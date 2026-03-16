@@ -1,3 +1,9 @@
+---
+name: mctl-platform
+description: Manage services on the mctl Kubernetes platform via MCP connector. Deploy services, check status, manage workflows, configure domains, provision databases.
+user-invocable: true
+---
+
 # MCTL Platform Operations
 
 Skill for managing services on the mctl Kubernetes platform via MCP connector.
@@ -20,6 +26,18 @@ User prompt → Claude → MCP tool call → mctl-api → Argo Workflow → GitO
 - **Secrets:** HashiCorp Vault → ExternalSecrets → K8s Secrets
 - **Domains:** auto `{team}-{service}.mctl.ai` + `.mctl.me` mirror
 - **Logs:** Loki (query via `mctl_get_service_logs`)
+
+## Key URLs
+
+| Service | URL |
+|---------|-----|
+| API + MCP | `https://api.mctl.ai/mcp` |
+| Argo Workflows UI | `https://workflows.mctl.ai/workflows/{namespace}/{workflow_name}` |
+| ArgoCD | `https://ops.mctl.ai` |
+| Backstage Portal | `https://app.mctl.ai` |
+| Landing + Docs | `https://mctl.ai` |
+
+When providing workflow links to the user, always use: `https://workflows.mctl.ai/workflows/{namespace}/{workflow_name}`
 
 ## Quick Start
 
