@@ -154,3 +154,5 @@ mctl is currently in a private beta phase. Access to the repositories, documenta
   <br />
   <a href="https://mctl.ai">mctl.ai</a> &nbsp;&bull;&nbsp; <a href="mailto:support@mctl.ai">support@mctl.ai</a>
 </div>
+
+<!-- SEO Tags: mcp, mcp-server, model-context-protocol, claude-connector, gemini-mcp, kubernetes, k8s, gitops, argocd, platform-engineering, developer-portal, self-healing, ai-agent, mcp.so -->
