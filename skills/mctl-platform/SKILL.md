@@ -144,7 +144,7 @@ Credentials auto-injected: `DATABASE_URL`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_
 | Template | Port | Memory | Special Config |
 |----------|------|--------|----------------|
 | `default` | 8080 | 256Mi | Standard HTTP service |
-| `openclaw` | 18789 | 1Gi | Gateway config ConfigMap, 5min startup probe, `NODE_OPTIONS=--max-old-space-size=768` |
+| `openclaw` | 18789 | 768Mi | Gateway config ConfigMap, 5min startup probe, `NODE_OPTIONS=--max-old-space-size=1024` |
 
 ## Repo Access Patterns
 

@@ -46,7 +46,7 @@
       <td width="33%" align="center">
         <img src="https://api.iconify.design/lucide:activity.svg?color=%2300f5ff" width="32" height="32" /><br><br>
         <strong>Integrated Monitoring</strong><br>
-        Full-stack observability with Prometheus, Grafana, and Loki.
+        Full-stack observability with VictoriaMetrics, Grafana, and Loki.
       </td>
       <td width="33%" align="center">
         <img src="https://api.iconify.design/lucide:lock.svg?color=%2300f5ff" width="32" height="32" /><br><br>
@@ -137,11 +137,11 @@ graph LR
 
 We stand on the shoulders of giants. mctl orchestrates best-in-class open source tools:
 
-* **Infrastructure:** K3s, Terraform, Longhorn, Traefik
+* **Infrastructure:** K3s, Terraform, Traefik
 * **Delivery:** ArgoCD, Argo Workflows, Helm, GitHub Actions
 * **Security:** HashiCorp Vault, External Secrets, cert-manager, Dex (OIDC)
 * **Data:** CloudNativePG (PostgreSQL)
-* **Observability:** Prometheus, Grafana, AlertManager, Loki
+* **Observability:** VictoriaMetrics, Grafana, AlertManager, Loki
 * **Developer Experience:** Backstage
 
 ---
