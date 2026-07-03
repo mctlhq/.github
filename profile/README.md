@@ -148,11 +148,11 @@ We stand on the shoulders of giants. mctl orchestrates best-in-class open source
 
 ## Current Status
 
-mctl is currently in a private beta phase. Access to the repositories, documentation, and the hosted control plane is restricted to invited teams. 
+mctl is open source. All platform repositories are public under Apache 2.0. Sign in with GitHub at [mctl.ai](https://mctl.ai) to self-provision a tenant on the hosted control plane — no invitation required.
 
 <div align="center">
   <br />
-  <a href="https://mctl.ai">mctl.ai</a> &nbsp;&bull;&nbsp; <a href="mailto:support@mctl.ai">support@mctl.ai</a>
+  <a href="https://mctl.ai">mctl.ai</a> &nbsp;&bull;&nbsp; <a href="https://docs.mctl.ai">docs.mctl.ai</a> &nbsp;&bull;&nbsp; <a href="mailto:support@mctl.ai">support@mctl.ai</a>
 </div>
 
 <!-- SEO Tags: mcp, mcp-server, model-context-protocol, claude-connector, gemini-mcp, gemini-cli, kubernetes, k8s, gitops, argocd, platform-engineering, developer-portal, self-healing, ai-agent, mcp.so -->
