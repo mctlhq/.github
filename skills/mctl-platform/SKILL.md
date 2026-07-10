@@ -50,7 +50,7 @@ mctl_deploy_service(
   team_name="my-team",
   component_name="hello-world",
   dockerfile_repo="user/hello-world",
-  git_tag="v1.0.0"
+  git_tag="1.0.0"
 )
 → Service at https://my-team-hello-world.mctl.ai
 ```
@@ -61,14 +61,13 @@ mctl_deploy_service(
   action="onboard",
   team_name="my-team",
   component_name="openclaw",
-  dockerfile_repo="openclaw/openclaw",
-  git_tag="main",
   service_template="openclaw"
 )
 → Dashboard at https://my-team-openclaw.mctl.ai/#token={auto-generated}
 ```
 
-The `openclaw` template pre-configures: 1Gi memory, 5min startup probe,
+The `openclaw` template provides the image source, so `dockerfile_repo` and
+`git_tag` are not required. It pre-configures: 1Gi memory, 5min startup probe,
 gateway config (LAN bind, token auth, trusted K8s proxies), Control UI enabled.
 
 ## Tool Reference
@@ -144,7 +143,7 @@ Credentials auto-injected: `DATABASE_URL`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_
 | Template | Port | Memory | Special Config |
 |----------|------|--------|----------------|
 | `default` | 8080 | 256Mi | Standard HTTP service |
-| `openclaw` | 18789 | 768Mi | Gateway config ConfigMap, 5min startup probe, `NODE_OPTIONS=--max-old-space-size=1024` |
+| `openclaw` | 18789 | 768Mi request / 1536Mi limit | Gateway config ConfigMap, 5min startup probe, `NODE_OPTIONS=--max-old-space-size=1792` |
 
 ## Repo Access Patterns
 
@@ -167,6 +166,13 @@ mctl_get_resource_usage → check quota headroom
 mctl_get_workflow_status(workflow_name) → read build logs
 ```
 Common causes: Dockerfile error, repo not accessible, out of memory during build.
+
+### Tenant created but invisible
+Check three read models separately:
+
+1. GitOps/Kubernetes: `platform-gitops/tenants/<tenant>/`, ArgoCD `tenant-<tenant>`, namespace `<tenant>`.
+2. Portal/OIDC: Backstage database `backstage`, schema `tenant-management`, table `tenant_members`; OIDC groups come from this table.
+3. mctl-api: local GitOps reader cache. The `admins-mctl-api` Application deploys the workload in namespace `mctl-api`; check logs for `gitops refresh failed`.
 
 ### OOM / Restart loop
 Check `mctl_get_service_logs` for "OOMKilled" or exit code 137.
