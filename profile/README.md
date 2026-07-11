@@ -148,12 +148,16 @@ graph LR
 
   Alert(["Alert<br/>(AlertManager)"]):::trig --> SelfHeal(["mctl-agent<br/>AI diagnosis"]):::agent
   Issue(["GitHub issue"]):::trig --> Investigator(["investigator<br/>agent"]):::agent
+  Scan(["Scheduled scan"]):::trig --> Tier1(["service agents<br/>+ mentor"]):::agent
+  TeamPR(["team & bot PRs"]):::trig --> Review(["AI code review<br/>0 unaddressed P1/P2"]):::gate
   Investigator -- proposal --> Implementer(["implementer<br/>agent"]):::agent
-  SelfHeal -- remediation PR --> Review(["AI code review<br/>0 unaddressed P1/P2"]):::gate
+  Tier1 -- proposal --> Implementer
+  SelfHeal -- remediation PR --> Review
   Implementer -- implementation PR --> Review
   Review -- findings --> Shepherd(["PR shepherd<br/>fix loop"]):::agent
   Shepherd -- fix push --> Review
   Review -- clean --> Merge(["merge"]):::done
+  Steward(["pr-steward<br/>PR watchdog"]):::agent -- merge when green --> Merge
   Merge --> Sync(["ArgoCD sync<br/>to cluster"]):::done
   Skills(["platform skills catalog<br/>GitOps · served over MCP"]):::gate
   Skills -.-> SelfHeal
