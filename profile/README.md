@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="../logo.svg" width="96" alt="mctl logo" />
   <h1>MCTL</h1>
   <h3>The AI-Native Kubernetes Platform</h3>
   <p>Your complete infrastructure stack unified: GitOps, secrets management, team isolation, and AI automation. Deploy services via a portal, REST API, or natural language.</p>
@@ -34,7 +35,7 @@
       <td width="33%" align="center">
         <img src="https://api.iconify.design/lucide:terminal.svg?color=%2300f5ff" width="32" height="32" /><br><br>
         <strong>AI Management</strong><br>
-        Manage infrastructure via REST API or natural language (MCP).
+        60+ MCP tools and platform skills — manage infrastructure in natural language from any AI assistant.
       </td>
       <td width="33%" align="center">
         <img src="https://api.iconify.design/lucide:database.svg?color=%2300f5ff" width="32" height="32" /><br><br>
@@ -65,10 +66,15 @@
 <div align="center">
   <table>
     <tr>
-      <td width="100%" align="center">
+      <td width="50%" align="center">
         <img src="https://api.iconify.design/lucide:sparkles.svg?color=%2300f5ff" width="32" height="32" /><br><br>
-        <strong>Autonomous AI Agent</strong><br>
-        The mctl-agent automatically diagnoses cluster issues via AI and proposes remediation Pull Requests.
+        <strong>Self-Healing Agent</strong><br>
+        mctl-agent diagnoses cluster incidents with AI and proposes remediation Pull Requests.
+      </td>
+      <td width="50%" align="center">
+        <img src="https://api.iconify.design/lucide:bot.svg?color=%2300f5ff" width="32" height="32" /><br><br>
+        <strong>Proposal Agents</strong><br>
+        mctl-agents investigate issues, draft proposals, implement them, and shepherd PRs through review to merge.
       </td>
     </tr>
   </table>
@@ -93,13 +99,15 @@ graph LR
   end
 
   subgraph controlplane ["  Control Plane  "]
-    API(["mctl-api<br/>REST + MCP"]):::ctrl
+    API(["mctl-api<br/>REST + MCP + skills"]):::ctrl
     Agent(["mctl-agent<br/>(self-heal)"]):::ctrl
+    Agents(["mctl-agents<br/>(proposal agents)"]):::ctrl
   end
 
   subgraph infra_group ["  Infrastructure  "]
     Argo(["Argo Workflows<br/>deploy · provision"]):::infra
-    Gitops(["mctl-gitops<br/>(Helm charts)"]):::infra
+    Gitops(["mctl-gitops<br/>Helm charts · builds"]):::infra
+    GHCR(["GHCR<br/>images"]):::infra
     K8s(["Kubernetes<br/>cluster"]):::infra
   end
 
@@ -109,14 +117,48 @@ graph LR
   API -- run workflow --> Argo
   Argo -- git commit --> Gitops
   Gitops -- "sync (ArgoCD)" --> K8s
+  Gitops -- "GHA build" --> GHCR
+  GHCR -. pull .-> K8s
   GitOps -- git push --> Gitops
   Agent -- PR --> Gitops
   Agent -. poll .-> API
+  API -- trigger runs --> Agents
+  Agents -- proposal PRs --> Gitops
   K8s -. "AlertManager" .-> Agent
 
   style interfaces fill:#f0f5ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
   style controlplane fill:#fefce8,stroke:#f59e0b,stroke-width:2px,color:#92400e
   style infra_group fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#065f46
+```
+
+---
+
+## AI Automation Loop
+
+Every change an agent makes lands as a Pull Request and passes an AI code
+review gate before it reaches the cluster — no unreviewed writes.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#94a3b8', 'fontSize': '14px'}}}%%
+graph LR
+  classDef trig fill:#fdf2f8,stroke:#ec4899,stroke-width:2px,color:#9d174d
+  classDef agent fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#92400e
+  classDef gate fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
+  classDef done fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#065f46
+
+  Alert(["Alert<br/>(AlertManager)"]):::trig --> SelfHeal(["mctl-agent<br/>AI diagnosis"]):::agent
+  Issue(["GitHub issue"]):::trig --> Investigator(["investigator<br/>agent"]):::agent
+  Investigator -- proposal --> Implementer(["implementer<br/>agent"]):::agent
+  SelfHeal -- remediation PR --> Review(["AI code review<br/>0 unaddressed P1/P2"]):::gate
+  Implementer -- implementation PR --> Review
+  Review -- findings --> Shepherd(["PR shepherd<br/>fix loop"]):::agent
+  Shepherd -- fix push --> Review
+  Review -- clean --> Merge(["merge"]):::done
+  Merge --> Sync(["ArgoCD sync<br/>to cluster"]):::done
+  Skills(["platform skills catalog<br/>GitOps · served over MCP"]):::gate
+  Skills -.-> SelfHeal
+  Skills -.-> Investigator
+  Skills -.-> Implementer
 ```
 
 ---
@@ -130,6 +172,7 @@ graph LR
 | **CLI** | `mctl deploy` | Traditional terminal-based workflows for fast, scriptable deployments. |
 | **REST API** | `api.mctl.ai` | OpenAPI compliant backend for custom automation and integrations. |
 | **GitOps** | `git push` | Advanced: Direct cluster delivery for DevOps/Platform engineers. |
+| **Docs** | `docs.mctl.ai` | Guides, runbooks, and API reference. |
 
 ---
 
@@ -138,11 +181,11 @@ graph LR
 We stand on the shoulders of giants. mctl orchestrates best-in-class open source tools:
 
 * **Infrastructure:** K3s, Terraform, Traefik
-* **Delivery:** ArgoCD, Argo Workflows, Helm, GitHub Actions
+* **Delivery:** ArgoCD, Argo Workflows, Argo Rollouts, Helm, GitHub Actions
 * **Security:** HashiCorp Vault, External Secrets, cert-manager, Dex (OIDC)
-* **Data:** CloudNativePG (PostgreSQL)
+* **Data:** CloudNativePG (PostgreSQL), Temporal, MinIO
 * **Observability:** VictoriaMetrics, Grafana, AlertManager, Loki
-* **Developer Experience:** Backstage
+* **Developer Experience:** Backstage, VitePress
 
 ---
 
