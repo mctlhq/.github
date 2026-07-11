@@ -150,8 +150,10 @@ graph LR
   Issue(["GitHub issue"]):::trig --> Investigator(["investigator<br/>agent"]):::agent
   Scan(["Scheduled scan"]):::trig --> Tier1(["service agents<br/>+ mentor"]):::agent
   TeamPR(["team & bot PRs"]):::trig --> Review(["AI code review<br/>0 unaddressed P1/P2"]):::gate
+  SelfHeal -. "no skill match" .-> Responder(["incident responder<br/>(unmatched incidents)"]):::agent
   Investigator -- proposal --> Implementer(["implementer<br/>agent"]):::agent
   Tier1 -- proposal --> Implementer
+  Responder -- proposal --> Implementer
   SelfHeal -- remediation PR --> Review
   Implementer -- implementation PR --> Review
   Review -- findings --> Shepherd(["PR shepherd<br/>fix loop"]):::agent
