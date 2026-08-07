@@ -1,0 +1,45 @@
+name: Claude PR review
+
+# This repository hosts the shared reviewer that 17 mctlhq repositories call,
+# so its own pull requests are worth reviewing too. Calls the reusable
+# workflow by local path rather than by SHA: for the self-hosting case a
+# pinned SHA would mean every edit to claude-review.yml also needs a bump
+# here, and the version under review is the one that should run.
+#
+# Note this cannot review a change to claude-review.yml or to this file:
+# claude-code-action refuses to run when the executing workflow differs from
+# the copy on the default branch ("Workflow validation failed"), which is
+# deliberate — otherwise a PR could rewrite the reviewer's own prompt and
+# allowlists and then be reviewed by the rewritten reviewer. Such PRs need a
+# human pass and an admin merge.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  claude-review:
+    uses: ./.github/workflows/claude-review.yml
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    with:
+      # Workflow definitions are the sensitive surface here: this file and the
+      # reusable it calls gate merges in every other repository.
+      sensitive-paths: '^\.github/workflows/'
+      conventions: |
+        This repository holds org-wide GitHub configuration: the shared
+        reusable review workflow and the organisation profile. There is no
+        application code. Weigh workflow correctness heavily — permission
+        scopes, secret handling, expression injection into `run:` blocks, and
+        anything that could let untrusted pull request content influence the
+        reviewer itself.
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      CLAUDE_CODE_OAUTH_TOKEN_2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
