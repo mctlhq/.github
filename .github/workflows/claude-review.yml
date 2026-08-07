@@ -47,6 +47,18 @@ on:
           only signals.
         type: string
         default: ''
+      skip-paths:
+        description: >
+          Extended regex matching paths that should never reach an LLM
+          reviewer at all (as opposed to sensitive-paths, which only picks a
+          model tier). When every changed file in the diff matches this
+          pattern, the review call is skipped entirely and the job succeeds
+          without posting a verdict. Intended for content that is already
+          gated by a deterministic pipeline plus human approval, where an LLM
+          review would just be checking another LLM's output. Empty disables
+          the check — nothing is ever skipped.
+        type: string
+        default: ''
       code-paths:
         description: >
           Extended regex matching non-test source files that warrant at least
@@ -410,6 +422,7 @@ jobs:
           # interpolated into the script body: `${{ }}` splicing would let a
           # caller's pattern terminate the surrounding quoting.
           SENSITIVE_PATHS: ${{ inputs.sensitive-paths }}
+          SKIP_PATHS: ${{ inputs.skip-paths }}
           CODE_PATHS: ${{ inputs.code-paths }}
           TEST_PATHS: ${{ inputs.test-paths }}
           MODEL_HIGH: ${{ inputs.model-high }}
@@ -421,6 +434,22 @@ jobs:
           files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
           lines=$(git diff --numstat "$BASE_SHA...$HEAD_SHA" |
             awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) removed += $2 } END { print added + removed + 0 }')
+
+          # A diff entirely inside skip-paths never reaches the model at all —
+          # not even at the low tier. A single file outside the pattern is
+          # enough to cancel the skip, since that file still needs a real
+          # review regardless of how many skip-paths files ride along with it.
+          skip=false
+          if [ -n "$SKIP_PATHS" ]; then
+            skip=true
+            while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              if ! printf '%s' "$f" | grep -qE "$SKIP_PATHS"; then
+                skip=false; break
+              fi
+            done <<< "$files"
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
 
           # Score: 3=high, 2=mid, 1=low
           score=1
@@ -484,7 +513,7 @@ jobs:
 
       - name: Claude review
         id: review
-        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true'
+        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true'
         continue-on-error: true
         uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1
         with:
