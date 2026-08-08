@@ -51,6 +51,11 @@ on:
           posts the review as an informational comment only.
         type: boolean
         default: false
+    secrets:
+      GEMINI_API_KEY:
+        required: false
+      AGY_API_KEY:
+        required: false
 
 jobs:
   review:
@@ -156,6 +161,8 @@ jobs:
         continue-on-error: true
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AGY_API_KEY }}
         run: |
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
