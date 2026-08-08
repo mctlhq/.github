@@ -1,9 +1,9 @@
 name: Agy PR review (reusable)
 
-# Shared automated second-opinion code reviewer for every mctlhq repository using
+# Shared automated code reviewer for every mctlhq repository using
 # the Antigravity CLI (agy) running on the self-hosted Mac mini.
 #
-# Callers keep their own triggers:
+# Callers keep their own triggers. Non-blocking example:
 #
 #   name: Agy PR review
 #   on:
@@ -13,6 +13,17 @@ name: Agy PR review (reusable)
 #   jobs:
 #     agy-review:
 #       uses: mctlhq/.github/.github/workflows/agy-review.yml@main
+#       permissions:
+#         contents: read
+#         pull-requests: write
+#
+# Blocking example (add the job as a required status check in repo settings):
+#
+#   jobs:
+#     agy-review:
+#       uses: mctlhq/.github/.github/workflows/agy-review.yml@main
+#       with:
+#         blocking: true
 #       permissions:
 #         contents: read
 #         pull-requests: write
@@ -33,6 +44,13 @@ on:
           Extra repository-specific guidance appended to the review prompt.
         type: string
         default: ''
+      blocking:
+        description: >
+          When true, the job fails (blocking merge) if the review contains any
+          P1 or P2 findings. When false (default), the job always succeeds and
+          posts the review as an informational comment only.
+        type: boolean
+        default: false
 
 jobs:
   review:
@@ -106,8 +124,20 @@ jobs:
           If there are no meaningful findings, say exactly:
           "No significant issues found."
 
-          End your response with nothing else added after the findings (or
-          the no-issues line) — it will be posted verbatim as a PR comment.
+          After writing all findings (or the no-issues line), you MUST append
+          a machine-readable verdict on its own line as the very last line of
+          your response, using EXACTLY one of these two forms with no
+          surrounding text:
+
+            <!-- VERDICT: PASS -->
+            <!-- VERDICT: FAIL:P1 -->
+            <!-- VERDICT: FAIL:P2 -->
+            <!-- VERDICT: FAIL:P1,P2 -->
+
+          Use PASS when there are no P1 or P2 findings. Use FAIL with the
+          comma-separated list of severities that appear when there are P1
+          and/or P2 findings. The verdict line is parsed by automation and
+          must be exact — do not alter its format.
 
           --- BEGIN DIFF ---
           PROMPT
@@ -152,13 +182,18 @@ jobs:
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
           GH_TOKEN: ${{ github.token }}
+          BLOCKING: ${{ inputs.blocking }}
         run: |
           set -euo pipefail
           {
-            echo "<!-- agy-review-pilot -->"
-            echo "## Antigravity (agy) review — pilot, non-blocking"
+            echo "<!-- agy-review -->"
+            if [ "$BLOCKING" = "true" ]; then
+              echo "## Antigravity (agy) review"
+            else
+              echo "## Antigravity (agy) review — informational"
+            fi
             echo
-            echo "_Second opinion alongside the primary Claude review. Model: ${{ inputs.model }}._"
+            echo "_Model: ${{ inputs.model }}._"
             echo
             cat review.md
           } > comment.md
@@ -170,9 +205,63 @@ jobs:
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
           GH_TOKEN: ${{ github.token }}
+          BLOCKING: ${{ inputs.blocking }}
         run: |
-          echo "<!-- agy-review-pilot -->" > comment.md
-          echo "## Antigravity (agy) review — pilot, non-blocking" >> comment.md
-          echo "" >> comment.md
-          echo "_agy run failed on this PR; see the workflow log. Not blocking merge._" >> comment.md
+          set -euo pipefail
+          {
+            echo "<!-- agy-review -->"
+            echo "## Antigravity (agy) review"
+            echo ""
+            if [ "$BLOCKING" = "true" ]; then
+              echo "_agy run failed on this PR; see the workflow log. **Blocking merge until resolved.**_"
+            else
+              echo "_agy run failed on this PR; see the workflow log. Not blocking merge._"
+            fi
+          } > comment.md
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+          if [ "$BLOCKING" = "true" ]; then
+            echo "::error::agy reviewer failed — blocking merge. See workflow log."
+            exit 1
+          fi
+
+      - name: Check for P1/P2 findings (blocking mode)
+        # Only runs when blocking=true AND the review itself succeeded.
+        #
+        # The prompt requires the model to end its response with one of four
+        # exact HTML comment strings as the very last line. We read only that
+        # last line and match it against an exact allowlist — no regex, no
+        # PCRE (grep -P is GNU-only and unavailable on macOS BSD grep, which
+        # runs on our self-hosted Mac mini). Anything not in the allowlist
+        # fails closed: missing tag, trailing whitespace variations, extra
+        # text, or a VERDICT value we didn't anticipate all block the merge
+        # rather than silently passing.
+        if: inputs.blocking == true && steps.agy.outcome == 'success'
+        shell: bash
+        working-directory: ${{ env.AGY_SCRATCH }}
+        run: |
+          set -euo pipefail
+
+          # Read the last non-empty line (ignoring trailing blank lines); strip Windows-style carriage returns.
+          verdict_line=$(awk 'NF {last=$0} END {print last}' review.md | tr -d '\r')
+
+          case "$verdict_line" in
+            '<!-- VERDICT: PASS -->')
+              echo "No P1/P2 findings — review passed."
+              ;;
+            '<!-- VERDICT: FAIL:P1 -->'|\
+            '<!-- VERDICT: FAIL:P2 -->'|\
+            '<!-- VERDICT: FAIL:P1,P2 -->')
+              echo "::error::agy found P1/P2 findings ($verdict_line) — address them before merging (see the PR comment)."
+              exit 1
+              ;;
+            *)
+              echo "::error::agy verdict tag missing or malformed — failing closed."
+              echo "  Last line of review.md: $verdict_line"
+              echo "  Expected exactly one of:"
+              echo "    <!-- VERDICT: PASS -->"
+              echo "    <!-- VERDICT: FAIL:P1 -->"
+              echo "    <!-- VERDICT: FAIL:P2 -->"
+              echo "    <!-- VERDICT: FAIL:P1,P2 -->"
+              exit 1
+              ;;
+          esac
