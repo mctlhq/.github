@@ -515,7 +515,7 @@ jobs:
         id: review
         if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true'
         continue-on-error: true
-        uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1.0.189 (CLI 2.1.226)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: ${{ inputs.allowed-bots }}
@@ -572,7 +572,7 @@ jobs:
         id: review2
         if: steps.review-check.outputs.failed == 'true' && steps.token-check.outputs.has_fallback == 'true'
         continue-on-error: true
-        uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1.0.189 (CLI 2.1.226)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           allowed_bots: ${{ inputs.allowed-bots }}
@@ -628,7 +628,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           OUT="$RUNNER_TEMP/claude-execution-output.json"
-          if [ -f "$OUT" ] && grep -qiE "hit your limit|usage limit|rate.?limit|overloaded|insufficient.*quota|credit balance" "$OUT"; then
+          if [ -f "$OUT" ] && grep -qiE "hit your limit|usage limit|rate.?limit|overloaded|insufficient.*quota|credit balance|out of.*usage" "$OUT"; then
             echo "::warning::Claude reviewer hit a transient usage limit — treating as non-blocking."
             gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
               "⏳ The Claude reviewer hit the shared usage limit and could not finish. This is **transient** and is *not* a code issue. Re-run with \`@claude review\` once the window resets." || true
