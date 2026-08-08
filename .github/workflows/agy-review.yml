@@ -241,8 +241,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Read the last non-empty line; strip Windows-style carriage returns.
-          verdict_line=$(tail -n 1 review.md | tr -d '\r')
+          # Read the last non-empty line (ignoring trailing blank lines); strip Windows-style carriage returns.
+          verdict_line=$(awk 'NF {last=$0} END {print last}' review.md | tr -d '\r')
 
           case "$verdict_line" in
             '<!-- VERDICT: PASS -->')
