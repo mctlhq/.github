@@ -1,9 +1,9 @@
 name: Agy PR review (reusable)
 
-# Shared automated second-opinion code reviewer for every mctlhq repository using
+# Shared automated code reviewer for every mctlhq repository using
 # the Antigravity CLI (agy) running on the self-hosted Mac mini.
 #
-# Callers keep their own triggers:
+# Callers keep their own triggers. Non-blocking example:
 #
 #   name: Agy PR review
 #   on:
@@ -13,6 +13,17 @@ name: Agy PR review (reusable)
 #   jobs:
 #     agy-review:
 #       uses: mctlhq/.github/.github/workflows/agy-review.yml@main
+#       permissions:
+#         contents: read
+#         pull-requests: write
+#
+# Blocking example (add the job as a required status check in repo settings):
+#
+#   jobs:
+#     agy-review:
+#       uses: mctlhq/.github/.github/workflows/agy-review.yml@main
+#       with:
+#         blocking: true
 #       permissions:
 #         contents: read
 #         pull-requests: write
@@ -33,6 +44,13 @@ on:
           Extra repository-specific guidance appended to the review prompt.
         type: string
         default: ''
+      blocking:
+        description: >
+          When true, the job fails (blocking merge) if the review contains any
+          P1 or P2 findings. When false (default), the job always succeeds and
+          posts the review as an informational comment only.
+        type: boolean
+        default: false
 
 jobs:
   review:
@@ -152,13 +170,18 @@ jobs:
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
           GH_TOKEN: ${{ github.token }}
+          BLOCKING: ${{ inputs.blocking }}
         run: |
           set -euo pipefail
           {
-            echo "<!-- agy-review-pilot -->"
-            echo "## Antigravity (agy) review — pilot, non-blocking"
+            echo "<!-- agy-review -->"
+            if [ "$BLOCKING" = "true" ]; then
+              echo "## Antigravity (agy) review"
+            else
+              echo "## Antigravity (agy) review — informational"
+            fi
             echo
-            echo "_Second opinion alongside the primary Claude review. Model: ${{ inputs.model }}._"
+            echo "_Model: ${{ inputs.model }}._"
             echo
             cat review.md
           } > comment.md
@@ -170,9 +193,38 @@ jobs:
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
           GH_TOKEN: ${{ github.token }}
+          BLOCKING: ${{ inputs.blocking }}
         run: |
-          echo "<!-- agy-review-pilot -->" > comment.md
-          echo "## Antigravity (agy) review — pilot, non-blocking" >> comment.md
-          echo "" >> comment.md
-          echo "_agy run failed on this PR; see the workflow log. Not blocking merge._" >> comment.md
+          {
+            echo "<!-- agy-review -->"
+            echo "## Antigravity (agy) review"
+            echo ""
+            if [ "$BLOCKING" = "true" ]; then
+              echo "_agy run failed on this PR; see the workflow log. **Blocking merge until resolved.**_"
+            else
+              echo "_agy run failed on this PR; see the workflow log. Not blocking merge._"
+            fi
+          } > comment.md
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+          if [ "$BLOCKING" = "true" ]; then
+            echo "::error::agy reviewer failed — blocking merge. See workflow log."
+            exit 1
+          fi
+
+      - name: Check for P1/P2 findings (blocking mode)
+        # Only runs when blocking=true AND the review itself succeeded.
+        # Grep is case-insensitive so "**P1**", "P1:", "p1 -" all match.
+        # The grep exits 1 (no match) when there are no P1/P2 lines, which
+        # means the step succeeds. It exits 0 (match found) when findings
+        # exist, which is when we want to fail the job.
+        if: inputs.blocking == true && steps.agy.outcome == 'success'
+        shell: bash
+        working-directory: ${{ env.AGY_SCRATCH }}
+        run: |
+          set -euo pipefail
+          if grep -qiE '\bP[12]\b' review.md; then
+            echo "::error::agy found P1/P2 findings — address them before merging (see the PR comment)."
+            grep -iE '\bP[12]\b' review.md | head -20 | sed 's/^/  /'
+            exit 1
+          fi
+          echo "No P1/P2 findings — review passed."
