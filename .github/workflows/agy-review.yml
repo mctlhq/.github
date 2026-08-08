@@ -124,8 +124,20 @@ jobs:
           If there are no meaningful findings, say exactly:
           "No significant issues found."
 
-          End your response with nothing else added after the findings (or
-          the no-issues line) — it will be posted verbatim as a PR comment.
+          After writing all findings (or the no-issues line), you MUST append
+          a machine-readable verdict on its own line as the very last line of
+          your response, using EXACTLY one of these two forms with no
+          surrounding text:
+
+            <!-- VERDICT: PASS -->
+            <!-- VERDICT: FAIL:P1 -->
+            <!-- VERDICT: FAIL:P2 -->
+            <!-- VERDICT: FAIL:P1,P2 -->
+
+          Use PASS when there are no P1 or P2 findings. Use FAIL with the
+          comma-separated list of severities that appear when there are P1
+          and/or P2 findings. The verdict line is parsed by automation and
+          must be exact — do not alter its format.
 
           --- BEGIN DIFF ---
           PROMPT
@@ -195,6 +207,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
         run: |
+          set -euo pipefail
           {
             echo "<!-- agy-review -->"
             echo "## Antigravity (agy) review"
@@ -213,18 +226,35 @@ jobs:
 
       - name: Check for P1/P2 findings (blocking mode)
         # Only runs when blocking=true AND the review itself succeeded.
-        # Grep is case-insensitive so "**P1**", "P1:", "p1 -" all match.
-        # The grep exits 1 (no match) when there are no P1/P2 lines, which
-        # means the step succeeds. It exits 0 (match found) when findings
-        # exist, which is when we want to fail the job.
+        #
+        # Instead of grepping free-form prose (which is fragile and vulnerable
+        # to prompt-injection bypasses), the prompt instructs the model to
+        # append an exact HTML comment verdict tag as its final line:
+        #   <!-- VERDICT: PASS -->
+        #   <!-- VERDICT: FAIL:P1 -->  (or FAIL:P2 or FAIL:P1,P2)
+        # We parse only that tag. If the tag is absent or malformed, we
+        # fail-closed rather than silently pass — a missing verdict is treated
+        # as a potential failure, not success.
         if: inputs.blocking == true && steps.agy.outcome == 'success'
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
         run: |
           set -euo pipefail
-          if grep -qiE '\bP[12]\b' review.md; then
-            echo "::error::agy found P1/P2 findings — address them before merging (see the PR comment)."
-            grep -iE '\bP[12]\b' review.md | head -20 | sed 's/^/  /'
+
+          # Extract the last line that matches the verdict pattern.
+          verdict=$(grep -oP '<!--\s*VERDICT:\s*\K[^\s-]+(?=\s*-->)' review.md | tail -1 || true)
+
+          if [ -z "$verdict" ]; then
+            echo "::error::agy response did not contain a machine-readable verdict tag — treating as failure (fail-closed)."
+            echo "  Expected last line: <!-- VERDICT: PASS --> or <!-- VERDICT: FAIL:P1 --> etc."
             exit 1
           fi
-          echo "No P1/P2 findings — review passed."
+
+          echo "Verdict: $verdict"
+
+          if [[ "$verdict" == FAIL* ]]; then
+            echo "::error::agy found P1/P2 findings (verdict=$verdict) — address them before merging (see the PR comment)."
+            exit 1
+          fi
+
+          echo "No P1/P2 findings — review passed (verdict=$verdict)."
