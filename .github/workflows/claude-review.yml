@@ -87,7 +87,7 @@ on:
           Without an entry the action hard-fails with "Workflow initiated by
           non-human actor" on synchronize events from the mctl-agents pipeline.
         type: string
-        default: mctl-claude-remote,github-actions
+        default: mctl-claude-remote,github-actions,dependabot
       conventions:
         description: >
           Extra repository-specific guidance appended to the review prompt
