@@ -89,46 +89,71 @@
 graph LR
   classDef iface fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
   classDef ctrl fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#92400e
+  classDef orch fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8
   classDef infra fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#065f46
+  classDef data fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b
+
 
   subgraph interfaces ["  Interfaces  "]
     Portal(["Portal<br/>(Backstage)"]):::iface
     CLI(["mctl CLI"]):::iface
     AI(["AI clients<br/>(MCP)"]):::iface
-    GitOps(["CI / CD<br/>git push"]):::iface
+    Push(["CI / CD<br/>git push"]):::iface
   end
 
   subgraph controlplane ["  Control Plane  "]
     API(["mctl-api<br/>REST + MCP + skills"]):::ctrl
-    Agent(["mctl-agent<br/>(self-heal)"]):::ctrl
-    Agents(["mctl-agents<br/>(proposal agents)"]):::ctrl
   end
 
-  subgraph infra_group ["  Infrastructure  "]
-    Argo(["Argo Workflows<br/>deploy · provision"]):::infra
-    Gitops(["mctl-gitops<br/>Helm charts · builds"]):::infra
+  subgraph orchestration ["  Orchestration + agents  "]
+    Temporal(["Temporal<br/>durable dev-loop"]):::orch
+    Argo(["Argo Workflows<br/>deploy · provision · agent runs"]):::orch
+    Agents(["mctl-agents<br/>proposal agents"]):::ctrl
+    Agent(["mctl-agent<br/>self-heal"]):::ctrl
+  end
+
+  subgraph delivery ["  Delivery  "]
+    Gitops(["mctl-gitops<br/>Helm charts · desired state"]):::infra
+    ArgoCD(["ArgoCD<br/>reconcile"]):::infra
     GHCR(["GHCR<br/>images"]):::infra
-    K8s(["Kubernetes<br/>cluster"]):::infra
+  end
+
+  subgraph runtime ["  K3s runtime  "]
+    Tenants(["Tenant namespaces<br/>admins · labs · ovk"]):::infra
+    Vault(["Vault<br/>+ External Secrets"]):::data
+    PG(["CloudNativePG<br/>per-service databases"]):::data
+    Obs(["Observability<br/>VictoriaMetrics · Grafana · Loki"]):::data
+    MinIO(["MinIO<br/>Loki object store"]):::data
   end
 
   Portal -- REST --> API
   CLI -- REST --> API
   AI -- MCP --> API
-  API -- run workflow --> Argo
+  Push -- git push --> Gitops
+
+  API -- operations --> Argo
+  API -- trigger runs --> Temporal
+  Temporal -- submit CWFT --> Argo
+  Argo -- sandboxed runs --> Agents
   Argo -- git commit --> Gitops
-  Gitops -- "sync (ArgoCD)" --> K8s
-  Gitops -- "GHA build" --> GHCR
-  GHCR -. pull .-> K8s
-  GitOps -- git push --> Gitops
-  Agent -- PR --> Gitops
-  Agent -. poll .-> API
-  API -- trigger runs --> Agents
   Agents -- proposal PRs --> Gitops
-  K8s -. "AlertManager" .-> Agent
+  Agent -- remediation PR --> Gitops
+
+  Gitops -- "GHA build" --> GHCR
+  Gitops --> ArgoCD
+  ArgoCD -- sync --> Tenants
+  GHCR -. pull .-> Tenants
+
+  Vault -. secrets .-> Tenants
+  Tenants --> PG
+  Tenants -. metrics · logs .-> Obs
+  Obs --> MinIO
 
   style interfaces fill:#f0f5ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
   style controlplane fill:#fefce8,stroke:#f59e0b,stroke-width:2px,color:#92400e
-  style infra_group fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#065f46
+  style orchestration fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8
+  style delivery fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#065f46
+  style runtime fill:#fef7f7,stroke:#ef4444,stroke-width:2px,color:#991b1b
 ```
 
 ---
@@ -136,35 +161,94 @@ graph LR
 ## AI Automation Loop
 
 Every change an agent makes lands as a Pull Request and passes an AI code
-review gate before it reaches the cluster — no unreviewed writes.
+review gate before it reaches the cluster — no unreviewed writes. Proposals
+wait for a human to accept them before any code is written, and a shepherd
+drives the PR through review rounds until it is clean or handed back for triage.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#94a3b8', 'fontSize': '14px'}}}%%
 graph LR
   classDef trig fill:#fdf2f8,stroke:#ec4899,stroke-width:2px,color:#9d174d
+  classDef orch fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#6b21a8
   classDef agent fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#92400e
+  classDef human fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b
   classDef gate fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
   classDef done fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#065f46
 
+  Issue(["GitHub issue<br/>label: agents:intake"]):::trig --> Poll(["issue poll<br/>every 12h"]):::orch
+  Ask(["mctl_trigger_issue<br/>on demand"]):::trig --> DevLoop
+  Poll --> DevLoop(["DevLoopWorkflow<br/>durable · one issue"]):::orch
   Alert(["Alert<br/>(AlertManager)"]):::trig --> SelfHeal(["mctl-agent<br/>AI diagnosis"]):::agent
-  Issue(["GitHub issue"]):::trig --> Investigator(["investigator<br/>agent"]):::agent
-  Scan(["Scheduled scan"]):::trig --> Tier1(["service agents<br/>+ mentor"]):::agent
-  TeamPR(["team & bot PRs"]):::trig --> Review(["AI code review<br/>0 unaddressed P1/P2"]):::gate
-  SelfHeal -. "no skill match" .-> Responder(["incident responder<br/>(unmatched incidents)"]):::agent
-  Investigator -- proposal --> Implementer(["implementer<br/>agent"]):::agent
-  Tier1 -- proposal --> Implementer
-  Responder -- proposal --> Implementer
+  Incidents(["incident sweep<br/>hourly"]):::orch --> Responder(["incident responder<br/>unmatched incidents"]):::agent
+  Scan(["scheduled scan"]):::trig --> Tier1(["service agents<br/>+ mentor"]):::agent
+
+  DevLoop -- submit --> Investigator(["investigator<br/>sandboxed run"]):::agent
+  Investigator -- "proposal (proposed)" --> Approve
+  Tier1 -- proposal --> Approve
+  Responder -- proposal --> Approve(["human approval<br/>proposed → accepted"]):::human
+  Approve -- accepted --> Implementer(["implementer<br/>sandboxed run"]):::agent
+
+  SelfHeal -. "no skill match" .-> Responder
   SelfHeal -- remediation PR --> Review
-  Implementer -- implementation PR --> Review
-  Review -- findings --> Shepherd(["PR shepherd<br/>fix loop"]):::agent
+  Implementer -- implementation PR --> Review(["AI code review<br/>0 unaddressed P1/P2"]):::gate
+  TeamPR(["team & bot PRs"]):::trig --> Review
+
+  Review -- findings --> Shepherd(["PR shepherd<br/>fix loop · max 3"]):::agent
   Shepherd -- fix push --> Review
-  Review -- clean --> Merge(["merge"]):::done
+  Shepherd -. "3 rounds unresolved" .-> Stuck(["review-stuck<br/>human triage"]):::human
+  Review -- clean + CI green --> Merge(["merge<br/>--match-head-commit"]):::done
   Steward(["pr-steward<br/>PR watchdog"]):::agent -- merge when green --> Merge
   Merge --> Sync(["ArgoCD sync<br/>to cluster"]):::done
+  Reconcile(["reconcile<br/>every 15m"]):::orch -. projects state .-> Shepherd
+
   Skills(["platform skills catalog<br/>GitOps · served over MCP"]):::gate
   Skills -.-> SelfHeal
   Skills -.-> Investigator
   Skills -.-> Implementer
+```
+
+---
+
+## Multi-Tenancy & Data
+
+Each team gets an isolated namespace with its own quotas, network policy and
+RBAC. Databases and secrets are provisioned into it on request — no shared
+credentials, no hand-managed connection strings.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#94a3b8', 'fontSize': '14px'}}}%%
+graph LR
+  classDef tenant fill:#eff6ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
+  classDef guard fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b
+  classDef data fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#065f46
+
+  Ingress(["Traefik ingress<br/>automated TLS · *.mctl.ai"]):::guard
+
+  subgraph ns ["  Every tenant namespace — admins · labs · ovk  "]
+    Svc(["tenant services"]):::tenant
+    Quota(["ResourceQuota<br/>cpu · memory · pods · PVCs"]):::guard
+    NetPol(["NetworkPolicy<br/>intra-namespace + egress flags"]):::guard
+    RBAC(["RBAC<br/>owners · members"]):::guard
+  end
+
+  subgraph shared ["  Shared platform data  "]
+    PG(["CloudNativePG · shared-pg<br/>a database per service"]):::data
+    Pooler(["connection pooler"]):::data
+    Backup(["scheduled backups"]):::data
+    Vault(["Vault → External Secrets"]):::data
+  end
+
+  Ingress --> Svc
+  Quota -.- Svc
+  NetPol -.- Svc
+  RBAC -.- Svc
+  Vault -. secrets .-> Svc
+  Svc -- provisioned on request --> PG
+  PG --> Pooler
+  PG --> Backup
+
+  style ns fill:#f0f5ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
+  style shared fill:#f0fdf4,stroke:#10b981,stroke-width:2px,color:#065f46
 ```
 
 ---
