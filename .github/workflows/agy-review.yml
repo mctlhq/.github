@@ -17,7 +17,8 @@ name: Agy PR review (reusable)
 #         contents: read
 #         pull-requests: write
 #
-# Blocking example (add the job as a required status check in repo settings):
+# Blocking example (submits a formal request-changes/approve PR review, which
+# is what actually gates merge in this org — see required_approving_review_count):
 #
 #   jobs:
 #     agy-review:
@@ -262,12 +263,23 @@ jobs:
           } > comment.md
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
           if [ "$BLOCKING" = "true" ]; then
+            gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --request-changes \
+              --body "agy run failed on this PR; see the workflow log. Blocking merge until resolved." \
+              || echo "::warning::could not submit request-changes review (may already be in that state)"
             echo "::error::agy reviewer failed — blocking merge. See workflow log."
             exit 1
           fi
 
-      - name: Check for P1/P2 findings (blocking mode)
+      - name: Submit review verdict (blocking mode)
         # Only runs when blocking=true AND the review itself succeeded.
+        #
+        # blocking=true is documented as gating merge, but a failing status
+        # check alone does NOT block merge in this org — mctlhq repos gate on
+        # required_approving_review_count via a formal PR review, not on
+        # required status checks (see claude-review.yml's approve/
+        # request-changes step, which this mirrors). Posting a comment here
+        # was necessary but not sufficient; submit an actual review so
+        # reviewDecision reflects the verdict.
         #
         # The prompt requires the model to end its response with one of four
         # exact HTML comment strings as the very last line. We read only that
@@ -280,6 +292,8 @@ jobs:
         if: inputs.blocking == true && steps.agy.outcome == 'success'
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -288,12 +302,16 @@ jobs:
 
           case "$verdict_line" in
             '<!-- VERDICT: PASS -->')
-              echo "No P1/P2 findings — review passed."
+              echo "No P1/P2 findings — approving."
+              gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --approve \
+                --body "agy: no P1/P2 findings."
               ;;
             '<!-- VERDICT: FAIL:P1 -->'|\
             '<!-- VERDICT: FAIL:P2 -->'|\
             '<!-- VERDICT: FAIL:P1,P2 -->')
               echo "::error::agy found P1/P2 findings ($verdict_line) — address them before merging (see the PR comment)."
+              gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --request-changes \
+                --body "agy found $verdict_line — see the review comment above."
               exit 1
               ;;
             *)
@@ -304,6 +322,8 @@ jobs:
               echo "    <!-- VERDICT: FAIL:P1 -->"
               echo "    <!-- VERDICT: FAIL:P2 -->"
               echo "    <!-- VERDICT: FAIL:P1,P2 -->"
+              gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --request-changes \
+                --body "agy verdict tag missing or malformed — failing closed. See workflow log."
               exit 1
               ;;
           esac
