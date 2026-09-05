@@ -76,7 +76,7 @@ on:
           from the other makes a test file score as production source, and
           that composes with the size bump into a top-tier promotion.
         type: string
-        default: '((^|/)(test_[^/]+\.(py|sh)|[^/]+_spec\.rb)|_test\.(go|py|rb|sh)|\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|sh))$'
+        default: '((^|/)__tests__/.+|(^|/)(test_[^/]+\.(py|sh)|[^/]+_spec\.rb|conftest\.py)|_test\.(go|py|rb|sh)|\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|sh))$'
       size-exempt-paths:
         description: >
           Extended regex matching paths whose churn should not feed the
@@ -461,7 +461,12 @@ jobs:
         run: |
           # Read only the immutable commit pair captured by gate. Never query
           # the live PR here: its head may move while this run is active.
-          files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
+          # core.quotePath=false on both calls: it defaults to true for every
+          # path-printing command, and a C-quoted path breaks the anchors in
+          # opposite directions. Here the leading `"` defeats the `^` in every
+          # caller's sensitive-paths, so a declared-sensitive file with one
+          # non-ASCII byte silently drops out of the top tier.
+          files=$(git -c core.quotePath=false diff --name-only "$BASE_SHA...$HEAD_SHA")
           # Binary files report "-" for both counts, hence the numeric guards.
           #
           # ENVIRON, not -v: POSIX processes a -v value as a string literal,
@@ -471,9 +476,13 @@ jobs:
           # runner ships. ENVIRON skips that step and matches this job's
           # convention of passing regexes as environment values.
           #
-          # -F with a literal tab, not the default FS: awk's default splits on
-          # runs of spaces AND tabs, so `$3` would be the first word of a path
-          # containing a space. Renames arrive compacted as
+          # -F '\t', not the default FS: awk's default splits on runs of
+          # spaces AND tabs, so `$3` would be the first word of a path
+          # containing a space. Note this is a two-character string, not a
+          # literal tab — POSIX handles the -F operand as if it were
+          # `-v FS=value`, so the very escape processing the paragraph above
+          # avoids for the pattern is what turns `\t` into TAB here. gawk,
+          # mawk and busybox awk all agree on `\t`, so it is portable. Renames arrive compacted as
           # `old/{a => b}/pnpm-lock.yaml` in a single field; the anchors in
           # size-exempt-paths are `(^|/)name$`, so the tail still matches.
           # core.quotePath defaults to true, which C-quotes any path holding
