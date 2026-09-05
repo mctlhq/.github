@@ -107,9 +107,15 @@ on:
         type: string
         default: claude-sonnet-5
       model-low:
-        description: Model for docs/config-only diffs.
+        description: >
+          Model for docs/config-only diffs. Not a cheaper reviewer any more:
+          on 2026-09-05 mctl-gitops#1058 classified score=1 and APPROVED the
+          same docs-only diff twice on claude-haiku-4-5-20251001, while the
+          Gemini reviewer found a real P2 on both passes. The tier still
+          exists because the classifier's `skip` output is what `skip-paths`
+          rides on, but the model no longer drops below model-mid.
         type: string
-        default: claude-haiku-4-5-20251001
+        default: claude-sonnet-5
       allowed-bots:
         description: >
           Comma-separated bot actors whose pushes may still be reviewed.
