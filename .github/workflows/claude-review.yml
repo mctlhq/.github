@@ -730,13 +730,16 @@ jobs:
 
           marker="<!-- claude-review:self-edit:$HEAD_SHA -->"
 
-          # `@claude review` is the way out of an EDIT, because
-          # `issue_comment` runs the default-branch copy of the workflow. That
-          # is exactly why it is not the way out of an ABSENCE: on the PR that
-          # ADDS the workflow, the trigger lives in the file being added and
-          # so is not on the default branch, and nothing would fire at all. An
+          # `@claude review` works because `issue_comment` runs the
+          # DEFAULT-BRANCH copy of the workflow, so what matters is only
+          # whether a reviewer is already there — never what this branch
+          # does. On an edit that is always true, which is why the `differs`
+          # body offers it flatly. On an absence it depends: a rename leaves
+          # the old path in place and the trigger still fires, while the PR
+          # that first ADDS the reviewer leaves the default branch with
+          # nothing to run. Hence the condition rather than a verdict — an
           # instruction that silently does nothing is worse than saying
-          # plainly that there is no verdict to be had here.
+          # plainly that there is none to be had.
           if [ "$REASON" = "absent" ]; then
             body=$(printf '%s\n' \
               "$marker" \
