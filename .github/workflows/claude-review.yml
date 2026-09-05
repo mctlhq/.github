@@ -461,11 +461,15 @@ jobs:
         run: |
           # Read only the immutable commit pair captured by gate. Never query
           # the live PR here: its head may move while this run is active.
-          # core.quotePath=false on both calls: it defaults to true for every
-          # path-printing command, and a C-quoted path breaks the anchors in
-          # opposite directions. Here the leading `"` defeats the `^` in every
-          # caller's sensitive-paths, so a declared-sensitive file with one
-          # non-ASCII byte silently drops out of the top tier.
+          #
+          # core.quotePath defaults to true for every path-printing command,
+          # C-quoting any path that holds a non-ASCII byte and wrapping it in
+          # literal double quotes. Both git calls below disable it, because a
+          # quoted path breaks the anchors in each one differently.
+          #
+          # Here the leading `"` defeats the `^` in every caller's
+          # sensitive-paths, so a declared-sensitive file with one such byte
+          # silently drops out of the top tier.
           files=$(git -c core.quotePath=false diff --name-only "$BASE_SHA...$HEAD_SHA")
           # Binary files report "-" for both counts, hence the numeric guards.
           #
@@ -482,13 +486,16 @@ jobs:
           # literal tab — POSIX handles the -F operand as if it were
           # `-v FS=value`, so the very escape processing the paragraph above
           # avoids for the pattern is what turns `\t` into TAB here. gawk,
-          # mawk and busybox awk all agree on `\t`, so it is portable. Renames arrive compacted as
-          # `old/{a => b}/pnpm-lock.yaml` in a single field; the anchors in
-          # size-exempt-paths are `(^|/)name$`, so the tail still matches.
-          # core.quotePath defaults to true, which C-quotes any path holding
-          # non-ASCII bytes and wraps it in literal double quotes — `$3` would
-          # then end in `"` and every $-anchored alternative in
-          # size-exempt-paths would miss.
+          # mawk and busybox awk all agree on `\t`, so it is portable.
+          #
+          # Renames arrive compacted as `old/{a => b}/pnpm-lock.yaml` in a
+          # single field; the anchors in size-exempt-paths are `(^|/)name$`,
+          # so the tail still matches.
+          #
+          # The quoting disabled above matters here too, in the other
+          # direction: a C-quoted `$3` ends in `"`, so every $-anchored
+          # alternative in size-exempt-paths would miss and the churn would be
+          # counted.
           lines=$(git -c core.quotePath=false diff --numstat "$BASE_SHA...$HEAD_SHA" |
             awk -F '\t' '
               BEGIN { exempt = ENVIRON["SIZE_EXEMPT_PATHS"] }
