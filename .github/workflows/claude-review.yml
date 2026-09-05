@@ -777,16 +777,15 @@ jobs:
           # of them is about this pull request. The gate also drops the run
           # when the body does not contain the phrase, or when the commenter
           # lacks write access — so "nothing happened" is not by itself
-          # evidence that no verdict is available. Both branches share this
-          # paragraph, so it names the default branch rather than referring
-          # back to a copy the `absent` branch has just said does not exist.
+          # evidence that no verdict is available. This paragraph carries
+          # only the two causes that hold on BOTH branches; the third is
+          # about the default-branch copy and differs between them, so each
+          # branch states its own immediately above this.
           silence=$(printf '%s\n' \
-            "If nothing happens after the comment, then the default branch has no copy" \
-            "of this workflow or has one that does not listen for \`issue_comment\`; or" \
-            "the phrase was not \`@claude review\`; or the commenter has no write" \
-            "access. Where none of those can be fixed, there is no verdict to be had" \
-            "on this pull request: the check stays red on every commit, and the thing" \
-            "to do is merge past it.")
+            "Silence can also mean the phrase was not \`@claude review\`, or that the" \
+            "commenter has no write access. Where none of these can be fixed, there is" \
+            "no verdict to be had on this pull request: the check stays red on every" \
+            "commit, and the thing to do is merge past it.")
 
           # `@claude review` works because `issue_comment` runs the
           # DEFAULT-BRANCH copy of the workflow, so what matters is that
@@ -831,6 +830,7 @@ jobs:
                 "from the default branch rather than from this branch, so the action" \
                 "accepts it whenever that copy listens for the comment." \
                 "" \
+                "If nothing happens after the comment, that copy does not listen for it." \
                 "$silence")
             fi
             body=$(printf '%s\n' \
