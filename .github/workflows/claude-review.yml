@@ -740,15 +740,17 @@ jobs:
           if [ "$REASON" = "absent" ]; then
             body=$(printf '%s\n' \
               "$marker" \
-              "This pull request adds \`$WF_PATH\`, the workflow file that invokes the" \
-              "reviewer. \`claude-code-action\` runs only when that file already exists on" \
-              "the default branch and matches it, so it cannot review the commit that" \
-              "introduces it. Nothing is wrong with the change itself." \
+              "\`$WF_PATH\` is the workflow file that invoked the reviewer on this pull" \
+              "request, and it does not exist on the default branch." \
+              "\`claude-code-action\` runs only when that file is already there and" \
+              "matches, so it will not review this commit. Nothing is wrong with the" \
+              "change itself." \
               "" \
-              "There is no way to get a verdict on this pull request — \`@claude review\`" \
-              "will not help either, because the trigger it needs is in the file being" \
-              "added. This check will stay red on every commit here; merge past it, and" \
-              "reviews begin with the next pull request.")
+              "If this renames an existing reviewer workflow, \`@claude review\` still" \
+              "works: the copy under the old name is on the default branch and it is that" \
+              "copy the trigger runs. If this adds the reviewer for the first time, there" \
+              "is no way to get a verdict here — the trigger lives in the file being" \
+              "added. Either way this check stays red on every commit; merge past it.")
           else
             body=$(printf '%s\n' \
               "$marker" \
@@ -779,7 +781,15 @@ jobs:
           # `grep -q` that exits on its first match can SIGPIPE the producer
           # and turn a HIT into a non-zero pipeline, which would read here as
           # "not announced yet" and comment again on every re-run.
-          existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body' || true)
+          # `--paginate` writes each page as it arrives, so a mid-listing
+          # failure leaves a PREFIX on stdout with a non-zero exit. Treating
+          # that as the full list would read a marker in a dropped page as
+          # absent. Fall back to the empty string instead: a duplicate notice
+          # is a nuisance, a missing one is the silence this step removes.
+          if ! existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body'); then
+            echo "::warning::could not read the comment list in full — posting, at the risk of a duplicate"
+            existing=""
+          fi
           case "$existing" in
             *"$marker"*) echo "already announced for $HEAD_SHA" ;;
             *) gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
