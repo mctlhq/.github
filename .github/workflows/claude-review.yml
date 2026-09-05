@@ -719,14 +719,31 @@ jobs:
               # fires nothing. Read the copy that would actually run, rather
               # than assume the trigger is there.
               # Raw media type, so there is no base64 hop; written to a file
-              # so the `grep -q` has nothing to SIGPIPE. Unreadable counts as
-              # "cannot promise a retrigger", the safe direction here.
+              # so the `grep`/`awk` has nothing to SIGPIPE.
+              #
+              # Unlike the reads above, an unreadable response here does not
+              # skip the check — it only costs the promise of a retrigger,
+              # which is the safe direction: the notice still goes out, minus
+              # the sentence it can no longer stand behind.
               base_wf="$RUNNER_TEMP/base-workflow.yml"
               : > "$base_wf"
-              gh api -H "Accept: application/vnd.github.raw" \
-                "repos/$REPO/contents/$path?ref=$default_branch" \
-                > "$base_wf" 2>/dev/null || true
-              if grep -q "issue_comment" "$base_wf"; then
+              if ! gh api -H "Accept: application/vnd.github.raw" \
+                   "repos/$REPO/contents/$path?ref=$default_branch" \
+                   > "$base_wf" 2>"$err"; then
+                echo "::warning::could not read $path at $default_branch to check its triggers — not offering a retrigger"
+                cat "$err" || true
+              fi
+
+              # Match the trigger where it is DECLARED, not wherever the
+              # string appears. A plain substring test would accept a
+              # commented-out block, a leftover
+              # `if: github.event_name == 'issue_comment'` guard, or the
+              # usage example in this file's own header — each of which
+              # would put back the false promise this probe removes.
+              if awk '/^jobs:[[:space:]]*$/ { exit }
+                      /^[[:space:]]*#/      { next }
+                      /^[[:space:]]*issue_comment:[[:space:]]*$/ { found = 1 }
+                      END { exit !found }' "$base_wf"; then
                 echo "retriggerable=true" >> "$GITHUB_OUTPUT"
               else
                 echo "retriggerable=false" >> "$GITHUB_OUTPUT"
@@ -782,10 +799,17 @@ jobs:
                 "run loads the workflow from the default branch instead of from this" \
                 "branch, so the action accepts it and reviews normally.")
             else
+              # Scoped to this file on purpose: the probe reads the caller
+              # that invoked this run, and a repository is free to keep its
+              # `issue_comment` trigger in a sibling caller. Saying that the
+              # comment will not re-run THIS workflow is true either way;
+              # saying it fires nothing would not be.
               way_out=$(printf '%s\n' \
-                "\`@claude review\` will not help: the copy of this workflow on the" \
-                "default branch has no \`issue_comment\` trigger, so the comment fires" \
-                "nothing. This check stays red on every commit here; merge past it.")
+                "The copy of \`$WF_PATH\` on the default branch has no" \
+                "\`issue_comment\` trigger, so \`@claude review\` will not re-run it." \
+                "Unless another workflow here listens for that comment, there is no" \
+                "verdict to be had on this pull request; the check stays red on every" \
+                "commit. Merge past it.")
             fi
             body=$(printf '%s\n' \
               "$marker" \
