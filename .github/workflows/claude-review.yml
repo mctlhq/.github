@@ -617,40 +617,70 @@ jobs:
         run: |
           set -euo pipefail
 
-          path=${WORKFLOW_REF%@*}
+          # Split on the first `@refs/` rather than the last `@`:
+          # `github.workflow_ref` always fully qualifies the ref half, and git
+          # permits `@` inside a branch name, so `refs/heads/feat@2` would
+          # otherwise leave the ref's prefix stuck on the path.
+          path=${WORKFLOW_REF%%@refs/*}
           path=${path#"$REPO/"}
+          wf_ref=refs/${WORKFLOW_REF#*@refs/}
+          case "$path" in
+            .github/workflows/*) ;;
+            *)
+              echo "::warning::unrecognised workflow_ref '$WORKFLOW_REF' — skipping the self-edit check"
+              echo "blocked=false" >> "$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
 
           # Compare the file at the ref the run actually loaded it from, not
           # at the PR head. On `issue_comment` GitHub runs the DEFAULT-branch
           # copy of the workflow, so a self-edit PR re-triggered with
           # `@claude review` is reviewed normally — comparing the head there
-          # would refuse a run that the action is perfectly happy to perform.
-          wf_ref=${WORKFLOW_REF##*@}
-          case "$path" in
-            .github/workflows/*) ;;
-            *)
-              echo "::notice::unrecognised workflow_ref '$WORKFLOW_REF' — skipping the self-edit check"
-              echo "blocked=false" >> "$GITHUB_OUTPUT"
-              exit 0 ;;
-          esac
-
-          default_branch=$(gh api "repos/$REPO" -q .default_branch)
+          # would refuse a run the action is perfectly happy to perform. That
+          # is also why the comment below names `@claude review` as the way
+          # out: it is the one trigger whose entry file passes validation.
+          #
+          # Every read below fails OPEN, and says so at warning level. An
+          # unreachable API means "cannot predict", not "refuse" — a red
+          # check with nothing on the board is the same unexplained state
+          # this step exists to remove, only inverted. Warning rather than
+          # notice because `blocked=true` is reachable only through these
+          # calls: if they start failing, a permanently no-op check would
+          # otherwise be indistinguishable from a healthy one.
+          if ! default_branch=$(gh api "repos/$REPO" -q .default_branch 2>/dev/null); then
+            echo "::warning::could not read the default branch — skipping the self-edit check"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # A blob SHA is content-addressed, so comparing the two is exactly
           # the "identical content" test the action performs, without pulling
-          # either file down.
-          head_blob=$(gh api "repos/$REPO/contents/$path?ref=$wf_ref" -q .sha 2>/dev/null || echo "")
-          base_blob=$(gh api "repos/$REPO/contents/$path?ref=$default_branch" -q .sha 2>/dev/null || echo "")
-
-          if [ -z "$head_blob" ]; then
-            # Nothing to compare against; let the action speak for itself.
-            echo "::notice::could not read $path at $wf_ref — skipping the self-edit check"
+          # either file down. `?ref=refs/pull/<n>/merge` resolves — verified
+          # against this PR's own merge ref before merge.
+          if ! head_blob=$(gh api "repos/$REPO/contents/$path?ref=$wf_ref" -q .sha 2>/dev/null); then
+            echo "::warning::could not read $path at $wf_ref — skipping the self-edit check"
             echo "blocked=false" >> "$GITHUB_OUTPUT"
-          elif [ "$head_blob" = "$base_blob" ]; then
+            exit 0
+          fi
+
+          # 404 is meaningful here and must not be lumped in with a blip: a
+          # workflow file absent from the default branch is refused by the
+          # action for the same reason an edited one is. Any other error is a
+          # transient read, and treating it as absence would post the notice
+          # below on a PR that touches no workflow at all.
+          if ! base_blob=$(gh api "repos/$REPO/contents/$path?ref=$default_branch" -q .sha 2>base.err); then
+            if grep -q "HTTP 404" base.err; then
+              base_blob=""
+            else
+              echo "::warning::could not read $path at $default_branch — skipping the self-edit check"
+              echo "blocked=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          if [ "$head_blob" = "$base_blob" ]; then
             echo "blocked=false" >> "$GITHUB_OUTPUT"
           else
-            # Covers both an edit and a brand-new workflow file absent from the
-            # default branch, which the action refuses for the same reason.
             echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
             echo "blocked=true" >> "$GITHUB_OUTPUT"
             echo "path=$path" >> "$GITHUB_OUTPUT"
@@ -687,7 +717,9 @@ jobs:
                 "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
                 "the change itself." \
                 "" \
-                "Review resumes by itself on the next pull request, once this one is merged.")
+                "To get a verdict on this commit, comment \`@claude review\` here. That run" \
+                "loads the workflow from the default branch instead of from this branch, so" \
+                "the action accepts it and reviews normally.")
               gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
           esac
 
