@@ -76,7 +76,7 @@ on:
           from the other makes a test file score as production source, and
           that composes with the size bump into a top-tier promotion.
         type: string
-        default: '(_test\.(go|py|rb)|\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs))$'
+        default: '((^|/)(test_[^/]+\.(py|sh)|[^/]+_spec\.rb)|_test\.(go|py|rb|sh)|\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|sh))$'
       size-exempt-paths:
         description: >
           Extended regex matching paths whose churn should not feed the
@@ -476,7 +476,11 @@ jobs:
           # containing a space. Renames arrive compacted as
           # `old/{a => b}/pnpm-lock.yaml` in a single field; the anchors in
           # size-exempt-paths are `(^|/)name$`, so the tail still matches.
-          lines=$(git diff --numstat "$BASE_SHA...$HEAD_SHA" |
+          # core.quotePath defaults to true, which C-quotes any path holding
+          # non-ASCII bytes and wraps it in literal double quotes — `$3` would
+          # then end in `"` and every $-anchored alternative in
+          # size-exempt-paths would miss.
+          lines=$(git -c core.quotePath=false diff --numstat "$BASE_SHA...$HEAD_SHA" |
             awk -F '\t' '
               BEGIN { exempt = ENVIRON["SIZE_EXEMPT_PATHS"] }
               exempt != "" && $3 ~ exempt { next }
