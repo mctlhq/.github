@@ -811,8 +811,9 @@ jobs:
               "" \
               "Try commenting \`@claude review\` here — it is worth it if this pull" \
               "request renames an existing reviewer, because that run loads the" \
-              "default-branch copy, which still carries the old path. If this adds the" \
-              "reviewer for the first time, the default branch has nothing to run." \
+              "default-branch copy, which still carries the old path; that only fires" \
+              "if the copy there listens for the comment. If this adds the reviewer" \
+              "for the first time, the default branch has nothing to run." \
               "" \
               "$silence")
           else
