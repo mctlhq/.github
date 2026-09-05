@@ -62,17 +62,46 @@ on:
       code-paths:
         description: >
           Extended regex matching non-test source files that warrant at least
-          the middle tier. Defaults to common compiled/scripting extensions.
+          the middle tier. Defaults to the extensions actually present in
+          mctlhq repositories. `.vue` and `.mjs` were missing until 2026-09-05,
+          which silently scored every single-file SFC change in mctl-web (36
+          .vue), mctl-design (29), mctl-academy (20 .vue, 53 .mjs) and
+          mctl-docs (7) at the docs tier.
         type: string
-        default: '\.(go|ts|tsx|js|jsx|py|rs|java|rb)$'
+        default: '\.(go|ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|svelte|py|rs|java|rb|sh)$'
       test-paths:
-        description: Extended regex matching test files, excluded from code-paths.
+        description: >
+          Extended regex matching test files, excluded from code-paths. Keep
+          this in step with code-paths: an extension present in one and absent
+          from the other makes a test file score as production source, and
+          that composes with the size bump into a top-tier promotion.
         type: string
-        default: '(_test\.(go|py|rb)|\.(test|spec)\.(ts|tsx|js|jsx))$'
+        default: '((^|/)(test_[^/]+\.(py|sh)|[^/]+_spec\.rb)|_test\.(go|py|rb|sh)|\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|sh))$'
+      size-exempt-paths:
+        description: >
+          Extended regex matching paths whose churn should not feed the
+          >400-line size bump. Generated lockfiles routinely move thousands of
+          lines for a one-line dependency change; counting them promoted such
+          diffs a tier on size alone. Harmless while model-high equalled
+          model-mid, but it bites now that the top tier is a costlier model.
+          Only the size signal is affected — a lockfile still reaches the
+          reviewer, and sensitive-paths and code-paths still see it.
+          Unlike the other path inputs, which are used with `grep -qE` (an
+          invalid pattern exits 2, reads as false, and the classifier carries
+          on), this one is evaluated by awk, where an invalid ERE is fatal and
+          fails the whole classify step. That is deliberate: silently counting
+          every lockfile would undo the input's only purpose.
+        type: string
+        default: '(^|/)(pnpm-lock\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|bun\.lock|go\.sum|go\.work\.sum|Cargo\.lock|uv\.lock|poetry\.lock|Pipfile\.lock|pdm\.lock|composer\.lock|Gemfile\.lock|gradle\.lockfile|flake\.lock|pubspec\.lock|\.terraform\.lock\.hcl)$|(^|/)__snapshots__/.*\.snap$'
       model-high:
-        description: Model for security-sensitive or large diffs.
+        description: >
+          Model for security-sensitive or large diffs. Must be more capable
+          than model-mid or sensitive-paths buys nothing: until 2026-09-05
+          both defaulted to claude-sonnet-5, so the eight repositories that
+          carefully enumerate their auth/crypto/db paths were getting the
+          middle tier's model on them.
         type: string
-        default: claude-sonnet-5
+        default: claude-opus-5
       model-mid:
         description: Model for ordinary source changes.
         type: string
@@ -425,6 +454,7 @@ jobs:
           SKIP_PATHS: ${{ inputs.skip-paths }}
           CODE_PATHS: ${{ inputs.code-paths }}
           TEST_PATHS: ${{ inputs.test-paths }}
+          SIZE_EXEMPT_PATHS: ${{ inputs.size-exempt-paths }}
           MODEL_HIGH: ${{ inputs.model-high }}
           MODEL_MID: ${{ inputs.model-mid }}
           MODEL_LOW: ${{ inputs.model-low }}
@@ -432,8 +462,31 @@ jobs:
           # Read only the immutable commit pair captured by gate. Never query
           # the live PR here: its head may move while this run is active.
           files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
-          lines=$(git diff --numstat "$BASE_SHA...$HEAD_SHA" |
-            awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) removed += $2 } END { print added + removed + 0 }')
+          # Binary files report "-" for both counts, hence the numeric guards.
+          #
+          # ENVIRON, not -v: POSIX processes a -v value as a string literal,
+          # so `\.` would be consumed before the regex engine sees it — gawk
+          # turns each one into an any-char `.` (with a warning per escape),
+          # mawk leaves it, and the pattern that runs depends on which awk the
+          # runner ships. ENVIRON skips that step and matches this job's
+          # convention of passing regexes as environment values.
+          #
+          # -F with a literal tab, not the default FS: awk's default splits on
+          # runs of spaces AND tabs, so `$3` would be the first word of a path
+          # containing a space. Renames arrive compacted as
+          # `old/{a => b}/pnpm-lock.yaml` in a single field; the anchors in
+          # size-exempt-paths are `(^|/)name$`, so the tail still matches.
+          # core.quotePath defaults to true, which C-quotes any path holding
+          # non-ASCII bytes and wraps it in literal double quotes — `$3` would
+          # then end in `"` and every $-anchored alternative in
+          # size-exempt-paths would miss.
+          lines=$(git -c core.quotePath=false diff --numstat "$BASE_SHA...$HEAD_SHA" |
+            awk -F '\t' '
+              BEGIN { exempt = ENVIRON["SIZE_EXEMPT_PATHS"] }
+              exempt != "" && $3 ~ exempt { next }
+              { if ($1 ~ /^[0-9]+$/) added += $1
+                if ($2 ~ /^[0-9]+$/) removed += $2 }
+              END { print added + removed + 0 }')
 
           # A diff entirely inside skip-paths never reaches the model at all —
           # not even at the low tier. A single file outside the pattern is
