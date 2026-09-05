@@ -786,9 +786,9 @@ jobs:
           # branch states its own immediately above this.
           silence=$(printf '%s\n' \
             "Silence can also mean the phrase was not \`@claude review\`, or that the" \
-            "commenter has no write access. Where none of these can be fixed, there is" \
-            "no verdict to be had on this pull request: the check stays red on every" \
-            "commit, and the thing to do is merge past it.")
+            "commenter has no write access. Where none of the causes above can be fixed," \
+            "there is no verdict to be had on this pull request: the check stays red on" \
+            "every commit, and the thing to do is merge past it.")
 
           # `@claude review` works because `issue_comment` runs the
           # DEFAULT-BRANCH copy of the workflow, so what matters is that
