@@ -772,6 +772,18 @@ jobs:
 
           marker="<!-- claude-review:self-edit:$HEAD_SHA -->"
 
+          # Silence after the comment has more than one cause, and only one
+          # of them is about this pull request. The gate also drops the run
+          # when the body does not contain the phrase, or when the commenter
+          # lacks write access — so "nothing happened" is not by itself
+          # evidence that no verdict is available.
+          silence=$(printf '%s\n' \
+            "If nothing happens after the comment, that copy does not listen for it," \
+            "the phrase was not \`@claude review\`, or the commenter has no write" \
+            "access. Where none of those can be fixed, there is no verdict to be had" \
+            "on this pull request: the check stays red on every commit, and the thing" \
+            "to do is merge past it.")
+
           # `@claude review` works because `issue_comment` runs the
           # DEFAULT-BRANCH copy of the workflow, so what matters is only
           # whether a reviewer is already there — never what this branch
@@ -791,12 +803,12 @@ jobs:
               "matches, so it will not review this commit. Nothing is wrong with the" \
               "change itself." \
               "" \
-              "\`@claude review\` helps only if some reviewer workflow is already on the" \
-              "default branch — as it is when this pull request renames one, since that" \
-              "run loads the default-branch copy rather than this branch's. If the" \
-              "default branch carries no reviewer yet, nothing fires and there is no" \
-              "verdict to be had here. This check stays red on every commit either way;" \
-              "merge past it.")
+              "Try commenting \`@claude review\` here — it is worth it if this pull" \
+              "request renames an existing reviewer, because that run loads the" \
+              "default-branch copy, which still carries the old path. If this adds the" \
+              "reviewer for the first time, the default branch has nothing to run." \
+              "" \
+              "$silence")
           else
             if [ "$RETRIGGERABLE" = "true" ]; then
               way_out=$(printf '%s\n' \
@@ -810,10 +822,9 @@ jobs:
               way_out=$(printf '%s\n' \
                 "Try commenting \`@claude review\` here: that run loads the workflow" \
                 "from the default branch rather than from this branch, so the action" \
-                "accepts it whenever that copy listens for the comment. If nothing" \
-                "happens, it does not — then there is no verdict to be had on this" \
-                "pull request, the check stays red on every commit, and the thing to" \
-                "do is merge past it.")
+                "accepts it whenever that copy listens for the comment." \
+                "" \
+                "$silence")
             fi
             body=$(printf '%s\n' \
               "$marker" \
