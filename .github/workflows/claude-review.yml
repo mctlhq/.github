@@ -647,7 +647,12 @@ jobs:
           # notice because `blocked=true` is reachable only through these
           # calls: if they start failing, a permanently no-op check would
           # otherwise be indistinguishable from a healthy one.
-          if ! default_branch=$(gh api "repos/$REPO" -q .default_branch 2>/dev/null); then
+          # `-q` on a missing key yields the string "null" with a zero exit,
+          # so an exit-status guard alone is not total: `?ref=null` would 404,
+          # read as "absent from the default branch", and produce a false red
+          # on a PR that touches no workflow.
+          default_branch=$(gh api "repos/$REPO" -q .default_branch 2>/dev/null || echo "")
+          if [ -z "$default_branch" ] || [ "$default_branch" = "null" ]; then
             echo "::warning::could not read the default branch — skipping the self-edit check"
             echo "blocked=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -657,7 +662,8 @@ jobs:
           # the "identical content" test the action performs, without pulling
           # either file down. `?ref=refs/pull/<n>/merge` resolves — verified
           # against this PR's own merge ref before merge.
-          if ! head_blob=$(gh api "repos/$REPO/contents/$path?ref=$wf_ref" -q .sha 2>/dev/null); then
+          head_blob=$(gh api "repos/$REPO/contents/$path?ref=$wf_ref" -q .sha 2>/dev/null || echo "")
+          if [ -z "$head_blob" ] || [ "$head_blob" = "null" ]; then
             echo "::warning::could not read $path at $wf_ref — skipping the self-edit check"
             echo "blocked=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -668,8 +674,15 @@ jobs:
           # action for the same reason an edited one is. Any other error is a
           # transient read, and treating it as absence would post the notice
           # below on a PR that touches no workflow at all.
-          if ! base_blob=$(gh api "repos/$REPO/contents/$path?ref=$default_branch" -q .sha 2>base.err); then
-            if grep -q "HTTP 404" base.err; then
+          # Written under RUNNER_TEMP: the workspace is the tree the reviewer
+          # reads, and a stray file there would show up in its `git status`.
+          #
+          # Matching on gh's stderr wording couples this to the CLI's
+          # phrasing. It fails in the safe direction — a reworded 404 reads
+          # as transient and skips the check — but it is worth knowing about.
+          err="$RUNNER_TEMP/base.err"
+          if ! base_blob=$(gh api "repos/$REPO/contents/$path?ref=$default_branch" -q .sha 2>"$err"); then
+            if grep -q "HTTP 404" "$err"; then
               base_blob=""
             else
               echo "::warning::could not read $path at $default_branch — skipping the self-edit check"
@@ -678,12 +691,21 @@ jobs:
             fi
           fi
 
+          # Absent and differing both make the action refuse, but they are not
+          # the same situation for the person reading the result, and only one
+          # of them has a way out. Carry the distinction into the output.
           if [ "$head_blob" = "$base_blob" ]; then
             echo "blocked=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
             echo "blocked=true" >> "$GITHUB_OUTPUT"
             echo "path=$path" >> "$GITHUB_OUTPUT"
+            if [ -z "$base_blob" ]; then
+              echo "::warning::$path does not exist on $default_branch — claude-code-action will refuse to run on this PR."
+              echo "reason=absent" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
+              echo "reason=differs" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       # Say it once per commit, on the pull request, where the person waiting
@@ -695,10 +717,44 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           WF_PATH: ${{ steps.selfedit.outputs.path }}
+          REASON: ${{ steps.selfedit.outputs.reason }}
         run: |
           set -euo pipefail
 
           marker="<!-- claude-review:self-edit:$HEAD_SHA -->"
+
+          # `@claude review` is the way out of an EDIT, because
+          # `issue_comment` runs the default-branch copy of the workflow. That
+          # is exactly why it is not the way out of an ABSENCE: on the PR that
+          # ADDS the workflow, the trigger lives in the file being added and
+          # so is not on the default branch, and nothing would fire at all. An
+          # instruction that silently does nothing is worse than saying
+          # plainly that there is no verdict to be had here.
+          if [ "$REASON" = "absent" ]; then
+            body=$(printf '%s\n' \
+              "$marker" \
+              "This pull request adds \`$WF_PATH\`, the workflow file that invokes the" \
+              "reviewer. \`claude-code-action\` runs only when that file already exists on" \
+              "the default branch and matches it, so it cannot review the commit that" \
+              "introduces it. Nothing is wrong with the change itself." \
+              "" \
+              "There is no way to get a verdict on this pull request — \`@claude review\`" \
+              "will not help either, because the trigger it needs is in the file being" \
+              "added. Reviews begin with the next pull request, once this one has landed" \
+              "on the default branch.")
+          else
+            body=$(printf '%s\n' \
+              "$marker" \
+              "This pull request edits \`$WF_PATH\`, the workflow file that invokes the" \
+              "reviewer. \`claude-code-action\` runs only when that file is identical to" \
+              "the copy on the default branch, so it will not review this commit and" \
+              "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
+              "the change itself." \
+              "" \
+              "To get a verdict on this commit, comment \`@claude review\` here. That run" \
+              "loads the workflow from the default branch instead of from this branch, so" \
+              "the action accepts it and reviews normally.")
+          fi
 
           # Matched with a case glob rather than `grep -qF`: under pipefail a
           # `grep -q` that exits on its first match can SIGPIPE the producer
@@ -706,26 +762,18 @@ jobs:
           # "not announced yet" and comment again on every re-run.
           existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body' || true)
           case "$existing" in
-            *"$marker"*)
-              echo "already announced for $HEAD_SHA" ;;
-            *)
-              body=$(printf '%s\n' \
-                "$marker" \
-                "This pull request edits \`$WF_PATH\`, the workflow file that invokes the" \
-                "reviewer. \`claude-code-action\` runs only when that file is identical to" \
-                "the copy on the default branch, so it will not review this commit and" \
-                "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
-                "the change itself." \
-                "" \
-                "To get a verdict on this commit, comment \`@claude review\` here. That run" \
-                "loads the workflow from the default branch instead of from this branch, so" \
-                "the action accepts it and reviews normally.")
-              gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
+            *"$marker"*) echo "already announced for $HEAD_SHA" ;;
+            *) gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
           esac
 
           # Fail closed. Green here would read as "reviewed, found nothing",
           # which is the one thing that did not happen.
-          echo "::error::No review ran — this PR edits the workflow that invokes the reviewer."
+          if [ "$REASON" = "absent" ]; then
+            why="is not on the default branch yet"
+          else
+            why="differs from the copy on the default branch"
+          fi
+          echo "::error::No review ran — $WF_PATH $why, so the reviewer refused to start."
           exit 1
 
       - name: Claude review
