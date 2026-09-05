@@ -62,17 +62,37 @@ on:
       code-paths:
         description: >
           Extended regex matching non-test source files that warrant at least
-          the middle tier. Defaults to common compiled/scripting extensions.
+          the middle tier. Defaults to the extensions actually present in
+          mctlhq repositories. `.vue` and `.mjs` were missing until 2026-09-05,
+          which silently scored every single-file SFC change in mctl-web (36
+          .vue), mctl-design (29), mctl-academy (20 .vue, 53 .mjs) and
+          mctl-docs (7) at the docs tier.
         type: string
-        default: '\.(go|ts|tsx|js|jsx|py|rs|java|rb)$'
+        default: '\.(go|ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|svelte|py|rs|java|rb|sh)$'
       test-paths:
         description: Extended regex matching test files, excluded from code-paths.
         type: string
         default: '(_test\.(go|py|rb)|\.(test|spec)\.(ts|tsx|js|jsx))$'
-      model-high:
-        description: Model for security-sensitive or large diffs.
+      size-exempt-paths:
+        description: >
+          Extended regex matching paths whose churn should not feed the
+          >400-line size bump. Generated lockfiles routinely move thousands of
+          lines for a one-line dependency change; counting them promoted such
+          diffs a tier on size alone. Harmless while model-high equalled
+          model-mid, but it bites now that the top tier is a costlier model.
+          Only the size signal is affected — a lockfile still reaches the
+          reviewer, and sensitive-paths and code-paths still see it.
         type: string
-        default: claude-sonnet-5
+        default: '(^|/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|npm-shrinkwrap\.json|go\.sum|Cargo\.lock|uv\.lock|poetry\.lock|composer\.lock|Gemfile\.lock)$'
+      model-high:
+        description: >
+          Model for security-sensitive or large diffs. Must be more capable
+          than model-mid or sensitive-paths buys nothing: until 2026-09-05
+          both defaulted to claude-sonnet-5, so the eight repositories that
+          carefully enumerate their auth/crypto/db paths were getting the
+          middle tier's model on them.
+        type: string
+        default: claude-opus-5
       model-mid:
         description: Model for ordinary source changes.
         type: string
@@ -425,6 +445,7 @@ jobs:
           SKIP_PATHS: ${{ inputs.skip-paths }}
           CODE_PATHS: ${{ inputs.code-paths }}
           TEST_PATHS: ${{ inputs.test-paths }}
+          SIZE_EXEMPT_PATHS: ${{ inputs.size-exempt-paths }}
           MODEL_HIGH: ${{ inputs.model-high }}
           MODEL_MID: ${{ inputs.model-mid }}
           MODEL_LOW: ${{ inputs.model-low }}
@@ -432,8 +453,15 @@ jobs:
           # Read only the immutable commit pair captured by gate. Never query
           # the live PR here: its head may move while this run is active.
           files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
+          # Binary files report "-" for both counts, hence the numeric guards.
+          # $3 is the path; awk's ~ is ERE, the same dialect as grep -E, so a
+          # caller's size-exempt-paths behaves the same here as elsewhere.
           lines=$(git diff --numstat "$BASE_SHA...$HEAD_SHA" |
-            awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) removed += $2 } END { print added + removed + 0 }')
+            awk -v exempt="$SIZE_EXEMPT_PATHS" '
+              { if (exempt != "" && $3 ~ exempt) next
+                if ($1 ~ /^[0-9]+$/) added += $1
+                if ($2 ~ /^[0-9]+$/) removed += $2 }
+              END { print added + removed + 0 }')
 
           # A diff entirely inside skip-paths never reaches the model at all —
           # not even at the low tier. A single file outside the pattern is
