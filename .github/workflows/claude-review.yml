@@ -689,6 +689,13 @@ jobs:
               echo "blocked=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+          elif [ "$base_blob" = "null" ]; then
+            # Same "null" hazard as the two reads above, and the loudest of
+            # the three: a literal "null" here compares unequal to a real
+            # head blob and would report a self-edit on a PR that has none.
+            echo "::warning::unusable response for $path at $default_branch — skipping the self-edit check"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
           # Absent and differing both make the action refuse, but they are not
@@ -740,8 +747,8 @@ jobs:
               "" \
               "There is no way to get a verdict on this pull request — \`@claude review\`" \
               "will not help either, because the trigger it needs is in the file being" \
-              "added. Reviews begin with the next pull request, once this one has landed" \
-              "on the default branch.")
+              "added. This check will stay red on every commit here; merge past it, and" \
+              "reviews begin with the next pull request.")
           else
             body=$(printf '%s\n' \
               "$marker" \
@@ -756,6 +763,18 @@ jobs:
               "the action accepts it and reviews normally.")
           fi
 
+          # Annotate BEFORE reaching for the API. Under `set -e` a failing
+          # `gh pr comment` aborts the step, and if the annotation came after
+          # it, that one failure would cost both — leaving the red check with
+          # nothing on it, which is the state this whole step exists to
+          # prevent. The annotation is the half that cannot fail.
+          if [ "$REASON" = "absent" ]; then
+            why="is not on the default branch yet"
+          else
+            why="differs from the copy on the default branch"
+          fi
+          echo "::error::No review ran — $WF_PATH $why, so the reviewer refused to start."
+
           # Matched with a case glob rather than `grep -qF`: under pipefail a
           # `grep -q` that exits on its first match can SIGPIPE the producer
           # and turn a HIT into a non-zero pipeline, which would read here as
@@ -768,12 +787,6 @@ jobs:
 
           # Fail closed. Green here would read as "reviewed, found nothing",
           # which is the one thing that did not happen.
-          if [ "$REASON" = "absent" ]; then
-            why="is not on the default branch yet"
-          else
-            why="differs from the copy on the default branch"
-          fi
-          echo "::error::No review ran — $WF_PATH $why, so the reviewer refused to start."
           exit 1
 
       - name: Claude review
