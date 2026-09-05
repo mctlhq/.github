@@ -712,6 +712,25 @@ jobs:
             else
               echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
               echo "reason=differs" >> "$GITHUB_OUTPUT"
+              # `@claude review` is only an escape if the DEFAULT-BRANCH copy
+              # of this caller listens for it — callers own their triggers,
+              # and a PR that adds `issue_comment` to one that had only
+              # `pull_request` would otherwise be handed an instruction that
+              # fires nothing. Read the copy that would actually run, rather
+              # than assume the trigger is there.
+              # Raw media type, so there is no base64 hop; written to a file
+              # so the `grep -q` has nothing to SIGPIPE. Unreadable counts as
+              # "cannot promise a retrigger", the safe direction here.
+              base_wf="$RUNNER_TEMP/base-workflow.yml"
+              : > "$base_wf"
+              gh api -H "Accept: application/vnd.github.raw" \
+                "repos/$REPO/contents/$path?ref=$default_branch" \
+                > "$base_wf" 2>/dev/null || true
+              if grep -q "issue_comment" "$base_wf"; then
+                echo "retriggerable=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "retriggerable=false" >> "$GITHUB_OUTPUT"
+              fi
             fi
           fi
 
@@ -725,6 +744,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           WF_PATH: ${{ steps.selfedit.outputs.path }}
           REASON: ${{ steps.selfedit.outputs.reason }}
+          RETRIGGERABLE: ${{ steps.selfedit.outputs.retriggerable }}
         run: |
           set -euo pipefail
 
@@ -756,6 +776,17 @@ jobs:
               "verdict to be had here. This check stays red on every commit either way;" \
               "merge past it.")
           else
+            if [ "$RETRIGGERABLE" = "true" ]; then
+              way_out=$(printf '%s\n' \
+                "To get a verdict on this commit, comment \`@claude review\` here. That" \
+                "run loads the workflow from the default branch instead of from this" \
+                "branch, so the action accepts it and reviews normally.")
+            else
+              way_out=$(printf '%s\n' \
+                "\`@claude review\` will not help: the copy of this workflow on the" \
+                "default branch has no \`issue_comment\` trigger, so the comment fires" \
+                "nothing. This check stays red on every commit here; merge past it.")
+            fi
             body=$(printf '%s\n' \
               "$marker" \
               "This pull request edits \`$WF_PATH\`, the workflow file that invokes the" \
@@ -764,9 +795,7 @@ jobs:
               "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
               "the change itself." \
               "" \
-              "To get a verdict on this commit, comment \`@claude review\` here. That run" \
-              "loads the workflow from the default branch instead of from this branch, so" \
-              "the action accepts it and reviews normally.")
+              "$way_out")
           fi
 
           # Annotate BEFORE reaching for the API. Under `set -e` a failing
