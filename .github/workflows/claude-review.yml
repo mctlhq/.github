@@ -639,8 +639,11 @@ jobs:
           # would refuse a run the action is perfectly happy to perform. That
           # is also why the comment below offers `@claude review`: it is the
           # one trigger whose entry file passes validation. Whether it also
-          # produces a verdict depends on the default-branch copy, which is
-          # what the `retriggerable` probe below reads.
+          # produces a verdict depends on the default-branch copy — on an
+          # edit, the one at this same path, which the `retriggerable` probe
+          # below reads; on an absence, whatever copy sits at some other
+          # path, which nothing here can find. Hence the probe on one arm
+          # and a stated condition on the other.
           #
           # Every read below fails OPEN, and says so at warning level. An
           # unreachable API means "cannot predict", not "refuse" — a red
