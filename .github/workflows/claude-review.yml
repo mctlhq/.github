@@ -712,6 +712,47 @@ jobs:
             else
               echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
               echo "reason=differs" >> "$GITHUB_OUTPUT"
+              # `@claude review` is only an escape if the DEFAULT-BRANCH copy
+              # of this caller listens for it — callers own their triggers,
+              # and a PR that adds `issue_comment` to one that had only
+              # `pull_request` would otherwise be handed an instruction that
+              # fires nothing. Read the copy that would actually run, rather
+              # than assume the trigger is there.
+              # Raw media type, so there is no base64 hop; written to a
+              # file so the `awk` has nothing to SIGPIPE.
+              base_wf="$RUNNER_TEMP/base-workflow.yml"
+              : > "$base_wf"
+              if ! gh api -H "Accept: application/vnd.github.raw" \
+                   "repos/$REPO/contents/$path?ref=$default_branch" \
+                   > "$base_wf" 2>"$err"; then
+                echo "::warning::could not read $path at $default_branch to check its triggers"
+                cat "$err" || true
+              fi
+
+              # Positive detection only, and deliberately so. This is a shape
+              # match in awk, not a YAML parser, and `on:` has more legal
+              # spellings than it can cover — a flow sequence, an inline
+              # mapping, a trailing comment after the key, `jobs:` declared
+              # before `on:`. Reporting a definite "no trigger" from a failed
+              # match would tell the author the escape does not exist for
+              # callers where it plainly does, which is worse than the
+              # uncertainty it replaces. So: `true` when the trigger is
+              # actually seen, `unknown` otherwise, including on a failed
+              # read — and the notice says which of the two it knows.
+              #
+              # The key must OPEN a line to be counted — that alone is what
+              # keeps a leftover `if: github.event_name == 'issue_comment'`
+              # guard and this file's own commented-out usage example from
+              # passing. No interval expressions: `awk` is mawk on the
+              # runners, and `{0,4}` is not portable there.
+              if awk '/^[[:space:]]*#/ { next }
+                      /^[[:space:]]*issue_comment:/ { found = 1 }
+                      /^on:[[:space:]]*\[.*issue_comment.*\]/ { found = 1 }
+                      END { exit !found }' "$base_wf"; then
+                echo "retriggerable=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "retriggerable=unknown" >> "$GITHUB_OUTPUT"
+              fi
             fi
           fi
 
@@ -725,31 +766,66 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           WF_PATH: ${{ steps.selfedit.outputs.path }}
           REASON: ${{ steps.selfedit.outputs.reason }}
+          RETRIGGERABLE: ${{ steps.selfedit.outputs.retriggerable }}
         run: |
           set -euo pipefail
 
           marker="<!-- claude-review:self-edit:$HEAD_SHA -->"
 
-          # `@claude review` is the way out of an EDIT, because
-          # `issue_comment` runs the default-branch copy of the workflow. That
-          # is exactly why it is not the way out of an ABSENCE: on the PR that
-          # ADDS the workflow, the trigger lives in the file being added and
-          # so is not on the default branch, and nothing would fire at all. An
+          # Silence after the comment has more than one cause, and only one
+          # of them is about this pull request. The gate also drops the run
+          # when the body does not contain the phrase, or when the commenter
+          # lacks write access — so "nothing happened" is not by itself
+          # evidence that no verdict is available.
+          silence=$(printf '%s\n' \
+            "If nothing happens after the comment, that copy does not listen for it," \
+            "the phrase was not \`@claude review\`, or the commenter has no write" \
+            "access. Where none of those can be fixed, there is no verdict to be had" \
+            "on this pull request: the check stays red on every commit, and the thing" \
+            "to do is merge past it.")
+
+          # `@claude review` works because `issue_comment` runs the
+          # DEFAULT-BRANCH copy of the workflow, so what matters is only
+          # whether a reviewer is already there — never what this branch
+          # does. On an edit that is always true, which is why the `differs`
+          # body offers it flatly. On an absence it depends: a rename leaves
+          # the old path in place and the trigger still fires, while the PR
+          # that first ADDS the reviewer leaves the default branch with
+          # nothing to run. Hence the condition rather than a verdict — an
           # instruction that silently does nothing is worse than saying
-          # plainly that there is no verdict to be had here.
+          # plainly that there is none to be had.
           if [ "$REASON" = "absent" ]; then
             body=$(printf '%s\n' \
               "$marker" \
-              "This pull request adds \`$WF_PATH\`, the workflow file that invokes the" \
-              "reviewer. \`claude-code-action\` runs only when that file already exists on" \
-              "the default branch and matches it, so it cannot review the commit that" \
-              "introduces it. Nothing is wrong with the change itself." \
+              "\`$WF_PATH\` is the workflow file that invoked the reviewer on this pull" \
+              "request, and it does not exist on the default branch." \
+              "\`claude-code-action\` runs only when that file is already there and" \
+              "matches, so it will not review this commit. Nothing is wrong with the" \
+              "change itself." \
               "" \
-              "There is no way to get a verdict on this pull request — \`@claude review\`" \
-              "will not help either, because the trigger it needs is in the file being" \
-              "added. This check will stay red on every commit here; merge past it, and" \
-              "reviews begin with the next pull request.")
+              "Try commenting \`@claude review\` here — it is worth it if this pull" \
+              "request renames an existing reviewer, because that run loads the" \
+              "default-branch copy, which still carries the old path. If this adds the" \
+              "reviewer for the first time, the default branch has nothing to run." \
+              "" \
+              "$silence")
           else
+            if [ "$RETRIGGERABLE" = "true" ]; then
+              way_out=$(printf '%s\n' \
+                "To get a verdict on this commit, comment \`@claude review\` here. That" \
+                "run loads the workflow from the default branch instead of from this" \
+                "branch, so the action accepts it and reviews normally.")
+            else
+              # Not "there is no trigger" — the probe did not establish
+              # that. What it can offer is the attempt plus what silence
+              # would mean, which is the same action either way.
+              way_out=$(printf '%s\n' \
+                "Try commenting \`@claude review\` here: that run loads the workflow" \
+                "from the default branch rather than from this branch, so the action" \
+                "accepts it whenever that copy listens for the comment." \
+                "" \
+                "$silence")
+            fi
             body=$(printf '%s\n' \
               "$marker" \
               "This pull request edits \`$WF_PATH\`, the workflow file that invokes the" \
@@ -758,9 +834,7 @@ jobs:
               "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
               "the change itself." \
               "" \
-              "To get a verdict on this commit, comment \`@claude review\` here. That run" \
-              "loads the workflow from the default branch instead of from this branch, so" \
-              "the action accepts it and reviews normally.")
+              "$way_out")
           fi
 
           # Annotate BEFORE reaching for the API. Under `set -e` a failing
@@ -775,11 +849,20 @@ jobs:
           fi
           echo "::error::No review ran — $WF_PATH $why, so the reviewer refused to start."
 
+          # `--paginate` writes each page as it arrives, so a mid-listing
+          # failure leaves a PREFIX on stdout with a non-zero exit. Treating
+          # that as the full list would read a marker in a dropped page as
+          # absent. Fall back to the empty string instead: a duplicate notice
+          # is a nuisance, a missing one is the silence this step removes.
+          if ! existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body'); then
+            echo "::warning::could not read the comment list in full — posting, at the risk of a duplicate"
+            existing=""
+          fi
+
           # Matched with a case glob rather than `grep -qF`: under pipefail a
           # `grep -q` that exits on its first match can SIGPIPE the producer
           # and turn a HIT into a non-zero pipeline, which would read here as
           # "not announced yet" and comment again on every re-run.
-          existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body' || true)
           case "$existing" in
             *"$marker"*) echo "already announced for $HEAD_SHA" ;;
             *) gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
