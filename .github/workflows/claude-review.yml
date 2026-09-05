@@ -586,9 +586,119 @@ jobs:
             echo "has_fallback=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # claude-code-action refuses to run when the workflow file that invoked
+      # it differs from the copy on the default branch: "Workflow validation
+      # failed. The workflow file must exist and have identical content to the
+      # version on the repository's default branch." That is a deliberate
+      # security property — otherwise a pull request could rewrite its own
+      # reviewer — and it fires on any edit to the CALLER, including a
+      # one-line bump of the `uses:` pin below.
+      #
+      # Left alone, the refusal is invisible in exactly the way that matters.
+      # The action emits a ::warning:: and exits with outcome=success, the
+      # steps downstream see no error to read, and the job goes green having
+      # reviewed nothing and approved nothing. On a repository whose merge gate
+      # is an approving review rather than a status check, that leaves an
+      # unmergeable pull request with a fully green board and no stated reason
+      # (mctlhq/mctl-gitops#1060).
+      #
+      # So predict the refusal instead of discovering it: compare the blob the
+      # action will compare. This is deterministic, costs two API reads, and
+      # needs no log scraping.
+      - name: Detect entry-workflow self-edit
+        id: selfedit
+        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Inside a reusable workflow this names the ENTRY workflow — the
+          # caller's file, which is the one the action validates — not this
+          # file. Shape: owner/repo/.github/workflows/name.yml@refs/heads/main
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+
+          path=${WORKFLOW_REF%@*}
+          path=${path#"$REPO/"}
+
+          # Compare the file at the ref the run actually loaded it from, not
+          # at the PR head. On `issue_comment` GitHub runs the DEFAULT-branch
+          # copy of the workflow, so a self-edit PR re-triggered with
+          # `@claude review` is reviewed normally — comparing the head there
+          # would refuse a run that the action is perfectly happy to perform.
+          wf_ref=${WORKFLOW_REF##*@}
+          case "$path" in
+            .github/workflows/*) ;;
+            *)
+              echo "::notice::unrecognised workflow_ref '$WORKFLOW_REF' — skipping the self-edit check"
+              echo "blocked=false" >> "$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
+
+          default_branch=$(gh api "repos/$REPO" -q .default_branch)
+
+          # A blob SHA is content-addressed, so comparing the two is exactly
+          # the "identical content" test the action performs, without pulling
+          # either file down.
+          head_blob=$(gh api "repos/$REPO/contents/$path?ref=$wf_ref" -q .sha 2>/dev/null || echo "")
+          base_blob=$(gh api "repos/$REPO/contents/$path?ref=$default_branch" -q .sha 2>/dev/null || echo "")
+
+          if [ -z "$head_blob" ]; then
+            # Nothing to compare against; let the action speak for itself.
+            echo "::notice::could not read $path at $wf_ref — skipping the self-edit check"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          elif [ "$head_blob" = "$base_blob" ]; then
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          else
+            # Covers both an edit and a brand-new workflow file absent from the
+            # default branch, which the action refuses for the same reason.
+            echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+            echo "path=$path" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Say it once per commit, on the pull request, where the person waiting
+      # for a verdict is looking. The marker carries the head SHA so a later
+      # push gets a fresh notice instead of being silently covered by an old
+      # one, and so tooling can recognise this state without parsing prose.
+      - name: Explain the self-edit refusal
+        if: steps.selfedit.outputs.blocked == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WF_PATH: ${{ steps.selfedit.outputs.path }}
+        run: |
+          set -euo pipefail
+
+          marker="<!-- claude-review:self-edit:$HEAD_SHA -->"
+
+          # Matched with a case glob rather than `grep -qF`: under pipefail a
+          # `grep -q` that exits on its first match can SIGPIPE the producer
+          # and turn a HIT into a non-zero pipeline, which would read here as
+          # "not announced yet" and comment again on every re-run.
+          existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body' || true)
+          case "$existing" in
+            *"$marker"*)
+              echo "already announced for $HEAD_SHA" ;;
+            *)
+              body=$(printf '%s\n' \
+                "$marker" \
+                "This pull request edits \`$WF_PATH\`, the workflow file that invokes the" \
+                "reviewer. \`claude-code-action\` runs only when that file is identical to" \
+                "the copy on the default branch, so it will not review this commit and" \
+                "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
+                "the change itself." \
+                "" \
+                "Review resumes by itself on the next pull request, once this one is merged.")
+              gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
+          esac
+
+          # Fail closed. Green here would read as "reviewed, found nothing",
+          # which is the one thing that did not happen.
+          echo "::error::No review ran — this PR edits the workflow that invokes the reviewer."
+          exit 1
+
       - name: Claude review
         id: review
-        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true'
+        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true' && steps.selfedit.outputs.blocked != 'true'
         continue-on-error: true
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1.0.189 (CLI 2.1.226)
         with:
