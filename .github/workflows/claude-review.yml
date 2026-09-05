@@ -831,7 +831,8 @@ jobs:
                 "from the default branch rather than from this branch, so the action" \
                 "accepts it whenever that copy listens for the comment." \
                 "" \
-                "If nothing happens after the comment, that copy does not listen for it." \
+                "If nothing happens after the comment, one cause is that the copy there" \
+                "does not listen for it." \
                 "$silence")
             fi
             body=$(printf '%s\n' \
