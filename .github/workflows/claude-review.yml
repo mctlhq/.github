@@ -718,35 +718,40 @@ jobs:
               # `pull_request` would otherwise be handed an instruction that
               # fires nothing. Read the copy that would actually run, rather
               # than assume the trigger is there.
-              # Raw media type, so there is no base64 hop; written to a file
-              # so the `grep`/`awk` has nothing to SIGPIPE.
-              #
-              # Unlike the reads above, an unreadable response here does not
-              # skip the check — it only costs the promise of a retrigger,
-              # which is the safe direction: the notice still goes out, minus
-              # the sentence it can no longer stand behind.
+              # Raw media type, so there is no base64 hop; written to a
+              # file so the `awk` has nothing to SIGPIPE.
               base_wf="$RUNNER_TEMP/base-workflow.yml"
               : > "$base_wf"
               if ! gh api -H "Accept: application/vnd.github.raw" \
                    "repos/$REPO/contents/$path?ref=$default_branch" \
                    > "$base_wf" 2>"$err"; then
-                echo "::warning::could not read $path at $default_branch to check its triggers — not offering a retrigger"
+                echo "::warning::could not read $path at $default_branch to check its triggers"
                 cat "$err" || true
               fi
 
-              # Match the trigger where it is DECLARED, not wherever the
-              # string appears. A plain substring test would accept a
-              # commented-out block, a leftover
-              # `if: github.event_name == 'issue_comment'` guard, or the
-              # usage example in this file's own header — each of which
-              # would put back the false promise this probe removes.
-              if awk '/^jobs:[[:space:]]*$/ { exit }
-                      /^[[:space:]]*#/      { next }
-                      /^[[:space:]]*issue_comment:[[:space:]]*$/ { found = 1 }
+              # Positive detection only, and deliberately so. This is a shape
+              # match in awk, not a YAML parser, and `on:` has more legal
+              # spellings than it can cover — a flow sequence, an inline
+              # mapping, a trailing comment after the key, `jobs:` declared
+              # before `on:`. Reporting a definite "no trigger" from a failed
+              # match would tell the author the escape does not exist for
+              # callers where it plainly does, which is worse than the
+              # uncertainty it replaces. So: `true` when the trigger is
+              # actually seen, `unknown` otherwise, including on a failed
+              # read — and the notice says which of the two it knows.
+              #
+              # The key must OPEN a line to be counted — that alone is what
+              # keeps a leftover `if: github.event_name == 'issue_comment'`
+              # guard and this file's own commented-out usage example from
+              # passing. No interval expressions: `awk` is mawk on the
+              # runners, and `{0,4}` is not portable there.
+              if awk '/^[[:space:]]*#/ { next }
+                      /^[[:space:]]*issue_comment:/ { found = 1 }
+                      /^on:[[:space:]]*\[.*issue_comment.*\]/ { found = 1 }
                       END { exit !found }' "$base_wf"; then
                 echo "retriggerable=true" >> "$GITHUB_OUTPUT"
               else
-                echo "retriggerable=false" >> "$GITHUB_OUTPUT"
+                echo "retriggerable=unknown" >> "$GITHUB_OUTPUT"
               fi
             fi
           fi
@@ -799,17 +804,16 @@ jobs:
                 "run loads the workflow from the default branch instead of from this" \
                 "branch, so the action accepts it and reviews normally.")
             else
-              # Scoped to this file on purpose: the probe reads the caller
-              # that invoked this run, and a repository is free to keep its
-              # `issue_comment` trigger in a sibling caller. Saying that the
-              # comment will not re-run THIS workflow is true either way;
-              # saying it fires nothing would not be.
+              # Not "there is no trigger" — the probe did not establish
+              # that. What it can offer is the attempt plus what silence
+              # would mean, which is the same action either way.
               way_out=$(printf '%s\n' \
-                "The copy of \`$WF_PATH\` on the default branch has no" \
-                "\`issue_comment\` trigger, so \`@claude review\` will not re-run it." \
-                "Unless another workflow here listens for that comment, there is no" \
-                "verdict to be had on this pull request; the check stays red on every" \
-                "commit. Merge past it.")
+                "Try commenting \`@claude review\` here: that run loads the workflow" \
+                "from the default branch rather than from this branch, so the action" \
+                "accepts it whenever that copy listens for the comment. If nothing" \
+                "happens, it does not — then there is no verdict to be had on this" \
+                "pull request, the check stays red on every commit, and the thing to" \
+                "do is merge past it.")
             fi
             body=$(printf '%s\n' \
               "$marker" \
