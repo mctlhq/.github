@@ -204,9 +204,11 @@ jobs:
           if [ -n "${AGY_SECRET:-}" ]; then
             export GEMINI_API_KEY="$AGY_SECRET"
             echo "Using secret-backed agy authentication."
-          else
+          elif [ -z "${GEMINI_API_KEY:-}" ]; then
             unset GEMINI_API_KEY
             echo "No agy API secret supplied; using runner-local/default authentication."
+          else
+            echo "Using runner-supplied GEMINI_API_KEY."
           fi
 
           agy \
