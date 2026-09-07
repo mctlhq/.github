@@ -197,10 +197,18 @@ jobs:
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AGY_API_KEY }}
+          AGY_SECRET: ${{ secrets.GEMINI_API_KEY || secrets.AGY_API_KEY }}
         run: |
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
+          if [ -n "${AGY_SECRET:-}" ]; then
+            export GEMINI_API_KEY="$AGY_SECRET"
+            echo "Using secret-backed agy authentication."
+          else
+            unset GEMINI_API_KEY
+            echo "No agy API secret supplied; using runner-local/default authentication."
+          fi
+
           agy \
             -p "$(cat prompt.md)" \
             --model "${{ inputs.model }}" \
