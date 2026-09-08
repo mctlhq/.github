@@ -254,19 +254,34 @@ jobs:
           AGY_MODEL: ${{ inputs.model }}
           AGY_EFFORT: ${{ inputs.effort }}
         run: |
-          set -uo pipefail
+          set -u
+
+          # `-e` is always on here regardless of this line: GitHub's
+          # `shell: bash` invokes `bash --noprofile --norc -e -o pipefail
+          # {0}` at the process level, independent of anything the script
+          # itself does. This `set` command only adds `-u` — `pipefail` is
+          # already active from that invocation, and there is no `set`
+          # spelling that turns `-e` back off once bash started with it.
+          # The previous version of this fix (mctlhq/.github#45) wrote
+          # `set -uo pipefail` believing it had dropped `-e`, and was
+          # wrong: verified live on 2026-09-08 (mctl-telegram#576) that agy
+          # failing inside run_agy still aborted the script before a
+          # single diagnostic line was printed — the exact "Process
+          # completed with exit code 1" signature that commit was supposed
+          # to fix, confirmed by running the real invocation
+          # (`bash --noprofile --norc -e -o pipefail`) against this logic
+          # directly, not just `bash -n` syntax-checking it. Every command
+          # below that is allowed to fail is therefore exempted at its own
+          # call site with `|| true`/`|| status=""` — a failing command as
+          # the condition of `||`/`&&`/`if` is the only thing bash does not
+          # apply errexit to, regardless of which flags are already active.
+          # When a function is called this way, bash suspends errexit for
+          # every command inside that call, not just the function's own
+          # return value — harmless here because in `run_agy` the `agy`
+          # invocation is the last command in the body, but worth knowing
+          # before adding a second failure-checking command after it.
           export PATH="$HOME/.local/bin:$PATH"
 
-          # No `-e` here on purpose: agy exiting non-zero (quota exhaustion,
-          # a transient API error, ...) must not abort this script before it
-          # gets to read *why* from result.json. That bug shipped for two
-          # days — every failed run since 2026-09-07 printed only "Process
-          # completed with exit code 1" to the Actions log, because `set -e`
-          # killed the script on the `agy ...` line itself, before the
-          # status/error check below ever ran. The real reason sat in
-          # result.json on the runner the whole time, readable only by SSHing
-          # into the Mac mini. Every step from here on checks its own exit
-          # status explicitly instead of relying on set -e.
           run_agy() {
             # This file is consumed by every mctlhq repository the moment it
             # merges to main, with no per-repo rollout or version pin. A
@@ -289,9 +304,48 @@ jobs:
               > result.json
           }
 
-          run_agy "$AGY_HOME_PRIMARY"
-          status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
-          error=$(jq -r '.error // ""' result.json 2>/dev/null)
+          # Reads result.json into $status/$error, tolerating every shape
+          # agy can leave behind. Both call sites need this, and it was
+          # got wrong twice already (mctlhq/.github#45, then #46's first
+          # commit) as duplicated inline code, so it is a function now —
+          # one place to fix instead of two to keep in sync.
+          read_result() {
+            # `jq`'s own exit status is what `-e` sees here, independent of
+            # `run_agy`'s: a truncated result.json (agy killed mid-write by
+            # --print-timeout, job cancellation, OOM) or one holding a plain
+            # message instead of JSON both make jq exit non-zero, which
+            # would abort the script here before a single diagnostic line
+            # printed — the same failure class `run_agy`'s own `|| true`
+            # exists to prevent, one step later. Every fallible read below
+            # is therefore the condition of its own `if`, not the trailing
+            # command of a `||` list — that trailing position is NOT exempt
+            # from errexit (only the earlier operands of `&&`/`||` are), so
+            # `cmd1 || fallback` still aborts if `fallback` itself fails.
+            if ! status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); then
+              status="UNKNOWN"
+            fi
+            status="${status:-UNKNOWN}"
+
+            # The raw-bytes fallback below must trigger only when jq itself
+            # failed to parse the file — not whenever `.error` merely comes
+            # back empty, which is the normal shape of a well-formed
+            # result.json for a non-quota failure (`.error` genuinely
+            # absent). Gating on emptiness instead of on jq's exit status
+            # fed the FIRST 500 bytes of agy's raw response — a field this
+            # file elsewhere goes out of its way to treat as attacker-
+            # influenced (see the case match below) — into that same
+            # quota-retry decision, so a non-quota failure whose review
+            # text happened to mention "quota" would still burn a call on
+            # the personal fallback account.
+            if ! error=$(jq -r '.error // ""' result.json 2>/dev/null); then
+              if ! error=$(head -c 500 result.json 2>/dev/null); then
+                error=""
+              fi
+            fi
+          }
+
+          run_agy "$AGY_HOME_PRIMARY" || true
+          read_result
 
           # The one shape observed in production (2026-09-07/08) is agy's
           # own human-readable message, "Individual quota reached. Please
@@ -326,9 +380,8 @@ jobs:
               # summary line still claimed a real account switch happened.
               echo "::warning::retrying on the fallback account"
               echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
-              run_agy "$AGY_HOME_FALLBACK"
-              status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
-              error=$(jq -r '.error // ""' result.json 2>/dev/null)
+              run_agy "$AGY_HOME_FALLBACK" || true
+              read_result
             else
               echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
             fi
