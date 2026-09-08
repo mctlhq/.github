@@ -27,6 +27,10 @@ name: Agy PR review (reusable)
 #       permissions:
 #         contents: read
 #         pull-requests: write
+#
+# Dependabot bumps and release-please release branches are skipped by default,
+# because agy runs on one shared subscription whose quota they exhaust without
+# producing a useful review. Pass `skip_bot_prs: false` to review them anyway.
 
 on:
   workflow_call:
@@ -51,6 +55,17 @@ on:
           posts the review as an informational comment only.
         type: boolean
         default: false
+      skip_bot_prs:
+        description: >
+          When true (default), skip pull requests that carry no reviewable
+          intent: dependabot dependency bumps, matched by author, and
+          release-please release branches, matched by branch prefix because
+          they are opened under several different app tokens
+          (github-actions[bot] on some repos, mctl-agents[bot] on others).
+          Implementer pull requests from mctl-agents[bot] contain real code and
+          match neither rule, so they keep being reviewed.
+        type: boolean
+        default: true
     secrets:
       GEMINI_API_KEY:
         required: false
@@ -61,7 +76,10 @@ jobs:
   review:
     if: >
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (inputs.skip_bot_prs == false ||
+      (github.event.pull_request.user.login != 'dependabot[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'release-please--') == false))
     runs-on: [self-hosted, agy-reviewer]
     timeout-minutes: 20
     concurrency:
