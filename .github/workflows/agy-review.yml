@@ -215,23 +215,65 @@ jobs:
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
+          # Currently inert: the installed agy CLI (1.1.27) does not honour
+          # GEMINI_API_KEY yet — `modelProvider: "gemini"` in settings.json
+          # plus this key still fails with "You are not logged into
+          # Antigravity" (verified 2026-09-08). Left wired up for when a
+          # future agy version picks it up; auth today is entirely the
+          # file-based profile under the HOME passed to agy below.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AGY_API_KEY }}
+          # Two Antigravity accounts logged in as separate file-based
+          # profiles on the self-hosted Mac mini (agy has no `login`
+          # subcommand or API-key auth that actually works yet — see the
+          # comment on GEMINI_API_KEY above — so switching accounts means
+          # switching HOME). PRIMARY is the account dedicated to CI load;
+          # FALLBACK is a second, personal subscription used only when
+          # PRIMARY is out of quota, so a CI storm never silently eats a
+          # human's own daily budget. Both are provisioned on the runner
+          # itself, not in repo config, because they are a fact about this
+          # one physical machine, not about any calling repository.
+          AGY_HOME_PRIMARY: /Users/ghrunner/agy/primary
+          AGY_HOME_FALLBACK: /Users/ghrunner/agy/fallback
         run: |
-          set -euo pipefail
+          set -uo pipefail
           export PATH="$HOME/.local/bin:$PATH"
-          agy \
-            -p "$(cat prompt.md)" \
-            --model "${{ inputs.model }}" \
-            --effort "${{ inputs.effort }}" \
-            --output-format json \
-            --print-timeout 15m \
-            --sandbox \
-            > result.json
 
-          status=$(jq -r '.status' result.json)
+          # No `-e` here on purpose: agy exiting non-zero (quota exhaustion,
+          # a transient API error, ...) must not abort this script before it
+          # gets to read *why* from result.json. That bug shipped for two
+          # days — every failed run since 2026-09-07 printed only "Process
+          # completed with exit code 1" to the Actions log, because `set -e`
+          # killed the script on the `agy ...` line itself, before the
+          # status/error check below ever ran. The real reason sat in
+          # result.json on the runner the whole time, readable only by SSHing
+          # into the Mac mini. Every step from here on checks its own exit
+          # status explicitly instead of relying on set -e.
+          run_agy() {
+            HOME="$1" agy \
+              -p "$(cat prompt.md)" \
+              --model "${{ inputs.model }}" \
+              --effort "${{ inputs.effort }}" \
+              --output-format json \
+              --print-timeout 15m \
+              --sandbox \
+              > result.json
+          }
+
+          run_agy "$AGY_HOME_PRIMARY"
+          status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
+          error=$(jq -r '.error // ""' result.json 2>/dev/null)
+
+          if [ "$status" != "SUCCESS" ] && printf '%s' "$error" | grep -qi 'quota'; then
+            echo "::warning::agy primary account is out of quota ($error) — retrying on the fallback account"
+            echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
+            run_agy "$AGY_HOME_FALLBACK"
+            status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
+            error=$(jq -r '.error // ""' result.json 2>/dev/null)
+          fi
+
           if [ "$status" != "SUCCESS" ]; then
             echo "::error::agy run did not succeed (status=$status)"
-            jq -r '.error // "unknown error"' result.json
+            echo "${error:-unknown error}"
             exit 1
           fi
           jq -r '.response' result.json > review.md
