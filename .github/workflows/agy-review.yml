@@ -304,23 +304,48 @@ jobs:
               > result.json
           }
 
+          # Reads result.json into $status/$error, tolerating every shape
+          # agy can leave behind. Both call sites need this, and it was
+          # got wrong twice already (mctlhq/.github#45, then #46's first
+          # commit) as duplicated inline code, so it is a function now —
+          # one place to fix instead of two to keep in sync.
+          read_result() {
+            # `jq`'s own exit status is what `-e` sees here, independent of
+            # `run_agy`'s: a truncated result.json (agy killed mid-write by
+            # --print-timeout, job cancellation, OOM) or one holding a plain
+            # message instead of JSON both make jq exit non-zero, which
+            # would abort the script here before a single diagnostic line
+            # printed — the same failure class `run_agy`'s own `|| true`
+            # exists to prevent, one step later. Every fallible read below
+            # is therefore the condition of its own `if`, not the trailing
+            # command of a `||` list — that trailing position is NOT exempt
+            # from errexit (only the earlier operands of `&&`/`||` are), so
+            # `cmd1 || fallback` still aborts if `fallback` itself fails.
+            if ! status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); then
+              status="UNKNOWN"
+            fi
+            status="${status:-UNKNOWN}"
+
+            # The raw-bytes fallback below must trigger only when jq itself
+            # failed to parse the file — not whenever `.error` merely comes
+            # back empty, which is the normal shape of a well-formed
+            # result.json for a non-quota failure (`.error` genuinely
+            # absent). Gating on emptiness instead of on jq's exit status
+            # fed the FIRST 500 bytes of agy's raw response — a field this
+            # file elsewhere goes out of its way to treat as attacker-
+            # influenced (see the case match below) — into that same
+            # quota-retry decision, so a non-quota failure whose review
+            # text happened to mention "quota" would still burn a call on
+            # the personal fallback account.
+            if ! error=$(jq -r '.error // ""' result.json 2>/dev/null); then
+              if ! error=$(head -c 500 result.json 2>/dev/null); then
+                error=""
+              fi
+            fi
+          }
+
           run_agy "$AGY_HOME_PRIMARY" || true
-          # `jq`'s own exit status is what `-e` sees here, independent of
-          # `run_agy`'s: a truncated result.json (agy killed mid-write by
-          # --print-timeout, job cancellation, OOM) or one holding a plain
-          # message instead of JSON both make jq exit non-zero, which would
-          # abort the script right here before a single diagnostic line
-          # printed — the same failure class the `|| true` above exists to
-          # prevent, one line later. An empty file is fine (jq exits 0 with
-          # no output, caught by the `:-UNKNOWN` default below); it's a
-          # non-empty, unparseable one that needs the exemption.
-          status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null) || status=""
-          status="${status:-UNKNOWN}"
-          error=$(jq -r '.error // ""' result.json 2>/dev/null) || error=""
-          # Falls back to the raw bytes so an operator sees the actual
-          # message agy wrote instead of a bare "status=UNKNOWN" when the
-          # file isn't valid JSON at all.
-          [ -n "$error" ] || error=$(head -c 500 result.json 2>/dev/null)
+          read_result
 
           # The one shape observed in production (2026-09-07/08) is agy's
           # own human-readable message, "Individual quota reached. Please
@@ -356,10 +381,7 @@ jobs:
               echo "::warning::retrying on the fallback account"
               echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
               run_agy "$AGY_HOME_FALLBACK" || true
-              status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null) || status=""
-              status="${status:-UNKNOWN}"
-              error=$(jq -r '.error // ""' result.json 2>/dev/null) || error=""
-              [ -n "$error" ] || error=$(head -c 500 result.json 2>/dev/null)
+              read_result
             else
               echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
             fi
