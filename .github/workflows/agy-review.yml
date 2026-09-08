@@ -257,16 +257,24 @@ jobs:
           set -uo pipefail
           export PATH="$HOME/.local/bin:$PATH"
 
-          # No `-e` here on purpose: agy exiting non-zero (quota exhaustion,
-          # a transient API error, ...) must not abort this script before it
-          # gets to read *why* from result.json. That bug shipped for two
-          # days — every failed run since 2026-09-07 printed only "Process
-          # completed with exit code 1" to the Actions log, because `set -e`
-          # killed the script on the `agy ...` line itself, before the
-          # status/error check below ever ran. The real reason sat in
-          # result.json on the runner the whole time, readable only by SSHing
-          # into the Mac mini. Every step from here on checks its own exit
-          # status explicitly instead of relying on set -e.
+          # `set -uo pipefail` does NOT turn off `-e`: GitHub's `shell: bash`
+          # invokes `bash --noprofile --norc -e -o pipefail {0}` at the
+          # process level regardless of what `set` command appears inside
+          # the script, and `set -uo pipefail` only ever touches `-u` and
+          # `pipefail` — it leaves whatever `-e` state was already active
+          # exactly as it was. The previous version of this fix (mctlhq/.github#45)
+          # believed dropping `set -e` from the script text was enough and
+          # was wrong: verified live on 2026-09-08 (mctl-telegram#576) that
+          # agy failing inside run_agy still aborted the script before a
+          # single diagnostic line was printed — the exact "Process
+          # completed with exit code 1" signature this was supposed to fix,
+          # confirmed by running the real invocation
+          # (`bash --noprofile --norc -e -o pipefail`) against this logic
+          # directly, not just `bash -n` syntax-checking it. Every `run_agy`
+          # call below is therefore explicitly exempted with `|| true` — a
+          # failing command as the condition of `||`/`&&`/`if` does not
+          # trigger `-e`, regardless of which flags are already active —
+          # rather than relying on the script having disabled it.
           run_agy() {
             # This file is consumed by every mctlhq repository the moment it
             # merges to main, with no per-repo rollout or version pin. A
@@ -289,7 +297,7 @@ jobs:
               > result.json
           }
 
-          run_agy "$AGY_HOME_PRIMARY"
+          run_agy "$AGY_HOME_PRIMARY" || true
           status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
           error=$(jq -r '.error // ""' result.json 2>/dev/null)
 
@@ -326,7 +334,7 @@ jobs:
               # summary line still claimed a real account switch happened.
               echo "::warning::retrying on the fallback account"
               echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
-              run_agy "$AGY_HOME_FALLBACK"
+              run_agy "$AGY_HOME_FALLBACK" || true
               status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
               error=$(jq -r '.error // ""' result.json 2>/dev/null)
             else
