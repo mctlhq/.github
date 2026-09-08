@@ -239,6 +239,20 @@ jobs:
           # calling repository.
           AGY_HOME_PRIMARY: /Users/ghrunner/agy/primary
           AGY_HOME_FALLBACK: /Users/ghrunner/agy/fallback
+          # Indirected through env, like GEMINI_API_KEY and the two
+          # AGY_HOME_* paths above, rather than interpolated by GitHub
+          # straight into the script text: this step now defines a shell
+          # function rather than a single inline command, so these two
+          # caller-supplied strings are added lines in the diff, not
+          # existing context. `${{ }}` substitution happens before bash
+          # ever sees the script, so an unescaped quote in a caller's
+          # `model:`/`effort:` input would otherwise run as shell syntax on
+          # this machine, which now also holds the credentials for two
+          # Antigravity accounts. Defense in depth, not a privilege
+          # boundary — a caller workflow that can set this input can
+          # already write its own arbitrary `run:` block on this runner.
+          AGY_MODEL: ${{ inputs.model }}
+          AGY_EFFORT: ${{ inputs.effort }}
         run: |
           set -uo pipefail
           export PATH="$HOME/.local/bin:$PATH"
@@ -267,8 +281,8 @@ jobs:
             fi
             HOME="$target_home" agy \
               -p "$(cat prompt.md)" \
-              --model "${{ inputs.model }}" \
-              --effort "${{ inputs.effort }}" \
+              --model "$AGY_MODEL" \
+              --effort "$AGY_EFFORT" \
               --output-format json \
               --print-timeout 15m \
               --sandbox \
@@ -279,16 +293,20 @@ jobs:
           status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
           error=$(jq -r '.error // ""' result.json 2>/dev/null)
 
-          # Matched broadly on purpose: the one shape observed in production
-          # (2026-09-07/08) is agy's own human-readable message, "Individual
-          # quota reached. Please upgrade your subscription..." — verified
-          # directly against a live quota-exhausted run, not assumed — but
-          # the gRPC code and status text it wraps (RESOURCE_EXHAUSTED, 429)
-          # are documented Google API surface for the same condition, so
-          # matching all of them is strictly safer than the one string
-          # that has actually been seen.
+          # The one shape observed in production (2026-09-07/08) is agy's
+          # own human-readable message, "Individual quota reached. Please
+          # upgrade your subscription..." — verified directly against a
+          # live quota-exhausted run, not assumed. RESOURCE_EXHAUSTED and
+          # "code 429" are the gRPC name and status text Google's API uses
+          # for the same condition, so matched too. Deliberately NOT
+          # matching bare "429" or "exhausted": .error is free text agy
+          # produces while processing a diff the PR author controls, and
+          # both are common enough to appear incidentally (a request id, a
+          # duration, "retries exhausted") in an error that switching
+          # accounts cannot fix — which would spend a call on the personal
+          # fallback subscription for nothing.
           case "$error" in
-            *[Qq]uota*|*RESOURCE_EXHAUSTED*|*429*|*[Ee]xhausted*) retry=1 ;;
+            *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*) retry=1 ;;
             *) retry=0 ;;
           esac
 
@@ -299,11 +317,21 @@ jobs:
             # forge a second ::error::/::notice:: line as if the runner had
             # emitted it itself.
             safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
-            echo "::warning::agy primary account is out of quota ($safe_error) — retrying on the fallback account"
-            echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
-            run_agy "$AGY_HOME_FALLBACK"
-            status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
-            error=$(jq -r '.error // ""' result.json 2>/dev/null)
+            echo "::warning::agy primary account is out of quota ($safe_error)"
+            if [ -d "$AGY_HOME_FALLBACK" ]; then
+              # Guarded, not just left to run_agy's own missing-directory
+              # fallback: without this check, a missing FALLBACK directory
+              # would silently re-run against the runner's default HOME —
+              # plausibly the same account that just failed — while this
+              # summary line still claimed a real account switch happened.
+              echo "::warning::retrying on the fallback account"
+              echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
+              run_agy "$AGY_HOME_FALLBACK"
+              status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
+              error=$(jq -r '.error // ""' result.json 2>/dev/null)
+            else
+              echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
+            fi
           fi
 
           if [ "$status" != "SUCCESS" ]; then
