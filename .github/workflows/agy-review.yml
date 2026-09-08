@@ -27,6 +27,10 @@ name: Agy PR review (reusable)
 #       permissions:
 #         contents: read
 #         pull-requests: write
+#
+# Dependabot bumps and release-please release branches are skipped by default,
+# because agy runs on one shared subscription whose quota they exhaust without
+# producing a useful review. Pass `skip_bot_prs: false` to review them anyway.
 
 on:
   workflow_call:
@@ -51,6 +55,17 @@ on:
           posts the review as an informational comment only.
         type: boolean
         default: false
+      skip_bot_prs:
+        description: >
+          When true (default), skip pull requests that carry no reviewable
+          intent: dependabot dependency bumps, matched by author, and
+          release-please release branches, matched by branch prefix because
+          they are opened under several different app tokens
+          (github-actions[bot] on some repos, mctl-agents[bot] on others).
+          Implementer pull requests from mctl-agents[bot] contain real code and
+          match neither rule, so they keep being reviewed.
+        type: boolean
+        default: true
     secrets:
       GEMINI_API_KEY:
         required: false
@@ -61,7 +76,11 @@ jobs:
   review:
     if: >
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (inputs.skip_bot_prs == false ||
+      (github.event.pull_request.user.login != 'dependabot[bot]' &&
+      (startsWith(github.event.pull_request.head.ref, 'release-please--') == false ||
+      endsWith(github.event.pull_request.user.login, '[bot]') == false)))
     runs-on: [self-hosted, agy-reviewer]
     timeout-minutes: 20
     concurrency:
@@ -197,23 +216,128 @@ jobs:
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
+          # Currently inert: the installed agy CLI (1.1.27) does not honour
+          # GEMINI_API_KEY yet — `modelProvider: "gemini"` in settings.json
+          # plus this key still fails with "You are not logged into
+          # Antigravity" (verified 2026-09-08). Left wired up for when a
+          # future agy version picks it up; auth today is entirely the
+          # file-based profile under the HOME passed to agy below.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AGY_API_KEY }}
+          # Two Antigravity accounts logged in as separate file-based
+          # profiles on the self-hosted Mac mini (agy has no `login`
+          # subcommand or API-key auth that actually works yet — see the
+          # comment on GEMINI_API_KEY above — so switching accounts means
+          # switching HOME). PRIMARY is the account meant to absorb CI load.
+          # FALLBACK is a second, personal subscription: once PRIMARY's
+          # multi-day quota is exhausted, every run in the org retries on it
+          # until PRIMARY resets, so it is a stopgap that buys time to
+          # notice and fix the root cause, not a hard cap on how much of the
+          # personal quota CI can spend — the `::warning::`/step-summary
+          # line below is what makes that spend visible. Both are
+          # provisioned on the runner itself, not in repo config, because
+          # they are a fact about this one physical machine, not about any
+          # calling repository.
+          AGY_HOME_PRIMARY: /Users/ghrunner/agy/primary
+          AGY_HOME_FALLBACK: /Users/ghrunner/agy/fallback
+          # Indirected through env, like GEMINI_API_KEY and the two
+          # AGY_HOME_* paths above, rather than interpolated by GitHub
+          # straight into the script text: this step now defines a shell
+          # function rather than a single inline command, so these two
+          # caller-supplied strings are added lines in the diff, not
+          # existing context. `${{ }}` substitution happens before bash
+          # ever sees the script, so an unescaped quote in a caller's
+          # `model:`/`effort:` input would otherwise run as shell syntax on
+          # this machine, which now also holds the credentials for two
+          # Antigravity accounts. Defense in depth, not a privilege
+          # boundary — a caller workflow that can set this input can
+          # already write its own arbitrary `run:` block on this runner.
+          AGY_MODEL: ${{ inputs.model }}
+          AGY_EFFORT: ${{ inputs.effort }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           export PATH="$HOME/.local/bin:$PATH"
-          agy \
-            -p "$(cat prompt.md)" \
-            --model "${{ inputs.model }}" \
-            --effort "${{ inputs.effort }}" \
-            --output-format json \
-            --print-timeout 15m \
-            --sandbox \
-            > result.json
 
-          status=$(jq -r '.status' result.json)
+          # No `-e` here on purpose: agy exiting non-zero (quota exhaustion,
+          # a transient API error, ...) must not abort this script before it
+          # gets to read *why* from result.json. That bug shipped for two
+          # days — every failed run since 2026-09-07 printed only "Process
+          # completed with exit code 1" to the Actions log, because `set -e`
+          # killed the script on the `agy ...` line itself, before the
+          # status/error check below ever ran. The real reason sat in
+          # result.json on the runner the whole time, readable only by SSHing
+          # into the Mac mini. Every step from here on checks its own exit
+          # status explicitly instead of relying on set -e.
+          run_agy() {
+            # This file is consumed by every mctlhq repository the moment it
+            # merges to main, with no per-repo rollout or version pin. A
+            # hard dependency on an account directory that is a fact about
+            # one physical machine — created, renamed, or wiped independently
+            # of this file — would turn a missing directory into an org-wide
+            # outage. Degrade to the runner's own logged-in HOME instead.
+            local target_home="$1"
+            if [ ! -d "$target_home" ]; then
+              echo "::warning::$target_home missing — using the runner's default HOME instead"
+              target_home="$HOME"
+            fi
+            HOME="$target_home" agy \
+              -p "$(cat prompt.md)" \
+              --model "$AGY_MODEL" \
+              --effort "$AGY_EFFORT" \
+              --output-format json \
+              --print-timeout 15m \
+              --sandbox \
+              > result.json
+          }
+
+          run_agy "$AGY_HOME_PRIMARY"
+          status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
+          error=$(jq -r '.error // ""' result.json 2>/dev/null)
+
+          # The one shape observed in production (2026-09-07/08) is agy's
+          # own human-readable message, "Individual quota reached. Please
+          # upgrade your subscription..." — verified directly against a
+          # live quota-exhausted run, not assumed. RESOURCE_EXHAUSTED and
+          # "code 429" are the gRPC name and status text Google's API uses
+          # for the same condition, so matched too. Deliberately NOT
+          # matching bare "429" or "exhausted": .error is free text agy
+          # produces while processing a diff the PR author controls, and
+          # both are common enough to appear incidentally (a request id, a
+          # duration, "retries exhausted") in an error that switching
+          # accounts cannot fix — which would spend a call on the personal
+          # fallback subscription for nothing.
+          case "$error" in
+            *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*) retry=1 ;;
+            *) retry=0 ;;
+          esac
+
+          if [ "$status" != "SUCCESS" ] && [ "$retry" = 1 ]; then
+            # $error came from agy while it was processing an
+            # attacker-controllable diff; sanitize before it goes into a
+            # workflow command or the log, so an embedded newline can't
+            # forge a second ::error::/::notice:: line as if the runner had
+            # emitted it itself.
+            safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
+            echo "::warning::agy primary account is out of quota ($safe_error)"
+            if [ -d "$AGY_HOME_FALLBACK" ]; then
+              # Guarded, not just left to run_agy's own missing-directory
+              # fallback: without this check, a missing FALLBACK directory
+              # would silently re-run against the runner's default HOME —
+              # plausibly the same account that just failed — while this
+              # summary line still claimed a real account switch happened.
+              echo "::warning::retrying on the fallback account"
+              echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
+              run_agy "$AGY_HOME_FALLBACK"
+              status=$(jq -r '.status // "UNKNOWN"' result.json 2>/dev/null); status="${status:-UNKNOWN}"
+              error=$(jq -r '.error // ""' result.json 2>/dev/null)
+            else
+              echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
+            fi
+          fi
+
           if [ "$status" != "SUCCESS" ]; then
+            safe_error=$(printf '%s' "${error:-unknown error}" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
             echo "::error::agy run did not succeed (status=$status)"
-            jq -r '.error // "unknown error"' result.json
+            echo "$safe_error"
             exit 1
           fi
           jq -r '.response' result.json > review.md
