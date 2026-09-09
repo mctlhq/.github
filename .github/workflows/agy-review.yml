@@ -83,9 +83,37 @@ jobs:
       endsWith(github.event.pull_request.user.login, '[bot]') == false)))
     runs-on: [self-hosted, agy-reviewer]
     timeout-minutes: 20
+    # Started reviews are allowed to finish. With cancel-in-progress: true a
+    # push landing mid-review killed the run, and on a busy pull request that
+    # repeated: measured on 2026-09-09, 10 of the last 30 agy runs in
+    # mctl-gitops ended `cancelled`, against 13 successes, while 7 more sat
+    # queued. A review that is killed at minute nine has cost a runner slot and
+    # produced nothing.
+    #
+    # This does not let runs pile up. GitHub keeps at most one *pending* run per
+    # concurrency group and cancels the older pending one, so a burst of pushes
+    # leaves exactly two: the one in flight and the newest queued behind it. The
+    # cost is that the in-flight review may describe a commit that is no longer
+    # head — acceptable, because the queued run then reviews the new head, where
+    # before neither of them finished at all. The comment names the commit it
+    # reviewed, so the two are told apart by reading rather than by timestamp.
+    #
+    # The second cost is latency, and it is the one that matters for making agy
+    # a blocking gate: the new head's review now queues behind the superseded
+    # run instead of replacing it, so time-to-verdict on a pull request pushed
+    # to mid-review roughly doubles — ~11 min median becomes ~22 — and those
+    # runner-minutes stay unavailable to other repositories. A slower verdict
+    # still beats no verdict, but that is the number #11 and mctl-gitops#820
+    # have to budget for.
+    #
+    # The queue itself is a separate constraint: two self-hosted runners for the
+    # whole organisation, ~11 min median per review. Adding runners was
+    # considered and rejected for now — the host is a 4-core/8 GB mac mini with
+    # no free memory and 1.1 GB already in swap, and more slots would not have
+    # changed the cancellation rate this fixes.
     concurrency:
       group: agy-review-${{ github.repository }}-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     permissions:
       contents: read
       pull-requests: write
@@ -421,6 +449,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Same rule as the run step above: a caller-supplied string reaches
+          # this script through env, never through `${{ }}`, because that
+          # substitution happens before bash parses the line.
+          AGY_MODEL: ${{ inputs.model }}
         run: |
           set -euo pipefail
           {
@@ -431,7 +464,12 @@ jobs:
               echo "## Antigravity (agy) review — informational"
             fi
             echo
-            echo "_Model: ${{ inputs.model }}._"
+            # The commit is named because cancel-in-progress is false: a review
+            # can now describe a commit that is no longer head. Two comments
+            # from the same pull request are otherwise indistinguishable, and
+            # the reader would have to diff timestamps against their own push
+            # history to tell which finding applies to what.
+            echo "_Model: ${AGY_MODEL} · commit \`${HEAD_SHA:0:7}\`._"
             echo
             cat review.md
           } > comment.md
