@@ -431,16 +431,32 @@ jobs:
             echo "<!-- agy-review -->"
             echo "## Antigravity (agy) review"
             echo ""
-            if [ "$BLOCKING" = "true" ]; then
-              echo "_agy run failed on this PR; see the workflow log. **Blocking merge until resolved.**_"
-            else
-              echo "_agy run failed on this PR; see the workflow log. Not blocking merge._"
-            fi
+            echo "_agy did not produce a review on this PR; see the workflow log. Not blocking merge — no verdict was reached, so there is nothing to act on._"
           } > comment.md
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
+          # A run that never reached a verdict is not a review outcome, and it
+          # is deliberately not a merge blocker in either mode.
+          #
+          # It used to be, under blocking:true. What that actually gated on was
+          # the health of one machine and one subscription: on 2026-09-08 the
+          # primary Antigravity account hit "Individual quota reached ... Resets
+          # in 60h18m54s" (agy's own message, in the runner's CLI log for that
+          # run), the fallback did not carry it, and the step exited 1. Because
+          # mctl-agents lists `agy-review / review` among its required status
+          # checks, release 1.40.1 then sat unmergeable for a day — a fix that
+          # was already reviewed and approved, held up by a reviewer that never
+          # read it. Re-running the same job the next day passed with "No
+          # significant issues found", which is the tell: nothing about the diff
+          # had changed.
+          #
+          # Findings still block. `Check for P1/P2 findings` below fails on
+          # FAIL:P1/FAIL:P2 and fails closed on a missing or malformed verdict
+          # tag, because those are things the reviewer said about this diff.
+          # Quota, a dead language server, a missing HOME profile and a network
+          # error are not.
           if [ "$BLOCKING" = "true" ]; then
-            echo "::error::agy reviewer failed — blocking merge. See workflow log."
-            exit 1
+            echo "::warning::agy produced no review (see log). Not blocking: a run that reached no verdict says nothing about this diff."
+            echo "agy: no review produced — not blocking (see the workflow log)" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Check for P1/P2 findings (blocking mode)
