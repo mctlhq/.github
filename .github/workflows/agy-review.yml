@@ -83,9 +83,28 @@ jobs:
       endsWith(github.event.pull_request.user.login, '[bot]') == false)))
     runs-on: [self-hosted, agy-reviewer]
     timeout-minutes: 20
+    # Started reviews are allowed to finish. With cancel-in-progress: true a
+    # push landing mid-review killed the run, and on a busy pull request that
+    # repeated: measured on 2026-09-09, 10 of the last 30 agy runs in
+    # mctl-gitops ended `cancelled`, against 13 successes, while 7 more sat
+    # queued. A review that is killed at minute nine has cost a runner slot and
+    # produced nothing.
+    #
+    # This does not let runs pile up. GitHub keeps at most one *pending* run per
+    # concurrency group and cancels the older pending one, so a burst of pushes
+    # leaves exactly two: the one in flight and the newest queued behind it. The
+    # cost is that the in-flight review may describe a commit that is no longer
+    # head — acceptable, because the queued run then reviews the new head, where
+    # before neither of them finished at all.
+    #
+    # The queue itself is a separate constraint: two self-hosted runners for the
+    # whole organisation, ~11 min median per review. Adding runners was
+    # considered and rejected for now — the host is a 4-core/8 GB mac mini with
+    # no free memory and 1.1 GB already in swap, and more slots would not have
+    # changed the cancellation rate this fixes.
     concurrency:
       group: agy-review-${{ github.repository }}-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     permissions:
       contents: read
       pull-requests: write
