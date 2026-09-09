@@ -391,6 +391,25 @@ jobs:
             safe_error=$(printf '%s' "${error:-unknown error}" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
             echo "::error::agy run did not succeed (status=$status)"
             echo "$safe_error"
+
+            # Record WHICH kind of failure this was, for the step that has to
+            # decide whether it may block a merge. The distinction is between
+            # "agy never came back with anything" and "agy came back with
+            # something this workflow cannot use".
+            #
+            # Only the first is safe to wave through. It is the class that held
+            # release 1.40.1 for a day (quota exhaustion), and it says nothing
+            # about the diff. The second class includes a model that declined
+            # to review — and a reviewer that can be made to decline is a
+            # reviewer that can be walked past, so that one keeps failing
+            # closed. The fork guard above means only someone with write access
+            # could try it; that is a reason it is not urgent, not a reason to
+            # leave the door open.
+            no_verdict=0
+            [ "$status" = "UNKNOWN" ] && no_verdict=1
+            [ -s result.json ] || no_verdict=1
+            [ "$retry" = 1 ] && no_verdict=1
+            echo "$no_verdict" > no-verdict
             exit 1
           fi
           jq -r '.response' result.json > review.md
@@ -427,36 +446,65 @@ jobs:
           BLOCKING: ${{ inputs.blocking }}
         run: |
           set -euo pipefail
+
+          # Written by the run step; absent means the step died before it could
+          # classify anything (killed by the job timeout, OOM), which is the
+          # same "came back with nothing" case.
+          if [ -f no-verdict ]; then
+            no_verdict=$(cat no-verdict)
+          else
+            no_verdict=1
+          fi
+
+          if [ "$no_verdict" = "1" ]; then
+            note="_agy did not produce a review on this PR; see the workflow log. Not blocking merge — no verdict was reached, so there is nothing to act on._"
+          else
+            note="_agy returned a result this workflow could not use; see the workflow log. Treated as a failed review._"
+          fi
+
           {
             echo "<!-- agy-review -->"
             echo "## Antigravity (agy) review"
             echo ""
-            echo "_agy did not produce a review on this PR; see the workflow log. Not blocking merge — no verdict was reached, so there is nothing to act on._"
+            echo "$note"
           } > comment.md
-          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
-          # A run that never reached a verdict is not a review outcome, and it
-          # is deliberately not a merge blocker in either mode.
-          #
-          # It used to be, under blocking:true. What that actually gated on was
-          # the health of one machine and one subscription: on 2026-09-08 the
-          # primary Antigravity account hit "Individual quota reached ... Resets
-          # in 60h18m54s" (agy's own message, in the runner's CLI log for that
-          # run), the fallback did not carry it, and the step exited 1. Because
-          # mctl-agents lists `agy-review / review` among its required status
-          # checks, release 1.40.1 then sat unmergeable for a day — a fix that
-          # was already reviewed and approved, held up by a reviewer that never
-          # read it. Re-running the same job the next day passed with "No
-          # significant issues found", which is the tell: nothing about the diff
-          # had changed.
-          #
-          # Findings still block. `Check for P1/P2 findings` below fails on
-          # FAIL:P1/FAIL:P2 and fails closed on a missing or malformed verdict
-          # tag, because those are things the reviewer said about this diff.
-          # Quota, a dead language server, a missing HOME profile and a network
-          # error are not.
-          if [ "$BLOCKING" = "true" ]; then
+
+          # Never the reason a merge is blocked. Under `set -e` a GitHub 5xx, a
+          # secondary rate limit or a locked conversation here would fail the
+          # step — reinstating, through the comment API, exactly the class of
+          # block this step exists to remove — and would also swallow the
+          # warning below, which is emitted after it.
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md || \
+            echo "::warning::could not post the agy failure comment (see log); continuing"
+
+          # Emitted in both modes on purpose. The account that just failed is
+          # shared, and most callers are non-blocking: hiding the outage from
+          # them is how a quota exhaustion becomes invisible until it blocks
+          # someone else. The comment at AGY_HOME_FALLBACK above leans on this
+          # line being what makes personal-quota spend visible.
+          if [ "$no_verdict" = "1" ]; then
             echo "::warning::agy produced no review (see log). Not blocking: a run that reached no verdict says nothing about this diff."
             echo "agy: no review produced — not blocking (see the workflow log)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::agy returned an unusable result (see log)."
+            echo "agy: unusable result — treated as a failed review" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # A run that reached no verdict is not a review outcome, and is
+          # deliberately not a merge blocker in either mode. It used to be:
+          # on 2026-09-08 the primary Antigravity account hit "Individual quota
+          # reached ... Resets in 60h18m54s" (agy's own message, in that run's
+          # CLI log on the runner), the fallback did not carry it, and the step
+          # exited 1 — holding release 1.40.1, already approved with green
+          # tests, for a day. Re-running the identical commit the next day
+          # passed with "No significant issues found".
+          #
+          # Findings still block: `Check for P1/P2 findings` below fails on
+          # FAIL:P1/FAIL:P2 and fails closed on a missing or malformed verdict
+          # tag, because those are things the reviewer said about this diff.
+          if [ "$no_verdict" != "1" ] && [ "$BLOCKING" = "true" ]; then
+            echo "::error::agy returned a result that could not be used as a review — failing closed."
+            exit 1
           fi
 
       - name: Check for P1/P2 findings (blocking mode)
