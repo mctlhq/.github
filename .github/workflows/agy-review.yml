@@ -95,7 +95,16 @@ jobs:
     # leaves exactly two: the one in flight and the newest queued behind it. The
     # cost is that the in-flight review may describe a commit that is no longer
     # head — acceptable, because the queued run then reviews the new head, where
-    # before neither of them finished at all.
+    # before neither of them finished at all. The comment names the commit it
+    # reviewed, so the two are told apart by reading rather than by timestamp.
+    #
+    # The second cost is latency, and it is the one that matters for making agy
+    # a blocking gate: the new head's review now queues behind the superseded
+    # run instead of replacing it, so time-to-verdict on a pull request pushed
+    # to mid-review roughly doubles — ~11 min median becomes ~22 — and those
+    # runner-minutes stay unavailable to other repositories. A slower verdict
+    # still beats no verdict, but that is the number #11 and mctl-gitops#820
+    # have to budget for.
     #
     # The queue itself is a separate constraint: two self-hosted runners for the
     # whole organisation, ~11 min median per review. Adding runners was
@@ -440,6 +449,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           {
@@ -450,7 +460,12 @@ jobs:
               echo "## Antigravity (agy) review — informational"
             fi
             echo
-            echo "_Model: ${{ inputs.model }}._"
+            # The commit is named because cancel-in-progress is false: a review
+            # can now describe a commit that is no longer head. Two comments
+            # from the same pull request are otherwise indistinguishable, and
+            # the reader would have to diff timestamps against their own push
+            # history to tell which finding applies to what.
+            echo "_Model: ${{ inputs.model }} · commit \`${HEAD_SHA:0:7}\`._"
             echo
             cat review.md
           } > comment.md
