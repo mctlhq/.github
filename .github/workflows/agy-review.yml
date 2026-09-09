@@ -450,6 +450,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Same rule as the run step above: a caller-supplied string reaches
+          # this script through env, never through `${{ }}`, because that
+          # substitution happens before bash parses the line.
+          AGY_MODEL: ${{ inputs.model }}
         run: |
           set -euo pipefail
           {
@@ -465,7 +469,7 @@ jobs:
             # from the same pull request are otherwise indistinguishable, and
             # the reader would have to diff timestamps against their own push
             # history to tell which finding applies to what.
-            echo "_Model: ${{ inputs.model }} · commit \`${HEAD_SHA:0:7}\`._"
+            echo "_Model: ${AGY_MODEL} · commit \`${HEAD_SHA:0:7}\`._"
             echo
             cat review.md
           } > comment.md
