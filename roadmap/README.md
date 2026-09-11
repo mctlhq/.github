@@ -159,9 +159,19 @@ reports OK forever on a line nobody evaluates — a passing test that never ran.
 `validate_state` rejects the whole run (exit 2) on an unknown key, an item that
 asserts nothing, a duplicate id, an unparsable expectation or a bad regex.
 
-The same instinct applies to paged GitHub data: every connection is fetched
-with its `totalCount`, and a connection that came back short raises rather than
+The same instinct applies to paged GitHub data. Truncation is detected with
+`pageInfo` — `hasNextPage` for `first:` connections, `hasPreviousPage` for
+`last:` ones — and a connection with more beyond the page raises rather than
 being counted, because a count over a truncated list is a guess.
+
+Not `totalCount`: on a filtered connection the two disagree.
+`IssueTimelineItemsConnection` carries three separate counters precisely
+because `totalCount` does not describe what an `itemTypes:` filter returned,
+and `PullRequestReviewConnection` has none that accounts for `states:`.
+Comparing an unfiltered total against a filtered list made every issue past a
+hundred timeline events permanently `OBSERVATION_FAILED` — the guard producing
+the failure it exists to prevent. Anyone adding a connection should follow
+`nodes_of`, not that earlier instinct.
 
 Probes cover assertions GitHub issue state cannot make — a file's contents, a
 count of services that opted into something. A probe that cannot read what it

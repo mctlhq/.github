@@ -117,38 +117,12 @@ jobs:
             exit "$code"
           fi
 
-      - name: Commit the snapshot
-        # Only when the reconciled state actually changed. snapshot.json
-        # carries the run's timestamp, so it differs on every pass and a
-        # content guard could never be true — this repo would have taken four
-        # commits a day saying nothing.
-        if: steps.reconcile.outputs.changed == 'true'
-        run: |
-          if git diff --quiet -- roadmap/snapshot.json roadmap/ROADMAP.md; then
-            echo "no change to publish"
-            exit 0
-          fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add roadmap/snapshot.json roadmap/ROADMAP.md
-          git commit -m "chore(roadmap): reconcile ${OVERALL}"
-          # Two scheduled runs can overlap a manual push to main. Rebase and
-          # retry rather than losing the snapshot to a race.
-          for attempt in 1 2 3; do
-            if git push; then exit 0; fi
-            # Checked: a rebase that fails is a conflict, not a race, and
-            # retrying the push would report the wrong reason for the failure.
-            if ! git pull --rebase --autostash; then
-              git rebase --abort || true
-              echo "::error::the snapshot conflicts with main — rebase failed, this is not a push race"
-              exit 1
-            fi
-          done
-          echo "::error::could not push the snapshot after three attempts"
-          exit 1
-        env:
-          OVERALL: ${{ steps.reconcile.outputs.overall }}
-
+      # Ordered deliberately: the report runs BEFORE the snapshot is
+      # committed. Committing it is precisely what makes the next run compute
+      # changed=false, so a report step that failed after the push would
+      # record the change as seen and never announce it — and the recovery
+      # this workflow relies on for a lost push, "the next run recomputes and
+      # re-announces", is the one that ordering removes.
       - name: Report through a tracking issue
         # Not a failed job. Two of the three conditions worth reporting are
         # standing states by design — a declared gap, an item we cannot see —
@@ -176,9 +150,19 @@ jobs:
           # one every six hours. A label survives that, an edited title, and a
           # manual close.
           label="roadmap-reconciler"
-          gh label create "$label" --color 0E4429 --force \
-            --description "Opened by the roadmap reconciler; identity for its tracking issue"
+          # Created only when missing. --force rewrote the colour and
+          # description on every run including aligned ones, which made an
+          # unconditional metadata write the first call that could fail the
+          # report.
+          gh label list --json name --jq '.[].name' | grep -qx "$label" || \
+            gh label create "$label" --color 0E4429 \
+              --description "Opened by the roadmap reconciler; identity for its tracking issue"
+          # Author-filtered as well as labelled. A label is an identity anyone
+          # with triage access can hand to any issue from a dropdown, and the
+          # steps below replace the title and body of whatever they find and
+          # later close it as "true again" — a blast radius worth closing.
           number=$(gh issue list --state open --label "$label" --limit 1 \
+            --search "author:app/github-actions" \
             --json number --jq "[.[].number] | first // empty")
 
           if [ "$OVERALL" = "ALIGNED" ] && [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
@@ -230,3 +214,35 @@ jobs:
               gh issue comment "$number" --body-file "$RUNNER_TEMP/body.md"
             fi
           fi
+
+      - name: Commit the snapshot
+        # Only when the reconciled state actually changed. snapshot.json
+        # carries the run's timestamp, so it differs on every pass and a
+        # content guard could never be true — this repo would have taken four
+        # commits a day saying nothing.
+        if: steps.reconcile.outputs.changed == 'true'
+        run: |
+          if git diff --quiet -- roadmap/snapshot.json roadmap/ROADMAP.md; then
+            echo "no change to publish"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roadmap/snapshot.json roadmap/ROADMAP.md
+          git commit -m "chore(roadmap): reconcile ${OVERALL}"
+          # Two scheduled runs can overlap a manual push to main. Rebase and
+          # retry rather than losing the snapshot to a race.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            # Checked: a rebase that fails is a conflict, not a race, and
+            # retrying the push would report the wrong reason for the failure.
+            if ! git pull --rebase --autostash; then
+              git rebase --abort || true
+              echo "::error::the snapshot conflicts with main — rebase failed, this is not a push race"
+              exit 1
+            fi
+          done
+          echo "::error::could not push the snapshot after three attempts"
+          exit 1
+        env:
+          OVERALL: ${{ steps.reconcile.outputs.overall }}
