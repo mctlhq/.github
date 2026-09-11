@@ -87,15 +87,31 @@ def _quoted_spans(line: str) -> list:
     spans = []
     quote = None
     start = 0
-    for i, ch in enumerate(line):
+    i = 0
+    while i < len(line):
+        ch = line[i]
+        if ch == "\\" and quote != "'":
+            # A backslash escapes the next character outside quotes and inside
+            # double quotes; inside single quotes it is literal, which is why
+            # the single-quote case is excluded rather than handled.
+            i += 2
+            continue
         if quote is None and ch in "\"'":
             before = line[:i].rstrip()
             if before.endswith("<<") or before.endswith("<<-"):
-                continue  # a heredoc delimiter, not a string
+                # A heredoc delimiter, not a string — and its CLOSING quote
+                # must be skipped with it. Excluding only the opener inverted
+                # quote parity for the rest of the line, so real string
+                # contents fell outside the spans and the text between strings
+                # fell inside them.
+                closing = line.find(ch, i + 1)
+                i = len(line) if closing == -1 else closing + 1
+                continue
             quote, start = ch, i
         elif ch == quote:
             spans.append((start, i))
             quote = None
+        i += 1
     return spans
 
 
@@ -195,8 +211,13 @@ def blocks(path: pathlib.Path):
             script = (step or {}).get("run")
             if not script:
                 continue
+            # Step, then job, then workflow. Missing the workflow level meant
+            # a file declaring `pwsh` once at the top had every block handed to
+            # `bash -n` and refused — the gate refusing valid work, with
+            # `needs: gate` and no escape hatch.
             shell = (step.get("shell")
                      or (job.get("defaults") or {}).get("run", {}).get("shell")
+                     or ((doc.get("defaults") or {}).get("run") or {}).get("shell")
                      or DEFAULT_SHELL)
             if shell not in ("bash", "sh"):
                 continue
@@ -361,6 +382,14 @@ def selftest() -> int:
               'a terminated <<"EOF" was reported as open')
         check(unterminated_heredoc("cat <<-'EOF'\n\tbody\n\tEOF\n") is None,
               "a tab-indented quoted delimiter was not recognised")
+        # Quote parity after a quoted delimiter: the closing quote of the
+        # delimiter must be consumed with the opening one, or every string
+        # later on the line is misattributed.
+        parity = _quoted_spans('cat <<"EOF" ; echo "a" ; echo "b"')
+        check(parity == [(19, 21), (30, 32)],
+              f"quote parity inverted after a quoted delimiter: {parity}")
+        check(unterminated_heredoc('echo "a \\" <<EOF b"') is None,
+              "an escaped quote was treated as closing the string")
 
         missing = workdir / "nope.yml"
         try:
