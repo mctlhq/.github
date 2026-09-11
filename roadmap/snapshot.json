@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T23:42:34Z",
+  "generated_at": "2026-09-11T23:53:56Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -35,7 +35,7 @@
       "epic": "mctlhq/.github#18",
       "issue": null,
       "reasons": [
-        "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/ = 0, expected == 1"
+        "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/, expected == 1"
       ],
       "evidence": {
         "probes": {
@@ -164,7 +164,7 @@
       "epic": "mctlhq/.github#55",
       "issue": null,
       "reasons": [
-        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services match /(?m)^otel:[ \\t]*\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+enabled:[ \\t]*true\\b/ = 0, expected >= 1"
+        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to True, expected >= 1"
       ],
       "evidence": {
         "probes": {
@@ -213,7 +213,7 @@
       "epic": "mctlhq/.github#47",
       "issue": "mctlhq/mctl-gitops#1178",
       "reasons": [
-        "probe zone-roots-still-local: mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots lines matching /^(?!\\s*#)\\s*(?:infrastructure/cloudflare/)?zones// = 3, expected == 0"
+        "probe zone-roots-still-local: 3 line(s) in mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots match /^(?!\\s*#)\\s*(?:\\./)?(?:infrastructure/cloudflare/)?zones//, expected == 0"
       ],
       "evidence": {
         "issue_state": "open",

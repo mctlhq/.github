@@ -170,14 +170,17 @@ items:
     phase: now
     probes:
       - id: services-opted-into-otel
-        kind: dir_file_match_count
+        # Parsed, not pattern-matched. Two regexes in two review rounds asked
+        # this question wrong: the first let `.` cross a top-level key, the
+        # second accepted any indent so a nested `metrics.enabled: true`
+        # satisfied it, and both returned zero on a blank line inside the
+        # block. A key path cannot drift from the structure it describes.
+        kind: dir_file_yaml_value_count
         repo: mctlhq/mctl-gitops
         path: platform-gitops/services
         file_pattern: 'values\.yaml$'
-        # Scoped to the otel: block. `(?ms)` let `.` cross blank lines, so
-        # `enabled: true` under ANY later top-level key satisfied it — a false
-        # green waiting for the day the count stops being zero.
-        content_pattern: '(?m)^otel:[ \t]*\n(?:[ \t]+[^\n]*\n)*?[ \t]+enabled:[ \t]*true\b'
+        key: otel.enabled
+        equals: true
         expect: '>= 1'
     note: >-
       The transport shipped with #902, but otel.enabled is false everywhere
@@ -227,8 +230,13 @@ items:
         #
         # The comment lines naming the same roots must not be counted, hence
         # the leading-hash exclusion.
-        pattern: '^(?!\s*#)\s*(?:infrastructure/cloudflare/)?zones/'
+        pattern: '^(?!\s*#)\s*(?:\./)?(?:infrastructure/cloudflare/)?zones/'
         expect: '== 0'
+        # The file naming roots that are NOT on the shared backend is the
+        # natural thing to delete once none are. Without saying so, this
+        # item's success state would be unreachable: the day the migration
+        # lands, file_text 404s and the row is OBSERVATION_FAILED forever.
+        when_absent: zero
     note: >-
       Only the `account` root is on the shared R2 backend. Until the three
       zone roots follow, Git is the source of truth for one root out of four.

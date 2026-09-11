@@ -320,15 +320,44 @@ def observe_issue(gh: GitHub, ref: str) -> IssueObservation:
 
 # ── probes ────────────────────────────────────────────────────────────────
 
+def _yaml_lookup(document, dotted: str):
+    """Walk a dotted key path, or raise KeyError if it is not there."""
+    node = document
+    for part in dotted.split("."):
+        if not isinstance(node, dict) or part not in node:
+            raise KeyError(dotted)
+        node = node[part]
+    return node
+
+
 def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
     """Return (count, description). Raises ObservationFailure, never returns 0
-    to mean "could not look"."""
+    to mean "could not look".
+
+    `file_pattern` decides WHICH files are examined and `content_pattern` (or
+    `key`) is the assertion made about each. An empty candidate set therefore
+    raises rather than counting zero: "no file matched the name" is a broken
+    path, not an answer about content. If a probe ever needs to assert the
+    absence of a file, that wants its own kind rather than this one's zero.
+    """
     kind = probe.get("kind")
     if kind == "file_line_match_count":
-        text = gh.file_text(probe["repo"], probe["path"])
+        try:
+            text = gh.file_text(probe["repo"], probe["path"])
+        except ObservationFailure:
+            # `when_absent: zero` is a human writing down what the file's
+            # absence means, which is not the same as the code guessing. The
+            # zone-roots list is the case: when every root is migrated the
+            # natural thing to do is delete it, and without this the item's
+            # success state is unreachable — OBSERVATION_FAILED forever.
+            if probe.get("when_absent") == "zero":
+                return 0, (f"{probe['repo']}/{probe['path']} does not exist, "
+                           f"declared as zero")  # count is 0 by declaration
+            raise
         pattern = re.compile(probe["pattern"], re.M)
         count = sum(1 for line in text.splitlines() if pattern.search(line))
-        return count, f"{probe['repo']}/{probe['path']} lines matching /{probe['pattern']}/"
+        return count, (f"{count} line(s) in {probe['repo']}/{probe['path']} match "
+                       f"/{probe['pattern']}/")
     if kind == "dir_file_match_count":
         files = gh.tree_files(probe["repo"], probe["path"])
         name_re = re.compile(probe["file_pattern"])
@@ -349,6 +378,36 @@ def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
         return count, (f"{count} of {len(candidates)} file(s) under "
                        f"{probe['repo']}/{probe['path']} match "
                        f"/{probe['content_pattern']}/")
+    if kind == "dir_file_yaml_value_count":
+        # Parsed, not matched. The same question — "is otel.enabled true in
+        # this values file" — was asked wrong twice in two review rounds by
+        # two different regexes: one let `.` cross a top-level key, its
+        # replacement accepted any indent so a nested `metrics.enabled: true`
+        # satisfied it, and both failed the other way on a blank line inside
+        # the block. A key path cannot drift from the structure it describes.
+        files = gh.tree_files(probe["repo"], probe["path"])
+        name_re = re.compile(probe["file_pattern"])
+        candidates = [f for f in files if name_re.search(f.rsplit("/", 1)[-1])]
+        if not candidates:
+            raise ObservationFailure(
+                f"{probe['repo']}/{probe['path']}: no file matching "
+                f"/{probe['file_pattern']}/ — the path is empty, renamed or gone, "
+                f"so a count over it would describe nothing")
+        wanted = probe["equals"]
+        count = 0
+        for path in candidates:
+            try:
+                document = yaml.safe_load(gh.file_text(probe["repo"], path))
+            except yaml.YAMLError as exc:
+                raise ObservationFailure(f"{probe['repo']}/{path}: {exc}") from exc
+            try:
+                if _yaml_lookup(document, probe["key"]) == wanted:
+                    count += 1
+            except KeyError:
+                continue  # the key is absent, which is not the value asked for
+        return count, (f"{count} of {len(candidates)} file(s) under "
+                       f"{probe['repo']}/{probe['path']} set "
+                       f"{probe['key']} to {wanted!r}")
     raise ObservationFailure(f"unknown probe kind {kind!r}")
 
 
@@ -362,9 +421,12 @@ MERGE_VALUES = {"ready", "draft", "conflicted", "none", "blocked-review",
                 "blocked-review-required", "blocked-checks", "blocked-behind-base",
                 "blocked-conversations", "blocked-unresolved-check"}
 PROBE_KEYS = {
-    "file_line_match_count": {"id", "kind", "repo", "path", "pattern", "expect"},
+    "file_line_match_count": {"id", "kind", "repo", "path", "pattern", "expect",
+                              "when_absent"},
     "dir_file_match_count": {"id", "kind", "repo", "path", "file_pattern",
                              "content_pattern", "expect"},
+    "dir_file_yaml_value_count": {"id", "kind", "repo", "path", "file_pattern",
+                                  "key", "equals", "expect"},
 }
 
 
@@ -740,14 +802,21 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
                 f"probe {probe.get('id', '?')} has no usable expectation: {exc}")
             continue
         if not satisfied:
+            # The description carries the count. It used to be appended here
+            # as well, so the one sentence that is a DRIFT row's entire
+            # payload said the number twice.
             mismatches.append(
-                f"probe {probe.get('id', '?')}: {description} = {count}, "
+                f"probe {probe.get('id', '?')}: {description}, "
                 f"expected {probe['expect']}")
 
     # One decision, made once. A blind spot outranks a divergence in the
     # state -- reporting DRIFT on an axis nobody could read would be inventing
     # a finding -- but `reasons` is what every rendering shows, so what the
     # other axes did observe is reported alongside it.
+    # UNEXPECTED_SILENCE is not evaluated on this path, and deliberately: it
+    # is a statement about how long nothing has moved, and "nothing moved" is
+    # exactly what a blind spot cannot distinguish from "we could not see it
+    # move".
     if blind:
         result.state = OBSERVATION_FAILED
         result.reasons.extend(blind)
@@ -1352,6 +1421,53 @@ def selftest() -> int:
                        {}, now)
     check(r.state == OBSERVATION_FAILED,
           f"no candidate file must not satisfy '== 0': {r.state}")
+
+    # The parsed probe, and the two shapes the regexes it replaced got wrong.
+    yaml_probe = {"id": "y", "kind": "dir_file_yaml_value_count", "repo": "o/r",
+                  "path": "svc", "file_pattern": r"values\.yaml$",
+                  "key": "otel.enabled", "equals": True, "expect": ">= 1"}
+    item_yaml = {"id": "yy", "title": "YY", "phase": "now", "expected": {},
+                 "probes": [yaml_probe]}
+    r = reconcile_item(StubGH(None, files={"svc/a/values.yaml": "otel:\n  enabled: true\n"}),
+                       item_yaml, {}, now)
+    check(r.state == ALIGNED, f"a real opt-in was missed: {r.state} {r.reasons}")
+    # A nested enabled: true satisfied the second regex. It must not satisfy
+    # a key path.
+    r = reconcile_item(
+        StubGH(None, files={"svc/a/values.yaml":
+                            "otel:\n  enabled: false\n  metrics:\n    enabled: true\n"}),
+        item_yaml, {}, now)
+    check(r.state == DRIFT,
+          f"a nested enabled:true was read as the opt-in: {r.state} {r.reasons}")
+    # A blank line inside the block ended the scan for both regexes.
+    r = reconcile_item(
+        StubGH(None, files={"svc/a/values.yaml":
+                            "otel:\n\n  # a comment\n  enabled: true\n"}),
+        item_yaml, {}, now)
+    check(r.state == ALIGNED,
+          f"a blank line inside the block hid a real opt-in: {r.state} {r.reasons}")
+    # A quoted true is a string, and the declaration asks for the boolean.
+    r = reconcile_item(
+        StubGH(None, files={"svc/a/values.yaml": 'otel:\n  enabled: "true"\n'}),
+        item_yaml, {}, now)
+    check(r.state == DRIFT, f'enabled: "true" is a string, not the boolean: {r.state}')
+    # An absent key is not the value asked for, and must not raise either.
+    r = reconcile_item(StubGH(None, files={"svc/a/values.yaml": "image:\n  tag: 1\n"}),
+                       item_yaml, {}, now)
+    check(r.state == DRIFT, f"an absent key should count as not-set: {r.state}")
+
+    # when_absent: a human writing down what a missing file means.
+    absent = {"id": "aa", "title": "AA", "phase": "now", "expected": {},
+              "probes": [{"id": "w", "kind": "file_line_match_count", "repo": "o/r",
+                          "path": "gone.txt", "pattern": "^x", "expect": "== 0",
+                          "when_absent": "zero"}]}
+    r = reconcile_item(StubGH(None, files={}), absent, {}, now)
+    check(r.state == ALIGNED, f"a declared absence should satisfy == 0: {r.state}")
+    r = reconcile_item(StubGH(None, files={}),
+                       dict(absent, probes=[dict(absent["probes"][0],
+                                                 when_absent=None)]), {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"an undeclared absence must still refuse: {r.state}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
