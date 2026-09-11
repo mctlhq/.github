@@ -174,7 +174,10 @@ items:
         repo: mctlhq/mctl-gitops
         path: platform-gitops/services
         file_pattern: 'values\.yaml$'
-        content_pattern: '(?ms)^otel:\s*\n(?:\s+.*\n)*?\s+enabled:\s*true'
+        # Scoped to the otel: block. `(?ms)` let `.` cross blank lines, so
+        # `enabled: true` under ANY later top-level key satisfied it — a false
+        # green waiting for the day the count stops being zero.
+        content_pattern: '(?m)^otel:[ \t]*\n(?:[ \t]+[^\n]*\n)*?[ \t]+enabled:[ \t]*true\b'
         expect: '>= 1'
     note: >-
       The transport shipped with #902, but otel.enabled is false everywhere
@@ -214,7 +217,17 @@ items:
         kind: file_line_match_count
         repo: mctlhq/mctl-gitops
         path: infrastructure/cloudflare/.local-state-roots
-        pattern: '^zones/'
+        # That file writes its entries as `infrastructure/cloudflare/zones/...`
+        # — both spellings are accepted by the tooling that reads it, and it
+        # uses the long one. `^zones/` therefore matched nothing, the count was
+        # zero, `== 0` was satisfied, and this item was green from the day it
+        # was written while its own note said three zone roots are still local.
+        # A regex that is valid, evaluated, and asks the wrong question is
+        # invisible to every guard here.
+        #
+        # The comment lines naming the same roots must not be counted, hence
+        # the leading-hash exclusion.
+        pattern: '^(?!\s*#)\s*(?:infrastructure/cloudflare/)?zones/'
         expect: '== 0'
     note: >-
       Only the `account` root is on the shared R2 backend. Until the three

@@ -202,7 +202,10 @@ a manual close, which frees the title to name whichever condition matters most.
 The marker is there because a label alone is an identity anyone with triage
 access can hand to any issue from a dropdown, and this workflow rewrites the
 title and body of what it finds and later closes it. An issue carrying the
-label without the marker is left alone with a warning.
+label without the marker is simply not selected: the lookup asks for issues
+carrying the marker, so a mislabelled one is passed over rather than reported.
+No warning is emitted — this document used to promise one, which made it the
+only place claiming a signal that does not exist.
 
 Author filtering would have been the obvious alternative and is deliberately
 not used: `author:app/github-actions` holds only while the job uses

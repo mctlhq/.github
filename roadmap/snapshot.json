@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-11T23:27:33Z",
+  "generated_at": "2026-09-11T23:42:34Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
-    "DRIFT": 2,
+    "DRIFT": 3,
     "UNEXPECTED_SILENCE": 0,
-    "ALIGNED": 16
+    "ALIGNED": 15
   },
   "items": [
     {
@@ -35,7 +35,7 @@
       "epic": "mctlhq/.github#18",
       "issue": null,
       "reasons": [
-        "probe resolver-mode-in-gitops: 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates matching /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/ = 0, expected == 1"
+        "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/ = 0, expected == 1"
       ],
       "evidence": {
         "probes": {
@@ -164,7 +164,7 @@
       "epic": "mctlhq/.github#55",
       "issue": null,
       "reasons": [
-        "probe services-opted-into-otel: 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services matching /(?ms)^otel:\\s*\\n(?:\\s+.*\\n)*?\\s+enabled:\\s*true/ = 0, expected >= 1"
+        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services match /(?m)^otel:[ \\t]*\\n(?:[ \\t]+[^\\n]*\\n)*?[ \\t]+enabled:[ \\t]*true\\b/ = 0, expected >= 1"
       ],
       "evidence": {
         "probes": {
@@ -209,17 +209,19 @@
       "id": "cloudflare.zone-authority",
       "title": "Zone roots on shared remote state",
       "phase": "now",
-      "state": "ALIGNED",
+      "state": "DRIFT",
       "epic": "mctlhq/.github#47",
       "issue": "mctlhq/mctl-gitops#1178",
-      "reasons": [],
+      "reasons": [
+        "probe zone-roots-still-local: mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots lines matching /^(?!\\s*#)\\s*(?:infrastructure/cloudflare/)?zones// = 3, expected == 0"
+      ],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
         "last_activity": "2026-09-11T00:23:08Z",
         "probes": {
-          "zone-roots-still-local": 0
+          "zone-roots-still-local": 3
         }
       },
       "note": "Only the `account` root is on the shared R2 backend. Until the three zone roots follow, Git is the source of truth for one root out of four."

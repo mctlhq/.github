@@ -333,10 +333,22 @@ def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
         files = gh.tree_files(probe["repo"], probe["path"])
         name_re = re.compile(probe["file_pattern"])
         candidates = [f for f in files if name_re.search(f.rsplit("/", 1)[-1])]
+        if not candidates:
+            # "There was nothing to look at" is not the number zero. A renamed
+            # or deleted directory yields an empty tree slice, and returning 0
+            # from it made this branch break the rule the docstring three lines
+            # up states for the other one: a `== 0` declaration would report
+            # ALIGNED having examined nothing, and a `>= 1` one would report
+            # DRIFT with a reason that names a cause it never observed.
+            raise ObservationFailure(
+                f"{probe['repo']}/{probe['path']}: no file matching "
+                f"/{probe['file_pattern']}/ — the path is empty, renamed or gone, "
+                f"so a count over it would describe nothing")
         content_re = re.compile(probe["content_pattern"])
         count = sum(1 for f in candidates if content_re.search(gh.file_text(probe["repo"], f)))
-        return count, (f"{len(candidates)} file(s) under {probe['repo']}/{probe['path']} "
-                       f"matching /{probe['content_pattern']}/")
+        return count, (f"{count} of {len(candidates)} file(s) under "
+                       f"{probe['repo']}/{probe['path']} match "
+                       f"/{probe['content_pattern']}/")
     raise ObservationFailure(f"unknown probe kind {kind!r}")
 
 
@@ -698,12 +710,12 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             result.evidence["merge"] = "unobserved"
         if actual_merge is not None:
             result.evidence["merge"] = actual_merge
-        # The count is evidence, not identity: blocked-conversations:14 and :9
-        # are the same situation and must not churn the report. The rule is
-        # deliberately narrow to that one value -- applied across the whole
-        # vocabulary it would also let a declared "unknown" be satisfied by
-        # "we could not read the field", which is the one match that must
-        # never go green.
+            # The count is evidence, not identity: blocked-conversations:14
+            # and :9 are the same situation and must not churn the report.
+            # The rule is deliberately narrow to that one value -- applied
+            # across the whole vocabulary it would also let a declared
+            # "unknown" be satisfied by "we could not read the field", which
+            # is the one match that must never go green.
             if not _satisfies(actual_merge, want_merge):
                 mismatches.append(
                     f"merge expected {_render_want(want_merge)}, actual {actual_merge}")
@@ -1316,6 +1328,30 @@ def selftest() -> int:
           f"the issue failure was not reported: {r.reasons}")
     check(any("probe z" in x for x in r.reasons),
           f"an unreadable issue skipped the probes: {r.reasons}")
+
+    # dir_file_match_count was the only probe kind with no fixture, and the
+    # one behind both live DRIFT rows.
+    dir_probe = {"id": "d", "kind": "dir_file_match_count", "repo": "o/r",
+                 "path": "svc", "file_pattern": r"values\.yaml$",
+                 "content_pattern": "^otel:", "expect": ">= 1"}
+    item_dir = {"id": "dd", "title": "DD", "phase": "now", "expected": {},
+                "probes": [dir_probe]}
+    r = reconcile_item(StubGH(None, files={"svc/a/values.yaml": "otel:\n"}),
+                       item_dir, {}, now)
+    check(r.state == ALIGNED, f"a matching file should align: {r.state} {r.reasons}")
+    r = reconcile_item(StubGH(None, files={"svc/a/values.yaml": "other:\n"}),
+                       item_dir, {}, now)
+    check(r.state == DRIFT, f"a non-matching file is a real zero: {r.state}")
+    # The one that mattered: nothing to look at is not zero.
+    r = reconcile_item(StubGH(None, files={"elsewhere/a/values.yaml": "otel:\n"}),
+                       item_dir, {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"an empty path must not be counted as zero: {r.state} {r.reasons}")
+    r = reconcile_item(StubGH(None, files={"svc/a/README.md": "otel:\n"}),
+                       dict(item_dir, probes=[dict(dir_probe, expect="== 0")]),
+                       {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"no candidate file must not satisfy '== 0': {r.state}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
