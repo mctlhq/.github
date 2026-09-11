@@ -150,20 +150,43 @@ jobs:
           # one every six hours. A label survives that, an edited title, and a
           # manual close.
           label="roadmap-reconciler"
-          # Created only when missing. --force rewrote the colour and
-          # description on every run including aligned ones, which made an
-          # unconditional metadata write the first call that could fail the
-          # report.
-          gh label list --json name --jq '.[].name' | grep -qx "$label" || \
+          marker="<!-- roadmap-reconciler:v1 -->"
+
+          # Asked for by name, not searched for in a page of them.
+          # `gh label list` defaults to the thirty OLDEST, and this label is
+          # the newest by construction, so the check was guaranteed to miss
+          # once thirty older labels existed — after which `gh label create`
+          # 422s on a label that already exists and takes the whole report
+          # down with it. (`cmd | grep -q` under pipefail was the same trap
+          # from the other side: SIGPIPE on a successful match.)
+          if ! gh api "repos/${GITHUB_REPOSITORY}/labels/${label}" >/dev/null 2>&1; then
             gh label create "$label" --color 0E4429 \
               --description "Opened by the roadmap reconciler; identity for its tracking issue"
-          # Author-filtered as well as labelled. A label is an identity anyone
-          # with triage access can hand to any issue from a dropdown, and the
-          # steps below replace the title and body of whatever they find and
-          # later close it as "true again" — a blast radius worth closing.
+          fi
+
+          # --label reads the issues API, which is strongly consistent.
+          # --search would read the eventually-consistent search index, and
+          # its best-match ordering also makes --limit 1 stop meaning "the
+          # newest". Author filtering is deliberately NOT used: it is true
+          # only while this job holds secrets.GITHUB_TOKEN, so the day the
+          # token becomes an App installation it would match nothing and file
+          # a fresh issue every six hours — the duplicate-per-run failure the
+          # label exists to prevent, reintroduced by an unrelated change.
           number=$(gh issue list --state open --label "$label" --limit 1 \
-            --search "author:app/github-actions" \
             --json number --jq "[.[].number] | first // empty")
+
+          # A label is an identity anyone with triage access can hand to any
+          # issue from a dropdown, and the steps below rewrite the title and
+          # body of what they find and later close it. So before touching it,
+          # require our own marker in the body: ours carry it, a mislabelled
+          # issue does not, and we leave that one alone rather than
+          # overwriting somebody's work.
+          if [ -n "$number" ]; then
+            if ! gh issue view "$number" --json body --jq .body | grep -qF "$marker"; then
+              echo "::warning::issue #${number} carries the ${label} label but is not one of ours — leaving it alone"
+              number=""
+            fi
+          fi
 
           if [ "$OVERALL" = "ALIGNED" ] && [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
             if [ -n "$number" ]; then
@@ -176,15 +199,20 @@ jobs:
           # The title names the condition that matters most, which is why
           # identity had to stop depending on it: an ended outage must not file
           # an issue titled "not aligned" above a body saying it is.
+          # Blindness first, then a standing divergence, and only then an
+          # outage that has already ended — the title is the mail subject, and
+          # retitling a standing DRIFT to a finished outage for one cycle
+          # would bury the thing that is still true.
           if [ "$UNOBSERVED" != "0" ]; then
             title="Roadmap: $UNOBSERVED item(s) could not be observed"
-          elif [ "$STALE_HOURS" != "0" ]; then
-            title="Roadmap: the reconciler did not complete successfully for ${STALE_HOURS}h"
-          else
+          elif [ "$OVERALL" != "ALIGNED" ]; then
             title="Roadmap: reconciled state is $OVERALL"
+          else
+            title="Roadmap: no successful reconcile for ${STALE_HOURS}h"
           fi
 
           {
+            echo "$marker"
             echo "**$OVERALL.** This body is rewritten on every run; a comment is added"
             echo "only when the reconciled state changes."
             echo
@@ -203,7 +231,8 @@ jobs:
             cat "$RUNNER_TEMP/digest.txt"
             echo '```'
             echo
-            echo "[Run]($RUN_URL) · [Page]($PAGE_URL)"
+            echo "[Run]($RUN_URL) · [Page]($PAGE_URL) — the page is committed after"
+            echo "this report, so it shows the previous state until that lands.
           } > "$RUNNER_TEMP/body.md"
 
           if [ -z "$number" ]; then

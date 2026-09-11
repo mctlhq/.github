@@ -841,6 +841,23 @@ def digest(snapshot: dict) -> str:
     return "\n".join(lines)
 
 
+def headline(snapshot: dict) -> str:
+    return f"{snapshot['overall']}  " + "  ".join(
+        f"{BADGE[st]}={snapshot['counts'][st]}" for st in SEVERITY)
+
+
+def write_digest(path: pathlib.Path, snapshot: dict, body: str) -> None:
+    """The digest, for a later workflow step to read.
+
+    Its own file, because GITHUB_STEP_SUMMARY is per step: the reporting step
+    opening it got an empty one, and the tracking issue carried an empty code
+    block for five commits without anyone noticing. A named function so the
+    write itself can be exercised rather than re-implemented by a test.
+    """
+    path.write_text(
+        f"{headline(snapshot)}\n\n{body}\n" if body else f"{headline(snapshot)}\n")
+
+
 def reportable_state(snapshot: dict) -> dict:
     """The part worth comparing between runs.
 
@@ -1200,10 +1217,23 @@ def selftest() -> int:
     check("## Done" in page and "## Now" in page, "the page lost its phases")
     with _tempfile.TemporaryDirectory() as d:
         out = pathlib.Path(d) / "digest.txt"
-        out.write_text(f"{snap['overall']}\n\n{text}\n")
+        write_digest(out, snap, text)
         written = out.read_text()
-    check(written.startswith(DRIFT) and "review expected clean" in written,
+    check(written.startswith(DRIFT) and "review expected clean" in written
+          and "DRIFT=1" in written,
           f"the digest file lost its content: {written!r}")
+
+    # The aligned case: an empty body must still produce a file with the
+    # headline, because the reporting step reads it unconditionally.
+    aligned_snap = dict(snap, overall=ALIGNED, items=[snap["items"][1]],
+                        counts={OBSERVATION_FAILED: 0, DRIFT: 0,
+                                UNEXPECTED_SILENCE: 0, ALIGNED: 1})
+    with _tempfile.TemporaryDirectory() as d:
+        out = pathlib.Path(d) / "digest.txt"
+        write_digest(out, aligned_snap, digest(aligned_snap))
+        written = out.read_text()
+    check(written.strip().startswith(ALIGNED) and written.endswith("\n"),
+          f"an aligned digest must still be a readable file: {written!r}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
@@ -1353,10 +1383,7 @@ def main(argv: list[str] | None = None) -> int:
         print(gap_line)
 
     if args.digest_out:
-        summary = f"{snapshot['overall']}  " + "  ".join(
-            f"{BADGE[st]}={snapshot['counts'][st]}" for st in SEVERITY)
-        pathlib.Path(args.digest_out).write_text(
-            f"{summary}\n\n{body}\n" if body else f"{summary}\n")
+        write_digest(pathlib.Path(args.digest_out), snapshot, body)
 
     if step_summary := os.getenv("GITHUB_STEP_SUMMARY"):
         with open(step_summary, "a") as fh:

@@ -135,12 +135,25 @@ changes; and the issue is closed when everything is aligned again. Blindness
 keeps the issue open for as long as it lasts, because a partially visible org
 must not be able to go quiet behind a half-red page.
 
-Its identity is a **label**, not its title. The issue stays open while the
-condition lasts, so it sinks out of any "newest N" window while working
-correctly — a title match would then file a fresh one every six hours. The
-label also survives an edited title and a manual close, which frees the title
-to name whichever condition matters most, so an ended outage cannot file an
-issue saying the roadmap is not aligned above a body saying it is.
+Its identity is a **label plus a marker this workflow writes into the body**,
+not its title. The issue stays open while the condition lasts, so it sinks out
+of any "newest N" window while working correctly — a title match would then
+file a fresh one every six hours. The label survives that, an edited title and
+a manual close, which frees the title to name whichever condition matters most.
+
+The marker is there because a label alone is an identity anyone with triage
+access can hand to any issue from a dropdown, and this workflow rewrites the
+title and body of what it finds and later closes it. An issue carrying the
+label without the marker is left alone with a warning.
+
+Author filtering would have been the obvious alternative and is deliberately
+not used: `author:app/github-actions` holds only while the job uses
+`secrets.GITHUB_TOKEN`, so the day that becomes an App installation token the
+lookup would match nothing and file a fresh issue every six hours — the
+duplicate-per-run failure the label exists to prevent, reintroduced by an
+unrelated change. The lookup also reads the issues API rather than the search
+index, which is eventually consistent and orders by best match rather than by
+age.
 
 One honesty note on the wording: the liveness gap is measured against the last
 **successful** run, so it reports "did not complete successfully", not "did not
