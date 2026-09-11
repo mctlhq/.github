@@ -1232,8 +1232,9 @@ def selftest() -> int:
         out = pathlib.Path(d) / "digest.txt"
         write_digest(out, aligned_snap, digest(aligned_snap))
         written = out.read_text()
-    check(written.strip().startswith(ALIGNED) and written.endswith("\n"),
-          f"an aligned digest must still be a readable file: {written!r}")
+    check(written == headline(aligned_snap) + "\n",
+          f"an aligned digest must be exactly the headline and a newline, "
+          f"since the report step cats it under `set -euo pipefail`: {written!r}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
@@ -1367,8 +1368,7 @@ def main(argv: list[str] | None = None) -> int:
     changed = before is None or reportable_state(before) != reportable_state(snapshot)
 
     body = digest(snapshot)
-    print(f"{snapshot['overall']}  " + "  ".join(
-        f"{BADGE[s]}={snapshot['counts'][s]}" for s in SEVERITY))
+    print(headline(snapshot))
     if body:
         print()
         print(body)
@@ -1387,7 +1387,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if step_summary := os.getenv("GITHUB_STEP_SUMMARY"):
         with open(step_summary, "a") as fh:
-            fh.write(f"### Roadmap: {snapshot['overall']}\n\n")
+            fh.write(f"### Roadmap: {headline(snapshot)}\n\n")
             fh.write(f"```\n{body or 'everything aligned'}\n```\n")
     if github_output := os.getenv("GITHUB_OUTPUT"):
         with open(github_output, "a") as fh:

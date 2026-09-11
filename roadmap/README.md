@@ -41,6 +41,24 @@ met. That is deliberate, and it is not noise: the workflow notifies only when
 the reconciled state *changes*, so a standing gap is announced once and then
 sits on the page until it closes.
 
+## The shell is gated too
+
+`check-workflow-shell.py` parses every `run:` block in the workflow and refuses
+one bash cannot, and the workflow runs it before anything else.
+
+It exists because the Python here was `--selftest`-gated before every pass
+while ninety lines of shell carrying the entire notification path had nothing.
+One missing quote turned the Report step into `unexpected EOF while looking for
+matching '"'`; bash parses a script before running any of it, so the step never
+executed, the commit behind it was skipped, the snapshot froze, and the
+liveness reference stayed empty forever. A reconciler that ran on schedule,
+observed correctly, and said nothing at all — the incident this whole directory
+is an answer to, reproduced by one character.
+
+`bash -n` costs milliseconds. shellcheck runs too when it is installed, for the
+semantic findings, but is not required, so the gate never depends on a tool the
+runner might lack.
+
 ## Running it
 
     python3 roadmap/reconcile.py --selftest          # fixtures, no network

@@ -50,6 +50,16 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install --quiet pyyaml
 
+      - name: Syntax-check every shell block in this workflow
+        # The Python here is self-test-gated before every pass while ~90 lines
+        # of shell carrying the whole notification path had nothing. One
+        # missing quote made the Report step a parse error, so it never ran,
+        # the commit step was skipped behind it, and the job failed in a way
+        # that left the liveness reference empty forever: a reconciler that
+        # ran on schedule, observed correctly and said nothing — the incident
+        # this PR exists to end, reproduced by one character.
+        run: python3 roadmap/check-workflow-shell.py .github/workflows/roadmap-reconcile.yml
+
       - name: Self-test the reconciler
         # Runs before the real pass, and gates it. The property being protected
         # is that a failed observation can never read as a zero or an absence;
@@ -172,21 +182,23 @@ jobs:
           # token becomes an App installation it would match nothing and file
           # a fresh issue every six hours — the duplicate-per-run failure the
           # label exists to prevent, reintroduced by an unrelated change.
-          number=$(gh issue list --state open --label "$label" --limit 1 \
-            --json number --jq "[.[].number] | first // empty")
-
-          # A label is an identity anyone with triage access can hand to any
-          # issue from a dropdown, and the steps below rewrite the title and
-          # body of what they find and later close it. So before touching it,
-          # require our own marker in the body: ours carry it, a mislabelled
-          # issue does not, and we leave that one alone rather than
-          # overwriting somebody's work.
-          if [ -n "$number" ]; then
-            if ! gh issue view "$number" --json body --jq .body | grep -qF "$marker"; then
-              echo "::warning::issue #${number} carries the ${label} label but is not one of ours — leaving it alone"
-              number=""
-            fi
-          fi
+          # Label AND marker, in one query over several candidates. A label
+          # is an identity anyone with triage access can hand to any issue
+          # from a dropdown, and the steps below rewrite the title and body of
+          # what they find and later close it — so only an issue carrying the
+          # marker this workflow writes is ours.
+          #
+          # --limit 1 would have asked for the NEWEST labelled issue and
+          # tested the marker only on that: a mislabelled issue newer than the
+          # real one is correctly skipped, and then the real tracking issue,
+          # older and marked, is never found — a duplicate gets filed and the
+          # original stays open forever with a frozen body. Selecting across a
+          # page keeps both properties, and drops a `| grep -qF` pipeline that
+          # was the same pipefail SIGPIPE trap removed from `gh label list`
+          # twenty lines above.
+          number=$(gh issue list --state open --label "$label" --limit 20 \
+            --json number,body \
+            --jq "[.[] | select(.body | contains(\"$marker\")) | .number] | first // empty")
 
           if [ "$OVERALL" = "ALIGNED" ] && [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
             if [ -n "$number" ]; then
@@ -232,7 +244,7 @@ jobs:
             echo '```'
             echo
             echo "[Run]($RUN_URL) · [Page]($PAGE_URL) — the page is committed after"
-            echo "this report, so it shows the previous state until that lands.
+            echo "this report, so it shows the previous state until that lands."
           } > "$RUNNER_TEMP/body.md"
 
           if [ -z "$number" ]; then
