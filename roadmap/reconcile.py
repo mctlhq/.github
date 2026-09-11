@@ -638,13 +638,14 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         try:
             issue_obs = observe_issue(gh, item["issue"])
         except ObservationFailure as exc:
-            result.state = OBSERVATION_FAILED
-            result.reasons.append(f"could not observe {item['issue']}: {exc}")
-            return result
+            # Collected, not returned. Returning here also skipped the probe
+            # loop, so an item declaring both an issue and a probe lost its
+            # probes to a GitHub hiccup -- or, since validate_state does not
+            # check that the reference resolves, to a typo.
+            blind.append(f"could not observe {item['issue']}: {exc}")
         except ValueError as exc:
-            result.state = OBSERVATION_FAILED
-            result.reasons.append(str(exc))
-            return result
+            blind.append(str(exc))
+    if issue_obs:
         result.evidence["issue_state"] = issue_obs.state.lower()
         result.evidence["open_prs"] = [p["number"] for p in issue_obs.open_prs]
         try:
@@ -676,7 +677,11 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     want_review = expected.get("review")
     if want_review and issue_obs:
         actual_review = result.evidence["review"]
-        if not _satisfies(actual_review, want_review):
+        # Guarded like the merge axis. Without this the branch reported a
+        # divergence on the very axis it had just recorded as unreadable —
+        # "review expected clean, actual unobserved" is not an observation,
+        # it is the absence of one wearing a finding's clothes.
+        if actual_review != "unobserved" and not _satisfies(actual_review, want_review):
             mismatches.append(
                 f"review expected {_render_want(want_review)}, actual {actual_review}")
 
@@ -687,6 +692,10 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         except ObservationFailure as exc:
             blind.append(f"could not observe mergeability: {exc}")
             actual_merge = None
+            # Recorded like the review axis, for the same reason: an absent
+            # key reads as "not applicable" to anyone looking at the snapshot,
+            # when the truth is that we looked and could not tell.
+            result.evidence["merge"] = "unobserved"
         if actual_merge is not None:
             result.evidence["merge"] = actual_merge
         # The count is evidence, not identity: blocked-conversations:14 and :9
@@ -929,8 +938,9 @@ def selftest() -> int:
             return self._issue
 
         def file_text(self, repo, path):
-            if self._fail:
-                raise ObservationFailure(self._fail)
+            # Deliberately not gated on self._fail: a stub whose GraphQL is
+            # down can still have readable files, which is the case the
+            # probe-after-issue-failure fixture needs.
             if path not in self._files:
                 raise ObservationFailure(f"{path} not found")
             return self._files[path]
@@ -1277,6 +1287,8 @@ def selftest() -> int:
     check(r.state == OBSERVATION_FAILED, f"review blind spot must set the state: {r.state}")
     check(any("issue expected open" in x for x in r.reasons),
           f"the observed divergence was dropped by the review axis: {r.reasons}")
+    check(not any("review expected" in x for x in r.reasons),
+          f"a divergence was reported on the axis that could not be read: {r.reasons}")
 
     # An item declaring merge AND probes must still have its probes run.
     r = reconcile_item(
@@ -1290,6 +1302,20 @@ def selftest() -> int:
         {}, now)
     check(any("probe z" in x for x in r.reasons),
           f"an unreadable merge state skipped the probes entirely: {r.reasons}")
+
+    # An unreadable issue must not cost the item its probes.
+    r = reconcile_item(
+        StubGH(None, files={"a.txt": "zones/x\n"}, fail="gh exited 1: HTTP 502"),
+        {"id": "ip", "title": "IP", "phase": "now", "issue": "o/r#1",
+         "expected": {"issue": "open"},
+         "probes": [{"id": "z", "kind": "file_line_match_count", "repo": "o/r",
+                     "path": "a.txt", "pattern": "^zones/", "expect": "== 0"}]},
+        {}, now)
+    check(r.state == OBSERVATION_FAILED, f"expected OBSERVATION_FAILED, got {r.state}")
+    check(any("could not observe o/r#1" in x for x in r.reasons),
+          f"the issue failure was not reported: {r.reasons}")
+    check(any("probe z" in x for x in r.reasons),
+          f"an unreadable issue skipped the probes: {r.reasons}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
