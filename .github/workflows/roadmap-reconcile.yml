@@ -21,10 +21,15 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - "roadmap/roadmap-state.yaml"
-      - "roadmap/reconcile.py"
+    paths: &sources
+      - "roadmap/**"
       - ".github/workflows/roadmap-reconcile.yml"
+  # So the gates can refuse a change before it is merged. Without this the
+  # earliest a broken `run:` block could be refused was the push that merged
+  # it: a shorter outage than none, but still a red scheduled workflow on main
+  # while the Python was gated ahead of every pass.
+  pull_request:
+    paths: *sources
 
 permissions:
   contents: write
@@ -42,7 +47,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  reconcile:
+  gate:
+    # Everything that can be checked without touching anything. Runs on a pull
+    # request as well, which is the point: the shell here carries the whole
+    # notification path, and it used to be the only part of this directory
+    # with no gate before merge.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -50,7 +59,13 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install --quiet pyyaml
 
-      - name: Syntax-check every shell block in this workflow
+      - name: Self-test the shell gate
+        # The gate's own gate. It exists to refuse a block it could not parse,
+        # so the one thing it must never do is report clean having observed
+        # nothing.
+        run: python3 roadmap/check-workflow-shell.py --selftest
+
+      - name: Syntax-check every shell block in this repository
         # The Python here is self-test-gated before every pass while ~90 lines
         # of shell carrying the whole notification path had nothing. One
         # missing quote made the Report step a parse error, so it never ran,
@@ -58,13 +73,25 @@ jobs:
         # that left the liveness reference empty forever: a reconciler that
         # ran on schedule, observed correctly and said nothing — the incident
         # this PR exists to end, reproduced by one character.
-        run: python3 roadmap/check-workflow-shell.py .github/workflows/roadmap-reconcile.yml
+        # Every workflow, not only this one: this repository defines
+        # org-wide configuration and the others carry another twenty blocks.
+        run: python3 roadmap/check-workflow-shell.py .github/workflows/*.yml
 
       - name: Self-test the reconciler
-        # Runs before the real pass, and gates it. The property being protected
-        # is that a failed observation can never read as a zero or an absence;
-        # a reconciler that lost it would report a green roadmap while blind.
+        # The property being protected is that a failed observation can never
+        # read as a zero or an absence; a reconciler that lost it would report
+        # a green roadmap while blind.
         run: python3 roadmap/reconcile.py --selftest
+
+  reconcile:
+    needs: gate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
 
       - name: When did this reconciler last run
         id: history
@@ -169,10 +196,22 @@ jobs:
           # 422s on a label that already exists and takes the whole report
           # down with it. (`cmd | grep -q` under pipefail was the same trap
           # from the other side: SIGPIPE on a successful match.)
-          if ! gh api "repos/${GITHUB_REPOSITORY}/labels/${label}" >/dev/null 2>&1; then
-            gh label create "$label" --color 0E4429 \
-              --description "Opened by the roadmap reconciler; identity for its tracking issue"
-          fi
+          # 404 means absent; anything else means we could not look, and
+          # those must not be the same answer — folding them together ended
+          # the report with a 422 on a label that already existed.
+          status=$(gh api "repos/${GITHUB_REPOSITORY}/labels/${label}" \
+            --silent --include 2>/dev/null | head -1 | tr -d '\r' | awk '{print $2}')
+          case "$status" in
+            200) ;;
+            404)
+              gh label create "$label" --color 0E4429 \
+                --description "Opened by the roadmap reconciler; identity for its tracking issue"
+              ;;
+            *)
+              echo "::error::could not read the ${label} label (HTTP ${status:-no response}) — refusing to guess whether it exists"
+              exit 1
+              ;;
+          esac
 
           # --label reads the issues API, which is strongly consistent.
           # --search would read the eventually-consistent search index, and
@@ -275,6 +314,7 @@ jobs:
           # retry rather than losing the snapshot to a race.
           for attempt in 1 2 3; do
             if git push; then exit 0; fi
+            echo "push attempt ${attempt} lost a race; rebasing"
             # Checked: a rebase that fails is a conflict, not a race, and
             # retrying the push would report the wrong reason for the failure.
             if ! git pull --rebase --autostash; then

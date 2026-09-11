@@ -59,6 +59,19 @@ is an answer to, reproduced by one character.
 semantic findings, but is not required, so the gate never depends on a tool the
 runner might lack.
 
+Two things the gate does itself rather than delegate. An unbalanced `${{` is
+refused instead of silently discarding the rest of the block — handing
+`bash -n` a fragment and printing "parses cleanly" would be a guard that
+observed nothing and said OK, which is the thing `nodes_of` and `run_probe`
+exist to refuse. And an unterminated heredoc is detected here, because
+`bash -n` calls it a warning and exits 0 — and only on some versions: bash 5
+warns, the bash 3.2 on macOS says nothing. A gate whose coverage depends on the
+runner's bash reports clean for the wrong reason.
+
+It runs in its own job, on `pull_request` as well as on the schedule, so a
+broken block is refused before it is merged rather than after — and over every
+workflow in the repository, not just this one.
+
 ## Running it
 
     python3 roadmap/reconcile.py --selftest          # fixtures, no network
