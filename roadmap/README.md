@@ -52,6 +52,29 @@ sits on the page until it closes.
 Exit codes: `0` aligned, `1` something is not aligned (a normal result to
 publish), `2` the run itself could not be completed.
 
+## Mergeability is a separate question from review
+
+`mergeStateStatus: BLOCKED` on its own is not actionable, and an approved,
+green, unmergeable PR is exactly the shape that reads as ready to a person
+skimming. `merge:` reports why:
+
+| value | meaning |
+|---|---|
+| `ready` | mergeable now |
+| `blocked-review` | a reviewer is asking for changes |
+| `blocked-conversations:N` | approved, but N review threads are unresolved |
+| `blocked-behind-base` | the branch is behind a base that requires strictness |
+| `blocked-checks` | a check is failing or pending |
+| `conflicted` | conflicts with the base |
+| `blocked-unresolved-check` | blocked, and we cannot say why |
+
+Review outranks threads when both are true: a reviewer asking for changes is
+the cause, open threads the symptom. `blocked-unresolved-check` is deliberate —
+a block we cannot explain is worth a person and must not be filed under one we
+can. The count in `blocked-conversations:N` is evidence, not identity: a
+declaration of `blocked-conversations` matches whatever N happens to be, so the
+report does not churn as threads are resolved one at a time.
+
 Probes cover assertions GitHub issue state cannot make — a file's contents, a
 count of services that opted into something. A probe that cannot read what it
 needs raises rather than returning zero, which is the whole point.

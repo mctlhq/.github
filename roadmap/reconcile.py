@@ -205,11 +205,15 @@ query($owner: String!, $repo: String!, $number: Int!) {
             source {
               ... on PullRequest {
                 number url state isDraft updatedAt reviewDecision headRefOid
+                mergeable mergeStateStatus
                 closingIssuesReferences(first: 20) {
                   nodes { number repository { nameWithOwner } }
                 }
                 reviews(last: 20, states: [APPROVED, CHANGES_REQUESTED]) {
                   nodes { state submittedAt commit { oid } }
+                }
+                reviewThreads(first: 100) {
+                  nodes { isResolved isOutdated }
                 }
               }
             }
@@ -267,6 +271,7 @@ def observe_issue(gh: GitHub, ref: str) -> IssueObservation:
                 "draft": bool(source.get("isDraft")),
                 "review_decision": source.get("reviewDecision") or "NONE",
                 "head_reviewed": _head_is_reviewed(source),
+                "merge": _merge_state(source),
                 "updated_at": source["updatedAt"],
             })
     return IssueObservation(
@@ -332,6 +337,56 @@ def _head_is_reviewed(pr: dict) -> bool:
     return False
 
 
+def _merge_state(pr: dict) -> str:
+    """Why this PR cannot be merged, in the caller's vocabulary.
+
+    `mergeStateStatus: BLOCKED` on its own says nothing actionable, and a PR
+    that is approved, green and still unmergeable is precisely the shape that
+    reads as "ready" to a human skimming and as a generic disagreement to a
+    reconciler. mctl-telegram#627 is the case: APPROVED on its head, every
+    check passing, mergeable, and blocked by fourteen unresolved review
+    conversations, because that repo's main requires resolution.
+
+    `blocked-unresolved-check` is deliberate: a block we cannot explain is
+    worth a person, and must not be quietly filed under one we can.
+    """
+    status = (pr.get("mergeStateStatus") or "").upper()
+    if pr.get("isDraft"):
+        return "draft"
+    if (pr.get("mergeable") or "").upper() == "CONFLICTING" or status == "DIRTY":
+        return "conflicted"
+    if status == "CLEAN" or status == "HAS_HOOKS":
+        return "ready"
+    if status == "BEHIND":
+        return "blocked-behind-base"
+    if status == "UNSTABLE":
+        return "blocked-checks"
+    if status == "BLOCKED":
+        # Review first, threads second. Both are often true at once, and a
+        # reviewer asking for changes is the thing that has to move before
+        # resolving threads means anything -- reporting the threads there
+        # would name the symptom over the cause.
+        if (pr.get("reviewDecision") or "") != "APPROVED":
+            return "blocked-review"
+        unresolved = sum(
+            1 for t in (pr.get("reviewThreads") or {}).get("nodes") or []
+            if not t.get("isResolved") and not t.get("isOutdated"))
+        if unresolved:
+            return f"blocked-conversations:{unresolved}"
+        return "blocked-unresolved-check"
+    return f"unknown:{status.lower() or 'none'}"
+
+
+def _merge_summary(open_prs: list[dict]) -> str:
+    if not open_prs:
+        return "none"
+    states = [p.get("merge", "unknown") for p in open_prs]
+    for preferred in states:
+        if preferred != "ready":
+            return preferred
+    return "ready"
+
+
 def _review_state(open_prs: list[dict]) -> str:
     """'clean' | 'blocking-findings' | 'none' | 'unreviewed-head' | 'unknown'."""
     if not open_prs:
@@ -374,6 +429,7 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         result.evidence["issue_state"] = issue_obs.state.lower()
         result.evidence["open_prs"] = [p["number"] for p in issue_obs.open_prs]
         result.evidence["review"] = _review_state(issue_obs.open_prs)
+        result.evidence["merge"] = _merge_summary(issue_obs.open_prs)
         result.evidence["last_activity"] = issue_obs.last_activity
 
     mismatches: list[str] = []
@@ -399,6 +455,14 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         if actual_review != want_review:
             mismatches.append(
                 f"review expected {want_review}, actual {actual_review}")
+
+    want_merge = expected.get("merge")
+    if want_merge and issue_obs:
+        actual_merge = _merge_summary(issue_obs.open_prs)
+        # A count is evidence, not identity: "blocked-conversations:14" and
+        # ":9" are the same situation and must not churn the report.
+        if actual_merge.split(":")[0] != str(want_merge).split(":")[0]:
+            mismatches.append(f"merge expected {want_merge}, actual {actual_merge}")
 
     for probe in item.get("probes") or []:
         try:
@@ -551,11 +615,16 @@ def selftest() -> int:
             failures.append(message)
 
     def fake_issue(state="OPEN", prs=(), updated="2026-09-11T17:00:00Z",
-                   mentions=(), head_seen=True):
-        def node(n, d, closes, head_seen=True):
+                   mentions=(), head_seen=True, merge_status="CLEAN",
+                   unresolved=0):
+        def node(n, d, closes, head_seen=True, merge_status="CLEAN", unresolved=0):
             return {"source": {
                 "number": n, "url": f"u{n}", "state": "OPEN", "isDraft": False,
                 "reviewDecision": d, "updatedAt": updated, "headRefOid": "abc123",
+                "mergeable": "MERGEABLE", "mergeStateStatus": merge_status,
+                "reviewThreads": {"nodes": [
+                    {"isResolved": False, "isOutdated": False}
+                ] * unresolved},
                 "reviews": {"nodes": [
                     {"state": d, "submittedAt": updated,
                      "commit": {"oid": "abc123" if head_seen else "older99"}}
@@ -564,7 +633,9 @@ def selftest() -> int:
                     [{"number": 1, "repository": {"nameWithOwner": "o/r"}}]
                     if closes else
                     [{"number": 7, "repository": {"nameWithOwner": "o/other"}}])}}}
-        nodes = [node(n, d, True, head_seen=head_seen) for n, d in prs]
+        nodes = [node(n, d, True, head_seen=head_seen,
+                      merge_status=merge_status, unresolved=unresolved)
+                 for n, d in prs]
         nodes += [node(n, "NONE", False) for n in mentions]
         return {"repository": {"issue": {
             "number": 1, "title": "t", "url": "u", "state": state,
@@ -671,6 +742,52 @@ def selftest() -> int:
                                                    "review": "clean"}), {}, now)
     check(r.state == DRIFT and any("unreviewed-head" in x for x in r.reasons),
           f"a stale APPROVED must not read as clean: {r.state} {r.reasons}")
+
+    # mctl-telegram#627's shape: approved on its head, every check green,
+    # mergeable -- and unmergeable, because that repo's main requires review
+    # conversations to be resolved. It must read as neither ready nor a
+    # generic disagreement.
+    blocked = fake_issue(prs=[(9, "APPROVED")], merge_status="BLOCKED", unresolved=14)
+    r = reconcile_item(StubGH(blocked),
+                       dict(item_active, expected={"issue": "open",
+                                                   "implementation": "active",
+                                                   "review": "clean",
+                                                   "merge": "ready"}), {}, now)
+    check(r.state == DRIFT, f"an unmergeable approved PR must not be ALIGNED: {r.state}")
+    check(r.evidence["merge"] == "blocked-conversations:14",
+          f"merge reason not explicit: {r.evidence.get('merge')}")
+
+    # When a reviewer is asking for changes AND threads are open, the review
+    # is the cause and the threads the symptom.
+    both = fake_issue(prs=[(9, "CHANGES_REQUESTED")], merge_status="BLOCKED",
+                      unresolved=12)
+    r = reconcile_item(StubGH(both),
+                       dict(item_active, expected={"issue": "open",
+                                                   "implementation": "active",
+                                                   "review": "blocking-findings",
+                                                   "merge": "blocked-review"}), {}, now)
+    check(r.state == ALIGNED and r.evidence["merge"] == "blocked-review",
+          f"review must outrank threads: {r.state} {r.evidence.get('merge')}")
+
+    # Declaring the block we know about makes it aligned again: the count is
+    # evidence, not identity, so 14 threads today and 9 tomorrow do not churn.
+    r = reconcile_item(StubGH(blocked),
+                       dict(item_active, expected={"issue": "open",
+                                                   "implementation": "active",
+                                                   "review": "clean",
+                                                   "merge": "blocked-conversations"}),
+                       {}, now)
+    check(r.state == ALIGNED, f"a declared block should align: {r.state} {r.reasons}")
+
+    # A block we cannot explain is its own answer, never folded into one we can.
+    unexplained = fake_issue(prs=[(9, "APPROVED")], merge_status="BLOCKED", unresolved=0)
+    r = reconcile_item(StubGH(unexplained),
+                       dict(item_active, expected={"issue": "open",
+                                                   "implementation": "active",
+                                                   "review": "clean",
+                                                   "merge": "ready"}), {}, now)
+    check(r.evidence["merge"] == "blocked-unresolved-check",
+          f"an unexplained block must say so: {r.evidence.get('merge')}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

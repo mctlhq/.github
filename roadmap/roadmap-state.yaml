@@ -43,6 +43,7 @@ items:
       issue: open
       implementation: active
       review: blocking-findings
+      merge: blocked-review
     max_silence: 6h
     note: >-
       The declarative agent architecture is a project rather than a production
@@ -126,6 +127,7 @@ items:
       issue: open
       implementation: active
       review: clean
+      merge: ready
     max_silence: 6h
     note: >-
       Approved on the current head as of 2026-09-11 18:40Z. The two P2s that
@@ -247,11 +249,17 @@ items:
       issue: open
       implementation: active
       review: clean
+      # Not `ready`: approved and green, and still unmergeable. mctl-telegram's
+      # main requires review conversations to be resolved, and fourteen are
+      # open. Declared so the page states the reason rather than showing an
+      # approved PR that looks mergeable and is not.
+      merge: blocked-conversations
     max_silence: 12h
     note: >-
-      Approved on the current head. Still carries steward:escalated, which is
-      terminal for pr-steward: the label has to be cleared by a human before
-      that lifecycle resumes, so silence here needs a person rather than time.
+      Approved on the current head, every check green, blocked on unresolved
+      review conversations. Also carries steward:escalated, which is terminal
+      for pr-steward: that label has to be cleared by a human before the
+      lifecycle resumes, so silence here needs a person rather than time.
 
   - id: client-lifecycle.lookup-account
     title: Scoped Telegram lookup account
