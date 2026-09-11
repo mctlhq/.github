@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T22:44:10Z",
+  "generated_at": "2026-09-11T23:20:25Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -21,8 +21,8 @@
         "open_prs": [
           291
         ],
-        "review": "blocking-findings",
-        "last_activity": "2026-09-11T19:23:24Z",
+        "review": "unreviewed-head",
+        "last_activity": "2026-09-11T23:19:25Z",
         "merge": "blocked-review"
       },
       "note": "The declarative agent architecture is a project rather than a production path until this lands: GitOps carries shadow ReleaseBindingIntent with promotable:false, and the resolver refuses to proceed on bindingSource: registry."
@@ -303,7 +303,7 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "last_activity": "2026-09-06T11:02:59Z"
+        "last_activity": "2026-09-11T22:48:48Z"
       },
       "note": "Deliberately unstaffed R&D. Needs a device in hand and an ADR on where the work lives; no child issue exists and none should be invented."
     }

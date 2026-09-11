@@ -625,7 +625,13 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         note=item.get("note"),
     )
     expected = item.get("expected") or {}
-    observed_everything = True
+    # One list for what could not be observed, one for what diverged. No axis
+    # returns early: the rule that a blind spot outranks a divergence in the
+    # STATE without erasing what the other axes showed had to be remembered
+    # independently at three returns, and two of them forgot it. Collecting
+    # both and deciding once makes it structural instead.
+    blind: list[str] = []
+    mismatches: list[str] = []
 
     issue_obs = None
     if item.get("issue"):
@@ -649,12 +655,8 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # and could not tell.
             result.evidence["review"] = "unobserved"
             if "review" in expected:
-                result.state = OBSERVATION_FAILED
-                result.reasons.append(f"could not observe review state: {exc}")
-                return result
+                blind.append(f"could not observe review state: {exc}")
         result.evidence["last_activity"] = issue_obs.last_activity
-
-    mismatches: list[str] = []
 
     want_issue = expected.get("issue")
     if want_issue and issue_obs:
@@ -683,32 +685,28 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         try:
             actual_merge = _merge_summary(issue_obs.open_prs)
         except ObservationFailure as exc:
-            result.state = OBSERVATION_FAILED
-            result.reasons.append(f"could not observe mergeability: {exc}")
-            return result
-        result.evidence["merge"] = actual_merge
+            blind.append(f"could not observe mergeability: {exc}")
+            actual_merge = None
+        if actual_merge is not None:
+            result.evidence["merge"] = actual_merge
         # The count is evidence, not identity: blocked-conversations:14 and :9
         # are the same situation and must not churn the report. The rule is
         # deliberately narrow to that one value -- applied across the whole
         # vocabulary it would also let a declared "unknown" be satisfied by
         # "we could not read the field", which is the one match that must
         # never go green.
-        if not _satisfies(actual_merge, want_merge):
-            mismatches.append(
-                f"merge expected {_render_want(want_merge)}, actual {actual_merge}")
+            if not _satisfies(actual_merge, want_merge):
+                mismatches.append(
+                    f"merge expected {_render_want(want_merge)}, actual {actual_merge}")
 
     for probe in item.get("probes") or []:
         try:
             count, description = run_probe(gh, probe)
         except ObservationFailure as exc:
-            result.state = OBSERVATION_FAILED
-            result.reasons.append(f"probe {probe.get('id', '?')}: {exc}")
-            observed_everything = False
+            blind.append(f"probe {probe.get('id', '?')}: {exc}")
             continue
         except (KeyError, re.error) as exc:
-            result.state = OBSERVATION_FAILED
-            result.reasons.append(f"probe {probe.get('id', '?')} is malformed: {exc}")
-            observed_everything = False
+            blind.append(f"probe {probe.get('id', '?')} is malformed: {exc}")
             continue
         result.evidence.setdefault("probes", {})[probe.get("id", "?")] = count
         try:
@@ -717,26 +715,21 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # Reading `expect` outside the guard let a malformed probe raise
             # out of reconcile(), exit 1, and be published by the workflow as
             # an ordinary "not aligned" result -- a crash dressed as a finding.
-            result.state = OBSERVATION_FAILED
-            result.reasons.append(
+            blind.append(
                 f"probe {probe.get('id', '?')} has no usable expectation: {exc}")
-            observed_everything = False
             continue
         if not satisfied:
             mismatches.append(
                 f"probe {probe.get('id', '?')}: {description} = {count}, "
                 f"expected {probe['expect']}")
 
-    if not observed_everything:
-        # What was observed is still reported. The state is
-        # OBSERVATION_FAILED, correctly — a blind spot outranks a divergence —
-        # but `reasons` is the payload every rendering uses, so returning here
-        # meant the page, the digest and the tracking-issue comment said only
-        # "probe X could not be read" about an item where a fully observed
-        # assertion had already failed. _merge_state and _review_state were
-        # made lazy so a blind spot on one axis could not fail an item that
-        # asserted another; the same argument says it must not erase what the
-        # other axes showed.
+    # One decision, made once. A blind spot outranks a divergence in the
+    # state -- reporting DRIFT on an axis nobody could read would be inventing
+    # a finding -- but `reasons` is what every rendering shows, so what the
+    # other axes did observe is reported alongside it.
+    if blind:
+        result.state = OBSERVATION_FAILED
+        result.reasons.extend(blind)
         result.reasons.extend(mismatches)
         return result
 
@@ -892,7 +885,8 @@ def selftest() -> int:
     def fake_issue(state="OPEN", prs=(), updated="2026-09-11T17:00:00Z",
                    mentions=(), head_seen=True, merge_status="CLEAN",
                    unresolved=0, mergeable="MERGEABLE", outdated=0,
-                   timeline_truncated=False, threads_truncated=False):
+                   timeline_truncated=False, threads_truncated=False,
+                   reviews_truncated=False):
         def node(n, d, closes):
             threads = ([{"isResolved": False, "isOutdated": False}] * unresolved
                        + [{"isResolved": False, "isOutdated": True}] * outdated)
@@ -903,7 +897,8 @@ def selftest() -> int:
                 "reviewThreads": {
                     "pageInfo": {"hasNextPage": threads_truncated},
                     "nodes": threads},
-                "reviews": {"pageInfo": {"hasPreviousPage": False}, "nodes": [
+                "reviews": {"pageInfo": {"hasPreviousPage": reviews_truncated},
+                            "nodes": [
                     {"state": d, "submittedAt": updated,
                      "commit": {"oid": "abc123" if head_seen else "older99"}}
                 ]},
@@ -1263,6 +1258,38 @@ def selftest() -> int:
           f"the observed mismatch was dropped: {r.reasons}")
     check(any("probe z" in x for x in r.reasons),
           f"the unreadable probe was not reported: {r.reasons}")
+
+    # The other two axes the rule had to be remembered at, and was not.
+    # An unreadable merge state alongside an observed issue divergence:
+    r = reconcile_item(StubGH(fake_issue(state="CLOSED", prs=[(9, "APPROVED")],
+                                         mergeable="UNKNOWN", merge_status="UNKNOWN")),
+                       {"id": "mm", "title": "MM", "phase": "now", "issue": "o/r#1",
+                        "expected": {"issue": "open", "merge": "ready"}}, {}, now)
+    check(r.state == OBSERVATION_FAILED, f"merge blind spot must set the state: {r.state}")
+    check(any("issue expected open" in x for x in r.reasons),
+          f"the observed divergence was dropped by the merge axis: {r.reasons}")
+
+    # An unreadable review state alongside the same:
+    r = reconcile_item(StubGH(fake_issue(state="CLOSED", prs=[(9, "APPROVED")],
+                                         reviews_truncated=True)),
+                       {"id": "rr", "title": "RR", "phase": "now", "issue": "o/r#1",
+                        "expected": {"issue": "open", "review": "clean"}}, {}, now)
+    check(r.state == OBSERVATION_FAILED, f"review blind spot must set the state: {r.state}")
+    check(any("issue expected open" in x for x in r.reasons),
+          f"the observed divergence was dropped by the review axis: {r.reasons}")
+
+    # An item declaring merge AND probes must still have its probes run.
+    r = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "APPROVED")], mergeable="UNKNOWN",
+                          merge_status="UNKNOWN"),
+               files={"a.txt": "zones/x\n"}),
+        {"id": "mp", "title": "MP", "phase": "now", "issue": "o/r#1",
+         "expected": {"merge": "ready"},
+         "probes": [{"id": "z", "kind": "file_line_match_count", "repo": "o/r",
+                     "path": "a.txt", "pattern": "^zones/", "expect": "== 0"}]},
+        {}, now)
+    check(any("probe z" in x for x in r.reasons),
+          f"an unreadable merge state skipped the probes entirely: {r.reasons}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

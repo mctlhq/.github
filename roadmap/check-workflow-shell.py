@@ -421,6 +421,9 @@ def main(argv: list[str]) -> int:
     # workflow while the shellcheck coupling that flag exists to remove was
     # quietly back on the gate that blocks the reconcile.
     options = [a for a in argv if a.startswith("-")]
+    if "-h" in options or "--help" in options:
+        print(__doc__)
+        return 0
     unknown = [a for a in options if a not in ("--selftest", "--syntax-only")]
     if unknown:
         print(f"unknown option(s): {', '.join(unknown)}", file=sys.stderr)
