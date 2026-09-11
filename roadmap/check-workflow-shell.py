@@ -195,8 +195,8 @@ def check_block(label: str, shell: str, script: str, workdir: pathlib.Path,
     return None
 
 
-def check_files(paths: list[pathlib.Path]) -> int:
-    have_shellcheck = shutil.which("shellcheck") is not None
+def check_files(paths: list[pathlib.Path], syntax_only: bool = False) -> int:
+    have_shellcheck = not syntax_only and shutil.which("shellcheck") is not None
     failures = 0
     checked = 0
     with tempfile.TemporaryDirectory() as d:
@@ -220,7 +220,12 @@ def check_files(paths: list[pathlib.Path]) -> int:
         print("no shell blocks found — this gate would pass on anything",
               file=sys.stderr)
         return 2
-    note = "" if have_shellcheck else " (shellcheck not installed, syntax only)"
+    if syntax_only:
+        note = " (syntax only, by request)"
+    elif have_shellcheck:
+        note = ""
+    else:
+        note = " (shellcheck not installed, syntax only)"
     print(f"workflow shell: {checked} block(s) parse cleanly{note}")
     return 0
 
@@ -298,6 +303,14 @@ def selftest() -> int:
         check(quietly(check_files, [empty]) == 2,
               "a workflow with no shell blocks must not report a clean sweep")
 
+        # A known and deliberate bias: `<<WORD` inside a string reads as an
+        # opener, so the gate refuses a block it should accept. Pinned
+        # rather than left to surprise someone — the failure direction is
+        # refusing valid work, never accepting broken work, which is the
+        # right way for a gate to be wrong.
+        check(unterminated_heredoc('echo "a <<EOF b"') == "EOF",
+              "the documented conservative bias changed without a decision")
+
         missing = workdir / "nope.yml"
         try:
             list(blocks(missing))
@@ -316,10 +329,16 @@ def selftest() -> int:
 def main(argv: list[str]) -> int:
     if argv and argv[0] == "--selftest":
         return selftest()
-    if not argv:
+    # --syntax-only skips shellcheck. The gate that blocks the reconcile
+    # uses it: shellcheck comes from the runner image, and a new warning
+    # arriving with an image bump would stop the reconciler with no pull
+    # request to refuse it at.
+    syntax_only = "--syntax-only" in argv
+    files = [pathlib.Path(a) for a in argv if not a.startswith("--")]
+    if not files:
         print(__doc__, file=sys.stderr)
         return 2
-    return check_files([pathlib.Path(a) for a in argv])
+    return check_files(files, syntax_only=syntax_only)
 
 
 if __name__ == "__main__":

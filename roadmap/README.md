@@ -159,8 +159,16 @@ the reconciler ran at all?
 Not from the snapshot. Its `generated_at` records the last *change*, and "no
 change" is the designed steady state — measuring staleness against it would
 report a growing outage forever on a roadmap that is simply quiet. The
-reference is the workflow's own run history, which advances on every run, and
-`--previous-run-at` carries it in.
+reference is the workflow's own run history, and `--previous-run-at` carries
+it in.
+
+Two exclusions make that reference mean what it says. Pull-request runs are
+skipped: `reconcile` does not run on them and a skipped job does not fail a
+run, so they conclude successfully having observed nothing — and one pull
+request touching `roadmap-state.yaml`, which is how the roadmap is maintained,
+would otherwise reset the staleness clock in the middle of an outage. And they
+sit in their own concurrency group, since GitHub cancels a queued run when a
+newer one joins the group: sharing it let a PR push drop a scheduled tick.
 
 Be exact about what that buys. It reports an outage that has **ended**, on the
 first run after it. A reconciler that is still down produces no run and

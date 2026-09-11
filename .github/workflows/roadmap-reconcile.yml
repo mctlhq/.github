@@ -55,7 +55,11 @@ on:
 permissions: {}
 
 concurrency:
-  group: roadmap-reconcile
+  # Pull-request runs get their own group. Sharing one meant a PR push could
+  # join the group and cancel a queued scheduled tick — GitHub cancels the
+  # pending run when a newer one joins — so the gate could drop the reconcile
+  # it exists to protect.
+  group: roadmap-reconcile-${{ github.event_name == 'pull_request' && github.ref || 'scheduled' }}
   cancel-in-progress: false
 
 jobs:
@@ -79,7 +83,7 @@ jobs:
         # nothing.
         run: python3 roadmap/check-workflow-shell.py --selftest
 
-      - name: Syntax-check this workflow's own shell
+      - name: Syntax-check the workflows this directory owns
         # The Python here is self-test-gated before every pass while ~90 lines
         # of shell carrying the whole notification path had nothing. One
         # missing quote made the Report step a parse error, so it never ran,
@@ -87,7 +91,22 @@ jobs:
         # that left the liveness reference empty forever: a reconciler that
         # ran on schedule, observed correctly and said nothing — the incident
         # this PR exists to end, reproduced by one character.
-        run: python3 roadmap/check-workflow-shell.py .github/workflows/roadmap-reconcile.yml
+        #
+        # --syntax-only on purpose: this gate blocks the reconcile, and
+        # shellcheck comes from whatever ubuntu-latest ships. Letting a runner
+        # image bump introduce a new warning here would silence the reconciler
+        # with no pull request to refuse it at — the coupling just removed for
+        # every other workflow, surviving for this one. Semantic findings are
+        # the sweep's job, where they cannot do that.
+        #
+        # Both files, because workflow-shell-check.yml would otherwise be the
+        # only thing checking itself: an Actions-invalid document there stops
+        # the job that would have caught it, and the sweep vanishing is its
+        # own only symptom.
+        run: |
+          python3 roadmap/check-workflow-shell.py --syntax-only \
+            .github/workflows/roadmap-reconcile.yml \
+            .github/workflows/workflow-shell-check.yml
 
       - name: Self-test the reconciler
         # The property being protected is that a failed observation can never
@@ -128,8 +147,19 @@ jobs:
           # been the joke telling itself. If the API call fails, the step
           # fails.
           runs=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&per_page=5")
-          previous=$(jq -r "[.workflow_runs[] | select(.id != ${RUN_ID}) | .created_at] | first // \"\"" <<<"$runs")
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&per_page=20")
+          # Pull-request runs are excluded. `reconcile` is skipped on them and
+          # a skipped job does not fail a run, so those runs conclude success
+          # having observed nothing — and letting one advance the reference
+          # means a pull request touching roadmap-state.yaml, which is how the
+          # roadmap is maintained, silently resets the staleness clock in the
+          # middle of an outage. The push-to-main run that follows would then
+          # be the first real reconcile in days and report stale_hours=0,
+          # which is the one thing this check exists to say.
+          previous=$(jq -r '[.workflow_runs[]
+            | select(.id != '"${RUN_ID}"')
+            | select(.event != "pull_request")
+            | .created_at] | first // ""' <<<"$runs")
           echo "previous_run_at=${previous}" >> "$GITHUB_OUTPUT"
           if [ -z "$previous" ]; then
             echo "no earlier successful run — liveness makes no claim this time"
