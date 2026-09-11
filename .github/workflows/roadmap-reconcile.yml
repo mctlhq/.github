@@ -81,6 +81,11 @@ jobs:
           else
             echo "previous successful run: ${previous}"
           fi
+          # Measured against SUCCESSFUL runs, so the gap this reports is
+          # "did not complete successfully", not "did not fire". An exit-2
+          # run, a push that lost three races, or a failure in the reporting
+          # step below all widen it without the schedule having missed a tick.
+          # The wording downstream says so rather than claiming more.
 
       - name: Reconcile
         id: reconcile
@@ -98,6 +103,7 @@ jobs:
             --state roadmap/roadmap-state.yaml \
             --json roadmap/snapshot.json \
             --markdown roadmap/ROADMAP.md \
+            --digest "$RUNNER_TEMP/digest.txt" \
             --previous "$RUNNER_TEMP/previous.json" \
             ${PREVIOUS_RUN_AT:+--previous-run-at "$PREVIOUS_RUN_AT"}
           code=$?
@@ -151,9 +157,9 @@ jobs:
         # job's own conclusion keeps meaning "the reconciler worked", and the
         # roadmap's state is reported where it can persist and notify:
         #
-        #   body  — rewritten every run, silently; the current state
+        #   body    — rewritten every run, silently; the current state
         #   comment — only when the reconciled state changes; the notification
-        #   closed — when everything is aligned again
+        #   closed  — when everything is aligned again
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OVERALL: ${{ steps.reconcile.outputs.overall }}
@@ -161,22 +167,42 @@ jobs:
           STALE_HOURS: ${{ steps.reconcile.outputs.stale_hours }}
           CHANGED: ${{ steps.reconcile.outputs.changed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PAGE_URL: ${{ github.server_url }}/${{ github.repository }}/blob/main/roadmap/ROADMAP.md
         run: |
           set -euo pipefail
-          title="Roadmap: reconciled state is not aligned"
-          number=$(gh issue list --state open --limit 50 \
-            --json number,title --jq "[.[] | select(.title == \"$title\") | .number] | first // empty")
+          # Identity is a label, not a title. The issue stays open for as long
+          # as the condition lasts, so it sinks out of any "newest N" window
+          # while working correctly — and a title match would then open a fresh
+          # one every six hours. A label survives that, an edited title, and a
+          # manual close.
+          label="roadmap-reconciler"
+          gh label create "$label" --color 0E4429 --force \
+            --description "Opened by the roadmap reconciler; identity for its tracking issue"
+          number=$(gh issue list --state open --label "$label" --limit 1 \
+            --json number --jq "[.[].number] | first // empty")
 
           if [ "$OVERALL" = "ALIGNED" ] && [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
             if [ -n "$number" ]; then
-              gh issue close "$number" --comment "Everything the roadmap declares is true again, as of $RUN_URL."
+              gh issue close "$number" \
+                --comment "Everything the roadmap declares is true again, as of $RUN_URL."
             fi
             exit 0
           fi
 
+          # The title names the condition that matters most, which is why
+          # identity had to stop depending on it: an ended outage must not file
+          # an issue titled "not aligned" above a body saying it is.
+          if [ "$UNOBSERVED" != "0" ]; then
+            title="Roadmap: $UNOBSERVED item(s) could not be observed"
+          elif [ "$STALE_HOURS" != "0" ]; then
+            title="Roadmap: the reconciler did not complete successfully for ${STALE_HOURS}h"
+          else
+            title="Roadmap: reconciled state is $OVERALL"
+          fi
+
           {
-            echo "Reconciled state as of the run below. This body is rewritten on every run;"
-            echo "a comment is added only when the state changes."
+            echo "**$OVERALL.** This body is rewritten on every run; a comment is added"
+            echo "only when the reconciled state changes."
             echo
             if [ "$UNOBSERVED" != "0" ]; then
               echo "**$UNOBSERVED item(s) could not be observed.** That is this tool or its"
@@ -184,21 +210,22 @@ jobs:
               echo
             fi
             if [ "$STALE_HOURS" != "0" ]; then
-              echo "**This reconciler did not run for ${STALE_HOURS}h.** The roadmap was"
-              echo "unobserved for that window; what follows is only what is true now."
+              echo "**No successful run for ${STALE_HOURS}h.** The schedule may have fired and"
+              echo "failed rather than missed a tick; either way the roadmap was unobserved"
+              echo "for that window, and what follows is only what is true now."
               echo
             fi
             echo '```'
-            sed -n "/^### Roadmap/,\$p" "$GITHUB_STEP_SUMMARY" | sed -n "/^\`\`\`$/,/^\`\`\`$/p" | sed "/^\`\`\`$/d"
+            cat "$RUNNER_TEMP/digest.txt"
             echo '```'
             echo
-            echo "[Run]($RUN_URL) · [Page](../blob/main/roadmap/ROADMAP.md)"
+            echo "[Run]($RUN_URL) · [Page]($PAGE_URL)"
           } > "$RUNNER_TEMP/body.md"
 
           if [ -z "$number" ]; then
-            gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            gh issue create --title "$title" --label "$label" --body-file "$RUNNER_TEMP/body.md"
           else
-            gh issue edit "$number" --body-file "$RUNNER_TEMP/body.md"
+            gh issue edit "$number" --title "$title" --body-file "$RUNNER_TEMP/body.md"
             if [ "$CHANGED" = "true" ] || [ "$STALE_HOURS" != "0" ]; then
               gh issue comment "$number" --body-file "$RUNNER_TEMP/body.md"
             fi

@@ -135,6 +135,18 @@ changes; and the issue is closed when everything is aligned again. Blindness
 keeps the issue open for as long as it lasts, because a partially visible org
 must not be able to go quiet behind a half-red page.
 
+Its identity is a **label**, not its title. The issue stays open while the
+condition lasts, so it sinks out of any "newest N" window while working
+correctly — a title match would then file a fresh one every six hours. The
+label also survives an edited title and a manual close, which frees the title
+to name whichever condition matters most, so an ended outage cannot file an
+issue saying the roadmap is not aligned above a body saying it is.
+
+One honesty note on the wording: the liveness gap is measured against the last
+**successful** run, so it reports "did not complete successfully", not "did not
+fire". An exit-2 run, a push that lost three races, or a failure while
+reporting all widen it without the schedule having missed a tick.
+
 A run that could observe nothing at all exits 2 and fails the job rather than
 publishing an all-red page: every item unobserved is a credentials or
 connectivity fault, not a roadmap state.

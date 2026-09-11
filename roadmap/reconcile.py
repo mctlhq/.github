@@ -1215,6 +1215,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--state", default="roadmap/roadmap-state.yaml")
     parser.add_argument("--json", dest="json_out")
     parser.add_argument("--markdown", dest="md_out")
+    parser.add_argument(
+        "--digest", dest="digest_out",
+        help="write the human-readable digest here. GITHUB_STEP_SUMMARY cannot "
+             "serve this: the runtime gives each step its own file, so a later "
+             "step reading it gets an empty one.")
     parser.add_argument("--previous", help="prior snapshot.json, to report only on change")
     parser.add_argument(
         "--previous-run-at",
@@ -1313,6 +1318,12 @@ def main(argv: list[str] | None = None) -> int:
                     f"below was unobserved for that whole window")
         body = f"{gap_line}\n{body}" if body else gap_line
         print(gap_line)
+
+    if args.digest_out:
+        summary = f"{snapshot['overall']}  " + "  ".join(
+            f"{BADGE[st]}={snapshot['counts'][st]}" for st in SEVERITY)
+        pathlib.Path(args.digest_out).write_text(
+            f"{summary}\n\n{body}\n" if body else f"{summary}\n")
 
     if step_summary := os.getenv("GITHUB_STEP_SUMMARY"):
         with open(step_summary, "a") as fh:
