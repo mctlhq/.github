@@ -131,7 +131,11 @@ def unterminated_heredoc(script: str) -> str | None:
     global HEREDOC
     if HEREDOC is None:
         # <<WORD, <<-WORD, <<'WORD', <<"WORD"; <<< is a herestring, not a heredoc.
-        HEREDOC = re.compile(r"<<(-?)\s*([\"\']?)([A-Za-z_][A-Za-z0-9_]*)\2")
+        # <<WORD, <<-WORD, <<'WORD', <<"WORD", <<\\WORD — the backslash is the
+        # third way to quote a delimiter and behaves like the other two.
+        # <<< is a herestring and is blanked before this runs.
+        HEREDOC = re.compile(
+            r"<<(-?)\s*(?:([\"\'])|(\\))?([A-Za-z_][A-Za-z0-9_]*)(?(2)\2|)")
     lines = script.split("\n")
     index = 0
     while index < len(lines):
@@ -152,7 +156,7 @@ def unterminated_heredoc(script: str) -> str | None:
         if not match:
             index += 1
             continue
-        dash, _, word = match.groups()
+        dash, _, _, word = match.groups()
         # Scan forward for the delimiter, and resume AFTER it rather than at
         # the next line: a `<<EOF` inside a heredoc body is text, not a second
         # opener, and treating it as one refuses valid blocks.
@@ -382,6 +386,11 @@ def selftest() -> int:
               'a terminated <<"EOF" was reported as open')
         check(unterminated_heredoc("cat <<-'EOF'\n\tbody\n\tEOF\n") is None,
               "a tab-indented quoted delimiter was not recognised")
+        # The third spelling: a backslash-quoted delimiter.
+        check(unterminated_heredoc("cat <<\\EOF\nbody\n") == "EOF",
+              "an unterminated <<\\\\EOF was accepted")
+        check(unterminated_heredoc("cat <<\\EOF\nbody\nEOF\n") is None,
+              "a terminated <<\\\\EOF was reported as open")
         # Quote parity after a quoted delimiter: the closing quote of the
         # delimiter must be consumed with the opening one, or every string
         # later on the line is misattributed.
@@ -407,24 +416,25 @@ def selftest() -> int:
 
 
 def main(argv: list[str]) -> int:
-    if "--selftest" in argv:
-        # Recognised anywhere, not only first: a real flag in second position
-        # was otherwise reported as unknown.
+    # Options are anything starting with a dash, not only a double dash:
+    # `-syntax-only` used to become a file path, reported as a missing
+    # workflow while the shellcheck coupling that flag exists to remove was
+    # quietly back on the gate that blocks the reconcile.
+    options = [a for a in argv if a.startswith("-")]
+    unknown = [a for a in options if a not in ("--selftest", "--syntax-only")]
+    if unknown:
+        print(f"unknown option(s): {', '.join(unknown)}", file=sys.stderr)
+        return 2
+    if "--selftest" in options:
+        # Checked after the scan, so `--selftest --bogus` is refused rather
+        # than silently running the self-test.
         return selftest()
     # --syntax-only skips shellcheck. The gate that blocks the reconcile
     # uses it: shellcheck comes from the runner image, and a new warning
     # arriving with an image bump would stop the reconciler with no pull
     # request to refuse it at.
-    syntax_only = "--syntax-only" in argv
-    unknown = [a for a in argv if a.startswith("--") and a != "--syntax-only"]
-    if unknown:
-        # Silently dropping an unrecognised flag is how a misspelled
-        # --syntax-only quietly restores the runner-image shellcheck
-        # coupling this option exists to remove, with nothing saying it
-        # stopped applying.
-        print(f"unknown option(s): {', '.join(unknown)}", file=sys.stderr)
-        return 2
-    files = [pathlib.Path(a) for a in argv if not a.startswith("--")]
+    syntax_only = "--syntax-only" in options
+    files = [pathlib.Path(a) for a in argv if not a.startswith("-")]
     if not files:
         print(__doc__, file=sys.stderr)
         return 2

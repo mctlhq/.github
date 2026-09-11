@@ -728,6 +728,16 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
                 f"expected {probe['expect']}")
 
     if not observed_everything:
+        # What was observed is still reported. The state is
+        # OBSERVATION_FAILED, correctly — a blind spot outranks a divergence —
+        # but `reasons` is the payload every rendering uses, so returning here
+        # meant the page, the digest and the tracking-issue comment said only
+        # "probe X could not be read" about an item where a fully observed
+        # assertion had already failed. _merge_state and _review_state were
+        # made lazy so a blind spot on one axis could not fail an item that
+        # asserted another; the same argument says it must not erase what the
+        # other axes showed.
+        result.reasons.extend(mismatches)
         return result
 
     if mismatches:
@@ -1235,6 +1245,24 @@ def selftest() -> int:
     check(written == headline(aligned_snap) + "\n",
           f"an aligned digest must be exactly the headline and a newline, "
           f"since the report step cats it under `set -euo pipefail`: {written!r}")
+
+    # An item asserting both an issue and a probe, with the probe unreadable:
+    # the state is OBSERVATION_FAILED, and the observed mismatch must still be
+    # reported. Nothing exercised this combination for fifteen review rounds,
+    # which is how the reasons came to be dropped.
+    both_axes = {
+        "id": "m", "title": "M", "phase": "now", "issue": "o/r#1",
+        "expected": {"issue": "open"},
+        "probes": [{"id": "z", "kind": "file_line_match_count", "repo": "o/r",
+                    "path": "gone.txt", "pattern": "^x", "expect": "== 0"}],
+    }
+    r = reconcile_item(StubGH(fake_issue(state="CLOSED"), files={}), both_axes, {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"an unreadable probe must outrank a divergence: {r.state}")
+    check(any("issue expected open" in x for x in r.reasons),
+          f"the observed mismatch was dropped: {r.reasons}")
+    check(any("probe z" in x for x in r.reasons),
+          f"the unreadable probe was not reported: {r.reasons}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
