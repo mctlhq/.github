@@ -42,8 +42,12 @@ items:
     expected:
       issue: open
       implementation: active
-      review: blocking-findings
-      merge: blocked-review
+      # Two acceptable answers, because both are this situation: the author
+      # pushes a fix and the head is briefly unreviewed, then the reviewer
+      # answers again. Declaring only one would report drift on every push
+      # and teach everyone to ignore the report.
+      review: [blocking-findings, unreviewed-head]
+      merge: [blocked-review, blocked-review-required]
     max_silence: 6h
     note: >-
       The declarative agent architecture is a project rather than a production

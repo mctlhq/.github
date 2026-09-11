@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T20:39:40Z",
+  "generated_at": "2026-09-11T20:51:02Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -22,8 +22,8 @@
           291
         ],
         "review": "blocking-findings",
-        "merge": "blocked-review",
-        "last_activity": "2026-09-11T19:23:24Z"
+        "last_activity": "2026-09-11T19:23:24Z",
+        "merge": "blocked-review"
       },
       "note": "The declarative agent architecture is a project rather than a production path until this lands: GitOps carries shadow ReleaseBindingIntent with promotable:false, and the resolver refuses to proceed on bindingSource: registry."
     },
@@ -56,7 +56,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-08-30T13:50:41Z"
       },
       "note": null
@@ -73,7 +72,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T00:06:19Z"
       },
       "note": "Owns execution identity; .github#55 observability consumes it. The two referenced each other as blockers until 2026-09-11, when the edge was made one-directional."
@@ -90,7 +88,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-08-29T06:28:13Z"
       },
       "note": "#198 is cited by .github#42 as the approval primitive but is not implemented; the durable wait that does exist is #150 / PR #212, and WAITING_FOR_APPROVAL appears nowhere in code."
@@ -109,8 +106,8 @@
           340
         ],
         "review": "clean",
-        "merge": "ready",
-        "last_activity": "2026-09-11T18:40:26Z"
+        "last_activity": "2026-09-11T18:40:26Z",
+        "merge": "ready"
       },
       "note": "Approved on the current head as of 2026-09-11 18:40Z. The two P2s that sat in the normative hashing core -- budget invariants skipped under a producer-supplied truncated flag, and allow_nan in the canonical JSON -- were fixed in review. Ready to merge."
     },
@@ -126,7 +123,6 @@
         "issue_state": "closed",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T10:12:30Z"
       },
       "note": null
@@ -143,7 +139,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T00:22:40Z"
       },
       "note": "Blocked by mctl-api#227 (done) and mctl-agents#264 (in review)."
@@ -160,7 +155,6 @@
         "issue_state": "closed",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T16:36:46Z"
       },
       "note": null
@@ -194,7 +188,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-08-29T06:28:10Z"
       },
       "note": null
@@ -211,7 +204,6 @@
         "issue_state": "closed",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T06:23:11Z"
       },
       "note": null
@@ -228,7 +220,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T00:23:08Z",
         "probes": {
           "zone-roots-still-local": 0
@@ -248,7 +239,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T00:23:46Z"
       },
       "note": "Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step is measurement of what exists, not more servers."
@@ -267,8 +257,8 @@
           627
         ],
         "review": "clean",
-        "merge": "blocked-conversations:14",
-        "last_activity": "2026-09-11T17:18:03Z"
+        "last_activity": "2026-09-11T17:18:03Z",
+        "merge": "blocked-conversations:14"
       },
       "note": "Approved on the current head, every check green, blocked on unresolved review conversations. Also carries steward:escalated, which is terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
     },
@@ -284,7 +274,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T00:25:42Z"
       },
       "note": "Waiting on a human: the account must be registered against a free number and its numeric id handed over before the allowlist entry and mctl-gitops#1182 can be applied. No amount of time moves this."
@@ -301,7 +290,6 @@
         "issue_state": "closed",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-11T17:02:10Z"
       },
       "note": null
@@ -318,7 +306,6 @@
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "merge": "none",
         "last_activity": "2026-09-06T11:02:59Z"
       },
       "note": "Deliberately unstaffed R&D. Needs a device in hand and an ADR on where the work lives; no child issue exists and none should be invented."

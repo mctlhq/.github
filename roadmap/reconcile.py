@@ -200,7 +200,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
     issue(number: $number) {
       number title url state updatedAt
       timelineItems(last: 100, itemTypes: [CROSS_REFERENCED_EVENT]) {
-        totalCount
+        pageInfo { hasPreviousPage }
         nodes {
           ... on CrossReferencedEvent {
             source {
@@ -208,15 +208,15 @@ query($owner: String!, $repo: String!, $number: Int!) {
                 number url state isDraft updatedAt reviewDecision headRefOid
                 mergeable mergeStateStatus
                 closingIssuesReferences(first: 100) {
-                  totalCount
+                  pageInfo { hasNextPage }
                   nodes { number repository { nameWithOwner } }
                 }
                 reviews(last: 100, states: [APPROVED, CHANGES_REQUESTED]) {
-                  totalCount
+                  pageInfo { hasPreviousPage }
                   nodes { state submittedAt commit { oid } }
                 }
                 reviewThreads(first: 100) {
-                  totalCount
+                  pageInfo { hasNextPage }
                   nodes { isResolved isOutdated }
                 }
               }
@@ -233,18 +233,25 @@ query($owner: String!, $repo: String!, $number: Int!) {
 def nodes_of(connection: dict | None, label: str) -> list[dict]:
     """Every node of a paged connection, or a refusal.
 
-    A connection whose `totalCount` exceeds what came back has been silently
-    truncated, and a count taken over the remainder is a guess. Guessing is
-    the failure mode this file exists to prevent, so it raises instead.
+    Truncation is detected with `pageInfo`, not `totalCount`. On a filtered
+    connection the two disagree: `IssueTimelineItemsConnection` carries three
+    separate counters precisely because `totalCount` does not describe what
+    an `itemTypes:` filter returned, and `PullRequestReviewConnection` has no
+    counter that accounts for `states:` at all. Comparing an unfiltered total
+    against a filtered list would have made every issue past a hundred
+    timeline events permanently OBSERVATION_FAILED — the truncation guard
+    manufacturing the state it exists to prevent. `hasNextPage` /
+    `hasPreviousPage` answer the only question being asked: is there more
+    beyond the page we took.
     """
     connection = connection or {}
     nodes = connection.get("nodes")
     if nodes is None:
         raise ObservationFailure(f"{label}: connection carried no nodes")
-    total = connection.get("totalCount")
-    if total is not None and total > len(nodes):
+    page = connection.get("pageInfo") or {}
+    if page.get("hasNextPage") or page.get("hasPreviousPage"):
         raise ObservationFailure(
-            f"{label}: {total} entries but only {len(nodes)} were returned, "
+            f"{label}: more entries exist beyond the {len(nodes)} returned, "
             f"so anything counted over them would be a guess")
     return nodes
 
@@ -295,7 +302,12 @@ def observe_issue(gh: GitHub, ref: str) -> IssueObservation:
                 "draft": bool(source.get("isDraft")),
                 "review_decision": source.get("reviewDecision") or "NONE",
                 "head_reviewed": _head_is_reviewed(source),
-                "merge": _merge_state(source),
+                # Kept raw. _merge_state is evaluated only if the item asserts
+                # `merge:`; computing it here let a transient
+                # `mergeable: UNKNOWN` on a just-pushed PR fail an item that
+                # never asked about merging, hiding a fully observed
+                # implementation DRIFT behind an unrelated blind spot.
+                "raw": source,
                 "updated_at": source["updatedAt"],
             })
     return IssueObservation(
@@ -333,6 +345,10 @@ def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
 ITEM_KEYS = {"id", "title", "epic", "issue", "also", "phase", "expected",
              "probes", "max_silence", "note", "unlocks"}
 EXPECTED_KEYS = {"issue", "implementation", "review", "merge"}
+REVIEW_VALUES = {"clean", "blocking-findings", "none", "unreviewed-head", "unknown"}
+MERGE_VALUES = {"ready", "draft", "conflicted", "none", "blocked-review",
+                "blocked-review-required", "blocked-checks", "blocked-behind-base",
+                "blocked-conversations", "blocked-unresolved-check"}
 PROBE_KEYS = {
     "file_line_match_count": {"id", "kind", "repo", "path", "pattern", "expect"},
     "dir_file_match_count": {"id", "kind", "repo", "path", "file_pattern",
@@ -377,6 +393,15 @@ def validate_state(state: dict) -> list[str]:
             problems.append(f"{where}: expected.issue must be open or closed")
         if expected.get("implementation") not in (None, "active", "none"):
             problems.append(f"{where}: expected.implementation must be active or none")
+        for key, vocabulary in (("review", REVIEW_VALUES), ("merge", MERGE_VALUES)):
+            declared = expected.get(key)
+            if declared is None:
+                continue
+            for value in (declared if isinstance(declared, list) else [declared]):
+                if value not in vocabulary:
+                    problems.append(
+                        f"{where}: expected.{key} {value!r} is not a value this "
+                        f"tool can produce (known: {', '.join(sorted(vocabulary))})")
 
         issue_keys = {"issue", "implementation", "review", "merge"} & set(expected)
         if issue_keys and not item.get("issue"):
@@ -435,6 +460,34 @@ class ItemResult:
     reasons: list[str] = field(default_factory=list)
     evidence: dict = field(default_factory=dict)
     note: str | None = None
+
+
+def _render_want(want) -> str:
+    return " or ".join(want) if isinstance(want, list) else str(want)
+
+
+def _satisfies(actual: str, want) -> bool:
+    """Does the observed value answer the declaration?
+
+    A declaration may list several acceptable answers, because some
+    assertions legitimately have more than one: an item under active
+    implementation alternates between `blocking-findings` and
+    `unreviewed-head` every time its author pushes a fix, and reporting that
+    as drift would train people to ignore the report.
+
+    The count in `blocked-conversations:N` is evidence rather than identity,
+    so the bare name matches any N. The rule is deliberately confined to that
+    one value: applied across the vocabulary it would also let a declared
+    `unknown` be satisfied by "we could not read the field".
+    """
+    for candidate in (want if isinstance(want, list) else [want]):
+        candidate = str(candidate)
+        if actual == candidate:
+            return True
+        if (candidate == "blocked-conversations"
+                and actual.startswith("blocked-conversations:")):
+            return True
+    return False
 
 
 def _head_is_reviewed(pr: dict) -> bool:
@@ -517,14 +570,29 @@ def _merge_state(pr: dict) -> str:
         f"PR #{pr.get('number')}: unrecognised mergeStateStatus {status!r}")
 
 
+# Worst-first, so a summary over several PRs is deterministic rather than
+# decided by whichever GitHub happened to return first.
+MERGE_RANK = ["conflicted", "blocked-review", "blocked-review-required",
+              "blocked-checks", "blocked-behind-base", "blocked-unresolved-check",
+              "blocked-conversations", "draft", "ready"]
+
+
 def _merge_summary(open_prs: list[dict]) -> str:
+    """The most blocking merge state across this issue's open PRs."""
     if not open_prs:
         return "none"
-    states = [p.get("merge", "unknown") for p in open_prs]
-    for preferred in states:
-        if preferred != "ready":
-            return preferred
-    return "ready"
+    states = [_merge_state(p["raw"]) for p in open_prs]
+
+    def rank(value: str) -> int:
+        head = value.split(":")[0]
+        if head not in MERGE_RANK:
+            # Unreachable while _merge_state raises on anything it does not
+            # recognise, and sorted last rather than first so that if it ever
+            # becomes reachable an unknown value cannot quietly win.
+            return len(MERGE_RANK)
+        return MERGE_RANK.index(head)
+
+    return min(states, key=rank)
 
 
 def _review_state(open_prs: list[dict]) -> str:
@@ -569,7 +637,6 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         result.evidence["issue_state"] = issue_obs.state.lower()
         result.evidence["open_prs"] = [p["number"] for p in issue_obs.open_prs]
         result.evidence["review"] = _review_state(issue_obs.open_prs)
-        result.evidence["merge"] = _merge_summary(issue_obs.open_prs)
         result.evidence["last_activity"] = issue_obs.last_activity
 
     mismatches: list[str] = []
@@ -592,25 +659,28 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     want_review = expected.get("review")
     if want_review and issue_obs:
         actual_review = _review_state(issue_obs.open_prs)
-        if actual_review != want_review:
+        if not _satisfies(actual_review, want_review):
             mismatches.append(
-                f"review expected {want_review}, actual {actual_review}")
+                f"review expected {_render_want(want_review)}, actual {actual_review}")
 
     want_merge = expected.get("merge")
     if want_merge and issue_obs:
-        actual_merge = _merge_summary(issue_obs.open_prs)
+        try:
+            actual_merge = _merge_summary(issue_obs.open_prs)
+        except ObservationFailure as exc:
+            result.state = OBSERVATION_FAILED
+            result.reasons.append(f"could not observe mergeability: {exc}")
+            return result
+        result.evidence["merge"] = actual_merge
         # The count is evidence, not identity: blocked-conversations:14 and :9
         # are the same situation and must not churn the report. The rule is
         # deliberately narrow to that one value -- applied across the whole
         # vocabulary it would also let a declared "unknown" be satisfied by
         # "we could not read the field", which is the one match that must
         # never go green.
-        if actual_merge.startswith("blocked-conversations:"):
-            matched = str(want_merge) in (actual_merge, "blocked-conversations")
-        else:
-            matched = actual_merge == str(want_merge)
-        if not matched:
-            mismatches.append(f"merge expected {want_merge}, actual {actual_merge}")
+        if not _satisfies(actual_merge, want_merge):
+            mismatches.append(
+                f"merge expected {_render_want(want_merge)}, actual {actual_merge}")
 
     for probe in item.get("probes") or []:
         try:
@@ -776,7 +846,7 @@ def selftest() -> int:
     def fake_issue(state="OPEN", prs=(), updated="2026-09-11T17:00:00Z",
                    mentions=(), head_seen=True, merge_status="CLEAN",
                    unresolved=0, mergeable="MERGEABLE", outdated=0,
-                   timeline_total=None, threads_total=None):
+                   timeline_truncated=False, threads_truncated=False):
         def node(n, d, closes):
             threads = ([{"isResolved": False, "isOutdated": False}] * unresolved
                        + [{"isResolved": False, "isOutdated": True}] * outdated)
@@ -785,23 +855,25 @@ def selftest() -> int:
                 "reviewDecision": d, "updatedAt": updated, "headRefOid": "abc123",
                 "mergeable": mergeable, "mergeStateStatus": merge_status,
                 "reviewThreads": {
-                    "totalCount": len(threads) if threads_total is None else threads_total,
+                    "pageInfo": {"hasNextPage": threads_truncated},
                     "nodes": threads},
-                "reviews": {"totalCount": 1, "nodes": [
+                "reviews": {"pageInfo": {"hasPreviousPage": False}, "nodes": [
                     {"state": d, "submittedAt": updated,
                      "commit": {"oid": "abc123" if head_seen else "older99"}}
                 ]},
-                "closingIssuesReferences": {"totalCount": 1, "nodes": (
-                    [{"number": 1, "repository": {"nameWithOwner": "o/r"}}]
-                    if closes else
-                    [{"number": 7, "repository": {"nameWithOwner": "o/other"}}])}}}
+                "closingIssuesReferences": {
+                    "pageInfo": {"hasNextPage": False},
+                    "nodes": (
+                        [{"number": 1, "repository": {"nameWithOwner": "o/r"}}]
+                        if closes else
+                        [{"number": 7, "repository": {"nameWithOwner": "o/other"}}])}}}
         nodes = [node(n, d, True) for n, d in prs]
         nodes += [node(n, "NONE", False) for n in mentions]
         return {"repository": {"issue": {
             "number": 1, "title": "t", "url": "u", "state": state,
             "updatedAt": updated,
             "timelineItems": {
-                "totalCount": len(nodes) if timeline_total is None else timeline_total,
+                "pageInfo": {"hasPreviousPage": timeline_truncated},
                 "nodes": nodes}}}}
 
     class StubGH(GitHub):
@@ -995,7 +1067,7 @@ def selftest() -> int:
 
     # A truncated connection is a refusal, not a short list.
     r = reconcile_item(StubGH(fake_issue(prs=[(9, "APPROVED")], merge_status="BLOCKED",
-                                         unresolved=2, threads_total=140)),
+                                         unresolved=2, threads_truncated=True)),
                        dict(item_active, expected={"issue": "open",
                                                    "implementation": "active",
                                                    "review": "clean",
@@ -1003,15 +1075,19 @@ def selftest() -> int:
                        {}, now)
     check(r.state == OBSERVATION_FAILED,
           f"a truncated thread list must not be counted: {r.state}")
-    r = reconcile_item(StubGH(fake_issue(prs=[(9, "APPROVED")], timeline_total=400)),
+    r = reconcile_item(StubGH(fake_issue(prs=[(9, "APPROVED")], timeline_truncated=True)),
                        item_active, {}, now)
     check(r.state == OBSERVATION_FAILED,
           f"a truncated timeline must not be counted: {r.state}")
 
     # The count is evidence only for the one value that carries it. A declared
     # "unknown" must never be satisfied by "we could not read the field".
-    check(_merge_summary([{"merge": "blocked-conversations:9"}]) == "blocked-conversations:9",
-          "summary lost the count")
+    check(_merge_summary([{"raw": {"number": 1, "mergeable": "MERGEABLE",
+                                   "mergeStateStatus": "BLOCKED",
+                                   "reviewDecision": "APPROVED",
+                                   "reviewThreads": {"pageInfo": {},
+                                                     "nodes": [{"isResolved": False}] * 9}}}])
+          == "blocked-conversations:9", "summary lost the count")
 
     # A malformed probe is a configuration failure, not a published finding.
     bad_probe = {"id": "b", "title": "B", "phase": "now", "expected": {},
@@ -1039,6 +1115,32 @@ def selftest() -> int:
         {"id": "ok", "issue": "o/r#1", "expected": {"issue": "open"}}]}) == [],
         "validate_state rejected a valid item")
 
+    # A declaration may list several acceptable answers: an item under active
+    # implementation alternates between blocking-findings and unreviewed-head
+    # every time its author pushes, and calling that drift trains people to
+    # ignore the report.
+    r = reconcile_item(StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], head_seen=False)),
+                       dict(item_active, expected={
+                           "issue": "open", "implementation": "active",
+                           "review": ["blocking-findings", "unreviewed-head"]}),
+                       {}, now)
+    check(r.state == ALIGNED, f"a list of acceptable answers must align: {r.state} {r.reasons}")
+
+    # But a list does not weaken the one match that must never go green.
+    check(not _satisfies("unknown:none", "unknown"),
+          "a declared unknown was satisfied by an unreadable field")
+    check(_satisfies("blocked-conversations:14", "blocked-conversations"),
+          "the count should be evidence, not identity")
+
+    # An item that asserts nothing about merging must not be failed by a
+    # transient UNKNOWN on some PR attached to it.
+    r = reconcile_item(StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")],
+                                         mergeable="UNKNOWN", merge_status="UNKNOWN")),
+                       dict(item_active, expected={"issue": "open",
+                                                   "implementation": "none"}), {}, now)
+    check(r.state == DRIFT and any("implementation" in x for x in r.reasons),
+          f"an unasserted merge blind spot hid an observed DRIFT: {r.state} {r.reasons}")
+
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
           "OBSERVATION_FAILED must outrank DRIFT")
@@ -1059,6 +1161,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", dest="json_out")
     parser.add_argument("--markdown", dest="md_out")
     parser.add_argument("--previous", help="prior snapshot.json, to report only on change")
+    parser.add_argument(
+        "--max-staleness", default="26h",
+        help="report when the prior snapshot is older than this — the "
+             "reconciler noticing its own silence")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1094,12 +1200,45 @@ def main(argv: list[str] | None = None) -> int:
     now = dt.datetime.now(dt.timezone.utc)
     snapshot = reconcile(GitHub(), state, now)
 
+    # Every item unobserved is not a roadmap that went wrong, it is a
+    # reconciler that could not look — a token without access to the repos it
+    # asserts about, a rate limit, an outage. Publishing an all-red page and
+    # exiting 1 would file that under "results", which is the same mistake as
+    # a watcher publishing silence.
+    blind = (snapshot["counts"][OBSERVATION_FAILED] == len(snapshot["items"])
+             and snapshot["items"])
+    if blind:
+        print("reconcile: every item was unobservable — this is an access or "
+              "connectivity failure, not a roadmap state", file=sys.stderr)
+        for item in snapshot["items"][:3]:
+            for reason in item["reasons"]:
+                print(f"reconcile:   {reason}", file=sys.stderr)
+        return 2
+
     if args.json_out:
         pathlib.Path(args.json_out).write_text(json.dumps(snapshot, indent=2) + "\n")
     if args.md_out:
         pathlib.Path(args.md_out).write_text(render_markdown(snapshot))
 
     changed = before is None or reportable_state(before) != reportable_state(snapshot)
+
+    # The reconciler's own liveness. Nothing else asserts that it ran: a
+    # workflow that stops firing produces no output at all, which is the
+    # failure mode this whole file is an argument against.
+    stale_for = None
+    if before and before.get("generated_at"):
+        try:
+            previous_at = dt.datetime.fromisoformat(
+                before["generated_at"].replace("Z", "+00:00"))
+            gap = (now - previous_at).total_seconds()
+            if gap > parse_duration(args.max_staleness):
+                stale_for = int(gap // 3600)
+        except ValueError:
+            stale_for = None
+    if stale_for is not None:
+        print(f"NOTE: the previous reconcile was {stale_for}h ago, longer than "
+              f"{args.max_staleness} — this reconciler was not running",
+              file=sys.stderr)
 
     body = digest(snapshot)
     print(f"{snapshot['overall']}  " + "  ".join(
@@ -1121,4 +1260,14 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        # Exit 2, never 1. An unhandled exception means the run did not
+        # complete, and exit 1 is the code the workflow publishes as an
+        # ordinary "something diverged" result — a crash would otherwise be
+        # rendered as a roadmap finding.
+        print(f"reconcile: unhandled {type(exc).__name__}: {exc}", file=sys.stderr)
+        raise SystemExit(2)

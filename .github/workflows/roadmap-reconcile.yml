@@ -79,6 +79,13 @@ jobs:
           fi
 
       - name: Commit the snapshot
+        # Only when the reconciled state actually changed. snapshot.json
+        # carries the run's timestamp, so it differs on every pass and the
+        # previous guard could never be true — this repo would have taken four
+        # commits a day saying nothing. Liveness does not live in the commit
+        # log: the run history is the record, and a reconciler that stops
+        # firing is reported by the staleness check on the next run that does.
+        if: steps.reconcile.outputs.changed == 'true'
         run: |
           if git diff --quiet -- roadmap/snapshot.json roadmap/ROADMAP.md; then
             echo "no change to publish"
@@ -90,13 +97,18 @@ jobs:
           git commit -m "chore(roadmap): reconcile ${{ steps.reconcile.outputs.overall }}"
           git push
 
-      - name: Report only on a change of reconciled state
-        # `changed` compares item states and reasons against the previous
-        # snapshot, not the whole file: a new timestamp every six hours is not
-        # news. A standing gap therefore reports once, when it appears, and
-        # then stops — while still showing on the page for as long as it lasts.
+      - name: Fail the run when the reconciled state changes for the worse
+        # `changed` compares item states and reasons, not the whole file: a
+        # new timestamp is not news, so a standing gap announces once and then
+        # goes quiet while still showing on the page.
+        #
+        # This fails the job rather than emitting `::warning::`. An annotation
+        # on a scheduled run is delivered to nobody — it appears in a log that
+        # someone would have to already be reading. A failed scheduled workflow
+        # is a channel GitHub actually notifies on, and this is precisely the
+        # case worth interrupting someone for: something we believed is no
+        # longer true.
         if: steps.reconcile.outputs.changed == 'true' && steps.reconcile.outputs.overall != 'ALIGNED'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "::warning::roadmap state changed to ${{ steps.reconcile.outputs.overall }} — see the job summary"
+          echo "::error::roadmap state changed to ${{ steps.reconcile.outputs.overall }} — see the job summary"
+          exit 1

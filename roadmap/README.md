@@ -87,6 +87,33 @@ can. The count in `blocked-conversations:N` is evidence, not identity: a
 declaration of `blocked-conversations` matches whatever N happens to be, so the
 report does not churn as threads are resolved one at a time.
 
+## One assertion, several acceptable answers
+
+`review:` and `merge:` accept a list. Some assertions genuinely have more than
+one right answer at different moments of the same situation: a PR under active
+review alternates between `blocking-findings` and `unreviewed-head` every time
+its author pushes a fix. Declaring a single value there would report drift on
+every push, and a report that cries wolf on normal work is worse than no
+report.
+
+Every value is checked against the vocabulary the tool can actually produce, so
+a typo is a hard error rather than an assertion that never matches.
+
+## Liveness is not in the commit log
+
+The snapshot is committed only when the reconciled state changes, because it
+carries a timestamp and would otherwise take four commits a day saying nothing.
+That leaves the question the rest of this file exists to ask: how do you know
+the reconciler ran at all? Two answers. A run that changes the state for the
+worse **fails the workflow**, which is a channel GitHub notifies on, unlike an
+annotation nobody reads. And each run compares the previous snapshot's
+timestamp against `--max-staleness`, so the first run after an outage says how
+long the reconciler had been silent.
+
+A run that could observe nothing at all exits 2 and fails the job rather than
+publishing an all-red page: every item unobserved is a credentials or
+connectivity fault, not a roadmap state.
+
 ## The declaration is validated, not trusted
 
 An unrecognised key under `expected:` is the worst defect this file can carry:
