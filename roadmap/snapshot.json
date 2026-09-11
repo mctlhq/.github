@@ -1,0 +1,306 @@
+{
+  "generated_at": "2026-09-11T19:30:08Z",
+  "overall": "DRIFT",
+  "counts": {
+    "OBSERVATION_FAILED": 0,
+    "DRIFT": 2,
+    "UNEXPECTED_SILENCE": 0,
+    "ALIGNED": 16
+  },
+  "items": [
+    {
+      "id": "agent-platform.registry",
+      "title": "Registry-backed ReleaseBinding",
+      "phase": "now",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#18",
+      "issue": "mctlhq/mctl-api#283",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [
+          291
+        ],
+        "review": "blocking-findings",
+        "last_activity": "2026-09-11T19:23:24Z"
+      },
+      "note": "The declarative agent architecture is a project rather than a production path until this lands: GitOps carries shadow ReleaseBindingIntent with promotable:false, and the resolver refuses to proceed on bindingSource: registry."
+    },
+    {
+      "id": "investigator.declarative-activation",
+      "title": "Investigator resolver off legacy",
+      "phase": "next",
+      "state": "DRIFT",
+      "epic": "mctlhq/.github#18",
+      "issue": null,
+      "reasons": [
+        "probe resolver-mode-in-gitops: 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates matching /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/ = 0, expected == 1"
+      ],
+      "evidence": {
+        "probes": {
+          "resolver-mode-in-gitops": 0
+        }
+      },
+      "note": "Activation is blocked on mctl-gitops#950 per the code comment, and on agent-platform.registry for the binding source. Expected to be failing until both land \u2014 this item exists so that the day it flips is observed rather than noticed."
+    },
+    {
+      "id": "agent-platform.capability-discovery",
+      "title": "Role-aware capability discovery",
+      "phase": "next",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#18",
+      "issue": "mctlhq/mctl-agents#242",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-08-30T13:50:41Z"
+      },
+      "note": null
+    },
+    {
+      "id": "governance.execution-identity",
+      "title": "Agent execution identity",
+      "phase": "next",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#18",
+      "issue": "mctlhq/mctl-agents#196",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T00:06:19Z"
+      },
+      "note": "Owns execution identity; .github#55 observability consumes it. The two referenced each other as blockers until 2026-09-11, when the edge was made one-directional."
+    },
+    {
+      "id": "governance.policy-approval-evidence",
+      "title": "Policy, approval and evidence checkpoints",
+      "phase": "next",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#18",
+      "issue": "mctlhq/mctl-agents#197",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-08-29T06:28:13Z"
+      },
+      "note": "#198 is cited by .github#42 as the approval primitive but is not implemented; the durable wait that does exist is #150 / PR #212, and WAITING_FOR_APPROVAL appears nowhere in code."
+    },
+    {
+      "id": "context.snapshot-contract",
+      "title": "ContextSnapshot contract",
+      "phase": "now",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#20",
+      "issue": "mctlhq/mctl-agents#264",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [
+          340
+        ],
+        "review": "clean",
+        "last_activity": "2026-09-11T18:40:26Z"
+      },
+      "note": "Approved on the current head as of 2026-09-11 18:40Z. The two P2s that sat in the normative hashing core -- budget invariants skipped under a producer-supplied truncated flag, and allow_nan in the canonical JSON -- were fixed in review. Ready to merge."
+    },
+    {
+      "id": "context.work-item",
+      "title": "Canonical WorkItem contract",
+      "phase": "done",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#21",
+      "issue": "mctlhq/mctl-api#227",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "closed",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T10:12:30Z"
+      },
+      "note": null
+    },
+    {
+      "id": "human-input.core",
+      "title": "Durable human input / WAITING_FOR_INPUT",
+      "phase": "next",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#42",
+      "issue": "mctlhq/mctl-agents#333",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T00:22:40Z"
+      },
+      "note": "Blocked by mctl-api#227 (done) and mctl-agents#264 (in review)."
+    },
+    {
+      "id": "observability.collector",
+      "title": "OTel Collector traces gateway",
+      "phase": "done",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#55",
+      "issue": "mctlhq/mctl-gitops#902",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "closed",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T16:36:46Z"
+      },
+      "note": null
+    },
+    {
+      "id": "observability.producers",
+      "title": "At least one service emitting spans",
+      "phase": "now",
+      "state": "DRIFT",
+      "epic": "mctlhq/.github#55",
+      "issue": null,
+      "reasons": [
+        "probe services-opted-into-otel: 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services matching /(?ms)^otel:\\s*\\n(?:\\s+.*\\n)*?\\s+enabled:\\s*true/ = 0, expected >= 1"
+      ],
+      "evidence": {
+        "probes": {
+          "services-opted-into-otel": 0
+        }
+      },
+      "note": "The transport shipped with #902, but otel.enabled is false everywhere and otelCollector.backendEndpoint is empty, so end-to-end traces are still zero. This item is the observability critical path now, not the collector."
+    },
+    {
+      "id": "observability.agent-instrumentation",
+      "title": "Execution traces from the agents",
+      "phase": "next",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#55",
+      "issue": "mctlhq/mctl-agents#195",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-08-29T06:28:10Z"
+      },
+      "note": null
+    },
+    {
+      "id": "cloudflare.apply-authority",
+      "title": "CI can apply Cloudflare state",
+      "phase": "done",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#47",
+      "issue": "mctlhq/mctl-gitops#1111",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "closed",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T06:23:11Z"
+      },
+      "note": null
+    },
+    {
+      "id": "cloudflare.zone-authority",
+      "title": "Zone roots on shared remote state",
+      "phase": "now",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#47",
+      "issue": "mctlhq/mctl-gitops#1178",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T00:23:08Z",
+        "probes": {
+          "zone-roots-still-local": 0
+        }
+      },
+      "note": "Only the `account` root is on the shared R2 backend. Until the three zone roots follow, Git is the source of truth for one root out of four."
+    },
+    {
+      "id": "enterprise-mcp.edge-properties",
+      "title": "Prove the properties of the live edge",
+      "phase": "now",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#35",
+      "issue": "mctlhq/mctl-telegram#615",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T00:23:46Z"
+      },
+      "note": "Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step is measurement of what exists, not more servers."
+    },
+    {
+      "id": "client-lifecycle.identity-attributes",
+      "title": "Identity attributes and profile",
+      "phase": "now",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#22",
+      "issue": "mctlhq/mctl-telegram#620",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [
+          627
+        ],
+        "review": "clean",
+        "last_activity": "2026-09-11T17:18:03Z"
+      },
+      "note": "Approved on the current head. Still carries steward:escalated, which is terminal for pr-steward: the label has to be cleared by a human before that lifecycle resumes, so silence here needs a person rather than time."
+    },
+    {
+      "id": "client-lifecycle.lookup-account",
+      "title": "Scoped Telegram lookup account",
+      "phase": "now",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#22",
+      "issue": "mctlhq/mctl-telegram#400",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T00:25:42Z"
+      },
+      "note": "Waiting on a human: the account must be registered against a free number and its numeric id handed over before the allowlist entry and mctl-gitops#1182 can be applied. No amount of time moves this."
+    },
+    {
+      "id": "devloop.steward-lifecycle",
+      "title": "Steward-owned repos have a lifecycle path",
+      "phase": "done",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#38",
+      "issue": "mctlhq/mctl-agents#292",
+      "reasons": [],
+      "evidence": {
+        "issue_state": "closed",
+        "open_prs": [],
+        "review": "none",
+        "last_activity": "2026-09-11T17:02:10Z"
+      },
+      "note": null
+    },
+    {
+      "id": "edge-ai.phase-0",
+      "title": "Android edge feasibility",
+      "phase": "later",
+      "state": "ALIGNED",
+      "epic": "mctlhq/.github#34",
+      "issue": null,
+      "reasons": [],
+      "evidence": {},
+      "note": "Deliberately unstaffed R&D. Needs a device in hand and an ADR on where the work lives; no child issue exists and none should be invented."
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+name: roadmap-reconcile
+
+# Reconcile roadmap/roadmap-state.yaml against GitHub and commit the snapshot.
+#
+# Read-only against every other repository: the only writes are this repo's own
+# roadmap/snapshot.json and roadmap/ROADMAP.md.
+#
+# The schedule matters more than it looks. A watcher fires on events and is
+# silent the rest of the time, so a broken watcher and a quiet org produce the
+# same output — that is how six pull requests went unannounced for six hours on
+# 2026-09-11. A reconciler runs whether or not anything happened and reports the
+# state it found, including OBSERVATION_FAILED when it could not look. Silence
+# from this workflow means the workflow did not run, which the schedule below
+# makes visible on its own.
+
+on:
+  schedule:
+    # Four times a day. Frequent enough that a day's drift is caught the same
+    # day, rare enough that the committed snapshot is not a noise generator.
+    - cron: "0 6,11,16,21 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "roadmap/roadmap-state.yaml"
+      - "roadmap/reconcile.py"
+      - ".github/workflows/roadmap-reconcile.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: roadmap-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Self-test the reconciler
+        # Runs before the real pass, and gates it. The property being protected
+        # is that a failed observation can never read as a zero or an absence;
+        # a reconciler that lost it would report a green roadmap while blind.
+        run: python3 roadmap/reconcile.py --selftest
+
+      - name: Reconcile
+        id: reconcile
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Exit 1 means "not everything is aligned", which is a normal result to
+        # publish rather than a failed run. Only exit 2 (the run itself could
+        # not be completed) fails the job.
+        run: |
+          set +e
+          python3 roadmap/reconcile.py \
+            --state roadmap/roadmap-state.yaml \
+            --json roadmap/snapshot.json \
+            --markdown roadmap/ROADMAP.md \
+            --previous roadmap/snapshot.json
+          code=$?
+          set -e
+          if [ "$code" -ge 2 ]; then
+            echo "::error::reconcile could not complete (exit $code)"
+            exit "$code"
+          fi
+
+      - name: Commit the snapshot
+        run: |
+          if git diff --quiet -- roadmap/snapshot.json roadmap/ROADMAP.md; then
+            echo "no change to publish"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roadmap/snapshot.json roadmap/ROADMAP.md
+          git commit -m "chore(roadmap): reconcile ${{ steps.reconcile.outputs.overall }}"
+          git push
+
+      - name: Report only on a change of reconciled state
+        # `changed` compares item states and reasons against the previous
+        # snapshot, not the whole file: a new timestamp every six hours is not
+        # news. A standing gap therefore reports once, when it appears, and
+        # then stops — while still showing on the page for as long as it lasts.
+        if: steps.reconcile.outputs.changed == 'true' && steps.reconcile.outputs.overall != 'ALIGNED'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::warning::roadmap state changed to ${{ steps.reconcile.outputs.overall }} — see the job summary"
