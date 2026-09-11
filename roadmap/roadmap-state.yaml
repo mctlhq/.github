@@ -58,8 +58,8 @@ items:
     title: Investigator resolver off legacy
     epic: mctlhq/.github#18
     phase: next
-    expected:
-      resolver_mode: declarative
+    # The assertion lives entirely in the probe below. A prose line under
+    # `expected:` here would read like a second assertion and check nothing.
     probes:
       - id: resolver-mode-in-gitops
         kind: dir_file_match_count
@@ -166,8 +166,6 @@ items:
     title: At least one service emitting spans
     epic: mctlhq/.github#55
     phase: now
-    expected:
-      producer_count: at-least-one
     probes:
       - id: services-opted-into-otel
         kind: dir_file_match_count
@@ -209,7 +207,6 @@ items:
     phase: now
     expected:
       issue: open
-      zone_roots_on_local_state: none
     probes:
       - id: zone-roots-still-local
         kind: file_line_match_count
@@ -287,9 +284,11 @@ items:
   - id: edge-ai.phase-0
     title: Android edge feasibility
     epic: mctlhq/.github#34
+    issue: mctlhq/.github#34
     phase: later
     expected:
-      epic_open: true
+      issue: open
+      implementation: none
     note: >-
       Deliberately unstaffed R&D. Needs a device in hand and an ADR on where
       the work lives; no child issue exists and none should be invented.

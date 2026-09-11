@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T19:51:42Z",
+  "generated_at": "2026-09-11T20:39:40Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -312,9 +312,15 @@
       "phase": "later",
       "state": "ALIGNED",
       "epic": "mctlhq/.github#34",
-      "issue": null,
+      "issue": "mctlhq/.github#34",
       "reasons": [],
-      "evidence": {},
+      "evidence": {
+        "issue_state": "open",
+        "open_prs": [],
+        "review": "none",
+        "merge": "none",
+        "last_activity": "2026-09-06T11:02:59Z"
+      },
       "note": "Deliberately unstaffed R&D. Needs a device in hand and an ADR on where the work lives; no child issue exists and none should be invented."
     }
   ]

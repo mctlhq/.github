@@ -56,14 +56,23 @@ jobs:
         # publish rather than a failed run. Only exit 2 (the run itself could
         # not be completed) fails the job.
         run: |
+          # The committed snapshot is copied aside first. reconcile.py reads
+          # --previous before writing --json for exactly this reason, but
+          # handing it two different paths means the comparison does not
+          # depend on that ordering holding forever.
+          cp roadmap/snapshot.json "$RUNNER_TEMP/previous.json" 2>/dev/null || true
           set +e
           python3 roadmap/reconcile.py \
             --state roadmap/roadmap-state.yaml \
             --json roadmap/snapshot.json \
             --markdown roadmap/ROADMAP.md \
-            --previous roadmap/snapshot.json
+            --previous "$RUNNER_TEMP/previous.json"
           code=$?
           set -e
+          # 0 aligned, 1 something diverged — both are results worth
+          # publishing. 2 means the run could not be completed, and a
+          # reconciler that could not look must fail loudly rather than
+          # publish a page implying it did.
           if [ "$code" -ge 2 ]; then
             echo "::error::reconcile could not complete (exit $code)"
             exit "$code"

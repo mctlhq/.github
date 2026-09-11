@@ -62,11 +62,23 @@ skimming. `merge:` reports why:
 |---|---|
 | `ready` | mergeable now |
 | `blocked-review` | a reviewer is asking for changes |
+| `blocked-review-required` | nobody has reviewed it yet, and the base wants an approval |
 | `blocked-conversations:N` | approved, but N review threads are unresolved |
 | `blocked-behind-base` | the branch is behind a base that requires strictness |
 | `blocked-checks` | a check is failing or pending |
 | `conflicted` | conflicts with the base |
 | `blocked-unresolved-check` | blocked, and we cannot say why |
+
+`blocked-review` and `blocked-review-required` are kept apart because they
+call for opposite actions: one wants the author to work, the other wants a
+reviewer to look. Every pre-review PR under branch protection sits in the
+second, so folding them together would misroute the most common blocked state
+in the org.
+
+An unresolved thread counts whether or not GitHub marks it outdated: a thread
+going outdated because its line was edited does not resolve it, and the merge
+box keeps refusing. Excluding them drove the count to zero on precisely the
+PRs this vocabulary exists to explain.
 
 Review outranks threads when both are true: a reviewer asking for changes is
 the cause, open threads the symptom. `blocked-unresolved-check` is deliberate —
@@ -74,6 +86,18 @@ a block we cannot explain is worth a person and must not be filed under one we
 can. The count in `blocked-conversations:N` is evidence, not identity: a
 declaration of `blocked-conversations` matches whatever N happens to be, so the
 report does not churn as threads are resolved one at a time.
+
+## The declaration is validated, not trusted
+
+An unrecognised key under `expected:` is the worst defect this file can carry:
+it reads like an assertion, renders like one, and checks nothing, so the item
+reports OK forever on a line nobody evaluates — a passing test that never ran.
+`validate_state` rejects the whole run (exit 2) on an unknown key, an item that
+asserts nothing, a duplicate id, an unparsable expectation or a bad regex.
+
+The same instinct applies to paged GitHub data: every connection is fetched
+with its `totalCount`, and a connection that came back short raises rather than
+being counted, because a count over a truncated list is a guess.
 
 Probes cover assertions GitHub issue state cannot make — a file's contents, a
 count of services that opted into something. A probe that cannot read what it
