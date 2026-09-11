@@ -85,25 +85,63 @@ def unterminated_heredoc(script: str) -> str | None:
         # <<WORD, <<-WORD, <<'WORD', <<"WORD"; <<< is a herestring, not a heredoc.
         HEREDOC = re.compile(r"<<(-?)\s*([\"\']?)([A-Za-z_][A-Za-z0-9_]*)\2")
     lines = script.split("\n")
-    for index, line in enumerate(lines):
+    index = 0
+    while index < len(lines):
+        line = lines[index]
         if "<<<" in line:
+            index += 1
             continue
         match = HEREDOC.search(line)
         if not match:
+            index += 1
             continue
         dash, _, word = match.groups()
-        for candidate in lines[index + 1:]:
+        # Scan forward for the delimiter, and resume AFTER it rather than at
+        # the next line: a `<<EOF` inside a heredoc body is text, not a second
+        # opener, and treating it as one refuses valid blocks.
+        for offset, candidate in enumerate(lines[index + 1:], start=index + 1):
             stripped = candidate.lstrip("\t") if dash else candidate
             if stripped.rstrip() == word:
+                index = offset + 1
                 break
         else:
             return word
     return None
 
 
+def anchors_or_aliases(text: str) -> list[str]:
+    """Anchor and alias names in a YAML document, which Actions rejects.
+
+    PyYAML resolves them happily, so a workflow using `&name` / `*name` loads
+    here, walks its jobs and reports "N block(s) parse cleanly" about a
+    document GitHub refuses outright: "Anchors are not currently supported."
+    The cron is never registered, dispatch has no button, and the pull-request
+    gate cannot run either — less signal than a syntax error, which at least
+    goes red.
+
+    This is the gate checking the thing that matters rather than the thing its
+    parser happens to accept.
+    """
+    found = []
+    try:
+        for event in yaml.parse(text):
+            name = getattr(event, "anchor", None)
+            if name:
+                found.append(name)
+    except yaml.YAMLError:
+        return []  # a parse failure is reported by the caller, not here
+    return sorted(set(found))
+
+
 def blocks(path: pathlib.Path):
     try:
-        doc = yaml.safe_load(path.read_text())
+        text = path.read_text()
+        names = anchors_or_aliases(text)
+        if names:
+            raise MalformedWorkflow(
+                f"{path}: uses YAML anchors/aliases ({', '.join(names)}), which "
+                f"the Actions parser rejects — the whole workflow would not run")
+        doc = yaml.safe_load(text)
     except OSError as exc:
         raise MalformedWorkflow(f"{path}: {exc}") from exc
     except yaml.YAMLError as exc:
@@ -188,7 +226,16 @@ def check_files(paths: list[pathlib.Path]) -> int:
 
 def selftest() -> int:
     """The gate's own gate. Its whole value is that it cannot say OK blindly."""
+    import contextlib
+    import io
+
     failures: list[str] = []
+
+    def quietly(fn, *a):
+        """Run a negative case without its diagnostics drowning the result."""
+        sink = io.StringIO()
+        with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
+            return fn(*a)
 
     def check(condition, message):
         if not condition:
@@ -226,6 +273,25 @@ def selftest() -> int:
               is not None, "an unterminated heredoc was accepted")
         check(check_block("expr", "bash", 'echo "${{ x "', workdir, have) is not None,
               "an unbalanced expression was accepted")
+
+        # check_files is the entry point the workflow actually calls, and the
+        # self-test covered only the pure functions under it.
+        good = workdir / "good.yml"
+        good.write_text("jobs:\n  j:\n    steps:\n      - run: echo hi\n")
+        check(quietly(check_files, [good]) == 0, "a valid workflow was rejected")
+        bad = workdir / "bad.yml"
+        bad.write_text('jobs:\n  j:\n    steps:\n      - run: echo "open\n')
+        check(quietly(check_files, [bad]) == 1, "a broken run: block was accepted")
+        anchored = workdir / "anchored.yml"
+        anchored.write_text(
+            "on:\n  push:\n    paths: &s\n      - a\n  pull_request:\n"
+            "    paths: *s\njobs:\n  j:\n    steps:\n      - run: echo hi\n")
+        check(quietly(check_files, [anchored]) == 1,
+              "a workflow using anchors was accepted — Actions rejects the file")
+        empty = workdir / "empty.yml"
+        empty.write_text("jobs: {}\n")
+        check(quietly(check_files, [empty]) == 2,
+              "a workflow with no shell blocks must not report a clean sweep")
 
         missing = workdir / "nope.yml"
         try:

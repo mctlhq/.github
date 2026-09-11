@@ -68,9 +68,22 @@ exist to refuse. And an unterminated heredoc is detected here, because
 warns, the bash 3.2 on macOS says nothing. A gate whose coverage depends on the
 runner's bash reports clean for the wrong reason.
 
+It also refuses a workflow that uses YAML **anchors or aliases**. PyYAML
+resolves them happily, so such a file loads here and the gate would walk its
+jobs and report "parses cleanly" about a document GitHub refuses outright —
+"Anchors are not currently supported". The cron is never registered, dispatch
+has no button, and the pull-request gate cannot run either: a silent failure
+with less signal than a syntax error, which at least goes red. That is the gate
+checking what matters rather than what its own parser happens to accept, and
+it is why the two `paths:` lists in the workflow are written out twice.
+
 It runs in its own job, on `pull_request` as well as on the schedule, so a
-broken block is refused before it is merged rather than after — and over every
-workflow in the repository, not just this one.
+broken block is refused before it is merged rather than after. The sweep over
+the repository's *other* workflows is a separate job that the reconciler does
+not depend on: shellcheck runs at `--severity warning` there, and one warning
+in a file outside this workflow's `paths:` would otherwise stop the scheduled
+reconcile without ever having been refused at the pull request that introduced
+it.
 
 ## Running it
 
