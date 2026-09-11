@@ -48,13 +48,28 @@ jobs:
         # a reconciler that lost it would report a green roadmap while blind.
         run: python3 roadmap/reconcile.py --selftest
 
+      - name: When did this reconciler last run
+        id: history
+        # From the workflow's own run history, not from the snapshot. The
+        # snapshot is committed only when the state changes, so its timestamp
+        # records the last change; a quiet roadmap would have read as a
+        # growing outage forever. This advances on every run.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          previous=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&per_page=5" \
+            --jq "[.workflow_runs[] | select(.id != ${RUN_ID}) | .created_at] | first // empty" \
+            2>/dev/null || true)
+          echo "previous_run_at=${previous}" >> "$GITHUB_OUTPUT"
+          echo "previous successful run: ${previous:-none recorded}"
+
       - name: Reconcile
         id: reconcile
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Exit 1 means "not everything is aligned", which is a normal result to
-        # publish rather than a failed run. Only exit 2 (the run itself could
-        # not be completed) fails the job.
+          PREVIOUS_RUN_AT: ${{ steps.history.outputs.previous_run_at }}
         run: |
           # The committed snapshot is copied aside first. reconcile.py reads
           # --previous before writing --json for exactly this reason, but
@@ -66,7 +81,8 @@ jobs:
             --state roadmap/roadmap-state.yaml \
             --json roadmap/snapshot.json \
             --markdown roadmap/ROADMAP.md \
-            --previous "$RUNNER_TEMP/previous.json"
+            --previous "$RUNNER_TEMP/previous.json" \
+            ${PREVIOUS_RUN_AT:+--previous-run-at "$PREVIOUS_RUN_AT"}
           code=$?
           set -e
           # 0 aligned, 1 something diverged — both are results worth
@@ -74,17 +90,15 @@ jobs:
           # reconciler that could not look must fail loudly rather than
           # publish a page implying it did.
           if [ "$code" -ge 2 ]; then
-            echo "::error::reconcile could not complete (exit $code)"
+            echo "::error::reconcile could not complete (exit $code) — this is the tool, not the roadmap"
             exit "$code"
           fi
 
       - name: Commit the snapshot
         # Only when the reconciled state actually changed. snapshot.json
-        # carries the run's timestamp, so it differs on every pass and the
-        # previous guard could never be true — this repo would have taken four
-        # commits a day saying nothing. Liveness does not live in the commit
-        # log: the run history is the record, and a reconciler that stops
-        # firing is reported by the staleness check on the next run that does.
+        # carries the run's timestamp, so it differs on every pass and a
+        # content guard could never be true — this repo would have taken four
+        # commits a day saying nothing.
         if: steps.reconcile.outputs.changed == 'true'
         run: |
           if git diff --quiet -- roadmap/snapshot.json roadmap/ROADMAP.md; then
@@ -94,21 +108,45 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add roadmap/snapshot.json roadmap/ROADMAP.md
-          git commit -m "chore(roadmap): reconcile ${{ steps.reconcile.outputs.overall }}"
-          git push
+          git commit -m "chore(roadmap): reconcile ${OVERALL}"
+          # Two scheduled runs can overlap a manual push to main. Rebase and
+          # retry rather than losing the snapshot to a race.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            git pull --rebase --autostash
+          done
+          echo "::error::could not push the snapshot after three attempts"
+          exit 1
+        env:
+          OVERALL: ${{ steps.reconcile.outputs.overall }}
 
-      - name: Fail the run when the reconciled state changes for the worse
-        # `changed` compares item states and reasons, not the whole file: a
-        # new timestamp is not news, so a standing gap announces once and then
-        # goes quiet while still showing on the page.
+      - name: Report
+        # Three different things can be wrong, and they are not the same
+        # message. A failed job is used rather than `::warning::` because an
+        # annotation on a scheduled run reaches nobody — it sits in a log
+        # somebody would have to already be reading.
         #
-        # This fails the job rather than emitting `::warning::`. An annotation
-        # on a scheduled run is delivered to nobody — it appears in a log that
-        # someone would have to already be reading. A failed scheduled workflow
-        # is a channel GitHub actually notifies on, and this is precisely the
-        # case worth interrupting someone for: something we believed is no
-        # longer true.
-        if: steps.reconcile.outputs.changed == 'true' && steps.reconcile.outputs.overall != 'ALIGNED'
+        # Blindness is announced on EVERY run, not only when it changes: a
+        # partially visible org would otherwise announce once and then go
+        # quiet behind a permanently half-red page, which is the failure this
+        # whole tool argues against.
+        if: >-
+          steps.reconcile.outputs.unobserved != '0' ||
+          steps.reconcile.outputs.stale_hours != '0' ||
+          (steps.reconcile.outputs.changed == 'true' &&
+           steps.reconcile.outputs.overall != 'ALIGNED')
+        env:
+          OVERALL: ${{ steps.reconcile.outputs.overall }}
+          UNOBSERVED: ${{ steps.reconcile.outputs.unobserved }}
+          STALE_HOURS: ${{ steps.reconcile.outputs.stale_hours }}
         run: |
-          echo "::error::roadmap state changed to ${{ steps.reconcile.outputs.overall }} — see the job summary"
+          if [ "$UNOBSERVED" != "0" ]; then
+            echo "::error::${UNOBSERVED} roadmap item(s) could not be observed — this is the tool or its access, not the roadmap"
+          fi
+          if [ "$STALE_HOURS" != "0" ]; then
+            echo "::error::this reconciler did not run for ${STALE_HOURS}h — the roadmap was unobserved for that window"
+          fi
+          if [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
+            echo "::error::roadmap state changed to ${OVERALL} — something we believed is no longer true"
+          fi
           exit 1

@@ -126,18 +126,16 @@ items:
     title: ContextSnapshot contract
     epic: mctlhq/.github#20
     issue: mctlhq/mctl-agents#264
-    phase: now
+    phase: done
     expected:
-      issue: open
-      implementation: active
-      review: clean
-      merge: ready
-    max_silence: 6h
+      issue: closed
     note: >-
-      Approved on the current head as of 2026-09-11 18:40Z. The two P2s that
-      sat in the normative hashing core -- budget invariants skipped under a
-      producer-supplied truncated flag, and allow_nan in the canonical JSON --
-      were fixed in review. Ready to merge.
+      Merged as f9efb074 on 2026-09-11 21:09Z. The contract is accepted; what
+      the review could not settle went to mctl-agents#347, chiefly whether
+      `truncated` means "the budget was exhausted" or "something did not make
+      it in" -- today an honest snapshot that drops an oversized candidate
+      fails its own validation unless it claims a truncation that did not
+      happen.
 
   - id: context.work-item
     title: Canonical WorkItem contract

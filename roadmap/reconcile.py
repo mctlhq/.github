@@ -301,7 +301,7 @@ def observe_issue(gh: GitHub, ref: str) -> IssueObservation:
                 "url": source["url"],
                 "draft": bool(source.get("isDraft")),
                 "review_decision": source.get("reviewDecision") or "NONE",
-                "head_reviewed": _head_is_reviewed(source),
+
                 # Kept raw. _merge_state is evaluated only if the item asserts
                 # `merge:`; computing it here let a transient
                 # `mergeable: UNKNOWN` on a just-pushed PR fail an item that
@@ -596,10 +596,15 @@ def _merge_summary(open_prs: list[dict]) -> str:
 
 
 def _review_state(open_prs: list[dict]) -> str:
-    """'clean' | 'blocking-findings' | 'none' | 'unreviewed-head' | 'unknown'."""
+    """'clean' | 'blocking-findings' | 'none' | 'unreviewed-head' | 'unknown'.
+
+    Derived on demand, like the merge state and for the same reason: computing
+    it while building the observation let a blind spot in one assertion fail an
+    item that only asked about another.
+    """
     if not open_prs:
         return "none"
-    if any(not p.get("head_reviewed") for p in open_prs):
+    if any(not _head_is_reviewed(p["raw"]) for p in open_prs):
         return "unreviewed-head"
     decisions = {p["review_decision"] for p in open_prs}
     if "CHANGES_REQUESTED" in decisions:
@@ -636,7 +641,13 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             return result
         result.evidence["issue_state"] = issue_obs.state.lower()
         result.evidence["open_prs"] = [p["number"] for p in issue_obs.open_prs]
-        result.evidence["review"] = _review_state(issue_obs.open_prs)
+        try:
+            result.evidence["review"] = _review_state(issue_obs.open_prs)
+        except ObservationFailure as exc:
+            if "review" in expected:
+                result.state = OBSERVATION_FAILED
+                result.reasons.append(f"could not observe review state: {exc}")
+                return result
         result.evidence["last_activity"] = issue_obs.last_activity
 
     mismatches: list[str] = []
@@ -658,7 +669,7 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
 
     want_review = expected.get("review")
     if want_review and issue_obs:
-        actual_review = _review_state(issue_obs.open_prs)
+        actual_review = result.evidence["review"]
         if not _satisfies(actual_review, want_review):
             mismatches.append(
                 f"review expected {_render_want(want_review)}, actual {actual_review}")
@@ -1141,6 +1152,23 @@ def selftest() -> int:
     check(r.state == DRIFT and any("implementation" in x for x in r.reasons),
           f"an unasserted merge blind spot hid an observed DRIFT: {r.state} {r.reasons}")
 
+    # Liveness is measured against the run history, not the snapshot. The
+    # snapshot is committed only on a change, so a quiet roadmap -- the
+    # designed steady state -- would have read as a growing outage forever.
+    class Args:
+        max_staleness = "26h"
+        previous_run_at = None
+
+    a = Args()
+    check(gap_since_previous_run(a, now) is None,
+          "no reference should mean no claim about liveness")
+    a.previous_run_at = "2026-09-11T17:00:00Z"
+    check(gap_since_previous_run(a, now) is None,
+          "a run an hour ago is not an outage")
+    a.previous_run_at = "2026-09-09T12:00:00Z"
+    check(gap_since_previous_run(a, now) == 54,
+          f"a two-day gap should be reported: {gap_since_previous_run(a, now)}")
+
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
           "OBSERVATION_FAILED must outrank DRIFT")
@@ -1155,6 +1183,29 @@ def selftest() -> int:
 
 # ── entry point ───────────────────────────────────────────────────────────
 
+def gap_since_previous_run(args, now: dt.datetime) -> int | None:
+    """Hours since the last successful run, when that exceeds the allowance.
+
+    The reference is the workflow's own run history, supplied by the caller.
+    It advances on every run, which the committed snapshot does not: the
+    snapshot is written only when the reconciled state changes, so "no change"
+    -- the designed steady state -- would have read as a growing outage
+    forever, and the number would have climbed while nothing was wrong.
+
+    What this can and cannot do is worth being exact about. It reports an
+    outage that has ENDED, on the first run after it: a reconciler that is
+    still down produces no run and therefore no report. Catching that needs a
+    watchdog outside this workflow, which does not exist yet.
+    """
+    if not args.previous_run_at:
+        return None
+    previous = dt.datetime.fromisoformat(args.previous_run_at.replace("Z", "+00:00"))
+    gap = (now - previous).total_seconds()
+    if gap <= parse_duration(args.max_staleness):
+        return None
+    return int(gap // 3600)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", default="roadmap/roadmap-state.yaml")
@@ -1162,9 +1213,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--markdown", dest="md_out")
     parser.add_argument("--previous", help="prior snapshot.json, to report only on change")
     parser.add_argument(
+        "--previous-run-at",
+        help="ISO timestamp of the last successful run of this reconciler, "
+             "from the workflow's own run history. NOT the snapshot's "
+             "generated_at: the snapshot is committed only when the state "
+             "changes, so its timestamp records the last change and a quiet "
+             "roadmap would look like an outage forever.")
+    parser.add_argument(
         "--max-staleness", default="26h",
-        help="report when the prior snapshot is older than this — the "
-             "reconciler noticing its own silence")
+        help="how long between runs before the gap is itself reported")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1178,6 +1235,16 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if not isinstance(state, dict) or not state.get("items"):
         print(f"reconcile: {args.state} declares no items", file=sys.stderr)
+        return 2
+
+    try:
+        parse_duration(args.max_staleness)
+        if args.previous_run_at:
+            dt.datetime.fromisoformat(args.previous_run_at.replace("Z", "+00:00"))
+    except ValueError as exc:
+        # Swallowing this would disable the liveness check while leaving the
+        # flag in place -- a guard that reports nothing and looks armed.
+        print(f"reconcile: {exc}", file=sys.stderr)
         return 2
 
     problems = validate_state(state)
@@ -1222,30 +1289,20 @@ def main(argv: list[str] | None = None) -> int:
 
     changed = before is None or reportable_state(before) != reportable_state(snapshot)
 
-    # The reconciler's own liveness. Nothing else asserts that it ran: a
-    # workflow that stops firing produces no output at all, which is the
-    # failure mode this whole file is an argument against.
-    stale_for = None
-    if before and before.get("generated_at"):
-        try:
-            previous_at = dt.datetime.fromisoformat(
-                before["generated_at"].replace("Z", "+00:00"))
-            gap = (now - previous_at).total_seconds()
-            if gap > parse_duration(args.max_staleness):
-                stale_for = int(gap // 3600)
-        except ValueError:
-            stale_for = None
-    if stale_for is not None:
-        print(f"NOTE: the previous reconcile was {stale_for}h ago, longer than "
-              f"{args.max_staleness} — this reconciler was not running",
-              file=sys.stderr)
-
     body = digest(snapshot)
     print(f"{snapshot['overall']}  " + "  ".join(
         f"{BADGE[s]}={snapshot['counts'][s]}" for s in SEVERITY))
     if body:
         print()
         print(body)
+
+    stale_hours = gap_since_previous_run(args, now)
+    if stale_hours is not None:
+        gap_line = (f"{BADGE[OBSERVATION_FAILED]} this reconciler did not run for "
+                    f"{stale_hours}h (allowed {args.max_staleness}) — the roadmap "
+                    f"below was unobserved for that whole window")
+        body = f"{gap_line}\n{body}" if body else gap_line
+        print(gap_line)
 
     if step_summary := os.getenv("GITHUB_STEP_SUMMARY"):
         with open(step_summary, "a") as fh:
@@ -1255,6 +1312,8 @@ def main(argv: list[str] | None = None) -> int:
         with open(github_output, "a") as fh:
             fh.write(f"overall={snapshot['overall']}\n")
             fh.write(f"changed={'true' if changed else 'false'}\n")
+            fh.write(f"unobserved={snapshot['counts'][OBSERVATION_FAILED]}\n")
+            fh.write(f"stale_hours={stale_hours if stale_hours is not None else 0}\n")
 
     return 0 if snapshot["overall"] == ALIGNED else 1
 

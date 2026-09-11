@@ -99,16 +99,30 @@ report.
 Every value is checked against the vocabulary the tool can actually produce, so
 a typo is a hard error rather than an assertion that never matches.
 
-## Liveness is not in the commit log
+## Liveness, and the limit of it
 
 The snapshot is committed only when the reconciled state changes, because it
 carries a timestamp and would otherwise take four commits a day saying nothing.
 That leaves the question the rest of this file exists to ask: how do you know
-the reconciler ran at all? Two answers. A run that changes the state for the
-worse **fails the workflow**, which is a channel GitHub notifies on, unlike an
-annotation nobody reads. And each run compares the previous snapshot's
-timestamp against `--max-staleness`, so the first run after an outage says how
-long the reconciler had been silent.
+the reconciler ran at all?
+
+Not from the snapshot. Its `generated_at` records the last *change*, and "no
+change" is the designed steady state — measuring staleness against it would
+report a growing outage forever on a roadmap that is simply quiet. The
+reference is the workflow's own run history, which advances on every run, and
+`--previous-run-at` carries it in.
+
+Be exact about what that buys. It reports an outage that has **ended**, on the
+first run after it. A reconciler that is still down produces no run and
+therefore no report; catching that needs a watchdog outside this workflow, and
+there isn't one. This is a known gap, not a solved problem.
+
+Three different things can be wrong and they are not the same message, so the
+report distinguishes them: the roadmap diverged, items could not be observed,
+or the reconciler was not running. Blindness is announced on **every** run
+rather than only when it changes — a partially visible org would otherwise
+announce once and then go quiet behind a permanently half-red page, which is
+precisely the failure this tool argues against.
 
 A run that could observe nothing at all exits 2 and fails the job rather than
 publishing an all-red page: every item unobserved is a credentials or
