@@ -644,6 +644,10 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         try:
             result.evidence["review"] = _review_state(issue_obs.open_prs)
         except ObservationFailure as exc:
+            # Recorded either way. An absent key reads as "not applicable" to
+            # anyone looking at the snapshot, when the truth is that we looked
+            # and could not tell.
+            result.evidence["review"] = "unobserved"
             if "review" in expected:
                 result.state = OBSERVATION_FAILED
                 result.reasons.append(f"could not observe review state: {exc}")
@@ -1240,7 +1244,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         parse_duration(args.max_staleness)
         if args.previous_run_at:
-            dt.datetime.fromisoformat(args.previous_run_at.replace("Z", "+00:00"))
+            parsed = dt.datetime.fromisoformat(
+                args.previous_run_at.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                # Naive passes fromisoformat and then raises TypeError on the
+                # subtraction, several steps away from the flag that caused it.
+                raise ValueError(
+                    f"--previous-run-at {args.previous_run_at!r} has no timezone")
     except ValueError as exc:
         # Swallowing this would disable the liveness check while leaving the
         # flag in place -- a guard that reports nothing and looks armed.

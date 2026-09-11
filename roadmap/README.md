@@ -119,10 +119,21 @@ there isn't one. This is a known gap, not a solved problem.
 
 Three different things can be wrong and they are not the same message, so the
 report distinguishes them: the roadmap diverged, items could not be observed,
-or the reconciler was not running. Blindness is announced on **every** run
-rather than only when it changes — a partially visible org would otherwise
-announce once and then go quiet behind a permanently half-red page, which is
-precisely the failure this tool argues against.
+or the reconciler was not running.
+
+The report is a **tracking issue**, not a failed job and not an annotation. An
+annotation on a scheduled run reaches nobody. A failed job would have been
+worse than useless here: two of the three conditions are standing states by
+design, so the job would never succeed again — and the liveness reference above
+is the last *successful* run, which would then recede without bound until the
+tool started reporting an outage that was not happening. The job's conclusion
+keeps meaning "the reconciler worked".
+
+The issue's body is rewritten every run and carries the current state; a
+comment — the part that notifies — is added only when the reconciled state
+changes; and the issue is closed when everything is aligned again. Blindness
+keeps the issue open for as long as it lasts, because a partially visible org
+must not be able to go quiet behind a half-red page.
 
 A run that could observe nothing at all exits 2 and fails the job rather than
 publishing an all-red page: every item unobserved is a credentials or

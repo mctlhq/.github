@@ -28,6 +28,14 @@ on:
 
 permissions:
   contents: write
+  # Reading this workflow's own run history is what liveness is measured
+  # against, and that needs actions:read — without it the read fails and the
+  # check would have to guess.
+  actions: read
+  # The report is a tracking issue rather than an annotation. An annotation on
+  # a scheduled run reaches nobody; an issue notifies, persists while the
+  # condition lasts, and dedupes by being the same issue.
+  issues: write
 
 concurrency:
   group: roadmap-reconcile
@@ -58,12 +66,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.run_id }}
         run: |
-          previous=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&per_page=5" \
-            --jq "[.workflow_runs[] | select(.id != ${RUN_ID}) | .created_at] | first // empty" \
-            2>/dev/null || true)
+          set -euo pipefail
+          # No `|| true`. A failed read of the run history is not a first run,
+          # and the two must not produce the same empty answer — that is the
+          # exact swallow this PR exists to end, and writing it here would have
+          # been the joke telling itself. If the API call fails, the step
+          # fails.
+          runs=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&per_page=5")
+          previous=$(jq -r "[.workflow_runs[] | select(.id != ${RUN_ID}) | .created_at] | first // \"\"" <<<"$runs")
           echo "previous_run_at=${previous}" >> "$GITHUB_OUTPUT"
-          echo "previous successful run: ${previous:-none recorded}"
+          if [ -z "$previous" ]; then
+            echo "no earlier successful run — liveness makes no claim this time"
+          else
+            echo "previous successful run: ${previous}"
+          fi
 
       - name: Reconcile
         id: reconcile
@@ -113,40 +130,76 @@ jobs:
           # retry rather than losing the snapshot to a race.
           for attempt in 1 2 3; do
             if git push; then exit 0; fi
-            git pull --rebase --autostash
+            # Checked: a rebase that fails is a conflict, not a race, and
+            # retrying the push would report the wrong reason for the failure.
+            if ! git pull --rebase --autostash; then
+              git rebase --abort || true
+              echo "::error::the snapshot conflicts with main — rebase failed, this is not a push race"
+              exit 1
+            fi
           done
           echo "::error::could not push the snapshot after three attempts"
           exit 1
         env:
           OVERALL: ${{ steps.reconcile.outputs.overall }}
 
-      - name: Report
-        # Three different things can be wrong, and they are not the same
-        # message. A failed job is used rather than `::warning::` because an
-        # annotation on a scheduled run reaches nobody — it sits in a log
-        # somebody would have to already be reading.
+      - name: Report through a tracking issue
+        # Not a failed job. Two of the three conditions worth reporting are
+        # standing states by design — a declared gap, an item we cannot see —
+        # and failing on those would mean no successful run ever again, which
+        # would also push the liveness reference above out of reach. So the
+        # job's own conclusion keeps meaning "the reconciler worked", and the
+        # roadmap's state is reported where it can persist and notify:
         #
-        # Blindness is announced on EVERY run, not only when it changes: a
-        # partially visible org would otherwise announce once and then go
-        # quiet behind a permanently half-red page, which is the failure this
-        # whole tool argues against.
-        if: >-
-          steps.reconcile.outputs.unobserved != '0' ||
-          steps.reconcile.outputs.stale_hours != '0' ||
-          (steps.reconcile.outputs.changed == 'true' &&
-           steps.reconcile.outputs.overall != 'ALIGNED')
+        #   body  — rewritten every run, silently; the current state
+        #   comment — only when the reconciled state changes; the notification
+        #   closed — when everything is aligned again
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OVERALL: ${{ steps.reconcile.outputs.overall }}
           UNOBSERVED: ${{ steps.reconcile.outputs.unobserved }}
           STALE_HOURS: ${{ steps.reconcile.outputs.stale_hours }}
+          CHANGED: ${{ steps.reconcile.outputs.changed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ "$UNOBSERVED" != "0" ]; then
-            echo "::error::${UNOBSERVED} roadmap item(s) could not be observed — this is the tool or its access, not the roadmap"
+          set -euo pipefail
+          title="Roadmap: reconciled state is not aligned"
+          number=$(gh issue list --state open --limit 50 \
+            --json number,title --jq "[.[] | select(.title == \"$title\") | .number] | first // empty")
+
+          if [ "$OVERALL" = "ALIGNED" ] && [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" --comment "Everything the roadmap declares is true again, as of $RUN_URL."
+            fi
+            exit 0
           fi
-          if [ "$STALE_HOURS" != "0" ]; then
-            echo "::error::this reconciler did not run for ${STALE_HOURS}h — the roadmap was unobserved for that window"
+
+          {
+            echo "Reconciled state as of the run below. This body is rewritten on every run;"
+            echo "a comment is added only when the state changes."
+            echo
+            if [ "$UNOBSERVED" != "0" ]; then
+              echo "**$UNOBSERVED item(s) could not be observed.** That is this tool or its"
+              echo "access, not the roadmap — treat it as blindness, not as a green light."
+              echo
+            fi
+            if [ "$STALE_HOURS" != "0" ]; then
+              echo "**This reconciler did not run for ${STALE_HOURS}h.** The roadmap was"
+              echo "unobserved for that window; what follows is only what is true now."
+              echo
+            fi
+            echo '```'
+            sed -n "/^### Roadmap/,\$p" "$GITHUB_STEP_SUMMARY" | sed -n "/^\`\`\`$/,/^\`\`\`$/p" | sed "/^\`\`\`$/d"
+            echo '```'
+            echo
+            echo "[Run]($RUN_URL) · [Page](../blob/main/roadmap/ROADMAP.md)"
+          } > "$RUNNER_TEMP/body.md"
+
+          if [ -z "$number" ]; then
+            gh issue create --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/body.md"
+            if [ "$CHANGED" = "true" ] || [ "$STALE_HOURS" != "0" ]; then
+              gh issue comment "$number" --body-file "$RUNNER_TEMP/body.md"
+            fi
           fi
-          if [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
-            echo "::error::roadmap state changed to ${OVERALL} — something we believed is no longer true"
-          fi
-          exit 1
