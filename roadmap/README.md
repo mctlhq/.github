@@ -78,12 +78,18 @@ checking what matters rather than what its own parser happens to accept, and
 it is why the two `paths:` lists in the workflow are written out twice.
 
 It runs in its own job, on `pull_request` as well as on the schedule, so a
-broken block is refused before it is merged rather than after. The sweep over
-the repository's *other* workflows is a separate job that the reconciler does
-not depend on: shellcheck runs at `--severity warning` there, and one warning
-in a file outside this workflow's `paths:` would otherwise stop the scheduled
-reconcile without ever having been refused at the pull request that introduced
-it.
+broken block is refused before it is merged rather than after.
+
+The sweep over the repository's *other* workflows lives in its own file,
+`workflow-shell-check.yml`, and not merely in its own job. Taking it out of
+`needs:` was not enough: a failing job still makes its **run** conclude
+`failure`, and the reconciler measures liveness against `?status=success` over
+its own runs — so a shellcheck warning in an unrelated workflow would have left
+the reconcile running, observing and committing correctly while the record that
+it did so stopped advancing, and at 26h it would have begun reporting an outage
+that was not happening, on a roadmap that might be perfectly aligned. Living in
+a separate file with `.github/workflows/**` in `paths:`, that warning is
+refused at the pull request that introduces it instead.
 
 ## Running it
 

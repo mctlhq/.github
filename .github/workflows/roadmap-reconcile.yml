@@ -95,26 +95,6 @@ jobs:
         # a green roadmap while blind.
         run: python3 roadmap/reconcile.py --selftest
 
-  sweep:
-    # The other workflows in this repository, checked but NOT in the
-    # reconciler's way. shellcheck ships on ubuntu-latest and runs at
-    # `--severity warning` here, so one warning in pr-review.yml,
-    # claude-review.yml or agy-review.yml would otherwise stop the scheduled
-    # reconcile — and those files are not in this workflow's `paths:`, so the
-    # warning would not have been refused at the pull request that introduced
-    # it. It would surface later, as the reconciler going quiet.
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Install PyYAML
-        run: python3 -m pip install --quiet pyyaml
-      - name: Syntax-check every workflow in this repository
-        # This repository defines org-wide configuration, and the other
-        # workflows carry another twenty run: blocks.
-        run: python3 roadmap/check-workflow-shell.py .github/workflows/*.yml
-
   reconcile:
     needs: gate
     if: github.event_name != 'pull_request'
@@ -241,10 +221,14 @@ jobs:
           # and this repository has no such label today. `--silent` and
           # `--include` are also mutually exclusive, and `| head -1` is the
           # SIGPIPE-under-pipefail shape removed twice already above.
+          # stdout and stderr kept apart. Merging them meant any gh notice on
+          # stderr could land on line 1, empty `status`, and end the report on
+          # a call that had returned 200.
           set +e
-          response=$(gh api "repos/${GITHUB_REPOSITORY}/labels/${label}" --include 2>&1)
+          gh api "repos/${GITHUB_REPOSITORY}/labels/${label}" --include \
+            >"$RUNNER_TEMP/label.out" 2>"$RUNNER_TEMP/label.err"
           set -e
-          status=$(printf '%s' "$response" | sed -n '1s@^HTTP/[0-9.]* \([0-9][0-9][0-9]\).*@\1@p')
+          status=$(sed -n '1s@^HTTP/[0-9.]* \([0-9][0-9][0-9]\).*@\1@p' "$RUNNER_TEMP/label.out")
           case "$status" in
             200)
               ;;
@@ -256,7 +240,8 @@ jobs:
               # The response is printed, not discarded: this is the read whose
               # whole point is that "absent" and "could not look" differ.
               echo "::error::could not read the ${label} label (status '${status:-none}')"
-              printf '%s\n' "$response" | sed -n '1,10p'
+              sed -n '1,10p' "$RUNNER_TEMP/label.out"
+              sed -n '1,10p' "$RUNNER_TEMP/label.err"
               exit 1
               ;;
           esac

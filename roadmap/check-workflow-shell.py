@@ -88,9 +88,10 @@ def unterminated_heredoc(script: str) -> str | None:
     index = 0
     while index < len(lines):
         line = lines[index]
-        if "<<<" in line:
-            index += 1
-            continue
+        # A herestring is not a heredoc, but a line can carry both — skipping
+        # the whole line would miss a real opener beside one. Blank out the
+        # herestrings and keep looking at what is left.
+        line = line.replace("<<<", "   ")
         match = HEREDOC.search(line)
         if not match:
             index += 1
@@ -269,6 +270,10 @@ def selftest() -> int:
               "a tab-indented <<- delimiter was not recognised")
         check(unterminated_heredoc("grep x <<<\"$var\"\n") is None,
               "a herestring was mistaken for a heredoc")
+        check(unterminated_heredoc('grep x <<<"$v" && cat <<EOF\nbody\n') == "EOF",
+              "a real heredoc beside a herestring on one line was missed")
+        check(unterminated_heredoc("cat <<EOF\ncat <<INNER\nEOF\n") is None,
+              "a <<WORD inside a heredoc body was treated as an opener")
         check(check_block("heredoc", "bash", "cat <<EOF\nbody\n", workdir, False)
               is not None, "an unterminated heredoc was accepted")
         check(check_block("expr", "bash", 'echo "${{ x "', workdir, have) is not None,
