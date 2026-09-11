@@ -71,23 +71,36 @@ def neutralise(script: str) -> str:
 HEREDOC = None  # compiled lazily below, after `re` is imported
 
 
-def _blank_quoted(line: str) -> str:
-    """Replace the contents of quoted runs with spaces, preserving length.
+def _quoted_spans(line: str) -> list:
+    """Ranges of `line` that sit inside a complete quote pair.
 
-    Only complete pairs on the one line are blanked: an unbalanced quote is
-    a different defect, and `bash -n` is the thing that reports it.
+    A quote opening immediately after `<<` or `<<-` is NOT a string: it is
+    part of the heredoc operator, and `<<"EOF"` is the commonest spelling of
+    one. Blanking it blinded this check to every quoted delimiter — verified
+    rather than reasoned: `unterminated_heredoc('cat <<"EOF"\\nbody\\n')`
+    returned None, which is a gate accepting broken work, the one direction it
+    must never fail in.
+
+    Only complete pairs count. An unbalanced quote is a different defect, and
+    `bash -n` is what reports that one.
     """
-    out = list(line)
+    spans = []
     quote = None
     start = 0
     for i, ch in enumerate(line):
         if quote is None and ch in "\"'":
+            before = line[:i].rstrip()
+            if before.endswith("<<") or before.endswith("<<-"):
+                continue  # a heredoc delimiter, not a string
             quote, start = ch, i
         elif ch == quote:
-            for j in range(start + 1, i):
-                out[j] = " "
+            spans.append((start, i))
             quote = None
-    return "".join(out)
+    return spans
+
+
+def _inside(position: int, spans: list) -> bool:
+    return any(lo < position < hi for lo, hi in spans)
 
 
 def unterminated_heredoc(script: str) -> str | None:
@@ -111,13 +124,15 @@ def unterminated_heredoc(script: str) -> str | None:
         # the whole line would miss a real opener beside one. Blank out the
         # herestrings and keep looking at what is left.
         line = line.replace("<<<", "   ")
-        # Quoted text is text. `echo "a <<EOF b"` opens nothing, and
-        # reading it as an opener made the gate refuse a valid block —
-        # tolerable as a bias, except that this gate blocks the scheduled
-        # reconcile and there is no escape hatch, so the class is removed
-        # rather than written down.
-        line = _blank_quoted(line)
-        match = HEREDOC.search(line)
+        spans = _quoted_spans(line)
+        # Quoted text is text: `echo "a <<EOF b"` opens nothing. The operator
+        # is found by position rather than by blanking the quotes, because
+        # `<<"EOF"` carries its delimiter inside them and blanking lost it.
+        match = None
+        for candidate in HEREDOC.finditer(line):
+            if not _inside(candidate.start(), spans):
+                match = candidate
+                break
         if not match:
             index += 1
             continue
@@ -336,6 +351,16 @@ def selftest() -> int:
               "a <<WORD inside single quotes was read as an opener")
         check(unterminated_heredoc('echo "x" && cat <<EOF\nbody\n') == "EOF",
               "a real opener after a quoted string was missed")
+        # The commonest spelling of all, and the one the previous approach
+        # silently accepted: a quoted delimiter.
+        check(unterminated_heredoc('cat <<"EOF"\nbody\n') == "EOF",
+              'an unterminated <<"EOF" was accepted')
+        check(unterminated_heredoc("cat <<'EOF'\nbody\n") == "EOF",
+              "an unterminated <<'EOF' was accepted")
+        check(unterminated_heredoc('cat <<"EOF"\nbody\nEOF\n') is None,
+              'a terminated <<"EOF" was reported as open')
+        check(unterminated_heredoc("cat <<-'EOF'\n\tbody\n\tEOF\n") is None,
+              "a tab-indented quoted delimiter was not recognised")
 
         missing = workdir / "nope.yml"
         try:
@@ -353,7 +378,9 @@ def selftest() -> int:
 
 
 def main(argv: list[str]) -> int:
-    if argv and argv[0] == "--selftest":
+    if "--selftest" in argv:
+        # Recognised anywhere, not only first: a real flag in second position
+        # was otherwise reported as unknown.
         return selftest()
     # --syntax-only skips shellcheck. The gate that blocks the reconcile
     # uses it: shellcheck comes from the runner image, and a new warning

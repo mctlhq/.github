@@ -136,8 +136,14 @@ jobs:
         id: history
         # From the workflow's own run history, not from the snapshot. The
         # snapshot is committed only when the state changes, so its timestamp
-        # records the last change; a quiet roadmap would have read as a
-        # growing outage forever. This advances on every run.
+        # records the last change, and a quiet roadmap would have read as a
+        # growing outage forever.
+        #
+        # It advances on every run that RECONCILED — which is not every run.
+        # The event list below is the `on:` triggers of this file minus
+        # `pull_request`, because the reconcile job is skipped there (see its
+        # `if:`) and a skipped job does not fail a run. Adding a trigger means
+        # adding it here too; nothing joins the two.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.run_id }}
