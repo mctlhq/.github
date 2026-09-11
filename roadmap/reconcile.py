@@ -1253,11 +1253,17 @@ def selftest() -> int:
 def gap_since_previous_run(args, now: dt.datetime) -> int | None:
     """Hours since the last successful run, when that exceeds the allowance.
 
-    The reference is the workflow's own run history, supplied by the caller.
-    It advances on every run, which the committed snapshot does not: the
-    snapshot is written only when the reconciled state changes, so "no change"
-    -- the designed steady state -- would have read as a growing outage
-    forever, and the number would have climbed while nothing was wrong.
+    The reference is the workflow's own run history, supplied by the caller,
+    and it must be the time of a run that actually RECONCILED -- not merely a
+    run that concluded successfully. A pull-request run of that workflow skips
+    the reconcile job, and a skipped job does not fail a run, so such a run
+    succeeds having observed nothing; letting one through would reset this
+    clock in the middle of an outage. The caller is responsible for that
+    filter, which is why this says so rather than "the last successful run".
+
+    Not the committed snapshot either: it is written only when the reconciled
+    state changes, so "no change" -- the designed steady state -- would have
+    read as a growing outage forever, climbing while nothing was wrong.
 
     What this can and cannot do is worth being exact about. It reports an
     outage that has ENDED, on the first run after it: a reconciler that is

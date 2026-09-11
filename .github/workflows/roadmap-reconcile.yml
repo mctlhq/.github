@@ -32,6 +32,7 @@ on:
       - "roadmap/reconcile.py"
       - "roadmap/check-workflow-shell.py"
       - ".github/workflows/roadmap-reconcile.yml"
+      - ".github/workflows/workflow-shell-check.yml"
   # So the gates can refuse a change before it is merged. Without this the
   # earliest a broken `run:` block could be refused was the push that merged
   # it: a shorter outage than none, but still a red scheduled workflow on main
@@ -48,6 +49,7 @@ on:
       - "roadmap/reconcile.py"
       - "roadmap/check-workflow-shell.py"
       - ".github/workflows/roadmap-reconcile.yml"
+      - ".github/workflows/workflow-shell-check.yml"
 
 # Declared per job rather than here: the gate reads the checkout and nothing
 # else, and inheriting write access it never uses is a permission granted to
@@ -146,20 +148,29 @@ jobs:
           # exact swallow this PR exists to end, and writing it here would have
           # been the joke telling itself. If the API call fails, the step
           # fails.
-          runs=$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&per_page=20")
-          # Pull-request runs are excluded. `reconcile` is skipped on them and
-          # a skipped job does not fail a run, so those runs conclude success
-          # having observed nothing — and letting one advance the reference
-          # means a pull request touching roadmap-state.yaml, which is how the
-          # roadmap is maintained, silently resets the staleness clock in the
-          # middle of an outage. The push-to-main run that follows would then
-          # be the first real reconcile in days and report stale_hours=0,
-          # which is the one thing this check exists to say.
-          previous=$(jq -r '[.workflow_runs[]
-            | select(.id != '"${RUN_ID}"')
-            | select(.event != "pull_request")
-            | .created_at] | first // ""' <<<"$runs")
+          # Asked for per event, not filtered out of a mixed page.
+          #
+          # Pull-request runs must not count: `reconcile` is skipped on them
+          # and a skipped job does not fail a run, so they conclude success
+          # having observed nothing — one pull request touching
+          # roadmap-state.yaml, which is how this roadmap is maintained, would
+          # otherwise reset the staleness clock in the middle of an outage.
+          #
+          # Excluding them from a page of the twenty newest successes had its
+          # own hole: if all twenty were gate runs the result was empty, and
+          # the step printed exactly what a genuine first run prints.
+          # Reachable by ordinary work — a pull request that pushes twenty
+          # times while the scheduled reconcile is failing. "We did not look
+          # far enough" and "there is nothing to find" are not the same
+          # answer, and the API can be asked the precise question instead.
+          previous=""
+          for event in schedule push workflow_dispatch; do
+            at=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&event=${event}&per_page=5" \
+              | jq -r '[.workflow_runs[] | select(.id != '"${RUN_ID}"') | .created_at] | first // ""')
+            if [ -n "$at" ] && { [ -z "$previous" ] || [[ "$at" > "$previous" ]]; }; then
+              previous="$at"
+            fi
+          done
           echo "previous_run_at=${previous}" >> "$GITHUB_OUTPUT"
           if [ -z "$previous" ]; then
             echo "no earlier successful run — liveness makes no claim this time"

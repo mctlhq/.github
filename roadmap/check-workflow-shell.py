@@ -71,6 +71,25 @@ def neutralise(script: str) -> str:
 HEREDOC = None  # compiled lazily below, after `re` is imported
 
 
+def _blank_quoted(line: str) -> str:
+    """Replace the contents of quoted runs with spaces, preserving length.
+
+    Only complete pairs on the one line are blanked: an unbalanced quote is
+    a different defect, and `bash -n` is the thing that reports it.
+    """
+    out = list(line)
+    quote = None
+    start = 0
+    for i, ch in enumerate(line):
+        if quote is None and ch in "\"'":
+            quote, start = ch, i
+        elif ch == quote:
+            for j in range(start + 1, i):
+                out[j] = " "
+            quote = None
+    return "".join(out)
+
+
 def unterminated_heredoc(script: str) -> str | None:
     """The delimiter of the first heredoc never closed, if any.
 
@@ -92,6 +111,12 @@ def unterminated_heredoc(script: str) -> str | None:
         # the whole line would miss a real opener beside one. Blank out the
         # herestrings and keep looking at what is left.
         line = line.replace("<<<", "   ")
+        # Quoted text is text. `echo "a <<EOF b"` opens nothing, and
+        # reading it as an opener made the gate refuse a valid block —
+        # tolerable as a bias, except that this gate blocks the scheduled
+        # reconcile and there is no escape hatch, so the class is removed
+        # rather than written down.
+        line = _blank_quoted(line)
         match = HEREDOC.search(line)
         if not match:
             index += 1
@@ -303,13 +328,14 @@ def selftest() -> int:
         check(quietly(check_files, [empty]) == 2,
               "a workflow with no shell blocks must not report a clean sweep")
 
-        # A known and deliberate bias: `<<WORD` inside a string reads as an
-        # opener, so the gate refuses a block it should accept. Pinned
-        # rather than left to surprise someone — the failure direction is
-        # refusing valid work, never accepting broken work, which is the
-        # right way for a gate to be wrong.
-        check(unterminated_heredoc('echo "a <<EOF b"') == "EOF",
-              "the documented conservative bias changed without a decision")
+        # Quoted text is text: this gate blocks the scheduled reconcile, so
+        # a false positive here has no escape hatch.
+        check(unterminated_heredoc('echo "a <<EOF b"') is None,
+              "a <<WORD inside a string was read as a heredoc opener")
+        check(unterminated_heredoc("echo 'a <<EOF b'") is None,
+              "a <<WORD inside single quotes was read as an opener")
+        check(unterminated_heredoc('echo "x" && cat <<EOF\nbody\n') == "EOF",
+              "a real opener after a quoted string was missed")
 
         missing = workdir / "nope.yml"
         try:
@@ -334,6 +360,14 @@ def main(argv: list[str]) -> int:
     # arriving with an image bump would stop the reconciler with no pull
     # request to refuse it at.
     syntax_only = "--syntax-only" in argv
+    unknown = [a for a in argv if a.startswith("--") and a != "--syntax-only"]
+    if unknown:
+        # Silently dropping an unrecognised flag is how a misspelled
+        # --syntax-only quietly restores the runner-image shellcheck
+        # coupling this option exists to remove, with nothing saying it
+        # stopped applying.
+        print(f"unknown option(s): {', '.join(unknown)}", file=sys.stderr)
+        return 2
     files = [pathlib.Path(a) for a in argv if not a.startswith("--")]
     if not files:
         print(__doc__, file=sys.stderr)
