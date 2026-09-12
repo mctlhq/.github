@@ -110,6 +110,14 @@ jobs:
             .github/workflows/roadmap-reconcile.yml \
             .github/workflows/workflow-shell-check.yml
 
+      - name: Validate the declaration and its schedule
+        # Runs in the gate, so a bad declaration — or a cron edit this
+        # resolver cannot read — is refused at the pull request rather than
+        # four hours later as a scheduled run that exits 2, observes nothing
+        # and stops the liveness reference advancing. Same coupling removed
+        # for every other workflow, which had re-entered here.
+        run: python3 roadmap/reconcile.py --validate-only --state roadmap/roadmap-state.yaml
+
       - name: Self-test the reconciler
         # The property being protected is that a failed observation can never
         # read as a zero or an absence; a reconciler that lost it would report

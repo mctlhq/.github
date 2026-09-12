@@ -539,8 +539,19 @@ PROBE_KEYS = {
 CRON_LINE = re.compile(r"^\s*-\s*cron:\s*[\"\']([^\"\']+)[\"\']", re.M)
 
 
-def widest_cron_gap(expression: str) -> int | None:
-    """Seconds between the two furthest-apart firings of a daily cron.
+def widest_gap_between(hours: list[int]) -> int:
+    """Seconds between the two furthest-apart firings of a daily hour set."""
+    if not hours:
+        return 24 * 3600
+    if len(hours) == 1:
+        return 24 * 3600
+    gaps = [(b - a) * 3600 for a, b in zip(hours, hours[1:])]
+    gaps.append((hours[0] + 24 - hours[-1]) * 3600)
+    return max(gaps)
+
+
+def cron_hours(expression: str) -> set[int] | None:
+    """The hours a daily cron fires at, or None if this parser cannot say.
 
     Only the shapes this repository uses: a literal hour list in field two,
     with the day fields unrestricted. Anything else returns None rather than a
@@ -554,16 +565,26 @@ def widest_cron_gap(expression: str) -> int | None:
     if not minute.isdigit():
         return None
     try:
-        hours = sorted({int(h) for h in hour.split(",")})
+        hours = {int(h) for h in hour.split(",")}
     except ValueError:
         return None
     if not hours or any(h > 23 for h in hours):
         return None
-    if len(hours) == 1:
-        return 24 * 3600
-    gaps = [(b - a) * 3600 for a, b in zip(hours, hours[1:])]
-    gaps.append((hours[0] + 24 - hours[-1]) * 3600)
-    return max(gaps)
+    return hours
+
+
+def widest_cron_gap(expression: str) -> int | None:
+    """Seconds between the two furthest-apart firings of a daily cron.
+
+    Only the shapes this repository uses: a literal hour list in field two,
+    with the day fields unrestricted. Anything else returns None rather than a
+    number, because a guess here would certify a window against arithmetic
+    nobody did.
+    """
+    hours = cron_hours(expression)
+    if hours is None:
+        return None
+    return widest_gap_between(sorted(hours))
 
 
 def check_run_gap_against_schedule(declared: str, workflow: pathlib.Path) -> list[str]:
@@ -583,18 +604,28 @@ def check_run_gap_against_schedule(declared: str, workflow: pathlib.Path) -> lis
     if not crons:
         return [f"defaults: {workflow} declares no cron, so longest_run_gap "
                 f"describes nothing"]
-    gaps = [widest_cron_gap(c) for c in crons]
-    if any(g is None for g in gaps):
-        return [f"defaults: a cron in {workflow} is not a shape this check "
-                f"understands, so longest_run_gap cannot be resolved"]
-    widest = max(gaps)
+    hours: set[int] = set()
+    for expression in crons:
+        fired = cron_hours(expression)
+        if fired is None:
+            return [f"defaults: a cron in {workflow} is not a shape this check "
+                    f"understands, so longest_run_gap cannot be resolved"]
+        hours |= fired
+    # The union's widest gap, not the widest of each: two schedules interleave,
+    # and taking a max over them certifies a figure the combined schedule does
+    # not contain.
+    widest = widest_gap_between(sorted(hours))
     try:
         stated = parse_duration(declared)
     except ValueError as exc:
         return [f"defaults: longest_run_gap: {exc}"]
-    if stated != widest:
-        return [f"defaults: longest_run_gap is {declared} but the schedule in "
-                f"{workflow.name} has a widest interval of {widest // 3600}h"]
+    if stated < widest:
+        # Only below. Above is what both this file and the README recommend,
+        # because GitHub delays and drops scheduled runs, so the cron is a
+        # floor rather than the truth -- and exact equality made the only
+        # legal value the one both documents call a floor.
+        return [f"defaults: longest_run_gap is {declared}, below the widest "
+                f"interval of {widest // 3600}h in {workflow.name}'s schedule"]
     return []
 
 
@@ -708,6 +739,31 @@ def validate_state(state: dict) -> list[str]:
             except ValueError as exc:
                 problems.append(f"{where}: also: {exc}")
 
+        # An item whose review: and merge: axes both say it is waiting on a
+        # person must not also declare that waiting is news. Three axes
+        # accounting for the silence and a fourth reporting it as unexplained
+        # is two tracking-issue comments and two snapshot commits per review
+        # round trip, with the accounting sitting in the same evidence dict.
+        # `max_silence: none` is how an item says so.
+        waiting_review = {"blocking-findings", "unreviewed-head"}
+        waiting_merge = {"blocked-review", "blocked-review-required",
+                         "blocked-conversations", "blocked-behind-base",
+                         "conflicted"}
+        declared_review = expected.get("review")
+        declared_merge = expected.get("merge")
+
+        def all_waiting(declared, vocabulary):
+            values = declared if isinstance(declared, list) else [declared]
+            return bool(values) and all(v in vocabulary for v in values)
+
+        if (all_waiting(declared_review, waiting_review)
+                and all_waiting(declared_merge, waiting_merge)
+                and item.get("max_silence") != "none"):
+            problems.append(
+                f"{where}: declares on review: and merge: that it is waiting "
+                f"on a person, so silence there is accounted for — set "
+                f"max_silence: none rather than reporting it as unexplained")
+
         # An item believed to be under active implementation must have a
         # silence window, its own or the default. Without one the whole check
         # is skipped and UNEXPECTED_SILENCE is unreachable for it — an OK row
@@ -716,7 +772,7 @@ def validate_state(state: dict) -> list[str]:
         # be refused.
         if (expected.get("implementation") == "active"
                 and item.get("max_silence") is None
-                and not (state.get("defaults") or {}).get("max_silence")):
+                and not (state.get("defaults") or {}).get("max_silence")):  # noqa
             problems.append(
                 f"{where}: declares implementation: active with no max_silence "
                 f"and no defaults.max_silence, so silence can never be reported "
@@ -781,7 +837,7 @@ def validate_state(state: dict) -> list[str]:
                 problems.append(
                     f"{where}: unlocks {target!r}, which is not an item id "
                     f"in this file")
-        if "max_silence" in item:
+        if "max_silence" in item and item["max_silence"] != "none":
             try:
                 parse_duration(item["max_silence"])
             except ValueError as exc:
@@ -836,7 +892,7 @@ def validate_state(state: dict) -> list[str]:
                 windows += [(i.get("id", "?"), i.get("max_silence"))
                             for i in items if isinstance(i, dict)]
                 for where_, declared in windows:
-                    if declared is None:
+                    if declared is None or declared == "none":
                         continue
                     try:
                         window = parse_duration(declared)
@@ -1288,6 +1344,9 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     # Silence is only meaningful once the state itself agrees: an item in
     # DRIFT already has a reason to be looked at.
     silence_window = item.get("max_silence", defaults.get("max_silence"))
+    if silence_window == "none":
+        # The item has declared that its silence is accounted for elsewhere.
+        silence_window = None
     if silence_window and issue_obs and expected.get("implementation") == "active":
         try:
             seconds = parse_duration(silence_window)
@@ -1389,9 +1448,15 @@ def render_markdown(snapshot: dict) -> str:
          f"Reconciled {snapshot['generated_at']} — **{snapshot['overall']}**, "
          f"with no earlier snapshot to date the change from."),
         "",
-        "This page is regenerated only when the reconciled state changes, so the "
-        "date above is that change, not the last time anything was checked. The "
-        "run history is the record of what ran.",
+        ("This page is regenerated only when the reconciled state changes, so the "
+         "date above is that change, not the last time anything was checked. The "
+         "run history is the record of what ran."
+         if snapshot.get("state_changed_at") else
+         # Conditional, because the sentence above it now has two forms. Left
+         # unconditional, the two adjacent lines disagreed about the page's own
+         # date and the false one is the one a skimming reader takes.
+         "This run had no earlier snapshot to compare against, so the date above "
+         "is when it ran. The run history is the record of what ran."),
         "",
         "| state | meaning | count |",
         "|---|---|---|",
@@ -2434,6 +2499,44 @@ def selftest() -> int:
                   for x in check_run_gap_against_schedule("9h", nocron)),
               "a workflow with no cron was treated as agreement")
 
+    # An item waiting on a person must not also report waiting as news.
+    waiting_item = {"id": "wt", "issue": "o/r#1", "max_silence": "12h",
+                    "expected": {"implementation": "active",
+                                 "review": ["blocking-findings", "unreviewed-head"],
+                                 "merge": ["blocked-review"]}}
+    problems = validate_state({"defaults": {"max_silence": "12h",
+                                            "longest_run_gap": "9h"},
+                               "items": [waiting_item]})
+    check(any("waiting on a person" in x for x in problems),
+          f"an item accounting for its own silence still reported it: {problems}")
+    ok_item = dict(waiting_item, max_silence="none")
+    check(validate_state({"defaults": {"max_silence": "12h",
+                                       "longest_run_gap": "9h"},
+                          "items": [ok_item]}) == [],
+          "max_silence: none was refused where it is the remedy")
+    # And at runtime the check is skipped for it.
+    r = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-01T00:00:00Z")),
+        {"id": "wt", "title": "WT", "phase": "now", "issue": "o/r#1",
+         "max_silence": "none",
+         "expected": {"implementation": "active"}}, {"max_silence": "12h"}, now)
+    check(r.state != UNEXPECTED_SILENCE,
+          f"max_silence: none did not disable the check: {r.state}")
+
+    # Two cron lines interleave; the union's widest gap is not the widest of each.
+    with _tempfile.TemporaryDirectory() as d:
+        two = pathlib.Path(d) / "two.yml"
+        two.write_text('on:\n  schedule:\n    - cron: "0 6 * * *"\n'
+                       '    - cron: "0 18 * * *"\n')
+        check(check_run_gap_against_schedule("12h", two) == [],
+              "the union's widest gap was not computed")
+        check(any("below the widest" in x
+                  for x in check_run_gap_against_schedule("11h", two)),
+              "a window below the union's gap passed")
+        # Above the cron is recommended, not refused.
+        check(check_run_gap_against_schedule("24h", two) == [],
+              "a window above the cron was refused, leaving only the floor legal")
+
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
           "OBSERVATION_FAILED must outrank DRIFT")
@@ -2531,6 +2634,11 @@ def main(argv: list[str] | None = None) -> int:
         "--schedule", default=".github/workflows/roadmap-reconcile.yml",
         help="workflow whose cron defaults.longest_run_gap is checked against; "
              "empty to skip")
+    parser.add_argument(
+        "--validate-only", action="store_true",
+        help="check the declaration and its schedule, observe nothing; the "
+             "gate runs this on a pull request so a bad edit is refused "
+             "before it can stop a scheduled run")
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args(argv)
 
@@ -2582,6 +2690,11 @@ def main(argv: list[str] | None = None) -> int:
             before = json.loads(pathlib.Path(args.previous).read_text())
         except (OSError, json.JSONDecodeError):
             before = None  # unreadable is not evidence of no change
+
+    if args.validate_only:
+        print(f"{args.state}: {len(state['items'])} item(s) declared, "
+              f"nothing observed")
+        return 0
 
     now = dt.datetime.now(dt.timezone.utc)
     snapshot = reconcile(GitHub(), state, now)

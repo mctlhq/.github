@@ -137,6 +137,18 @@ is refused as loudly as deleting the line. Trusting it was the gap: every
 window clears a smaller floor, no message moves, and the file still reads as
 armed.
 
+Only a value *below* the cron's widest interval is refused. Above it is what
+both documents recommend, and exact equality would have made the only legal
+value the one they both call a floor. Two cron lines are resolved as the union
+of their firings, not the widest of each, since interleaved schedules do not
+have the gap either one has on its own.
+
+An item whose `review:` and `merge:` axes both say it is waiting on a person
+must set `max_silence: none`. Three axes accounting for the silence and a
+fourth reporting it as unexplained costs two tracking-issue comments and two
+snapshot commits per review round trip, with the accounting sitting in the same
+evidence dict.
+
 It is still a floor rather than the truth:
 GitHub delays scheduled runs and drops them, and a certified window can still
 flap after a missed tick. The liveness step reads the run history and knows the
