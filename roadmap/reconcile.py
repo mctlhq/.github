@@ -539,14 +539,19 @@ PROBE_KEYS = {
 CRON_LINE = re.compile(r"^\s*-\s*cron:\s*[\"\']([^\"\']+)[\"\']", re.M)
 
 
-def widest_gap_between(hours: list[int]) -> int:
-    """Seconds between the two furthest-apart firings of a daily hour set."""
-    if not hours:
-        return 24 * 3600
-    if len(hours) == 1:
-        return 24 * 3600
-    gaps = [(b - a) * 3600 for a, b in zip(hours, hours[1:])]
-    gaps.append((hours[0] + 24 - hours[-1]) * 3600)
+DAY_MINUTES = 24 * 60
+
+
+def widest_gap_between(minutes: list[int]) -> int:
+    """Seconds between the two furthest-apart firings of a daily schedule.
+
+    Takes minutes-past-midnight rather than hours, so two crons at :00 and :30
+    are not treated as firing together.
+    """
+    if len(minutes) <= 1:
+        return DAY_MINUTES * 60
+    gaps = [(b - a) * 60 for a, b in zip(minutes, minutes[1:])]
+    gaps.append((minutes[0] + DAY_MINUTES - minutes[-1]) * 60)
     return max(gaps)
 
 
@@ -564,13 +569,20 @@ def cron_hours(expression: str) -> set[int] | None:
     minute, hour = parts[0], parts[1]
     if not minute.isdigit():
         return None
+    offset = int(minute)
+    if offset > 59:
+        return None
     try:
         hours = {int(h) for h in hour.split(",")}
     except ValueError:
         return None
     if not hours or any(h > 23 for h in hours):
         return None
-    return hours
+    # Minutes are carried, not discarded: two schedules at :00 and :30
+    # interleave differently than two at :00, and dropping the offset
+    # understates the union's gap by up to an hour — certifying a window that
+    # still flaps.
+    return {h * 60 + offset for h in hours}
 
 
 def widest_cron_gap(expression: str) -> int | None:
@@ -581,10 +593,10 @@ def widest_cron_gap(expression: str) -> int | None:
     number, because a guess here would certify a window against arithmetic
     nobody did.
     """
-    hours = cron_hours(expression)
-    if hours is None:
+    minutes = cron_hours(expression)
+    if minutes is None:
         return None
-    return widest_gap_between(sorted(hours))
+    return widest_gap_between(sorted(minutes))
 
 
 def check_run_gap_against_schedule(declared: str, workflow: pathlib.Path) -> list[str]:
@@ -739,31 +751,6 @@ def validate_state(state: dict) -> list[str]:
             except ValueError as exc:
                 problems.append(f"{where}: also: {exc}")
 
-        # An item whose review: and merge: axes both say it is waiting on a
-        # person must not also declare that waiting is news. Three axes
-        # accounting for the silence and a fourth reporting it as unexplained
-        # is two tracking-issue comments and two snapshot commits per review
-        # round trip, with the accounting sitting in the same evidence dict.
-        # `max_silence: none` is how an item says so.
-        waiting_review = {"blocking-findings", "unreviewed-head"}
-        waiting_merge = {"blocked-review", "blocked-review-required",
-                         "blocked-conversations", "blocked-behind-base",
-                         "conflicted"}
-        declared_review = expected.get("review")
-        declared_merge = expected.get("merge")
-
-        def all_waiting(declared, vocabulary):
-            values = declared if isinstance(declared, list) else [declared]
-            return bool(values) and all(v in vocabulary for v in values)
-
-        if (all_waiting(declared_review, waiting_review)
-                and all_waiting(declared_merge, waiting_merge)
-                and item.get("max_silence") != "none"):
-            problems.append(
-                f"{where}: declares on review: and merge: that it is waiting "
-                f"on a person, so silence there is accounted for — set "
-                f"max_silence: none rather than reporting it as unexplained")
-
         # An item believed to be under active implementation must have a
         # silence window, its own or the default. Without one the whole check
         # is skipped and UNEXPECTED_SILENCE is unreachable for it — an OK row
@@ -772,7 +759,7 @@ def validate_state(state: dict) -> list[str]:
         # be refused.
         if (expected.get("implementation") == "active"
                 and item.get("max_silence") is None
-                and not (state.get("defaults") or {}).get("max_silence")):  # noqa
+                and not (state.get("defaults") or {}).get("max_silence")):
             problems.append(
                 f"{where}: declares implementation: active with no max_silence "
                 f"and no defaults.max_silence, so silence can never be reported "
@@ -1344,9 +1331,6 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     # Silence is only meaningful once the state itself agrees: an item in
     # DRIFT already has a reason to be looked at.
     silence_window = item.get("max_silence", defaults.get("max_silence"))
-    if silence_window == "none":
-        # The item has declared that its silence is accounted for elsewhere.
-        silence_window = None
     if silence_window and issue_obs and expected.get("implementation") == "active":
         try:
             seconds = parse_duration(silence_window)
@@ -1361,7 +1345,24 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         latest = max([issue_obs.last_activity] + [o.last_activity for o in also_obs])
         last = dt.datetime.fromisoformat(latest.replace("Z", "+00:00"))
         quiet_for = (now - last).total_seconds()
-        if quiet_for > seconds:
+        # Suppressed on what was OBSERVED, not on what was declared. Doing it
+        # at declaration time set `max_silence: none` on both items that
+        # declare `implementation: active` and made UNEXPECTED_SILENCE
+        # unreachable for every row in the file — one of the four states in
+        # this tool's contract, dead, while the run-gap floor went on
+        # certifying windows nobody could evaluate. Conditionally, an item
+        # that stops being blocked is watched again without an edit.
+        waiting = (result.evidence.get("merge") in
+                   ("blocked-review", "blocked-review-required")
+                   or (result.evidence.get("merge") or "").startswith(
+                       "blocked-conversations")
+                   or result.evidence.get("review") in
+                   ("blocking-findings", "unreviewed-head"))
+        if waiting:
+            result.evidence["silence_accounted_for"] = (
+                f"waiting: review={result.evidence.get('review')}, "
+                f"merge={result.evidence.get('merge')}")
+        elif quiet_for > seconds:
             result.state = UNEXPECTED_SILENCE
             # The elapsed figure goes in the evidence, not the reason.
             # reportable_state compares reasons, so a number that grows every
@@ -1635,9 +1636,14 @@ def selftest() -> int:
     check(any("review expected" in x for x in r.reasons), f"bad reasons: {r.reasons}")
 
     # UNEXPECTED_SILENCE: state agrees, but nothing has moved for a day.
+    # An approved PR on a reviewed head: nobody is waiting on anybody, so
+    # silence is the news rather than the accounting.
+    idle = {"id": "x", "title": "X", "issue": "o/r#1", "phase": "now",
+            "expected": {"issue": "open", "implementation": "active"},
+            "max_silence": "6h"}
     r = reconcile_item(
-        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-10T05:00:00Z")),
-        item_active, {}, now)
+        StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-10T05:00:00Z")),
+        idle, {}, now)
     check(r.state == UNEXPECTED_SILENCE, f"expected UNEXPECTED_SILENCE, got {r.state}")
 
     # OBSERVATION_FAILED: the call fails. This must NOT read as "no PRs", which
@@ -2156,12 +2162,12 @@ def selftest() -> int:
 
     # The announce-once policy has to hold for the one state whose cause is
     # an elapsed time. Two runs six hours apart must compare equal.
-    quiet_item = dict(item_active, max_silence="6h")
+    quiet_item = idle
     r1 = reconcile_item(
-        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-10T05:00:00Z")),
+        StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-10T05:00:00Z")),
         quiet_item, {}, now)
     r2 = reconcile_item(
-        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-10T05:00:00Z")),
+        StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-10T05:00:00Z")),
         quiet_item, {}, now + dt.timedelta(hours=6))
     check(r1.state == UNEXPECTED_SILENCE and r2.state == UNEXPECTED_SILENCE,
           f"expected silence twice: {r1.state} {r2.state}")
@@ -2478,6 +2484,10 @@ def selftest() -> int:
           f"wrong widest gap: {widest_cron_gap('0 6,11,16,21 * * *')}")
     check(widest_cron_gap("0 3 * * *") == 24 * 3600, "a single firing is daily")
     check(widest_cron_gap("0 0,12 * * *") == 12 * 3600, "even split")
+    # Minutes matter: two schedules at :00 and :30 do not fire together.
+    check(widest_cron_gap("30 6,18 * * *") == 12 * 3600, "offset schedule")
+    check(widest_gap_between(sorted({6 * 60, 18 * 60 + 30})) == 12 * 3600 + 1800,
+          "the minute offset was discarded")
     for unsupported in ("*/15 * * * *", "0 6 * * 1", "0 6,11 1 * *", "0 6-11 * * *"):
         check(widest_cron_gap(unsupported) is None,
               f"{unsupported!r} was given a number rather than refused")
@@ -2499,29 +2509,26 @@ def selftest() -> int:
                   for x in check_run_gap_against_schedule("9h", nocron)),
               "a workflow with no cron was treated as agreement")
 
-    # An item waiting on a person must not also report waiting as news.
-    waiting_item = {"id": "wt", "issue": "o/r#1", "max_silence": "12h",
-                    "expected": {"implementation": "active",
-                                 "review": ["blocking-findings", "unreviewed-head"],
-                                 "merge": ["blocked-review"]}}
-    problems = validate_state({"defaults": {"max_silence": "12h",
-                                            "longest_run_gap": "9h"},
-                               "items": [waiting_item]})
-    check(any("waiting on a person" in x for x in problems),
-          f"an item accounting for its own silence still reported it: {problems}")
-    ok_item = dict(waiting_item, max_silence="none")
-    check(validate_state({"defaults": {"max_silence": "12h",
-                                       "longest_run_gap": "9h"},
-                          "items": [ok_item]}) == [],
-          "max_silence: none was refused where it is the remedy")
-    # And at runtime the check is skipped for it.
-    r = reconcile_item(
-        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-01T00:00:00Z")),
-        {"id": "wt", "title": "WT", "phase": "now", "issue": "o/r#1",
-         "max_silence": "none",
-         "expected": {"implementation": "active"}}, {"max_silence": "12h"}, now)
-    check(r.state != UNEXPECTED_SILENCE,
-          f"max_silence: none did not disable the check: {r.state}")
+    # Silence is suppressed on what was OBSERVED, and only while it holds.
+    # The pair is what makes the case exact: the same stub, one blocked and
+    # one not, must land on different sides.
+    blocked_now = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")],
+                          updated="2026-09-01T00:00:00Z")),
+        dict(idle, expected={"issue": "open", "implementation": "active",
+                             "review": "blocking-findings"}), {}, now)
+    check(blocked_now.state == ALIGNED,
+          f"a PR waiting on its author reported silence as unexplained: "
+          f"{blocked_now.state} {blocked_now.reasons}")
+    check("silence_accounted_for" in blocked_now.evidence,
+          f"the accounting was not recorded: {blocked_now.evidence}")
+    unblocked = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-01T00:00:00Z")),
+        dict(idle, expected={"issue": "open", "implementation": "active",
+                             "review": "clean"}), {}, now)
+    check(unblocked.state == UNEXPECTED_SILENCE,
+          f"an item that stopped being blocked was not watched again: "
+          f"{unblocked.state}")
 
     # Two cron lines interleave; the union's widest gap is not the widest of each.
     with _tempfile.TemporaryDirectory() as d:

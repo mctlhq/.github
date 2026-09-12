@@ -76,10 +76,7 @@ items:
       # and teach everyone to ignore the report.
       review: [blocking-findings, unreviewed-head]
       merge: [blocked-review, blocked-review-required]
-    # Both axes above say this is waiting on a reviewer, so silence here is
-    # accounted for and reporting it again is two tracking-issue comments and
-    # two snapshot commits per review round trip.
-    max_silence: none
+    max_silence: 12h
     note: >-
       The declarative agent architecture is a project rather than a production
       path until this lands: GitOps carries shadow ReleaseBindingIntent with
@@ -284,7 +281,6 @@ items:
     expected:
       issue: open
       implementation: none
-    max_silence: 24h
     note: >-
       Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step
       is measurement of what exists, not more servers. mctl-gitops#1181
@@ -324,10 +320,7 @@ items:
       # `conflicted` is deliberately NOT in the list. The first two are
       # states the PR moves through on its own; conflicts are work somebody
       # has to do, and a row that reports them is the row doing its job.
-    # The note below says silence here needs a person rather than time, and
-    # the merge axis already reports what it is waiting on. Carrying a window
-    # anyway would have made this item say the opposite of its own prose.
-    max_silence: none
+    max_silence: 12h
     note: >-
       Approved, green, and not mergeable. Which reason holds alternates —
       unresolved review conversations, or the branch behind a `strict` main —

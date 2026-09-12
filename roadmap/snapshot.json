@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-09-12T11:35:54Z",
-  "state_changed_at": "2026-09-12T11:35:54Z",
-  "overall": "DRIFT",
+  "generated_at": "2026-09-12T11:45:35Z",
+  "state_changed_at": "2026-09-12T11:45:35Z",
+  "overall": "OBSERVATION_FAILED",
   "counts": {
-    "OBSERVATION_FAILED": 0,
-    "DRIFT": 4,
+    "OBSERVATION_FAILED": 1,
+    "DRIFT": 3,
     "UNEXPECTED_SILENCE": 0,
     "ALIGNED": 14
   },
@@ -29,7 +29,8 @@
         ],
         "review": "unreviewed-head",
         "last_activity": "2026-09-11T23:19:25Z",
-        "merge": "blocked-review"
+        "merge": "blocked-review",
+        "silence_accounted_for": "waiting: review=unreviewed-head, merge=blocked-review"
       },
       "note": "The declarative agent architecture is a project rather than a production path until this lands: GitOps carries shadow ReleaseBindingIntent with promotable:false, and the resolver refuses to proceed on bindingSource: registry."
     },
@@ -310,15 +311,15 @@
       "id": "client-lifecycle.identity-attributes",
       "title": "Identity attributes and profile",
       "phase": "now",
-      "state": "DRIFT",
+      "state": "OBSERVATION_FAILED",
       "epic": "mctlhq/.github#22",
       "issue": "mctlhq/mctl-telegram#620",
       "unlocks": [],
       "reasons": [
-        "merge expected blocked-conversations or blocked-behind-base, actual conflicted"
+        "could not observe mergeability: PR #627: GitHub has not computed mergeability yet (mergeable=UNKNOWN, status=UNKNOWN)"
       ],
       "reason_keys": [
-        "merge expected blocked-conversations or blocked-behind-base, actual conflicted"
+        "could not observe mergeability"
       ],
       "evidence": {
         "issue_state": "open",
@@ -327,7 +328,7 @@
         ],
         "review": "clean",
         "last_activity": "2026-09-11T17:18:03Z",
-        "merge": "conflicted"
+        "merge": "unobserved"
       },
       "note": "Approved, green, and not mergeable. Which reason holds alternates \u2014 unresolved review conversations, or the branch behind a `strict` main \u2014 so the snapshot's `merge` field is the thing to read, not this sentence \u2014 including when it reports something outside that pair, which is the row doing its job rather than a gap in the declaration. It also carries steward:escalated, terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
     },

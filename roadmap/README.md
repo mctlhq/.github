@@ -143,11 +143,18 @@ value the one they both call a floor. Two cron lines are resolved as the union
 of their firings, not the widest of each, since interleaved schedules do not
 have the gap either one has on its own.
 
-An item whose `review:` and `merge:` axes both say it is waiting on a person
-must set `max_silence: none`. Three axes accounting for the silence and a
-fourth reporting it as unexplained costs two tracking-issue comments and two
-snapshot commits per review round trip, with the accounting sitting in the same
-evidence dict.
+Silence is suppressed on what was **observed**, not on what was declared. An
+item whose review or merge state says it is waiting on a person has its silence
+accounted for — the reason is recorded in `evidence.silence_accounted_for` —
+and reporting it again as unexplained would cost two tracking-issue comments
+and two snapshot commits per review round trip, with the accounting sitting in
+the same dict.
+
+Doing this at declaration time was worse and shipped briefly: setting a flag on
+the items that wait made `UNEXPECTED_SILENCE` unreachable for every row in the
+file, so one of the four states was dead while the run-gap floor went on
+certifying windows nobody could evaluate. Conditionally, an item that stops
+being blocked is watched again with no edit.
 
 It is still a floor rather than the truth:
 GitHub delays scheduled runs and drops them, and a certified window can still
