@@ -109,10 +109,12 @@ nothing and reads as everything being true; an unknown key at the top level, on
 an item, under `expected:`, on a probe or inside `defaults:`; a value outside
 its vocabulary; an item asserting nothing; an empty assertion on any axis; a
 duplicate id; a malformed `issue:`, `epic:` or `also:` reference; an `unlocks:`
-target naming no item in the file; an item declaring `implementation: active`
-with no silence window, an empty `max_silence:` key, or a window every one of
-whose declared values on an axis stands the silence check down — all three
-being the same outcome, a row that can never say the work stalled; a window not
+target naming no item in the file; an item declaring
+`implementation: active` with no silence window of its own under no usable
+`defaults.max_silence`, an empty `max_silence:` key at either level, or a
+window every one of whose declared values on an axis stands the silence check
+down — all three being the same outcome, a row that can never say the work
+stalled; a window not
 longer than `defaults.longest_run_gap`; an unparsable expectation or duration; a bad regex; a probe carrying a key its
 kind does not use or an unrecognised `when_absent`; a malformed
 `--previous-run-at`; every item unobservable in one pass; and any unhandled
@@ -169,6 +171,15 @@ waiting block, naming both remedies: widen the declaration — a PR that becomes
 mergeable and is then left alone is exactly the silence worth hearing about —
 or write `max_silence: none` and let the note say why a person is needed. Both
 live rows take the second, which is what their notes already said in words.
+
+`none` is legal at `defaults:` too, but it is not a window supplied to the rows
+beneath it: an item declaring `implementation: active` with nothing of its own
+is still refused under a file-wide `none`. The asymmetry is the point. On an
+item the sentinel is that row's explicit opt-out, carried beside a note saying
+why a person is needed there; at `defaults:` it would be the file opting out on
+behalf of every row that said nothing, which is how the window-less active item
+this section opens with gets back in. A file whose every window is switched off
+needs no `longest_run_gap`, since there is nothing left for a floor to certify.
 
 It is still a floor rather than the truth:
 GitHub delays scheduled runs and drops them, and a certified window can still

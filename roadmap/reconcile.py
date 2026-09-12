@@ -773,13 +773,28 @@ def validate_state(state: dict) -> list[str]:
         # that can never say the work stalled. The run-gap message has two
         # remedies, and deleting the line validated clean where a typo would
         # be refused.
+        item_defaults = state.get("defaults")
+        item_defaults = item_defaults if isinstance(item_defaults, dict) else {}
+        # `!= SILENCE_OFF` on the defaults half, and the asymmetry is the
+        # point: `none` on an item is that row's explicit opt-out, carried
+        # beside a note saying why a person is needed there, which is why it
+        # is the remedy this file recommends by name. At `defaults:` it is the
+        # file opting out on behalf of every row that said nothing — and read
+        # as a window having been supplied, it let an active item with no
+        # window of its own validate clean and never report silence, word for
+        # word what this check exists to refuse. Reachable by the obvious
+        # tidy: both live active rows already say `none`, so hoisting the
+        # sentinel and deleting the two lines is what a reader does next.
+        defaults_window = item_defaults.get("max_silence")
         if (expected.get("implementation") == "active"
                 and item.get("max_silence") is None
-                and not (state.get("defaults") or {}).get("max_silence")):
+                and not (defaults_window and defaults_window != SILENCE_OFF)):
             problems.append(
                 f"{where}: declares implementation: active with no max_silence "
-                f"and no defaults.max_silence, so silence can never be reported "
-                f"for it")
+                f"of its own and no usable defaults.max_silence, so silence "
+                f"can never be reported for it — give it a window, or say "
+                f"max_silence: none on the item itself and let its note carry "
+                f"why a person is needed rather than a clock")
 
         # The same unreachability arrived at through the declaration instead
         # of through the omission. Silence is only evaluated on an item whose
@@ -796,8 +811,6 @@ def validate_state(state: dict) -> list[str]:
         # there — an exception here would be exit 2 with no problem list at
         # all, which reads as "the tool broke" rather than "your file is
         # wrong".
-        item_defaults = state.get("defaults")
-        item_defaults = item_defaults if isinstance(item_defaults, dict) else {}
         # `max_silence:` with nothing after it is a present key holding None,
         # so `get(key, fallback)` returns None rather than the default — and
         # None is what every check downstream skips: this guard, the
@@ -912,7 +925,15 @@ def validate_state(state: dict) -> list[str]:
         # unreachable-silence guard recommends by name; refusing it here made
         # the file-wide form of that remedy the one thing a reader cannot
         # write.
-        if "max_silence" in defaults and defaults["max_silence"] != SILENCE_OFF:
+        if defaults.get("max_silence") is None and "max_silence" in defaults:
+            # The mirror of the item-level case: an empty key is a present one
+            # holding None, so it reads as absent everywhere downstream while
+            # `parse_duration` stringifies it into a second message naming no
+            # remedy.
+            problems.append(
+                "defaults: max_silence is empty — write a duration (12h) or "
+                "the word none; an empty key is skipped by every check")
+        elif "max_silence" in defaults and defaults["max_silence"] != SILENCE_OFF:
             try:
                 parse_duration(defaults["max_silence"])
             except ValueError as exc:
@@ -925,8 +946,16 @@ def validate_state(state: dict) -> list[str]:
         # changes a day, two tracking-issue comments and two snapshot commits,
         # on an item nobody touched. Declared rather than inferred, because
         # this file cannot see the workflow's schedule.
-        declares_window = bool(defaults.get("max_silence")) or any(
-            isinstance(i, dict) and i.get("max_silence") for i in items)
+        # A window that is switched off is not a window: a file whose every
+        # `max_silence` says `none` has nothing for a floor to certify, and
+        # requiring `longest_run_gap` for it demands a constant about windows
+        # that cannot fire.
+        def _real_window(value):
+            return bool(value) and value != SILENCE_OFF
+
+        declares_window = _real_window(defaults.get("max_silence")) or any(
+            isinstance(i, dict) and _real_window(i.get("max_silence"))
+            for i in items)
         if declares_window and "longest_run_gap" not in defaults:
             # Required once any window exists, because otherwise deleting one
             # line withdraws the floor from every window in the file — while a
@@ -953,7 +982,7 @@ def validate_state(state: dict) -> list[str]:
                 windows += [(i.get("id", "?"), i.get("max_silence"))
                             for i in items if isinstance(i, dict)]
                 for where_, declared in windows:
-                    if declared is None or declared == "none":
+                    if not _real_window(declared):
                         continue
                     try:
                         window = parse_duration(declared)
@@ -2605,6 +2634,27 @@ def selftest() -> int:
     d_off["defaults"]["max_silence"] = SILENCE_OFF
     check(not any("duration" in x for x in validate_state(d_off)),
           f"defaults.max_silence: none was refused: {validate_state(d_off)}")
+    # But the file-wide sentinel is not a window supplied to an item that said
+    # nothing: that is the file opting out on behalf of a row with no note.
+    hoisted = {"defaults": {"max_silence": SILENCE_OFF},
+               "items": [{"id": "h", "issue": "o/r#1",
+                          "expected": {"implementation": "active"}}]}
+    check(any("no usable defaults.max_silence" in x
+              for x in validate_state(hoisted)),
+          f"a file-wide none was read as a window: {validate_state(hoisted)}")
+    # And a file whose every window is switched off needs no floor for them.
+    check(not any("longest_run_gap is required" in x
+                  for x in validate_state(hoisted)),
+          f"a floor was demanded for windows that cannot fire: "
+          f"{validate_state(hoisted)}")
+    empty_defaults = {"defaults": {"max_silence": None},
+                      "items": [{"id": "h", "issue": "o/r#1",
+                                 "expected": {"issue": "open"}}]}
+    problems = validate_state(empty_defaults)
+    check(any("max_silence is empty" in x for x in problems),
+          f"an empty defaults.max_silence passed: {problems}")
+    check(len([x for x in problems if "max_silence" in x]) == 1,
+          f"one empty defaults key collected two problems: {problems}")
 
     off = copy.deepcopy(unreachable)
     off["items"][0]["max_silence"] = SILENCE_OFF
@@ -2722,6 +2772,26 @@ def selftest() -> int:
     check("blocked-behind-base" in behind.evidence.get(
               "silence_accounted_for", ""),
           f"the merge arm recorded no accounting: {behind.evidence}")
+    # The declaration gate on the review arm, which nothing else reaches:
+    # every other fixture here declares `review:`. Ungated, this item is
+    # excused by `unreviewed-head` — what an open PR nobody has reviewed
+    # reports, including one nobody ever will — because `evidence["review"]`
+    # is written for every observable issue whether the item asserts the axis
+    # or not. That was a finding; deleting `want_review and` must fail here.
+    undeclared_review = reconcile_item(
+        StubGH(fake_issue(prs=[(9, None)], head_seen=False,
+                          updated="2026-09-01T00:00:00Z")),
+        dict(idle, expected={"issue": "open", "implementation": "active"}),
+        {}, now)
+    check(undeclared_review.evidence.get("review") in WAITING_REVIEW,
+          f"the fixture stopped observing a waiting review state: "
+          f"{undeclared_review.evidence.get('review')}")
+    check(undeclared_review.state == UNEXPECTED_SILENCE,
+          f"an item asserting nothing about review was excused by a review "
+          f"state it never declared: {undeclared_review.state}")
+    check("silence_accounted_for" not in undeclared_review.evidence,
+          f"an undeclared axis recorded an accounting: "
+          f"{undeclared_review.evidence}")
     unblocked = reconcile_item(
         StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-01T00:00:00Z")),
         dict(idle, expected={"issue": "open", "implementation": "active",
