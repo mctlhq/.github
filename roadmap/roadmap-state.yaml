@@ -29,24 +29,33 @@ version: 1
 defaults:
   # Long enough that an overnight gap is not noise, short enough that a
   # workday of silence on something we believe is being implemented is
-  # surfaced the same day.
+  # surfaced the same day. An item declaring `implementation: active` must
+  # have a window — its own or this one — or the silence check is skipped for
+  # it entirely and UNEXPECTED_SILENCE becomes unreachable.
   max_silence: 12h
-  # The longest interval between two runs of the reconciler, taken from the
-  # cron in .github/workflows/roadmap-reconcile.yml (0 6,11,16,21 — the
-  # overnight gap). It is the SCHEDULED interval, which is a floor rather than
-  # the truth: GitHub delays scheduled runs under load and drops them
-  # outright, so a window certified by this rule can still flap after a missed
-  # tick. The liveness step reads the run history and knows the real gap; this
-  # constant is the cheap half. Declared because this file cannot see that schedule, and
-  # load-bearing: a max_silence below it makes an item report SILENT every
-  # morning for behaving exactly as declared, which is two state changes a
-  # day, two tracking-issue comments and two snapshot commits on work nobody
+
+  # The longest interval between two runs of the reconciler, read off the cron
+  # in .github/workflows/roadmap-reconcile.yml (0 6,11,16,21 — the overnight
+  # gap). Declared rather than inferred because this file cannot see that
+  # schedule.
   #
-  # validate_state refuses any window that is not strictly longer than it —
-  # including this file's own default above, which is the one most items
-  # use, and including equality: at exactly the gap an item has to move
-  # between the 21:00 and 06:00 runs or it reports.
+  # Load-bearing: a window shorter than the gap reports an item as silent for
+  # behaving exactly as declared, and ALIGNED -> SILENT -> ALIGNED is two
+  # state changes a day — two tracking-issue comments and two snapshot commits
+  # on work nobody touched. validate_state refuses any window that is not
+  # strictly longer than this, including the default above (the one most items
+  # use) and including equality: at exactly the gap an item has to move
+  # between the 21:00 and 06:00 runs or it reports. It is required once any
+  # window exists, so deleting this line cannot withdraw the floor from the
+  # whole file.
+  #
+  # It is the SCHEDULED interval, which is a floor rather than the truth:
+  # GitHub delays scheduled runs under load and drops them outright, so a
+  # window this rule certifies can still flap after a missed tick. The
+  # liveness step reads the run history and knows the real gap; this constant
+  # is the cheap half.
   longest_run_gap: 9h
+
 
 items:
   # ── Agent platform ────────────────────────────────────────────────────

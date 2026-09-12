@@ -745,6 +745,18 @@ def validate_state(state: dict) -> list[str]:
         # changes a day, two tracking-issue comments and two snapshot commits,
         # on an item nobody touched. Declared rather than inferred, because
         # this file cannot see the workflow's schedule.
+        declares_window = bool(defaults.get("max_silence")) or any(
+            isinstance(i, dict) and i.get("max_silence") for i in items)
+        if declares_window and "longest_run_gap" not in defaults:
+            # Required once any window exists, because otherwise deleting one
+            # line withdraws the floor from every window in the file — while a
+            # typo in the same key is refused by the unknown-key check above.
+            # The message names the constant, so "this constant is wrong" is a
+            # natural reading and deletion a natural remedy.
+            problems.append(
+                "defaults: longest_run_gap is required once any max_silence is "
+                "declared — without it no window has a floor and the silence "
+                "check reports items for behaving as declared")
         if "longest_run_gap" in defaults:
             try:
                 gap = parse_duration(defaults["longest_run_gap"])
@@ -2297,10 +2309,33 @@ def selftest() -> int:
         {"id": "w", "issue": "o/r#1", "expected": {"implementation": "active"}}]})
     check(any("max_silence" in x for x in problems),
           f"an active item with no window passed validation: {problems}")
-    check(validate_state({"defaults": {"max_silence": "12h"}, "items": [
+    check(validate_state({"defaults": {"max_silence": "12h",
+                                       "longest_run_gap": "9h"},
+                          "items": [
         {"id": "w", "issue": "o/r#1",
          "expected": {"implementation": "active"}}]}) == [],
         "the default window should satisfy the requirement")
+    # And the floor cannot be withdrawn by deleting the line that names it.
+    problems = validate_state({"defaults": {"max_silence": "12h"}, "items": [
+        {"id": "w", "issue": "o/r#1", "expected": {"implementation": "active"}}]})
+    check(any("longest_run_gap is required" in x for x in problems),
+          f"deleting longest_run_gap withdrew the floor silently: {problems}")
+
+    # The carry-forward, which had no fixture and shipped its effect committed.
+    now_s, older = "2026-09-12T16:00:00Z", "2026-09-12T10:00:00Z"
+    snap_now = {"generated_at": now_s}
+    check(carry_state_changed_at(None, snap_now, False) == now_s,
+          "a first run has nothing to carry")
+    check(carry_state_changed_at({"state_changed_at": older}, snap_now, True) == now_s,
+          "a changed run must stamp itself")
+    check(carry_state_changed_at({"state_changed_at": older}, snap_now, False) == older,
+          "an unchanged run must carry the previous change forward")
+    # The case that shipped: a snapshot predating the field.
+    check(carry_state_changed_at({"generated_at": older}, snap_now, False) == older,
+          "a snapshot with no state_changed_at stamped this run's clock")
+    check(carry_state_changed_at({"state_changed_at": None,
+                                  "generated_at": older}, snap_now, False) == older,
+          "an explicit None was treated as a licence to claim now")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
@@ -2315,6 +2350,28 @@ def selftest() -> int:
 
 
 # ── entry point ───────────────────────────────────────────────────────────
+
+def carry_state_changed_at(before: dict | None, snapshot: dict, changed: bool) -> str:
+    """When the reconciled state last actually changed.
+
+    `or` was wrong here for the reason `reportable_state` stopped using it two
+    rounds earlier: it collapses "absent" and "None" into one answer, and
+    `reconcile()` sets the field to None by construction — so an unchanged run
+    against a snapshot predating the field stamped its own clock into what the
+    page renders as "State last changed", and then latched, carrying the wrong
+    value forward as a genuine answer until the roadmap next moved.
+
+    A snapshot with no usable value is not a licence to claim now. The best
+    available statement is that the state was already this at the previous
+    run, so that run's time is used.
+    """
+    if changed or not before:
+        return snapshot["generated_at"]
+    carried = before.get("state_changed_at")
+    if carried:
+        return carried
+    return before.get("generated_at") or snapshot["generated_at"]
+
 
 def gap_since_previous_run(args, now: dt.datetime) -> int | None:
     """Hours since the last successful run, when that exceeds the allowance.
@@ -2433,9 +2490,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     changed = before is None or reportable_state(before) != reportable_state(snapshot)
-    snapshot["state_changed_at"] = (
-        snapshot["generated_at"] if changed
-        else (before or {}).get("state_changed_at") or snapshot["generated_at"])
+    snapshot["state_changed_at"] = carry_state_changed_at(before, snapshot, changed)
 
     if args.json_out:
         pathlib.Path(args.json_out).write_text(json.dumps(snapshot, indent=2) + "\n")

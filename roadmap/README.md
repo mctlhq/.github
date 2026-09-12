@@ -207,8 +207,11 @@ carries a timestamp and would otherwise take four commits a day saying nothing.
 That leaves the question the rest of this file exists to ask: how do you know
 the reconciler ran at all?
 
-Not from the snapshot. Its `generated_at` records the last *change*, and "no
-change" is the designed steady state — measuring staleness against it would
+Not from the snapshot. Its `generated_at` is when the run happened;
+`state_changed_at` is when the reconciled state last actually moved, carried
+forward on an unchanged run so the page's header is a property of the data
+rather than of the workflow's commit gate. And "no change" is the designed
+steady state — measuring staleness against it would
 report a growing outage forever on a roadmap that is simply quiet. The
 reference is the workflow's own run history, and `--previous-run-at` carries
 it in.
