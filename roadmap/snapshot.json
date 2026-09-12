@@ -1,5 +1,6 @@
 {
-  "generated_at": "2026-09-12T10:59:37Z",
+  "generated_at": "2026-09-12T11:09:53Z",
+  "state_changed_at": "2026-09-12T11:09:53Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,

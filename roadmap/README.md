@@ -108,10 +108,33 @@ file; a declaration with no items at all, which reconciles to ALIGNED over
 nothing and reads as everything being true; an unknown key at the top level, on
 an item, under `expected:`, on a probe or inside `defaults:`; a value outside
 its vocabulary; an item asserting nothing; an empty assertion on any axis; a
-duplicate id; an unparsable expectation or duration; a bad regex; a probe
-carrying a key its kind does not use; a malformed `--previous-run-at`; every
-item unobservable in one pass; and any unhandled exception. The list grows; the
+duplicate id; a malformed `issue:`, `epic:` or `also:` reference; an `unlocks:`
+target naming no item in the file; an item declaring `implementation: active`
+with no silence window; a window not longer than `defaults.longest_run_gap`; an
+unparsable expectation or duration; a bad regex; a probe carrying a key its
+kind does not use or an unrecognised `when_absent`; a malformed
+`--previous-run-at`; every item unobservable in one pass; and any unhandled
+exception. The list grows; the
 rule does not.
+
+## Silence needs a window, and the window needs a floor
+
+An item declaring `implementation: active` must carry a `max_silence`, its own
+or the file's default — without one the check is skipped and
+`UNEXPECTED_SILENCE` is unreachable for it: an OK row that can never say the
+work stalled.
+
+`defaults.longest_run_gap` names the widest interval between two runs, and no
+window may be shorter than it or equal to it. A 6h window under a 9h overnight
+gap reported silence every morning on work behaving exactly as declared —
+`ALIGNED → SILENT → ALIGNED` is two state changes a day, two tracking-issue
+comments and two snapshot commits. At exactly the gap the item has to move
+between the 21:00 and 06:00 runs or report, which is the same alarm.
+
+The constant is taken from the cron, so it is a floor rather than the truth:
+GitHub delays scheduled runs and drops them, and a certified window can still
+flap after a missed tick. The liveness step reads the run history and knows the
+real gap; this is the cheap half.
 
 ## Which rendering gets which words
 

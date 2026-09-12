@@ -33,10 +33,15 @@ defaults:
   max_silence: 12h
   # The longest interval between two runs of the reconciler, taken from the
   # cron in .github/workflows/roadmap-reconcile.yml (0 6,11,16,21 — the
-  # overnight gap). Declared because this file cannot see that schedule, and
+  # overnight gap). It is the SCHEDULED interval, which is a floor rather than
+  # the truth: GitHub delays scheduled runs under load and drops them
+  # outright, so a window certified by this rule can still flap after a missed
+  # tick. The liveness step reads the run history and knows the real gap; this
+  # constant is the cheap half. Declared because this file cannot see that schedule, and
   # load-bearing: a max_silence below it makes an item report SILENT every
   # morning for behaving exactly as declared, which is two state changes a
   # day, two tracking-issue comments and two snapshot commits on work nobody
+  #
   # validate_state refuses any window that is not strictly longer than it —
   # including this file's own default above, which is the one most items
   # use, and including equality: at exactly the gap an item has to move
