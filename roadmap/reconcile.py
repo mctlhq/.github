@@ -560,20 +560,22 @@ def validate_state(state: dict) -> list[str]:
             problems.append(f"{where}: expected.issue must be open or closed")
         if expected.get("implementation") not in (None, "active", "none"):
             problems.append(f"{where}: expected.implementation must be active or none")
-        for key, vocabulary in (("review", REVIEW_VALUES), ("merge", MERGE_VALUES)):
-            if key in expected and not expected[key]:
-                # `merge:` with nothing after it, or `merge: []`. Both read as
-                # assertions, are skipped by reconcile_item because the value
-                # is falsy, and leave the item ALIGNED on a line nobody
-                # evaluated -- the shape this whole function exists to refuse.
-                # The natural edit on an item declaring a list is to delete an
-                # entry, which is how you arrive at the empty one.
+        # Every axis, not the two with a vocabulary. `issue:` with nothing
+        # after it read as `not declared`, so the comparison was skipped and
+        # the item reported ALIGNED on a line that looks like an assertion --
+        # and it defeated the "asserts nothing at all" guard below, which
+        # tests that the key is present rather than that it says anything.
+        # The natural edit on an item declaring a list is to delete an entry,
+        # which is how you arrive at the empty one.
+        for key in EXPECTED_KEYS & set(expected):
+            if not expected[key]:
                 problems.append(
                     f"{where}: expected.{key} is empty — it reads as an "
                     f"assertion and is evaluated by nothing")
-                continue
+
+        for key, vocabulary in (("review", REVIEW_VALUES), ("merge", MERGE_VALUES)):
             declared = expected.get(key)
-            if declared is None:
+            if not declared:
                 continue
             for value in (declared if isinstance(declared, list) else [declared]):
                 if value not in vocabulary:
@@ -586,7 +588,10 @@ def validate_state(state: dict) -> list[str]:
             problems.append(
                 f"{where}: asserts {', '.join(sorted(issue_keys))} but names no issue")
 
-        if not expected and not item.get("probes"):
+        if not any(expected.get(k) for k in EXPECTED_KEYS) and not item.get("probes"):
+            # `any(...)` rather than `not expected`: a block of keys that are
+            # all empty is an item asserting nothing while looking like one
+            # that asserts four things.
             problems.append(f"{where}: asserts nothing at all")
 
         for probe in item.get("probes") or []:
@@ -1661,12 +1666,19 @@ def selftest() -> int:
               f"{other!r} was classified as an absence")
 
     # An empty declaration reads as an assertion and is evaluated by nobody.
-    for empty in ([], None):
-        problems = validate_state({"items": [
-            {"id": "e", "issue": "o/r#1", "expected": {"issue": "open",
-                                                       "merge": empty}}]})
-        check(any("empty" in x for x in problems),
-              f"expected.merge = {empty!r} passed validation: {problems}")
+    for axis in ("issue", "implementation", "review", "merge"):
+        for empty in ([], None, ""):
+            problems = validate_state({"items": [
+                {"id": "e", "issue": "o/r#1",
+                 "expected": {"issue": "open", axis: empty}}]})
+            check(any("empty" in x for x in problems),
+                  f"expected.{axis} = {empty!r} passed validation: {problems}")
+    # And a block whose every key is empty asserts nothing, however full it looks.
+    problems = validate_state({"items": [
+        {"id": "e2", "issue": "o/r#1",
+         "expected": {"issue": None, "implementation": None}}]})
+    check(any("asserts nothing at all" in x for x in problems),
+          f"an all-empty expected block passed as an assertion: {problems}")
 
     # OPTIONAL_PER_KIND and PROBE_KEYS are hand-kept against each other, and a
     # key in the first but not the second is optional AND unknown.
@@ -1675,6 +1687,13 @@ def selftest() -> int:
         stray = keys - PROBE_KEYS.get(kind, set())
         check(not stray,
               f"{kind}: {sorted(stray)} is optional but not a key of that kind")
+    # The other direction, which is the one that costs: a kind missing from
+    # OPTIONAL_PER_KIND falls back to {"id"} and makes every key mandatory --
+    # exit 2, four times a day, which is the failure that constant's own
+    # comment describes.
+    for kind in PROBE_KEYS:
+        check(kind in OPTIONAL_PER_KIND,
+              f"{kind} has no OPTIONAL_PER_KIND entry, so every key is required")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

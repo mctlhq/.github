@@ -275,10 +275,13 @@ items:
       # right thing, and again when they finished — under `strict`, at the
       # frequency main moves.
       #
-      # The cost, named rather than hidden: the item can no longer report an
-      # approval that has stopped covering the head, which is a real thing to
-      # want to know. It is the right trade only while the merge axis is
-      # already saying the PR is not mergeable.
+      # The cost, named rather than hidden: `unreviewed-head` is decided
+      # before the decisions are read, so this pair covers BOTH "an approval
+      # that has stopped covering the head" and "changes requested on an
+      # older commit, not yet re-cast" — the second being a negative verdict,
+      # not a lapsed positive one. It is the right trade only while the merge
+      # axis is already saying the PR is not mergeable, which is what keeps
+      # the item from reading as ready.
       review: [clean, unreviewed-head]
       # Not `ready`: approved and green, and still unmergeable. Two answers
       # are legitimate and it alternates between them — mctl-telegram's main
