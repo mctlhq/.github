@@ -131,6 +131,29 @@ def parse_ref(ref: str) -> tuple[str, str, int]:
     return m.group("owner"), m.group("repo"), int(m.group("number"))
 
 
+def classify_gh_failure(returncode: int, output: str) -> ObservationFailure:
+    """Turn a failed `gh` invocation into the right kind of failure.
+
+    Only a 404 becomes NotFound, because that is the only one `when_absent`
+    may act on. The decision rests on what `gh` prints, so the exact strings
+    it produces are pinned in the self-test rather than taken on trust: a
+    wording change would otherwise disarm `when_absent` silently while it
+    still reads as armed.
+
+    Observed 2026-09-12 for a missing path and for a repository the token
+    cannot see — GitHub answers both the same way, which is why the caller
+    pairs this with a directory read:
+
+        {"message":"Not Found", ... ,"status":"404"}gh: Not Found (HTTP 404)
+    """
+    text = output.strip()
+    first = text.splitlines()[0] if text.splitlines() else "no output"
+    message = f"gh exited {returncode}: {first}"
+    if "HTTP 404" in text or '"status":"404"' in text.replace(" ", ""):
+        return NotFound(message)
+    return ObservationFailure(message)
+
+
 class GitHub:
     """Thin `gh` wrapper. Every non-zero exit becomes ObservationFailure.
 
@@ -152,12 +175,8 @@ class GitHub:
         except subprocess.TimeoutExpired as exc:
             raise ObservationFailure(f"gh timed out: {' '.join(args)}") from exc
         if proc.returncode != 0:
-            text = (proc.stderr or proc.stdout or "").strip()
-            detail = text.splitlines()
-            message = f"gh exited {proc.returncode}: {detail[0] if detail else 'no output'}"
-            if "HTTP 404" in text or "Not Found" in text:
-                raise NotFound(message)
-            raise ObservationFailure(message)
+            raise classify_gh_failure(
+                proc.returncode, (proc.stderr or proc.stdout or ""))
         return proc.stdout
 
     def graphql(self, query: str, **variables: Any) -> dict:
@@ -381,6 +400,18 @@ def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
                 raise
             parent = probe["path"].rsplit("/", 1)[0] if "/" in probe["path"] else ""
             siblings = gh.tree_files(probe["repo"], parent)
+            if not siblings:
+                # An empty directory is not proof of absence, it is proof we
+                # saw nothing — the same rule as one branch below, which this
+                # path was missing. Completing the zone migration plausibly
+                # moves or renames infrastructure/cloudflare/ rather than
+                # deleting one hidden file inside it, and that would have been
+                # reported as the migration done: DRIFT dropped, tracking issue
+                # closed as "true again".
+                raise ObservationFailure(
+                    f"{probe['repo']}/{parent or '<root>'} holds no files at "
+                    f"all, so the absence of {probe['path']} is not something "
+                    f"that was observed")
             if any(f == probe["path"] for f in siblings):
                 raise ObservationFailure(
                     f"{probe['repo']}/{probe['path']} is in the tree but could "
@@ -544,6 +575,15 @@ def validate_state(state: dict) -> list[str]:
             if missing:
                 problems.append(
                     f"{where}: probe {pid} is missing {', '.join(sorted(missing))}")
+            extra = set(probe) - PROBE_KEYS[kind] - OPTIONAL_PROBE_KEYS
+            if extra:
+                # Refused for the same reason an unknown key under `expected:`
+                # is: it reads like an assertion and is evaluated by nothing.
+                # `when_absent: zero` on a dir_file_match_count probe is the
+                # live example — harmless, and indistinguishable from armed.
+                problems.append(
+                    f"{where}: probe {pid} carries {', '.join(sorted(extra))}, "
+                    f"which {kind} does not use")
             if probe.get("when_absent") is not None and (
                     probe["when_absent"] not in WHEN_ABSENT_VALUES):
                 problems.append(
@@ -1518,11 +1558,18 @@ def selftest() -> int:
     # when_absent: a human writing down what a missing file means.
     absent = {"id": "aa", "title": "AA", "phase": "now", "expected": {},
               "probes": [{"id": "w", "kind": "file_line_match_count", "repo": "o/r",
-                          "path": "gone.txt", "pattern": "^x", "expect": "== 0",
+                          "path": "dir/gone.txt", "pattern": "^x", "expect": "== 0",
                           "when_absent": "zero"}]}
-    r = reconcile_item(StubGH(None, files={}), absent, {}, now)
+    # The absence has to be observed: a sibling proves the directory was read.
+    r = reconcile_item(StubGH(None, files={"dir/other.txt": "x\n"}), absent, {}, now)
     check(r.state == ALIGNED, f"a declared absence should satisfy == 0: {r.state}")
-    r = reconcile_item(StubGH(None, files={}),
+    # An empty directory is not proof of absence, it is proof we saw nothing —
+    # and the whole directory disappearing is the likelier shape of the event
+    # this probe exists to track.
+    r = reconcile_item(StubGH(None, files={}), absent, {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"an empty directory was accepted as proof of absence: {r.state}")
+    r = reconcile_item(StubGH(None, files={"dir/other.txt": "x\n"}),
                        dict(absent, probes=[dict(absent["probes"][0],
                                                  when_absent=None)]), {}, now)
     check(r.state == OBSERVATION_FAILED,
@@ -1533,14 +1580,15 @@ def selftest() -> int:
     # close the tracking issue as "true again" and announce the drift back on
     # the next run — two notifications, both wrong.
     r = reconcile_item(
-        StubGH(None, files={}, file_error=ObservationFailure("gh exited 1: HTTP 429")),
+        StubGH(None, files={"dir/other.txt": "x\n"},
+               file_error=ObservationFailure("gh exited 1: HTTP 429")),
         absent, {}, now)
     check(r.state == OBSERVATION_FAILED,
           f"a rate limit was declared as zero: {r.state} {r.reasons}")
     check(any("429" in x for x in r.reasons), f"the cause was lost: {r.reasons}")
 
     # And a 404 on a file the tree says is there is not an absence either.
-    r = reconcile_item(StubGH(None, files={"gone.txt": ""},
+    r = reconcile_item(StubGH(None, files={"dir/gone.txt": ""},
                               file_error=NotFound("gone.txt not found")),
                        absent, {}, now)
     check(r.state == OBSERVATION_FAILED,
@@ -1564,6 +1612,20 @@ def selftest() -> int:
                                  "repo": "o/r", "path": "p", "pattern": "x",
                                  "expect": "== 0"}]}]}) == [],
         "omitting when_absent was treated as a missing required key")
+
+    # The one link between what gh prints and the only path to a declared
+    # zero. Captured from a real run rather than imagined.
+    real_404 = ('{"message":"Not Found","documentation_url":"https://docs.github.com'
+                '/rest/repos/contents#get-repository-content","status":"404"}'
+                'gh: Not Found (HTTP 404)')
+    check(isinstance(classify_gh_failure(1, real_404), NotFound),
+          "a real gh 404 was not classified as NotFound")
+    for other in ('gh: API rate limit exceeded (HTTP 429)',
+                  'gh: Internal Server Error (HTTP 500)',
+                  'gh: Forbidden (HTTP 403)'):
+        exc = classify_gh_failure(1, other)
+        check(isinstance(exc, ObservationFailure) and not isinstance(exc, NotFound),
+              f"{other!r} was classified as an absence")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
