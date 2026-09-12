@@ -1352,10 +1352,21 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         # this tool's contract, dead, while the run-gap floor went on
         # certifying windows nobody could evaluate. Conditionally, an item
         # that stops being blocked is watched again without an edit.
-        waiting = (result.evidence.get("merge") in
-                   ("blocked-review", "blocked-review-required")
-                   or (result.evidence.get("merge") or "").startswith(
-                       "blocked-conversations")
+        # `blocked-behind-base` is here and `conflicted` is not, and the
+        # difference is who the block is waiting for. A branch behind a strict
+        # base is waiting for whoever updates it, exactly as unresolved
+        # conversations wait for whoever resolves them; the answer to "why has
+        # nothing moved" is on the PR, so reporting silence adds nothing.
+        # Conflicts are not: a conflicted branch can sit for weeks with nobody
+        # owning it, which is the case an item declares `conflicted` in order
+        # to hear about. Dropping it here cost the one row that declares
+        # `merge: [blocked-conversations, blocked-behind-base]` an
+        # ALIGNED → SILENT → ALIGNED flip every time #627's mergeability
+        # resolved to the second of its two declared values.
+        merge_now = result.evidence.get("merge") or ""
+        waiting = (merge_now in ("blocked-review", "blocked-review-required",
+                                 "blocked-behind-base")
+                   or merge_now.startswith("blocked-conversations")
                    or result.evidence.get("review") in
                    ("blocking-findings", "unreviewed-head"))
         if waiting:
@@ -2522,6 +2533,21 @@ def selftest() -> int:
           f"{blocked_now.state} {blocked_now.reasons}")
     check("silence_accounted_for" in blocked_now.evidence,
           f"the accounting was not recorded: {blocked_now.evidence}")
+    # The merge arm, which both review-arm fixtures above leave unexercised:
+    # a clean review and a branch behind its base is the exact shape that
+    # flipped `client-lifecycle.identity-attributes` in and out of SILENT.
+    behind = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "APPROVED")], merge_status="BEHIND",
+                          updated="2026-09-01T00:00:00Z")),
+        dict(idle, expected={"issue": "open", "implementation": "active",
+                             "review": "clean",
+                             "merge": ["blocked-behind-base"]}), {}, now)
+    check(behind.state == ALIGNED,
+          f"a branch behind a strict base reported silence as unexplained: "
+          f"{behind.state} {behind.reasons}")
+    check("blocked-behind-base" in behind.evidence.get(
+              "silence_accounted_for", ""),
+          f"the merge arm recorded no accounting: {behind.evidence}")
     unblocked = reconcile_item(
         StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-01T00:00:00Z")),
         dict(idle, expected={"issue": "open", "implementation": "active",
