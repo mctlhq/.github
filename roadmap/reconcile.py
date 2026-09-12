@@ -798,6 +798,20 @@ def validate_state(state: dict) -> list[str]:
         # wrong".
         item_defaults = state.get("defaults")
         item_defaults = item_defaults if isinstance(item_defaults, dict) else {}
+        # `max_silence:` with nothing after it is a present key holding None,
+        # so `get(key, fallback)` returns None rather than the default — and
+        # None is what every check downstream skips: this guard, the
+        # active-item guard above (which sees `defaults.max_silence` and is
+        # satisfied), the run-gap floor, and the silence block itself. One
+        # keystroke short of the `none` the guard recommends, and the row
+        # renders as a plain OK that can never say the work stalled — word for
+        # word what the guard above exists to refuse. `expected.issue:` was
+        # this same shape.
+        if "max_silence" in item and item["max_silence"] is None:
+            problems.append(
+                f"{where}: max_silence is empty — write a duration (6h) or "
+                f"the word none; an empty key is skipped by every check and "
+                f"silence can never be reported for it")
         window = item.get("max_silence", item_defaults.get("max_silence"))
         if (expected.get("implementation") == "active"
                 and window not in (None, SILENCE_OFF)):
@@ -1407,9 +1421,23 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         # Which blocks count as waiting, and why, is at WAITING_MERGE.
         # `blocked-conversations` carries its count, so the head is what is
         # compared: the vocabulary has one value, the evidence has fourteen.
+        #
+        # Both arms are gated on the item DECLARING the axis, and that is what
+        # makes the guard in validate_state a statement about this code rather
+        # than a statement next to it: the guard reads declarations, so an
+        # ungated arm suppresses on an axis the guard never looked at. It did:
+        # `evidence["review"]` is written for every observable issue, so an
+        # item saying nothing about review was suppressed by `unreviewed-head`
+        # — what `_review_state` returns for an open PR nobody has reviewed,
+        # including one nobody ever will — while an item declaring exactly
+        # that value was refused. The commonest stall there is, permanently
+        # accounted for in a field no rendering shows. Declare the axis and
+        # the guard makes you say how silence can still fire; declare nothing
+        # and nothing is excused.
         merge_now = (result.evidence.get("merge") or "").split(":")[0]
-        waiting = (merge_now in WAITING_MERGE
-                   or result.evidence.get("review") in WAITING_REVIEW)
+        waiting = ((expected.get("merge") and merge_now in WAITING_MERGE)
+                   or (expected.get("review")
+                       and result.evidence.get("review") in WAITING_REVIEW))
         if waiting:
             result.evidence["silence_accounted_for"] = (
                 f"waiting: review={result.evidence.get('review')}, "
@@ -2531,6 +2559,23 @@ def selftest() -> int:
     widened["items"][0]["expected"]["merge"].append("ready")
     check(not any("unreachable" in x for x in validate_state(widened)),
           f"widening the declaration did not clear it: {validate_state(widened)}")
+    # The review arm of the same guard, which the merge fixtures above leave
+    # to be satisfied by the wrong constant.
+    review_only = {"defaults": {"max_silence": "12h", "longest_run_gap": "9h"},
+                   "items": [{"id": "u", "issue": "o/r#1",
+                              "expected": {"implementation": "active",
+                                           "review": ["blocking-findings",
+                                                      "unreviewed-head"]}}]}
+    check(any("unreachable" in x and "review" in x
+              for x in validate_state(review_only)),
+          f"a decorative window passed on the review axis: "
+          f"{validate_state(review_only)}")
+    # An empty key is not a missing one, and every check downstream skips it.
+    empty = copy.deepcopy(unreachable)
+    empty["items"][0]["max_silence"] = None
+    check(any("max_silence is empty" in x for x in validate_state(empty)),
+          f"an empty max_silence passed: {validate_state(empty)}")
+
     off = copy.deepcopy(unreachable)
     off["items"][0]["max_silence"] = SILENCE_OFF
     check(not any("unreachable" in x for x in validate_state(off)),
