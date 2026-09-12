@@ -209,6 +209,18 @@ class GitHub:
         content = data.get("content")
         if content is None:
             raise ObservationFailure(f"{repo}/{path} carried no content")
+        encoding = data.get("encoding")
+        if encoding != "base64":
+            # The contents API answers a 1-100 MB file with a 200 carrying
+            # content: "" and encoding: "none". That decodes cleanly to the
+            # empty string, so a line count over it is zero -- satisfying
+            # `== 0` outright and failing `>= 1` with a cause never observed.
+            # The module docstring's "never degrades to zero", defeated three
+            # frames below it.
+            raise ObservationFailure(
+                f"{repo}/{path} came back with encoding {encoding!r}, not "
+                f"base64 — GitHub answers that for a file too large to inline, "
+                f"and its empty content is not an observation")
         try:
             return base64.b64decode(content).decode("utf-8", "replace")
         except Exception as exc:  # noqa: BLE001 - any decode problem is a failure
@@ -534,7 +546,16 @@ def validate_state(state: dict) -> list[str]:
     """
     problems: list[str] = []
     seen_ids: set[str] = set()
-    for index, item in enumerate(state.get("items") or []):
+    items = state.get("items") or []
+    if not isinstance(items, list):
+        return ["items: must be a list"]
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            # An operator sent here because the run refused to start should
+            # read a sentence, not a traceback from the validator.
+            problems.append(f"items[{index}]: must be a mapping, got "
+                            f"{type(item).__name__}")
+            continue
         where = item.get("id") or f"items[{index}]"
         if not item.get("id"):
             problems.append(f"{where}: no id")
@@ -551,6 +572,15 @@ def validate_state(state: dict) -> list[str]:
             problems.append(f"{where}: phase {phase!r} is not one of {PHASES}")
 
         expected = item.get("expected") or {}
+        if not isinstance(expected, dict):
+            problems.append(f"{where}: expected must be a mapping, got "
+                            f"{type(expected).__name__}")
+            expected = {}
+        probes = item.get("probes") or []
+        if not isinstance(probes, list):
+            problems.append(f"{where}: probes must be a list, got "
+                            f"{type(probes).__name__}")
+            probes = []
         for key in set(expected) - EXPECTED_KEYS:
             problems.append(
                 f"{where}: expected.{key} is not an assertion this tool "
@@ -588,13 +618,17 @@ def validate_state(state: dict) -> list[str]:
             problems.append(
                 f"{where}: asserts {', '.join(sorted(issue_keys))} but names no issue")
 
-        if not any(expected.get(k) for k in EXPECTED_KEYS) and not item.get("probes"):
+        if not any(expected.get(k) for k in EXPECTED_KEYS) and not probes:
             # `any(...)` rather than `not expected`: a block of keys that are
             # all empty is an item asserting nothing while looking like one
             # that asserts four things.
             problems.append(f"{where}: asserts nothing at all")
 
-        for probe in item.get("probes") or []:
+        for probe in probes:
+            if not isinstance(probe, dict):
+                problems.append(f"{where}: a probe must be a mapping, got "
+                                f"{type(probe).__name__}")
+                continue
             pid = probe.get("id", "?")
             kind = probe.get("kind")
             if kind not in PROBE_KEYS:
@@ -780,7 +814,21 @@ def _merge_summary(open_prs: list[dict]) -> str:
     """The most blocking merge state across this issue's open PRs."""
     if not open_prs:
         return "none"
-    states = [_merge_state(p["raw"]) for p in open_prs]
+    states, failures = [], []
+    for pr in open_prs:
+        try:
+            states.append(_merge_state(pr["raw"]))
+        except ObservationFailure as exc:
+            failures.append(exc)
+    if failures:
+        # A definitive answer at the top of the ranking stands regardless:
+        # nothing an unread PR could say outranks `conflicted`, so discarding
+        # it to report blindness would be throwing away the worse news. Below
+        # that, an unread PR could have been worse than anything read, so the
+        # honest answer is that we do not know.
+        if MERGE_RANK[0] in states:
+            return MERGE_RANK[0]
+        raise failures[0]
 
     def rank(value: str) -> int:
         head = value.split(":")[0]
@@ -967,10 +1015,19 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         quiet_for = (now - last).total_seconds()
         if quiet_for > seconds:
             result.state = UNEXPECTED_SILENCE
+            # The elapsed figure goes in the evidence, not the reason.
+            # reportable_state compares reasons, so a number that grows every
+            # run made `changed` true forever: a comment on the tracking issue
+            # four times a day, and a snapshot commit with it, for as long as
+            # the item stayed quiet — which is precisely the state that has to
+            # survive being true for a week. DRIFT and OBSERVATION_FAILED hold
+            # the announce-once policy; this was the one state whose reason is
+            # defined as an elapsed time.
+            result.evidence["quiet_hours"] = int(quiet_for // 3600)
             result.reasons.append(
-                f"believed to be under active implementation, but nothing has moved "
-                f"on {item['issue']} or its PRs for "
-                f"{int(quiet_for // 3600)}h (allowed {silence_window})")
+                f"believed to be under active implementation, but nothing has "
+                f"moved on {item['issue']} or its PRs for longer than "
+                f"{silence_window} (see quiet_hours)")
     return result
 
 
@@ -1694,6 +1751,64 @@ def selftest() -> int:
     for kind in PROBE_KEYS:
         check(kind in OPTIONAL_PER_KIND,
               f"{kind} has no OPTIONAL_PER_KIND entry, so every key is required")
+
+    # The announce-once policy has to hold for the one state whose cause is
+    # an elapsed time. Two runs six hours apart must compare equal.
+    quiet_item = dict(item_active, max_silence="6h")
+    r1 = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-10T05:00:00Z")),
+        quiet_item, {}, now)
+    r2 = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "CHANGES_REQUESTED")], updated="2026-09-10T05:00:00Z")),
+        quiet_item, {}, now + dt.timedelta(hours=6))
+    check(r1.state == UNEXPECTED_SILENCE and r2.state == UNEXPECTED_SILENCE,
+          f"expected silence twice: {r1.state} {r2.state}")
+    check(r1.reasons == r2.reasons,
+          f"the silence reason changes every run, so it announces every run:\n"
+          f"  {r1.reasons}\n  {r2.reasons}")
+    check(r1.evidence.get("quiet_hours") != r2.evidence.get("quiet_hours"),
+          "the elapsed figure should still be recorded, in the evidence")
+    snap1 = {"items": [asdict(r1)]}
+    snap2 = {"items": [asdict(r2)]}
+    check(reportable_state(snap1) == reportable_state(snap2),
+          "two quiet runs compare unequal, so the tracking issue is commented "
+          "on four times a day for as long as the item stays quiet")
+
+    # A 200 carrying encoding "none" is not an empty file.
+    class BigFileGH(GitHub):
+        def __init__(self):
+            super().__init__(runner=lambda args: json.dumps(
+                {"content": "", "encoding": "none"}))
+    try:
+        BigFileGH().file_text("o/r", "big.bin")
+        failures.append("a file too large to inline was read as empty")
+    except ObservationFailure:
+        pass
+
+    # A definitive worst answer stands even when a sibling PR is unreadable.
+    def raw(status, mergeable="MERGEABLE"):
+        return {"number": 1, "mergeable": mergeable, "mergeStateStatus": status,
+                "reviewDecision": "APPROVED",
+                "reviewThreads": {"pageInfo": {}, "nodes": []}}
+    check(_merge_summary([{"raw": raw("DIRTY")},
+                          {"raw": raw("UNKNOWN", "UNKNOWN")}]) == "conflicted",
+          "a conflicted PR was discarded because a sibling was unreadable")
+    try:
+        _merge_summary([{"raw": raw("CLEAN")}, {"raw": raw("UNKNOWN", "UNKNOWN")}])
+        failures.append("an unreadable PR was ignored below the top of the ranking")
+    except ObservationFailure:
+        pass
+
+    # A malformed declaration is reported, not raised: this function is where
+    # an operator is sent when the run refuses to start.
+    for bad, needle in (
+        ({"items": ["a string"]}, "must be a mapping"),
+        ({"items": [{"id": "x", "expected": "open"}]}, "expected must be a mapping"),
+        ({"items": [{"id": "x", "probes": "one"}]}, "probes must be a list"),
+        ({"items": [{"id": "x", "probes": ["a string"]}]}, "probe must be a mapping"),
+    ):
+        got = validate_state(bad)
+        check(any(needle in x for x in got), f"{needle!r} not reported: {got}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

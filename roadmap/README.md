@@ -102,6 +102,14 @@ refused at the pull request that introduces it instead.
 Exit codes: `0` aligned, `1` something is not aligned (a normal result to
 publish), `2` the run itself could not be completed.
 
+Exit 2 is deliberately wide, because everything under it means the tool cannot
+answer rather than that the roadmap is wrong: an unreadable or malformed state
+file, an unknown key or value anywhere in it, an item asserting nothing, an
+empty assertion, a duplicate id, an unparsable expectation or duration, a bad
+regex, a probe carrying a key its kind does not use, a malformed
+`--previous-run-at`, every item unobservable in one pass, and any unhandled
+exception. The list grows; the rule does not.
+
 ## Mergeability is a separate question from review
 
 `mergeStateStatus: BLOCKED` on its own is not actionable, and an approved,
@@ -246,6 +254,28 @@ Comparing an unfiltered total against a filtered list made every issue past a
 hundred timeline events permanently `OBSERVATION_FAILED` — the guard producing
 the failure it exists to prevent. Anyone adding a connection should follow
 `nodes_of`, not that earlier instinct.
+
+## The one sanctioned exception
+
+`when_absent: zero` lets a probe treat a missing file as the number zero. It is
+the only way a probe may produce a count without reading what it counts, and it
+exists because otherwise `cloudflare.zone-authority` has no success state: the
+file listing roots that are *not* on the shared backend is the natural thing to
+delete once none are, and a 404 would leave that row unobservable forever.
+
+Three preconditions hold it to the rule rather than around it:
+
+* only a real **404** counts — a 429, a 5xx, a timeout or a missing `gh` still
+  refuse, and the classification is pinned against the string a real `gh` 404
+  prints;
+* the **surrounding directory is read**, because GitHub answers 404 for a
+  resource a token may not see, and a file the tree still lists is unreadable
+  rather than absent;
+* an **empty directory refuses**, since that is proof nothing was seen rather
+  than proof the file is gone.
+
+It is valid only on `file_line_match_count`, and declaring it on another kind
+is refused.
 
 Probes cover assertions GitHub issue state cannot make — a file's contents, a
 count of services that opted into something. A probe that cannot read what it
