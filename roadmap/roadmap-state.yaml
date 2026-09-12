@@ -290,12 +290,16 @@ items:
       # requires review conversations to be resolved AND is `strict`, so the
       # branch falls behind every time main moves.
       merge: [blocked-conversations, blocked-behind-base]
+      # `conflicted` is deliberately NOT in the list. The first two are
+      # states the PR moves through on its own; conflicts are work somebody
+      # has to do, and a row that reports them is the row doing its job.
     max_silence: 12h
     note: >-
-      Approved, green, and not mergeable. Which of the two reasons holds
-      alternates — unresolved review conversations, or the branch behind a
-      `strict` main — so the snapshot's `merge` field is the thing to read,
-      not this sentence. It also carries steward:escalated, terminal for
+      Approved, green, and not mergeable. Which reason holds alternates —
+      unresolved review conversations, or the branch behind a `strict` main —
+      so the snapshot's `merge` field is the thing to read, not this sentence.
+      As of 2026-09-12 it is neither: the branch now CONFLICTS with main,
+      which is work rather than a state it moves through. It also carries steward:escalated, terminal for
       pr-steward: that label has to be cleared by a human before the
       lifecycle resumes, so silence here needs a person rather than time.
 

@@ -546,6 +546,11 @@ def validate_state(state: dict) -> list[str]:
     """
     problems: list[str] = []
     seen_ids: set[str] = set()
+    # Collected before the loop: `unlocks:` may name an item declared further
+    # down, so resolving it as we go would report a forward reference as a
+    # typo.
+    declared_ids = {i.get("id") for i in (state.get("items") or [])
+                    if isinstance(i, dict) and i.get("id")}
     for key in set(state) - {"version", "defaults", "items"}:
         # Unknown keys are refused under expected:, on an item, on a probe and
         # inside defaults: — everywhere except here, so `defualts:` silently
@@ -682,6 +687,11 @@ def validate_state(state: dict) -> list[str]:
                         problems.append(
                             f"{where}: probe {pid}: {field_name} is not a regex: {exc}")
 
+        for target in item.get("unlocks") or []:
+            if target not in declared_ids:
+                problems.append(
+                    f"{where}: unlocks {target!r}, which is not an item id "
+                    f"in this file")
         if "max_silence" in item:
             try:
                 parse_duration(item["max_silence"])
@@ -978,7 +988,12 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     # named issue's own PRs, which is what those axes mean.
     also_obs: list[IssueObservation] = []
     also_refs: list[str] = []
-    for ref in item.get("also") or []:
+    # Observed only when an axis actually asks about the set — the lazy rule
+    # already established for merge: and review:, where computing an axis
+    # nobody asserted let a blind spot on it fail an item that asked about
+    # something else.
+    wants_set = bool(expected.get("issue") or expected.get("implementation"))
+    for ref in (item.get("also") or []) if wants_set else []:
         try:
             also_obs.append(observe_issue(gh, ref))
             also_refs.append(ref)
@@ -990,8 +1005,15 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     if also_obs:
         # Keyed by the reference as declared, not derived from a URL: the
         # declaration is the thing a reader will match it against.
+        # Keyed by the reference as declared -- that is what a reader matches
+        # against -- with the resolved one recorded beside it, since GraphQL
+        # follows a rename and `mctl-agent` vs `mctl-agents` are two real
+        # repositories in this org. Nothing validates that a reference points
+        # where its author meant; showing what it resolved to is the half that
+        # can be shown.
         result.evidence["also"] = {
-            ref: o.state.lower() for ref, o in zip(also_refs, also_obs)}
+            ref: {"state": o.state.lower(), "resolved": o.url}
+            for ref, o in zip(also_refs, also_obs)}
 
     want_issue = expected.get("issue")
     if want_issue and issue_obs:
@@ -1059,7 +1081,7 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
                     (f"merge expected {_render_want(want_merge)}, actual {actual_merge}",
                      # blocked-conversations:14 and :9 are the same situation.
                      f"merge expected {_render_want(want_merge)}, "
-                     f"actual {actual_merge.split(chr(58))[0]}"))
+                     f"actual {actual_merge.split(':')[0]}"))
 
     for probe in item.get("probes") or []:
         try:
@@ -1090,12 +1112,16 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             mismatches.append(
                 (f"probe {probe.get('id', '?')}: {description}, "
                  f"expected {probe['expect']}",
-                 # The description carries counts — the answer, and for the
-                 # directory kinds how many files were examined. The second
-                 # moves when somebody adds a service in another repository,
-                 # and announcing that would say nothing about the gap.
-                 f"probe {probe.get('id', '?')} does not satisfy "
-                 f"{probe['expect']}"))
+                 # The ANSWER stays in the key; only the denominator goes.
+                 # A probe's count moving IS the news — three zone roots
+                 # becoming two is what somebody wants woken for, and it is
+                 # self-correcting on the page — whereas how many files were
+                 # examined moves when somebody adds a service in another
+                 # repository and says nothing about the gap. That is the
+                 # distinction that made the elapsed-hours fix right, and
+                 # dropping the whole description lost it.
+                 f"probe {probe.get('id', '?')}: {count}, "
+                 f"expected {probe['expect']}"))
 
     # One decision, made once. A blind spot outranks a divergence in the
     # state -- reporting DRIFT on an axis nobody could read would be inventing
@@ -1128,7 +1154,11 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             result.reasons.append(str(exc))
             result.reason_keys.append(str(exc))
             return result
-        last = dt.datetime.fromisoformat(issue_obs.last_activity.replace("Z", "+00:00"))
+        # Across the set, because `implementation:` spans it: reading one
+        # issue's activity while the other axis looks at four made the two
+        # disagree about where the work is.
+        latest = max([issue_obs.last_activity] + [o.last_activity for o in also_obs])
+        last = dt.datetime.fromisoformat(latest.replace("Z", "+00:00"))
         quiet_for = (now - last).total_seconds()
         if quiet_for > seconds:
             result.state = UNEXPECTED_SILENCE
@@ -2036,6 +2066,24 @@ def selftest() -> int:
     check(a.reason_keys == b.reason_keys,
           f"adding a service elsewhere changes the compared identity:\n"
           f"  {a.reason_keys}\n  {b.reason_keys}")
+    # But a changed ANSWER is the news, and must compare unequal — the half
+    # the denominator fixture cannot see.
+    c = reconcile_item(StubGH(None, files={"svc/one/values.yaml": "otel:\n"}),
+                       probe_item, {}, now)
+    check(c.state == ALIGNED or a.reason_keys != c.reason_keys,
+          f"the probe's answer is missing from the compared identity:\n"
+          f"  {a.reason_keys}\n  {c.reason_keys}")
+    line_probe = {"id": "lp", "title": "LP", "phase": "now", "expected": {},
+                  "probes": [{"id": "z", "kind": "file_line_match_count",
+                              "repo": "o/r", "path": "f.txt",
+                              "pattern": "^zones/", "expect": "== 0"}]}
+    three = reconcile_item(StubGH(None, files={"f.txt": "zones/a\nzones/b\nzones/c\n"}),
+                           line_probe, {}, now)
+    two = reconcile_item(StubGH(None, files={"f.txt": "zones/a\nzones/b\n"}),
+                         line_probe, {}, now)
+    check(three.reason_keys != two.reason_keys,
+          f"three roots and two compare identically, so progress is never "
+          f"announced:\n  {three.reason_keys}\n  {two.reason_keys}")
 
     # Every result carries one key per reason, or the page and the comparison
     # drift apart silently.
@@ -2080,6 +2128,32 @@ def selftest() -> int:
                                        "evidence": {}, "unlocks": ["a.b", "c.d"]}]})
     check("a.b" in page and "c.d" in page,
           f"unlocks: is accepted by the validator and rendered by nobody:\n{page}")
+
+    # `also:` is observed only when an axis asks about the set — the lazy
+    # rule already established for merge: and review:.
+    watched = []
+
+    class CountingGH(MultiGH):
+        def graphql(self, query, **variables):
+            watched.append(f"{variables['owner']}/{variables['repo']}#{variables['number']}")
+            return super().graphql(query, **variables)
+
+    reconcile_item(CountingGH({"o/r#1": quiet, "o/r#2": fake_issue(number=2)}),
+                   {"id": "lz", "title": "LZ", "phase": "now", "issue": "o/r#1",
+                    "also": ["o/r#2"], "expected": {"review": "none"}}, {}, now)
+    check("o/r#2" not in watched,
+          f"an also: issue was read for an item that asserts nothing about the "
+          f"set: {watched}")
+
+    # unlocks: must name an item in this file.
+    problems = validate_state({"items": [
+        {"id": "a", "issue": "o/r#1", "expected": {"issue": "open"},
+         "unlocks": ["b", "nope"]},
+        {"id": "b", "issue": "o/r#2", "expected": {"issue": "open"}}]})
+    check(any("nope" in x for x in problems),
+          f"unlocks named a non-existent item and passed: {problems}")
+    check(not any("'b'" in x for x in problems),
+          f"a forward reference was reported as a typo: {problems}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
