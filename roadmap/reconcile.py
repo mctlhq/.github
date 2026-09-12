@@ -546,9 +546,24 @@ def validate_state(state: dict) -> list[str]:
     """
     problems: list[str] = []
     seen_ids: set[str] = set()
-    items = state.get("items") or []
+    for key in set(state) - {"version", "defaults", "items"}:
+        # Unknown keys are refused under expected:, on an item, on a probe and
+        # inside defaults: — everywhere except here, so `defualts:` silently
+        # disabled the fallback max_silence for every item without its own.
+        problems.append(f"unknown top-level key {key!r}")
+    items = state.get("items")
+    if items is None:
+        problems.append(
+            "items: absent — a declaration that asserts nothing reconciles to "
+            "ALIGNED over zero items, which reads as everything being true")
+        return problems
     if not isinstance(items, list):
-        return ["items: must be a list"]
+        return problems + ["items: must be a list"]
+    if not items:
+        problems.append(
+            "items: empty — see above; zero assertions is not the same answer "
+            "as zero divergences")
+        return problems
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             # An operator sent here because the run refused to start should
@@ -858,6 +873,10 @@ def _merge_summary(open_prs: list[dict]) -> str:
 
 # Worst-first, like MERGE_RANK and for the same reason: a summary over several
 # PRs must not be decided by whichever GitHub returned first.
+# `unknown` above `clean` deliberately: a PR whose decision GitHub does not
+# report is a weaker claim than one that is approved, and a summary over
+# several PRs should not be able to call the set clean on the strength of the
+# one it could read.
 REVIEW_RANK = ["blocking-findings", "unreviewed-head", "unknown", "clean", "none"]
 
 
@@ -875,9 +894,14 @@ def _review_state(open_prs: list[dict]) -> str:
     """
     if not open_prs:
         return "none"
-    states = []
+    states, failures = [], []
     for pr in open_prs:
-        if not _head_is_reviewed(pr["raw"]):
+        try:
+            reviewed = _head_is_reviewed(pr["raw"])
+        except ObservationFailure as exc:
+            failures.append(exc)
+            continue
+        if not reviewed:
             states.append("unreviewed-head")
         elif pr["review_decision"] == "CHANGES_REQUESTED":
             states.append("blocking-findings")
@@ -885,6 +909,15 @@ def _review_state(open_prs: list[dict]) -> str:
             states.append("clean")
         else:
             states.append("unknown")
+    if failures:
+        # The same refusal as _merge_summary, not only the same ranking:
+        # nothing an unread PR could say outranks a blocking verdict already
+        # observed, and below that an unread PR could have been worse than
+        # anything read. Ranking without this made the raise certain rather
+        # than order-dependent, which is worse than what it replaced.
+        if REVIEW_RANK[0] in states:
+            return REVIEW_RANK[0]
+        raise failures[0]
     return min(states, key=lambda v: REVIEW_RANK.index(v))
 
 
@@ -1132,7 +1165,14 @@ def render_markdown(snapshot: dict) -> str:
             out.append(f"### {BADGE[item['state']]} · {item['title']}{ref}")
             if item.get("epic"):
                 out.append(f"Epic {item['epic']}.")
-            for reason in item.get("reasons") or []:
+            # reason_keys, not reasons: this page is committed only when the
+            # reconciled state changes, so a figure rendered here freezes at
+            # the announcing run and keeps saying it while the real one grows
+            # — wrong in the reassuring direction, on the artifact the
+            # tracking issue links to. The keys are the same claims without
+            # the moving parts; the figure belongs in the channels that are
+            # rewritten every run, which is what digest() feeds.
+            for reason in item.get("reason_keys") or item.get("reasons") or []:
                 out.append(f"- {reason}")
             if item.get("note"):
                 out += ["", item["note"].strip()]
@@ -1183,7 +1223,8 @@ def reportable_state(snapshot: dict) -> dict:
                       # snapshots have no such field, and falling back to
                       # reasons keeps a comparison against one honest rather
                       # than declaring everything changed.
-                      "reasons": i.get("reason_keys") or i["reasons"]}
+                      "reasons": (i["reason_keys"] if "reason_keys" in i
+                                  else i["reasons"])}
             for i in snapshot["items"]}
 
 
@@ -1883,6 +1924,41 @@ def selftest() -> int:
         {"id": "d", "issue": "o/r#1", "expected": {"issue": "open"}}]})
     check(any("defaults" in x for x in problems),
           f"an unparsable defaults.max_silence passed: {problems}")
+
+    # An unreadable sibling must not turn a blocking verdict into a refusal.
+    def unread_pr(number):
+        return {"number": number, "review_decision": "NONE",
+                "raw": {"number": number, "headRefOid": "abc",
+                        "reviews": {"pageInfo": {"hasPreviousPage": True},
+                                    "nodes": []}}}
+    check(_review_state([pr(1, "CHANGES_REQUESTED"), unread_pr(2)]) == "blocking-findings",
+          "a blocking verdict was discarded because a sibling could not be read")
+    try:
+        _review_state([pr(1, "APPROVED"), unread_pr(2)])
+        failures.append("an unreadable sibling was ignored below the top of the ranking")
+    except ObservationFailure:
+        pass
+    # And the ordering itself: unknown is a weaker claim than clean.
+    check(_review_state([pr(1, "APPROVED"),
+                         {"number": 2, "review_decision": "NONE",
+                          "raw": {"number": 2, "headRefOid": "abc",
+                                  "reviews": {"pageInfo": {}, "nodes": [
+                                      {"state": "NONE", "commit": {"oid": "abc"}}]}}}])
+          == "unknown",
+          "a set containing an unreadable decision was called clean")
+
+    # The page carries the claim that cannot go stale; the digest carries the
+    # figure. The page is committed only on a change, so a number rendered
+    # there freezes while the real one grows.
+    silent = asdict(r1)
+    page = render_markdown({"generated_at": "t", "overall": UNEXPECTED_SILENCE,
+                            "counts": {OBSERVATION_FAILED: 0, DRIFT: 0,
+                                       UNEXPECTED_SILENCE: 1, ALIGNED: 0},
+                            "items": [silent]})
+    check("37h" not in page, "the page renders a figure that freezes when committed")
+    check("quiet beyond" in page, f"the page lost the stable claim:\n{page}")
+    text = digest({"items": [silent]})
+    check("37h" in text, f"the digest lost the figure people need: {text}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

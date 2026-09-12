@@ -104,11 +104,31 @@ publish), `2` the run itself could not be completed.
 
 Exit 2 is deliberately wide, because everything under it means the tool cannot
 answer rather than that the roadmap is wrong: an unreadable or malformed state
-file, an unknown key or value anywhere in it, an item asserting nothing, an
-empty assertion, a duplicate id, an unparsable expectation or duration, a bad
-regex, a probe carrying a key its kind does not use, a malformed
-`--previous-run-at`, every item unobservable in one pass, and any unhandled
-exception. The list grows; the rule does not.
+file; a declaration with no items at all, which reconciles to ALIGNED over
+nothing and reads as everything being true; an unknown key at the top level, on
+an item, under `expected:`, on a probe or inside `defaults:`; a value outside
+its vocabulary; an item asserting nothing; an empty assertion on any axis; a
+duplicate id; an unparsable expectation or duration; a bad regex; a probe
+carrying a key its kind does not use; a malformed `--previous-run-at`; every
+item unobservable in one pass; and any unhandled exception. The list grows; the
+rule does not.
+
+## Which rendering gets which words
+
+`reasons` and `reason_keys` are the same claims, except where one carries a
+figure that moves on its own — how long something has been quiet, today the
+only case. They are split because the channels have different lifetimes:
+
+* `ROADMAP.md` is committed only when the reconciled state changes, so it
+  renders the **keys**. A number written there freezes at the announcing run
+  and keeps saying it while the real one grows — wrong in the reassuring
+  direction, on the page the tracking issue links to.
+* the digest — the issue body, its comment, the step summary — is rewritten
+  every run, so it renders the **reasons**, figure and all. That is where the
+  quantity is the point: "longer than 12h" cannot tell one tick late from three
+  weeks.
+* `reportable_state` compares the **keys**, which is what stops a growing
+  number waking somebody four times a day for as long as the silence lasts.
 
 ## Mergeability is a separate question from review
 
