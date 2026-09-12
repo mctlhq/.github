@@ -1,30 +1,26 @@
 {
-  "generated_at": "2026-09-12T10:39:43Z",
+  "generated_at": "2026-09-12T10:50:40Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
     "DRIFT": 4,
-    "UNEXPECTED_SILENCE": 1,
-    "ALIGNED": 13
+    "UNEXPECTED_SILENCE": 0,
+    "ALIGNED": 14
   },
   "items": [
     {
       "id": "agent-platform.registry",
       "title": "Registry-backed ReleaseBinding",
       "phase": "now",
-      "state": "UNEXPECTED_SILENCE",
+      "state": "ALIGNED",
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-api#283",
       "unlocks": [
         "investigator.declarative-activation",
         "agent-platform.capability-discovery"
       ],
-      "reasons": [
-        "believed to be under active implementation, but nothing has moved on mctlhq/mctl-api#283 or its PRs for 11h (allowed 6h)"
-      ],
-      "reason_keys": [
-        "quiet beyond 6h on mctlhq/mctl-api#283"
-      ],
+      "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [
@@ -32,8 +28,7 @@
         ],
         "review": "unreviewed-head",
         "last_activity": "2026-09-11T23:19:25Z",
-        "merge": "blocked-review",
-        "quiet_hours": 11
+        "merge": "blocked-review"
       },
       "note": "The declarative agent architecture is a project rather than a production path until this lands: GitOps carries shadow ReleaseBindingIntent with promotable:false, and the resolver refuses to proceed on bindingSource: registry."
     },
@@ -333,7 +328,7 @@
         "last_activity": "2026-09-11T17:18:03Z",
         "merge": "conflicted"
       },
-      "note": "Approved, green, and not mergeable. Which reason holds alternates \u2014 unresolved review conversations, or the branch behind a `strict` main \u2014 so the snapshot's `merge` field is the thing to read, not this sentence. As of 2026-09-12 it is neither: the branch now CONFLICTS with main, which is work rather than a state it moves through. It also carries steward:escalated, terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
+      "note": "Approved, green, and not mergeable. Which reason holds alternates \u2014 unresolved review conversations, or the branch behind a `strict` main \u2014 so the snapshot's `merge` field is the thing to read, not this sentence \u2014 including when it reports something outside that pair, which is the row doing its job rather than a gap in the declaration. It also carries steward:escalated, terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
     },
     {
       "id": "client-lifecycle.lookup-account",

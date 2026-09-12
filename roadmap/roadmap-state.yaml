@@ -31,6 +31,14 @@ defaults:
   # workday of silence on something we believe is being implemented is
   # surfaced the same day.
   max_silence: 12h
+  # The longest interval between two runs of the reconciler, taken from the
+  # cron in .github/workflows/roadmap-reconcile.yml (0 6,11,16,21 — the
+  # overnight gap). Declared because this file cannot see that schedule, and
+  # load-bearing: a max_silence below it makes an item report SILENT every
+  # morning for behaving exactly as declared, which is two state changes a
+  # day, two tracking-issue comments and two snapshot commits on work nobody
+  # touched. validate_state refuses any item that goes under it.
+  longest_run_gap: 9h
 
 items:
   # ── Agent platform ────────────────────────────────────────────────────
@@ -48,7 +56,7 @@ items:
       # and teach everyone to ignore the report.
       review: [blocking-findings, unreviewed-head]
       merge: [blocked-review, blocked-review-required]
-    max_silence: 6h
+    max_silence: 12h
     note: >-
       The declarative agent architecture is a project rather than a production
       path until this lands: GitOps carries shadow ReleaseBindingIntent with
@@ -297,9 +305,9 @@ items:
     note: >-
       Approved, green, and not mergeable. Which reason holds alternates —
       unresolved review conversations, or the branch behind a `strict` main —
-      so the snapshot's `merge` field is the thing to read, not this sentence.
-      As of 2026-09-12 it is neither: the branch now CONFLICTS with main,
-      which is work rather than a state it moves through. It also carries steward:escalated, terminal for
+      so the snapshot's `merge` field is the thing to read, not this sentence
+      — including when it reports something outside that pair, which is the
+      row doing its job rather than a gap in the declaration. It also carries steward:escalated, terminal for
       pr-steward: that label has to be cleared by a human before the
       lifecycle resumes, so silence here needs a person rather than time.
 

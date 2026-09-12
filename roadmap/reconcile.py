@@ -704,13 +704,41 @@ def validate_state(state: dict) -> list[str]:
         # later as an AttributeError from somewhere else.
         problems.append(f"defaults: must be a mapping, got {type(defaults).__name__}")
     else:
-        for key in set(defaults) - {"max_silence"}:
+        for key in set(defaults) - {"max_silence", "longest_run_gap"}:
             problems.append(f"defaults: unknown key {key!r}")
         if "max_silence" in defaults:
             try:
                 parse_duration(defaults["max_silence"])
             except ValueError as exc:
                 problems.append(f"defaults: {exc}")
+
+        # A silence window shorter than the longest gap between runs reports
+        # an item as silent for behaving exactly as declared. The cron here is
+        # 0 6,11,16,21, whose overnight gap is nine hours, so a 6h window went
+        # SILENT every morning — and ALIGNED -> SILENT -> ALIGNED is two state
+        # changes a day, two tracking-issue comments and two snapshot commits,
+        # on an item nobody touched. Declared rather than inferred, because
+        # this file cannot see the workflow's schedule.
+        if "longest_run_gap" in defaults:
+            try:
+                gap = parse_duration(defaults["longest_run_gap"])
+            except ValueError as exc:
+                problems.append(f"defaults: longest_run_gap: {exc}")
+            else:
+                for item in items:
+                    if not isinstance(item, dict) or "max_silence" not in item:
+                        continue
+                    try:
+                        window = parse_duration(item["max_silence"])
+                    except ValueError:
+                        continue  # already reported above
+                    if window < gap:
+                        problems.append(
+                            f"{item.get('id', '?')}: max_silence "
+                            f"{item['max_silence']} is shorter than "
+                            f"defaults.longest_run_gap "
+                            f"{defaults['longest_run_gap']}, so this item "
+                            f"reports silence for behaving as declared")
     return problems
 
 
@@ -1177,12 +1205,18 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # late from three weeks. The key below carries the same claim
             # without it, so a number that grows on its own does not wake
             # anyone a second time.
+            # Names every issue the figure was taken across, since
+            # `implementation:` spans the set: the most recent activity
+            # anywhere in it stops the clock, so naming one would invite the
+            # reader to look at the wrong place — and would hide that chatter
+            # on a peripheral issue is enough to keep this quiet.
+            across = ", ".join([item["issue"]] + also_refs)
             result.reasons.append(
                 f"believed to be under active implementation, but nothing has "
-                f"moved on {item['issue']} or its PRs for {hours}h "
+                f"moved on {across} or their PRs for {hours}h "
                 f"(allowed {silence_window})")
             result.reason_keys.append(
-                f"quiet beyond {silence_window} on {item['issue']}")
+                f"quiet beyond {silence_window} across {across}")
     return result
 
 
@@ -1260,7 +1294,9 @@ def render_markdown(snapshot: dict) -> str:
             for reason in keys:
                 out.append(f"- {reason}")
             if item.get("unlocks"):
-                out.append(f"Unlocks {', '.join(item['unlocks'])}.")
+                # The blank line matters: CommonMark lazy continuation folds
+                # this into the bullet above it otherwise.
+                out += ["", f"Unlocks {', '.join(item['unlocks'])}."]
             if item.get("note"):
                 out += ["", item["note"].strip()]
             out.append("")
@@ -2066,13 +2102,8 @@ def selftest() -> int:
     check(a.reason_keys == b.reason_keys,
           f"adding a service elsewhere changes the compared identity:\n"
           f"  {a.reason_keys}\n  {b.reason_keys}")
-    # But a changed ANSWER is the news, and must compare unequal — the half
-    # the denominator fixture cannot see.
-    c = reconcile_item(StubGH(None, files={"svc/one/values.yaml": "otel:\n"}),
-                       probe_item, {}, now)
-    check(c.state == ALIGNED or a.reason_keys != c.reason_keys,
-          f"the probe's answer is missing from the compared identity:\n"
-          f"  {a.reason_keys}\n  {c.reason_keys}")
+    # And a changed ANSWER is the news, so it must compare unequal — the half
+    # the denominator fixture cannot see. Two real counts, both diverging.
     line_probe = {"id": "lp", "title": "LP", "phase": "now", "expected": {},
                   "probes": [{"id": "z", "kind": "file_line_match_count",
                               "repo": "o/r", "path": "f.txt",
@@ -2154,6 +2185,20 @@ def selftest() -> int:
           f"unlocks named a non-existent item and passed: {problems}")
     check(not any("'b'" in x for x in problems),
           f"a forward reference was reported as a typo: {problems}")
+
+    # A silence window shorter than the longest gap between runs reports an
+    # item as silent for behaving exactly as declared.
+    problems = validate_state({
+        "defaults": {"max_silence": "12h", "longest_run_gap": "9h"},
+        "items": [{"id": "s", "issue": "o/r#1", "max_silence": "6h",
+                   "expected": {"implementation": "active"}}]})
+    check(any("longest_run_gap" in x for x in problems),
+          f"a window shorter than the run gap passed: {problems}")
+    problems = validate_state({
+        "defaults": {"max_silence": "12h", "longest_run_gap": "9h"},
+        "items": [{"id": "s", "issue": "o/r#1", "max_silence": "12h",
+                   "expected": {"implementation": "active"}}]})
+    check(problems == [], f"a window at or above the gap was refused: {problems}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
