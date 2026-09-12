@@ -1,0 +1,417 @@
+name: roadmap-reconcile
+
+# Reconcile roadmap/roadmap-state.yaml against GitHub and commit the snapshot.
+#
+# Read-only against every other repository: the only writes are this repo's own
+# roadmap/snapshot.json and roadmap/ROADMAP.md.
+#
+# The schedule matters more than it looks. A watcher fires on events and is
+# silent the rest of the time, so a broken watcher and a quiet org produce the
+# same output — that is how six pull requests went unannounced for six hours on
+# 2026-09-11. A reconciler runs whether or not anything happened and reports the
+# state it found, including OBSERVATION_FAILED when it could not look. Silence
+# from this workflow means the workflow did not run, which the schedule below
+# makes visible on its own.
+
+on:
+  schedule:
+    # Four times a day. Frequent enough that a day's drift is caught the same
+    # day, rare enough that the committed snapshot is not a noise generator.
+    - cron: "0 6,11,16,21 * * *"
+  workflow_dispatch:
+  # The two path lists below are duplicated on purpose. A YAML anchor and
+  # alias would express it once and make the whole file invalid: the Actions
+  # parser refuses them outright ("Anchors are not currently supported"), so
+  # the cron would never be registered, dispatch would have no button, and the
+  # pull-request gate could not run either — a silent failure with less signal
+  # than a syntax error, which at least goes red.
+  push:
+    branches: [main]
+    paths:
+      - "roadmap/roadmap-state.yaml"
+      - "roadmap/reconcile.py"
+      - "roadmap/check-workflow-shell.py"
+      - ".github/workflows/roadmap-reconcile.yml"
+      - ".github/workflows/workflow-shell-check.yml"
+  # So the gates can refuse a change before it is merged. Without this the
+  # earliest a broken `run:` block could be refused was the push that merged
+  # it: a shorter outage than none, but still a red scheduled workflow on main
+  # while the Python was gated ahead of every pass.
+  #
+  # Deliberately NOT roadmap/**: that matches snapshot.json and ROADMAP.md,
+  # the two files this workflow itself commits. Nothing would loop today,
+  # because a GITHUB_TOKEN push raises no events — but that is a property of
+  # the token, and replacing it with an App installation token is a standing
+  # recommendation on this PR.
+  pull_request:
+    paths:
+      - "roadmap/roadmap-state.yaml"
+      - "roadmap/reconcile.py"
+      - "roadmap/check-workflow-shell.py"
+      - ".github/workflows/roadmap-reconcile.yml"
+      - ".github/workflows/workflow-shell-check.yml"
+
+# Declared per job rather than here: the gate reads the checkout and nothing
+# else, and inheriting write access it never uses is a permission granted to
+# pull-request code for no reason.
+permissions: {}
+
+concurrency:
+  # Pull-request runs get their own group. Sharing one meant a PR push could
+  # join the group and cancel a queued scheduled tick — GitHub cancels the
+  # pending run when a newer one joins — so the gate could drop the reconcile
+  # it exists to protect.
+  group: roadmap-reconcile-${{ github.event_name == 'pull_request' && github.ref || 'scheduled' }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    # Everything that can be checked without touching anything. Runs on a pull
+    # request as well, which is the point: the shell here carries the whole
+    # notification path, and it used to be the only part of this directory
+    # with no gate before merge.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Self-test the shell gate
+        # The gate's own gate. It exists to refuse a block it could not parse,
+        # so the one thing it must never do is report clean having observed
+        # nothing.
+        run: python3 roadmap/check-workflow-shell.py --selftest
+
+      - name: Syntax-check the workflows this directory owns
+        # The Python here is self-test-gated before every pass while ~90 lines
+        # of shell carrying the whole notification path had nothing. One
+        # missing quote made the Report step a parse error, so it never ran,
+        # the commit step was skipped behind it, and the job failed in a way
+        # that left the liveness reference empty forever: a reconciler that
+        # ran on schedule, observed correctly and said nothing — the incident
+        # this PR exists to end, reproduced by one character.
+        #
+        # --syntax-only on purpose: this gate blocks the reconcile, and
+        # shellcheck comes from whatever ubuntu-latest ships. Letting a runner
+        # image bump introduce a new warning here would silence the reconciler
+        # with no pull request to refuse it at — the coupling just removed for
+        # every other workflow, surviving for this one. Semantic findings are
+        # the sweep's job, where they cannot do that.
+        #
+        # Both files, because workflow-shell-check.yml would otherwise be the
+        # only thing checking itself: an Actions-invalid document there stops
+        # the job that would have caught it, and the sweep vanishing is its
+        # own only symptom.
+        run: |
+          python3 roadmap/check-workflow-shell.py --syntax-only \
+            .github/workflows/roadmap-reconcile.yml \
+            .github/workflows/workflow-shell-check.yml
+
+      - name: Validate the declaration and its schedule
+        # Runs in the gate, so a bad declaration — or a cron edit this
+        # resolver cannot read — is refused at the pull request rather than
+        # four hours later as a scheduled run that exits 2, observes nothing
+        # and stops the liveness reference advancing. Same coupling removed
+        # for every other workflow, which had re-entered here.
+        run: python3 roadmap/reconcile.py --validate-only --state roadmap/roadmap-state.yaml
+
+      - name: Self-test the reconciler
+        # The property being protected is that a failed observation can never
+        # read as a zero or an absence; a reconciler that lost it would report
+        # a green roadmap while blind.
+        run: python3 roadmap/reconcile.py --selftest
+
+  reconcile:
+    needs: gate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # Liveness is measured against this workflow's own run history.
+      actions: read
+      # The report is a tracking issue, not an annotation.
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: When did this reconciler last run
+        id: history
+        # From the workflow's own run history, not from the snapshot. The
+        # snapshot is committed only when the state changes, so its timestamp
+        # records the last change, and a quiet roadmap would have read as a
+        # growing outage forever.
+        #
+        # It advances on every run that RECONCILED — which is not every run.
+        # The event list below is the `on:` triggers of this file minus
+        # `pull_request`, because the reconcile job is skipped there (see its
+        # `if:`) and a skipped job does not fail a run. Adding a trigger means
+        # adding it here too; nothing joins the two.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # No `|| true`. A failed read of the run history is not a first run,
+          # and the two must not produce the same empty answer — that is the
+          # exact swallow this PR exists to end, and writing it here would have
+          # been the joke telling itself. If the API call fails, the step
+          # fails.
+          # Asked for per event, not filtered out of a mixed page.
+          #
+          # Pull-request runs must not count: `reconcile` is skipped on them
+          # and a skipped job does not fail a run, so they conclude success
+          # having observed nothing — one pull request touching
+          # roadmap-state.yaml, which is how this roadmap is maintained, would
+          # otherwise reset the staleness clock in the middle of an outage.
+          #
+          # Excluding them from a page of the twenty newest successes had its
+          # own hole: if all twenty were gate runs the result was empty, and
+          # the step printed exactly what a genuine first run prints.
+          # Reachable by ordinary work — a pull request that pushes twenty
+          # times while the scheduled reconcile is failing. "We did not look
+          # far enough" and "there is nothing to find" are not the same
+          # answer, and the API can be asked the precise question instead.
+          previous=""
+          for event in schedule push workflow_dispatch; do
+            at=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/roadmap-reconcile.yml/runs?status=success&event=${event}&per_page=5" \
+              | jq -r '[.workflow_runs[] | select(.id != '"${RUN_ID}"') | .created_at] | first // ""')
+            if [ -n "$at" ] && { [ -z "$previous" ] || [[ "$at" > "$previous" ]]; }; then
+              previous="$at"
+            fi
+          done
+          echo "previous_run_at=${previous}" >> "$GITHUB_OUTPUT"
+          if [ -z "$previous" ]; then
+            echo "no earlier successful run — liveness makes no claim this time"
+          else
+            echo "previous successful run: ${previous}"
+          fi
+          # Measured against SUCCESSFUL runs, so the gap this reports is
+          # "did not complete successfully", not "did not fire". An exit-2
+          # run, a push that lost three races, or a failure in the reporting
+          # step below all widen it without the schedule having missed a tick.
+          # The wording downstream says so rather than claiming more.
+
+      - name: Reconcile
+        id: reconcile
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIOUS_RUN_AT: ${{ steps.history.outputs.previous_run_at }}
+        run: |
+          # The committed snapshot is copied aside first. reconcile.py reads
+          # --previous before writing --json for exactly this reason, but
+          # handing it two different paths means the comparison does not
+          # depend on that ordering holding forever.
+          cp roadmap/snapshot.json "$RUNNER_TEMP/previous.json" 2>/dev/null || true
+          set +e
+          python3 roadmap/reconcile.py \
+            --state roadmap/roadmap-state.yaml \
+            --json roadmap/snapshot.json \
+            --markdown roadmap/ROADMAP.md \
+            --digest "$RUNNER_TEMP/digest.txt" \
+            --previous "$RUNNER_TEMP/previous.json" \
+            ${PREVIOUS_RUN_AT:+--previous-run-at "$PREVIOUS_RUN_AT"}
+          code=$?
+          set -e
+          # 0 aligned, 1 something diverged — both are results worth
+          # publishing. 2 means the run could not be completed, and a
+          # reconciler that could not look must fail loudly rather than
+          # publish a page implying it did.
+          if [ "$code" -ge 2 ]; then
+            echo "::error::reconcile could not complete (exit $code) — this is the tool, not the roadmap"
+            exit "$code"
+          fi
+
+      # Ordered deliberately: the report runs BEFORE the snapshot is
+      # committed. Committing it is precisely what makes the next run compute
+      # changed=false, so a report step that failed after the push would
+      # record the change as seen and never announce it — and the recovery
+      # this workflow relies on for a lost push, "the next run recomputes and
+      # re-announces", is the one that ordering removes.
+      - name: Report through a tracking issue
+        # Not a failed job. Two of the three conditions worth reporting are
+        # standing states by design — a declared gap, an item we cannot see —
+        # and failing on those would mean no successful run ever again, which
+        # would also push the liveness reference above out of reach. So the
+        # job's own conclusion keeps meaning "the reconciler worked", and the
+        # roadmap's state is reported where it can persist and notify:
+        #
+        #   body    — rewritten every run, silently; the current state
+        #   comment — only when the reconciled state changes; the notification
+        #   closed  — when everything is aligned again
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OVERALL: ${{ steps.reconcile.outputs.overall }}
+          UNOBSERVED: ${{ steps.reconcile.outputs.unobserved }}
+          STALE_HOURS: ${{ steps.reconcile.outputs.stale_hours }}
+          CHANGED: ${{ steps.reconcile.outputs.changed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PAGE_URL: ${{ github.server_url }}/${{ github.repository }}/blob/main/roadmap/ROADMAP.md
+        run: |
+          set -euo pipefail
+          # Identity is a label, not a title. The issue stays open for as long
+          # as the condition lasts, so it sinks out of any "newest N" window
+          # while working correctly — and a title match would then open a fresh
+          # one every six hours. A label survives that, an edited title, and a
+          # manual close.
+          label="roadmap-reconciler"
+          marker="<!-- roadmap-reconciler:v1 -->"
+
+          # Asked for by name, not searched for in a page of them.
+          # `gh label list` defaults to the thirty OLDEST, and this label is
+          # the newest by construction, so the check was guaranteed to miss
+          # once thirty older labels existed — after which `gh label create`
+          # 422s on a label that already exists and takes the whole report
+          # down with it. (`cmd | grep -q` under pipefail was the same trap
+          # from the other side: SIGPIPE on a successful match.)
+          # 404 means absent; anything else means we could not look, and those
+          # must not be the same answer. Getting there needs care: `gh api`
+          # exits non-zero on any 4xx, which under `set -e` ended the step
+          # before the case could run — so the create branch was unreachable
+          # and this repository has no such label today. `--silent` and
+          # `--include` are also mutually exclusive, and `| head -1` is the
+          # SIGPIPE-under-pipefail shape removed twice already above.
+          # stdout and stderr kept apart. Merging them meant any gh notice on
+          # stderr could land on line 1, empty `status`, and end the report on
+          # a call that had returned 200.
+          set +e
+          gh api "repos/${GITHUB_REPOSITORY}/labels/${label}" --include \
+            >"$RUNNER_TEMP/label.out" 2>"$RUNNER_TEMP/label.err"
+          set -e
+          status=$(sed -n '1s@^HTTP/[0-9.]* \([0-9][0-9][0-9]\).*@\1@p' "$RUNNER_TEMP/label.out")
+          case "$status" in
+            200)
+              ;;
+            404)
+              gh label create "$label" --color 0E4429 \
+                --description "Opened by the roadmap reconciler; identity for its tracking issue"
+              ;;
+            *)
+              # The response is printed, not discarded: this is the read whose
+              # whole point is that "absent" and "could not look" differ.
+              echo "::error::could not read the ${label} label (status '${status:-none}')"
+              sed -n '1,10p' "$RUNNER_TEMP/label.out"
+              sed -n '1,10p' "$RUNNER_TEMP/label.err"
+              exit 1
+              ;;
+          esac
+
+          # --label reads the issues API, which is strongly consistent.
+          # --search would read the eventually-consistent search index, and
+          # its best-match ordering also makes --limit 1 stop meaning "the
+          # newest". Author filtering is deliberately NOT used: it is true
+          # only while this job holds secrets.GITHUB_TOKEN, so the day the
+          # token becomes an App installation it would match nothing and file
+          # a fresh issue every six hours — the duplicate-per-run failure the
+          # label exists to prevent, reintroduced by an unrelated change.
+          # Label AND marker, in one query over several candidates. A label
+          # is an identity anyone with triage access can hand to any issue
+          # from a dropdown, and the steps below rewrite the title and body of
+          # what they find and later close it — so only an issue carrying the
+          # marker this workflow writes is ours.
+          #
+          # --limit 1 would have asked for the NEWEST labelled issue and
+          # tested the marker only on that: a mislabelled issue newer than the
+          # real one is correctly skipped, and then the real tracking issue,
+          # older and marked, is never found — a duplicate gets filed and the
+          # original stays open forever with a frozen body. Selecting across a
+          # page keeps both properties, and drops a `| grep -qF` pipeline that
+          # was the same pipefail SIGPIPE trap removed from `gh label list`
+          # twenty lines above.
+          number=$(gh issue list --state open --label "$label" --limit 20 \
+            --json number,body \
+            --jq "[.[] | select(.body | contains(\"$marker\")) | .number] | first // empty")
+
+          if [ "$OVERALL" = "ALIGNED" ] && [ "$UNOBSERVED" = "0" ] && [ "$STALE_HOURS" = "0" ]; then
+            if [ -n "$number" ]; then
+              gh issue close "$number" \
+                --comment "Everything the roadmap declares is true again, as of $RUN_URL."
+            fi
+            exit 0
+          fi
+
+          # The title names the condition that matters most, which is why
+          # identity had to stop depending on it: an ended outage must not file
+          # an issue titled "not aligned" above a body saying it is.
+          # Blindness first, then a standing divergence, and only then an
+          # outage that has already ended — the title is the mail subject, and
+          # retitling a standing DRIFT to a finished outage for one cycle
+          # would bury the thing that is still true.
+          if [ "$UNOBSERVED" != "0" ]; then
+            title="Roadmap: $UNOBSERVED item(s) could not be observed"
+          elif [ "$OVERALL" != "ALIGNED" ]; then
+            title="Roadmap: reconciled state is $OVERALL"
+          else
+            title="Roadmap: no successful reconcile for ${STALE_HOURS}h"
+          fi
+
+          {
+            echo "$marker"
+            echo "**$OVERALL.** This body is rewritten on every run; a comment is added"
+            echo "only when the reconciled state changes."
+            echo
+            if [ "$UNOBSERVED" != "0" ]; then
+              echo "**$UNOBSERVED item(s) could not be observed.** That is this tool or its"
+              echo "access, not the roadmap — treat it as blindness, not as a green light."
+              echo
+            fi
+            if [ "$STALE_HOURS" != "0" ]; then
+              echo "**No successful run for ${STALE_HOURS}h.** The schedule may have fired and"
+              echo "failed rather than missed a tick; either way the roadmap was unobserved"
+              echo "for that window, and what follows is only what is true now."
+              echo
+            fi
+            echo '```'
+            cat "$RUNNER_TEMP/digest.txt"
+            echo '```'
+            echo
+            echo "[Run]($RUN_URL) · [Page]($PAGE_URL) — the page is committed after"
+            echo "this report, so it shows the previous state until that lands."
+          } > "$RUNNER_TEMP/body.md"
+
+          if [ -z "$number" ]; then
+            gh issue create --title "$title" --label "$label" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh issue edit "$number" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+            if [ "$CHANGED" = "true" ] || [ "$STALE_HOURS" != "0" ]; then
+              gh issue comment "$number" --body-file "$RUNNER_TEMP/body.md"
+            fi
+          fi
+
+      - name: Commit the snapshot
+        # Only when the reconciled state actually changed. snapshot.json
+        # carries the run's timestamp, so it differs on every pass and a
+        # content guard could never be true — this repo would have taken four
+        # commits a day saying nothing.
+        if: steps.reconcile.outputs.changed == 'true'
+        run: |
+          if git diff --quiet -- roadmap/snapshot.json roadmap/ROADMAP.md; then
+            echo "no change to publish"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roadmap/snapshot.json roadmap/ROADMAP.md
+          git commit -m "chore(roadmap): reconcile ${OVERALL}"
+          # Two scheduled runs can overlap a manual push to main. Rebase and
+          # retry rather than losing the snapshot to a race.
+          for attempt in 1 2 3; do
+            if git push; then exit 0; fi
+            echo "push attempt ${attempt} lost a race; rebasing"
+            # Checked: a rebase that fails is a conflict, not a race, and
+            # retrying the push would report the wrong reason for the failure.
+            if ! git pull --rebase --autostash; then
+              git rebase --abort || true
+              echo "::error::the snapshot conflicts with main — rebase failed, this is not a push race"
+              exit 1
+            fi
+          done
+          echo "::error::could not push the snapshot after three attempts"
+          exit 1
+        env:
+          OVERALL: ${{ steps.reconcile.outputs.overall }}

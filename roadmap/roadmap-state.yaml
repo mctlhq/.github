@@ -1,0 +1,376 @@
+# Desired state of the mctlhq roadmap.
+#
+# This file is the input to roadmap/reconcile.py. It declares what we believe
+# to be true, per roadmap item; the reconciler observes GitHub and reports
+# where belief and reality disagree. Nothing here describes events ("a PR
+# appeared", "an issue closed") — only assertions about state, because an
+# event stream cannot tell "nothing happened" apart from "I failed to look".
+#
+# Org project #1 "mctl.ai — Roadmap" stays the roadmap of record for
+# priority and status; this file is narrower on purpose. It carries only the
+# claims worth being woken up about, and it is the source of roadmap/ROADMAP.md.
+#
+# Editing rules
+# -------------
+# * `expected` is what SHOULD be true now. When reality changes because we
+#   decided it should, edit this file in the same PR as the change. A DRIFT
+#   report is either a real divergence or a stale line here — both need a
+#   human, which is the point.
+# * `phase` drives the generated page only (done / now / next / later).
+# * `max_silence` is how long an item may show no observable movement before
+#   that silence is itself reported. Omit it for items where silence is
+#   correct (a `later` item nobody is working on).
+# * Probes assert things GitHub's issue state cannot: a file's contents, a
+#   count of opted-in services. A probe that cannot be evaluated is an
+#   OBSERVATION_FAILED, never a zero.
+
+version: 1
+
+defaults:
+  # Long enough that an overnight gap is not noise, short enough that a
+  # workday of silence on something we believe is being implemented is
+  # surfaced the same day. An item declaring `implementation: active` must
+  # have a window — its own or this one — or the silence check is skipped for
+  # it entirely and UNEXPECTED_SILENCE becomes unreachable.
+  max_silence: 12h
+
+  # The longest interval between two runs of the reconciler, read off the cron
+  # in .github/workflows/roadmap-reconcile.yml (0 6,11,16,21 — the overnight
+  # gap). Declared here because this file cannot see that schedule — and
+  # RESOLVED against it at validation, the way `unlocks:` resolves an item id,
+  # so lowering this number is refused as loudly as deleting the line.
+  # Trusting it was the gap: every window clears a smaller floor, no message
+  # moves, and the file still reads as armed.
+  #
+  # Load-bearing: a window shorter than the gap reports an item as silent for
+  # behaving exactly as declared, and ALIGNED -> SILENT -> ALIGNED is two
+  # state changes a day — two tracking-issue comments and two snapshot commits
+  # on work nobody touched. validate_state refuses any window that is not
+  # strictly longer than this, including the default above (the one most items
+  # use) and including equality: at exactly the gap an item has to move
+  # between the 21:00 and 06:00 runs or it reports. It is required once any
+  # window exists, so deleting this line cannot withdraw the floor from the
+  # whole file.
+  #
+  # It is the SCHEDULED interval, which is a floor rather than the truth:
+  # GitHub delays scheduled runs under load and drops them outright, so a
+  # window this rule certifies can still flap after a missed tick. The
+  # liveness step reads the run history and knows the real gap; this constant
+  # is the cheap half.
+  longest_run_gap: 9h
+
+
+items:
+  # ── Agent platform ────────────────────────────────────────────────────
+  - id: agent-platform.registry
+    title: Registry-backed ReleaseBinding
+    epic: mctlhq/.github#18
+    issue: mctlhq/mctl-api#283
+    phase: now
+    expected:
+      issue: open
+      implementation: active
+      # Two acceptable answers, because both are this situation: the author
+      # pushes a fix and the head is briefly unreviewed, then the reviewer
+      # answers again. Declaring only one would report drift on every push
+      # and teach everyone to ignore the report.
+      review: [blocking-findings, unreviewed-head]
+      merge: [blocked-review, blocked-review-required]
+    # Not a window: every value this item allows on either axis is a block
+    # that stands the silence check down, so a duration here would be
+    # decoration — an OK row under a `12h` line that can never fire. The
+    # validator refuses that combination; this is the other half of its
+    # remedy. What it is waiting for is a reviewer and an author, and the
+    # snapshot's `review` and `merge` fields say which, which is the answer a
+    # clock would only approximate.
+    max_silence: none
+    note: >-
+      The declarative agent architecture is a project rather than a production
+      path until this lands: GitOps carries shadow ReleaseBindingIntent with
+      promotable:false, and the resolver refuses to proceed on
+      bindingSource: registry.
+    unlocks:
+      - investigator.declarative-activation
+      - agent-platform.capability-discovery
+
+  - id: investigator.declarative-activation
+    title: Investigator resolver off legacy
+    epic: mctlhq/.github#18
+    phase: next
+    # The assertion lives entirely in the probe below. A prose line under
+    # `expected:` here would read like a second assertion and check nothing.
+    probes:
+      - id: resolver-mode-in-gitops
+        kind: dir_file_match_count
+        repo: mctlhq/mctl-gitops
+        path: platform-gitops/argo-workflows/cluster-templates
+        file_pattern: '^cwft-mctl-agents-investigate\.yaml$'
+        # The env var is absent today, and the code default is "legacy"
+        # (orchestrator/run_issue_investigator.py). Absent therefore means
+        # legacy, which is why this asserts on the value being SET, not on
+        # the absence of the opposite.
+        content_pattern: 'ISSUE_INVESTIGATOR_RESOLVER_MODE\s*\n\s*value:\s*"?declarative"?'
+        expect: '== 1'
+    note: >-
+      Activation is blocked on mctl-gitops#950 per the code comment, and on
+      agent-platform.registry for the binding source. Expected to be failing
+      until both land — this item exists so that the day it flips is observed
+      rather than noticed.
+
+  - id: agent-platform.capability-discovery
+    title: Role-aware capability discovery
+    epic: mctlhq/.github#18
+    issue: mctlhq/mctl-agents#242
+    phase: next
+    expected:
+      issue: open
+      implementation: none
+
+  # ── Governance ────────────────────────────────────────────────────────
+  - id: governance.execution-identity
+    title: Agent execution identity
+    epic: mctlhq/.github#18
+    issue: mctlhq/mctl-agents#196
+    phase: next
+    expected:
+      issue: open
+      implementation: none
+    note: >-
+      Owns execution identity; .github#55 observability consumes it. The two
+      referenced each other as blockers until 2026-09-11, when the edge was
+      made one-directional.
+
+  - id: governance.policy-approval-evidence
+    title: Policy, approval and evidence checkpoints
+    epic: mctlhq/.github#18
+    issue: mctlhq/mctl-agents#197
+    also:
+      - mctlhq/mctl-agents#198
+      - mctlhq/mctl-agents#199
+    phase: next
+    expected:
+      issue: open
+      implementation: none
+    note: >-
+      #198 is cited by .github#42 as the approval primitive but is not
+      implemented; the durable wait that does exist is #150 / PR #212, and
+      WAITING_FOR_APPROVAL appears nowhere in code.
+
+  # ── Context platform ──────────────────────────────────────────────────
+  - id: context.snapshot-contract
+    title: ContextSnapshot contract
+    epic: mctlhq/.github#20
+    issue: mctlhq/mctl-agents#264
+    phase: done
+    expected:
+      issue: closed
+    note: >-
+      Merged as f9efb074 on 2026-09-11 21:09Z. The contract is accepted; what
+      the review could not settle went to mctl-agents#347, chiefly whether
+      `truncated` means "the budget was exhausted" or "something did not make
+      it in" -- today an honest snapshot that drops an oversized candidate
+      fails its own validation unless it claims a truncation that did not
+      happen.
+
+  - id: context.work-item
+    title: Canonical WorkItem contract
+    epic: mctlhq/.github#21
+    issue: mctlhq/mctl-api#227
+    phase: done
+    expected:
+      issue: closed
+
+  - id: human-input.core
+    title: Durable human input / WAITING_FOR_INPUT
+    epic: mctlhq/.github#42
+    issue: mctlhq/mctl-agents#333
+    phase: next
+    expected:
+      issue: open
+      implementation: none
+    note: Blocked by mctl-api#227 (done) and mctl-agents#264 (in review).
+
+  # ── Observability ─────────────────────────────────────────────────────
+  - id: observability.collector
+    title: OTel Collector traces gateway
+    epic: mctlhq/.github#55
+    issue: mctlhq/mctl-gitops#902
+    phase: done
+    expected:
+      issue: closed
+
+  - id: observability.producers
+    title: At least one service emitting spans
+    epic: mctlhq/.github#55
+    phase: now
+    probes:
+      - id: services-opted-into-otel
+        # Parsed, not pattern-matched. Two regexes in two review rounds asked
+        # this question wrong: the first let `.` cross a top-level key, the
+        # second accepted any indent so a nested `metrics.enabled: true`
+        # satisfied it, and both returned zero on a blank line inside the
+        # block. A key path cannot drift from the structure it describes.
+        kind: dir_file_yaml_value_count
+        repo: mctlhq/mctl-gitops
+        path: platform-gitops/services
+        file_pattern: 'values\.yaml$'
+        key: otel.enabled
+        equals: true
+        expect: '>= 1'
+    note: >-
+      The transport shipped with #902, but otel.enabled is false everywhere
+      and otelCollector.backendEndpoint is empty, so end-to-end traces are
+      still zero. This item is the observability critical path now, not the
+      collector.
+
+  - id: observability.agent-instrumentation
+    title: Execution traces from the agents
+    epic: mctlhq/.github#55
+    issue: mctlhq/mctl-agents#195
+    also:
+      - mctlhq/mctl-agent#38
+    phase: next
+    expected:
+      issue: open
+      implementation: none
+
+  # ── Cloudflare ────────────────────────────────────────────────────────
+  - id: cloudflare.apply-authority
+    title: CI can apply Cloudflare state
+    epic: mctlhq/.github#47
+    issue: mctlhq/mctl-gitops#1111
+    phase: done
+    expected:
+      issue: closed
+
+  - id: cloudflare.zone-authority
+    title: Zone roots on shared remote state
+    epic: mctlhq/.github#47
+    issue: mctlhq/mctl-gitops#1178
+    phase: now
+    expected:
+      issue: open
+    probes:
+      - id: zone-roots-still-local
+        kind: file_line_match_count
+        repo: mctlhq/mctl-gitops
+        path: infrastructure/cloudflare/.local-state-roots
+        # That file writes its entries as `infrastructure/cloudflare/zones/...`
+        # — both spellings are accepted by the tooling that reads it, and it
+        # uses the long one. `^zones/` therefore matched nothing, the count was
+        # zero, `== 0` was satisfied, and this item was green from the day it
+        # was written while its own note said three zone roots are still local.
+        # A regex that is valid, evaluated, and asks the wrong question is
+        # invisible to every guard here.
+        #
+        # The comment lines naming the same roots must not be counted, hence
+        # the leading-hash exclusion.
+        pattern: '^(?!\s*#)\s*(?:\./)?(?:infrastructure/cloudflare/)?zones/'
+        expect: '== 0'
+        # The file naming roots that are NOT on the shared backend is the
+        # natural thing to delete once none are. Without saying so, this
+        # item's success state would be unreachable: the day the migration
+        # lands, file_text 404s and the row is OBSERVATION_FAILED forever.
+        when_absent: zero
+    note: >-
+      Only the `account` root is on the shared R2 backend. Until the three
+      zone roots follow, Git is the source of truth for one root out of four.
+
+  # ── Enterprise MCP ────────────────────────────────────────────────────
+  - id: enterprise-mcp.edge-properties
+    title: Prove the properties of the live edge
+    epic: mctlhq/.github#35
+    issue: mctlhq/mctl-telegram#615
+    also:
+      - mctlhq/mctl-telegram#616
+      - mctlhq/mctl-telegram#617
+    phase: now
+    expected:
+      issue: open
+      implementation: none
+    note: >-
+      Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step
+      is measurement of what exists, not more servers. mctl-gitops#1181
+      (Gateway routing on the portal) closed 2026-09-11 22:07Z and is dropped
+      from the set — the reconciler found that the moment `also:` stopped
+      being a key nobody read.
+
+  # ── Client lifecycle ──────────────────────────────────────────────────
+  - id: client-lifecycle.identity-attributes
+    title: Identity attributes and profile
+    epic: mctlhq/.github#22
+    issue: mctlhq/mctl-telegram#620
+    phase: now
+    expected:
+      issue: open
+      implementation: active
+      # The pair, for the same reason as the merge axis below: the one fix
+      # for `blocked-behind-base` is to update the branch, which moves the
+      # head and leaves it reviewed by nobody until someone re-approves. With
+      # `clean` alone this item reported drift every time somebody did the
+      # right thing, and again when they finished — under `strict`, at the
+      # frequency main moves.
+      #
+      # The cost, named rather than hidden: `unreviewed-head` is decided
+      # before the decisions are read, so this pair covers BOTH "an approval
+      # that has stopped covering the head" and "changes requested on an
+      # older commit, not yet re-cast" — the second being a negative verdict,
+      # not a lapsed positive one. It is the right trade only while the merge
+      # axis is already saying the PR is not mergeable, which is what keeps
+      # the item from reading as ready.
+      review: [clean, unreviewed-head]
+      # Not `ready`: approved and green, and still unmergeable. Two answers
+      # are legitimate and it alternates between them — mctl-telegram's main
+      # requires review conversations to be resolved AND is `strict`, so the
+      # branch falls behind every time main moves.
+      merge: [blocked-conversations, blocked-behind-base]
+      # `conflicted` is deliberately NOT in the list. The first two are
+      # states the PR moves through on its own; conflicts are work somebody
+      # has to do, and a row that reports them is the row doing its job.
+    # Both declared merge values are blocks that stand the silence check down,
+    # so a window here could never fire — and the note below already says so
+    # in words: this row needs a person, not a clock.
+    max_silence: none
+    note: >-
+      Approved, green, and not mergeable. Which reason holds alternates —
+      unresolved review conversations, or the branch behind a `strict` main —
+      so the snapshot's `merge` field is the thing to read, not this sentence
+      — including when it reports something outside that pair, which is the
+      row doing its job rather than a gap in the declaration. It also carries steward:escalated, terminal for
+      pr-steward: that label has to be cleared by a human before the
+      lifecycle resumes, so silence here needs a person rather than time.
+
+  - id: client-lifecycle.lookup-account
+    title: Scoped Telegram lookup account
+    epic: mctlhq/.github#22
+    issue: mctlhq/mctl-telegram#400
+    phase: now
+    expected:
+      issue: open
+      implementation: none
+    note: >-
+      Waiting on a human: the account must be registered against a free
+      number and its numeric id handed over before the allowlist entry and
+      mctl-gitops#1182 can be applied. No amount of time moves this.
+
+  # ── DevLoop ───────────────────────────────────────────────────────────
+  - id: devloop.steward-lifecycle
+    title: Steward-owned repos have a lifecycle path
+    epic: mctlhq/.github#38
+    issue: mctlhq/mctl-agents#292
+    phase: done
+    expected:
+      issue: closed
+
+  # ── Parked ────────────────────────────────────────────────────────────
+  - id: edge-ai.phase-0
+    title: Android edge feasibility
+    epic: mctlhq/.github#34
+    issue: mctlhq/.github#34
+    phase: later
+    expected:
+      issue: open
+      implementation: none
+    note: >-
+      Deliberately unstaffed R&D. Needs a device in hand and an ADR on where
+      the work lives; no child issue exists and none should be invented.

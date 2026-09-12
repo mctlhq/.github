@@ -1,0 +1,59 @@
+name: workflow-shell-check
+
+# Parse every `run:` block in every workflow in this repository.
+#
+# A separate file, deliberately. It used to be a job inside
+# roadmap-reconcile.yml, taken out of that job's `needs:` so it could not block
+# the reconcile — but a failing job still makes its RUN conclude `failure`, and
+# the reconciler measures its own liveness against `?status=success` over this
+# workflow's runs. So a shellcheck warning in an unrelated workflow would have
+# left the reconcile running, observing and committing correctly while the
+# record that it did so stopped advancing: at 26h it would have begun
+# commenting on the tracking issue four times a day about an outage that was
+# not happening, and the aligned path that closes the issue could never fire.
+#
+# The triggers matter as much as the split. Living here, with
+# `.github/workflows/**` in `paths:`, a warning is refused at the pull request
+# that introduces it — where it costs nothing — rather than surfacing later at
+# the only moment when finding it is expensive.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "roadmap/check-workflow-shell.py"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - "roadmap/check-workflow-shell.py"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Self-test the gate
+        run: python3 roadmap/check-workflow-shell.py --selftest
+
+      - name: Check every workflow
+        # Both extensions: GitHub accepts .yml and .yaml alike, and a glob for
+        # one silently skips the other — coverage that looks complete and is
+        # not, which is the failure mode this whole directory is about.
+        run: |
+          shopt -s nullglob
+          files=(.github/workflows/*.yml .github/workflows/*.yaml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::no workflow files found — this check would pass on anything"
+            exit 1
+          fi
+          python3 roadmap/check-workflow-shell.py "${files[@]}"
