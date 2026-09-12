@@ -888,7 +888,13 @@ def validate_state(state: dict) -> list[str]:
                 problems.append(
                     f"{where}: unlocks {target!r}, which is not an item id "
                     f"in this file")
-        if "max_silence" in item and item["max_silence"] != "none":
+        # `is not None` because an empty key is refused above with a message
+        # naming both remedies, and `parse_duration` stringifies: without this
+        # line `None` becomes `"None"`, is refused as an unparsable duration,
+        # and one key collects two problems — the guard's message and a second
+        # one naming neither remedy.
+        if ("max_silence" in item and item["max_silence"] != SILENCE_OFF
+                and item["max_silence"] is not None):
             try:
                 parse_duration(item["max_silence"])
             except ValueError as exc:
@@ -902,7 +908,11 @@ def validate_state(state: dict) -> list[str]:
     else:
         for key in set(defaults) - {"max_silence", "longest_run_gap"}:
             problems.append(f"defaults: unknown key {key!r}")
-        if "max_silence" in defaults:
+        # The same exemption items have. `none` is the remedy the
+        # unreachable-silence guard recommends by name; refusing it here made
+        # the file-wide form of that remedy the one thing a reader cannot
+        # write.
+        if "max_silence" in defaults and defaults["max_silence"] != SILENCE_OFF:
             try:
                 parse_duration(defaults["max_silence"])
             except ValueError as exc:
@@ -1435,13 +1445,25 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         # the guard makes you say how silence can still fire; declare nothing
         # and nothing is excused.
         merge_now = (result.evidence.get("merge") or "").split(":")[0]
-        waiting = ((expected.get("merge") and merge_now in WAITING_MERGE)
-                   or (expected.get("review")
-                       and result.evidence.get("review") in WAITING_REVIEW))
-        if waiting:
+        # `want_merge` and `want_review` above are these same declarations;
+        # repeating the lookup invited the two to drift apart, which is the
+        # shape of the bug this gate exists to close. Only the merge arm is
+        # gated twice in effect, since `evidence["merge"]` is written under
+        # `if want_merge` and `evidence["review"]` for every observable issue
+        # — the asymmetry that caused it, left visible rather than tidied
+        # into one expression.
+        accounted = []
+        if want_merge and merge_now in WAITING_MERGE:
+            accounted.append(f"merge={result.evidence.get('merge')}")
+        if want_review and result.evidence.get("review") in WAITING_REVIEW:
+            accounted.append(f"review={result.evidence.get('review')}")
+        if accounted:
+            # Names the axis that fired, not both. The field's job is to say
+            # which observation stood the check down; printing the other one
+            # beside it made a reader chase an axis the decision had just been
+            # taught to ignore.
             result.evidence["silence_accounted_for"] = (
-                f"waiting: review={result.evidence.get('review')}, "
-                f"merge={result.evidence.get('merge')}")
+                "waiting: " + ", ".join(accounted))
         elif quiet_for > seconds:
             result.state = UNEXPECTED_SILENCE
             # The elapsed figure goes in the evidence, not the reason.
@@ -2575,6 +2597,14 @@ def selftest() -> int:
     empty["items"][0]["max_silence"] = None
     check(any("max_silence is empty" in x for x in validate_state(empty)),
           f"an empty max_silence passed: {validate_state(empty)}")
+    check(len([x for x in validate_state(empty) if "max_silence" in x]) == 1,
+          f"one empty key collected two problems: {validate_state(empty)}")
+    # The file-wide form of the guard's own recommended remedy.
+    d_off = copy.deepcopy(unreachable)
+    d_off["items"][0]["max_silence"] = SILENCE_OFF
+    d_off["defaults"]["max_silence"] = SILENCE_OFF
+    check(not any("duration" in x for x in validate_state(d_off)),
+          f"defaults.max_silence: none was refused: {validate_state(d_off)}")
 
     off = copy.deepcopy(unreachable)
     off["items"][0]["max_silence"] = SILENCE_OFF
@@ -2671,6 +2701,12 @@ def selftest() -> int:
           f"{blocked_now.state} {blocked_now.reasons}")
     check("silence_accounted_for" in blocked_now.evidence,
           f"the accounting was not recorded: {blocked_now.evidence}")
+    # And it names the axis that fired, not both: this item declares no
+    # `merge:`, so a merge figure here would send a reader to an axis the
+    # decision was just taught to ignore.
+    check("merge=" not in blocked_now.evidence["silence_accounted_for"],
+          f"the accounting named an axis that did not fire: "
+          f"{blocked_now.evidence['silence_accounted_for']}")
     # The merge arm, which both review-arm fixtures above leave unexercised:
     # a clean review and a branch behind its base is the exact shape that
     # flipped `client-lifecycle.identity-attributes` in and out of SILENT.

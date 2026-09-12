@@ -110,8 +110,10 @@ an item, under `expected:`, on a probe or inside `defaults:`; a value outside
 its vocabulary; an item asserting nothing; an empty assertion on any axis; a
 duplicate id; a malformed `issue:`, `epic:` or `also:` reference; an `unlocks:`
 target naming no item in the file; an item declaring `implementation: active`
-with no silence window; a window not longer than `defaults.longest_run_gap`; an
-unparsable expectation or duration; a bad regex; a probe carrying a key its
+with no silence window, an empty `max_silence:` key, or a window every one of
+whose declared values on an axis stands the silence check down — all three
+being the same outcome, a row that can never say the work stalled; a window not
+longer than `defaults.longest_run_gap`; an unparsable expectation or duration; a bad regex; a probe carrying a key its
 kind does not use or an unrecognised `when_absent`; a malformed
 `--previous-run-at`; every item unobservable in one pass; and any unhandled
 exception. The list grows; the
@@ -143,9 +145,9 @@ value the one they both call a floor. Two cron lines are resolved as the union
 of their firings, not the widest of each, since interleaved schedules do not
 have the gap either one has on its own.
 
-Silence is suppressed on what was **observed**, not on what was declared. An
-item whose review or merge state says it is waiting on a person has its silence
-accounted for — the reason is recorded in `evidence.silence_accounted_for` —
+Silence is suppressed on what was **observed**, on an axis the item
+**declared**. An item whose review or merge state says it is waiting on a
+person has its silence accounted for — the reason is recorded in `evidence.silence_accounted_for` —
 and reporting it again as unexplained would cost two tracking-issue comments
 and two snapshot commits per review round trip, with the accounting sitting in
 the same dict.
@@ -155,6 +157,18 @@ the items that wait made `UNEXPECTED_SILENCE` unreachable for every row in the
 file, so one of the four states was dead while the run-gap floor went on
 certifying windows nobody could evaluate. Conditionally, an item that stops
 being blocked is watched again with no edit.
+
+Both halves are needed, and each without the other has shipped here. Observed
+without declared suppressed on `evidence["review"]`, which is written for every
+observable issue: an item saying nothing about review was excused by
+`unreviewed-head` — what an open PR nobody has reviewed reports, including one
+nobody ever will — while an item declaring that value was refused. Declared
+without observed set the flag on every waiting item and killed the state. So
+the validator refuses a window whose every declared value on an axis is a
+waiting block, naming both remedies: widen the declaration — a PR that becomes
+mergeable and is then left alone is exactly the silence worth hearing about —
+or write `max_silence: none` and let the note say why a person is needed. Both
+live rows take the second, which is what their notes already said in words.
 
 It is still a floor rather than the truth:
 GitHub delays scheduled runs and drops them, and a certified window can still
