@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-12T00:08:03Z",
+  "generated_at": "2026-09-12T00:16:05Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -257,7 +257,7 @@
         ],
         "review": "clean",
         "last_activity": "2026-09-11T17:18:03Z",
-        "merge": "blocked-conversations:14"
+        "merge": "blocked-behind-base"
       },
       "note": "Approved on the current head, every check green, blocked on unresolved review conversations. Also carries steward:escalated, which is terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
     },

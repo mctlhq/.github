@@ -493,16 +493,25 @@ REVIEW_VALUES = {"clean", "blocking-findings", "none", "unreviewed-head", "unkno
 MERGE_VALUES = {"ready", "draft", "conflicted", "none", "blocked-review",
                 "blocked-review-required", "blocked-checks", "blocked-behind-base",
                 "blocked-conversations", "blocked-unresolved-check"}
-# Keys a probe may omit. Everything else in PROBE_KEYS is required, so adding
-# an optional one to those sets without listing it here makes every existing
-# probe of that kind fail validation — exit 2, four times a day, over a
-# question those probes never asked.
-OPTIONAL_PROBE_KEYS = {"id", "when_absent"}
+# Keys a probe may omit. `id` everywhere; everything else per kind, because a
+# global set is subtracted from the unknown-key check too — which let
+# `when_absent` validate clean on a kind that never reads it, the exact case
+# that check was added to refuse.
+#
+# Adding an optional key to PROBE_KEYS without listing it here makes every
+# existing probe of that kind fail validation: exit 2, four times a day, over
+# a question those probes never asked.
+OPTIONAL_PROBE_KEYS = {"id"}
+OPTIONAL_PER_KIND = {
+    "file_line_match_count": {"when_absent"},
+    "dir_file_match_count": set(),
+    "dir_file_yaml_value_count": set(),
+}
 WHEN_ABSENT_VALUES = {"zero"}
 
 PROBE_KEYS = {
     "file_line_match_count": {"id", "kind", "repo", "path", "pattern", "expect",
-                              "when_absent"},
+                              "when_absent"},  # when_absent optional, see above
     "dir_file_match_count": {"id", "kind", "repo", "path", "file_pattern",
                              "content_pattern", "expect"},
     "dir_file_yaml_value_count": {"id", "kind", "repo", "path", "file_pattern",
@@ -571,11 +580,12 @@ def validate_state(state: dict) -> list[str]:
             if kind not in PROBE_KEYS:
                 problems.append(f"{where}: probe {pid} has unknown kind {kind!r}")
                 continue
-            missing = PROBE_KEYS[kind] - set(probe) - OPTIONAL_PROBE_KEYS
+            optional = OPTIONAL_PROBE_KEYS | OPTIONAL_PER_KIND.get(kind, set())
+            missing = PROBE_KEYS[kind] - set(probe) - optional
             if missing:
                 problems.append(
                     f"{where}: probe {pid} is missing {', '.join(sorted(missing))}")
-            extra = set(probe) - PROBE_KEYS[kind] - OPTIONAL_PROBE_KEYS
+            extra = set(probe) - PROBE_KEYS[kind] - optional
             if extra:
                 # Refused for the same reason an unknown key under `expected:`
                 # is: it reads like an assertion and is evaluated by nothing.
@@ -1606,6 +1616,14 @@ def selftest() -> int:
                                  "expect": "== 0", "when_absent": 0}]}]})
     check(any("when_absent" in x for x in problems),
           f"an unrecognised when_absent passed validation: {problems}")
+    # And on a kind that never reads it, the key itself is the defect.
+    problems = validate_state({"items": [
+        {"id": "wk", "probes": [{"id": "p", "kind": "dir_file_match_count",
+                                 "repo": "o/r", "path": "d",
+                                 "file_pattern": "x", "content_pattern": "y",
+                                 "expect": "== 0", "when_absent": "zero"}]}]})
+    check(any("when_absent" in x and "does not use" in x for x in problems),
+          f"when_absent validated clean on a kind that ignores it: {problems}")
     # And an omitted when_absent is not a missing required key.
     check(validate_state({"items": [
         {"id": "ok", "probes": [{"id": "p", "kind": "file_line_match_count",

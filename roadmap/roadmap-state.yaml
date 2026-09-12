@@ -269,11 +269,12 @@ items:
       issue: open
       implementation: active
       review: clean
-      # Not `ready`: approved and green, and still unmergeable. mctl-telegram's
-      # main requires review conversations to be resolved, and fourteen are
-      # open. Declared so the page states the reason rather than showing an
-      # approved PR that looks mergeable and is not.
-      merge: blocked-conversations
+      # Not `ready`: approved and green, and still unmergeable. Two answers
+      # are legitimate here and it alternates between them — mctl-telegram's
+      # main requires review conversations to be resolved (fourteen are open)
+      # AND is `strict`, so the branch falls behind every time main moves.
+      # Declaring one would report drift every time the other was true.
+      merge: [blocked-conversations, blocked-behind-base]
     max_silence: 12h
     note: >-
       Approved on the current head, every check green, blocked on unresolved
