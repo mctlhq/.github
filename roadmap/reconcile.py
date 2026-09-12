@@ -74,6 +74,18 @@ class ObservationFailure(Exception):
     """GitHub could not be observed. Never a value, never a zero."""
 
 
+class NotFound(ObservationFailure):
+    """The resource is absent — HTTP 404, and nothing else.
+
+    A distinct type because `when_absent: zero` may only act on an absence
+    that was actually observed. Catching every ObservationFailure there would
+    turn a rate limit, a 5xx or a missing `gh` into the number zero, which is
+    the rule this whole file exists to hold. GitHub also answers 404 for a
+    resource a token may not see, so the caller pairs this with a read of the
+    surrounding directory before believing it.
+    """
+
+
 # ── duration parsing ──────────────────────────────────────────────────────
 
 _DURATION = re.compile(r"^\s*(\d+)\s*([smhd])\s*$")
@@ -140,9 +152,12 @@ class GitHub:
         except subprocess.TimeoutExpired as exc:
             raise ObservationFailure(f"gh timed out: {' '.join(args)}") from exc
         if proc.returncode != 0:
-            detail = (proc.stderr or proc.stdout or "").strip().splitlines()
-            raise ObservationFailure(
-                f"gh exited {proc.returncode}: {detail[0] if detail else 'no output'}")
+            text = (proc.stderr or proc.stdout or "").strip()
+            detail = text.splitlines()
+            message = f"gh exited {proc.returncode}: {detail[0] if detail else 'no output'}"
+            if "HTTP 404" in text or "Not Found" in text:
+                raise NotFound(message)
+            raise ObservationFailure(message)
         return proc.stdout
 
     def graphql(self, query: str, **variables: Any) -> dict:
@@ -189,7 +204,10 @@ class GitHub:
         if data.get("truncated"):
             raise ObservationFailure(
                 f"{repo}: git tree was truncated, so a count over it would be a guess")
-        prefix = path.rstrip("/") + "/"
+        # An empty path is the repository root, not the prefix "/" — which
+        # matches nothing, and would have made a sibling check at the root
+        # silently see an empty directory.
+        prefix = (path.rstrip("/") + "/") if path.strip("/") else ""
         return [e["path"] for e in tree
                 if e.get("type") == "blob" and e.get("path", "").startswith(prefix)]
 
@@ -344,16 +362,32 @@ def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
     if kind == "file_line_match_count":
         try:
             text = gh.file_text(probe["repo"], probe["path"])
-        except ObservationFailure:
+        except NotFound:
             # `when_absent: zero` is a human writing down what the file's
             # absence means, which is not the same as the code guessing. The
             # zone-roots list is the case: when every root is migrated the
             # natural thing to do is delete it, and without this the item's
             # success state is unreachable — OBSERVATION_FAILED forever.
-            if probe.get("when_absent") == "zero":
-                return 0, (f"{probe['repo']}/{probe['path']} does not exist, "
-                           f"declared as zero")  # count is 0 by declaration
-            raise
+            #
+            # Only NotFound, and only after proving we could see the directory
+            # around it. Catching every ObservationFailure here would have let
+            # one rate-limited pass turn a standing DRIFT into ALIGNED: the row
+            # leaves the page, the tracking issue is closed as "true again",
+            # and the next run announces the drift back — two notifications,
+            # both wrong, about a migration nobody performed. GitHub also
+            # answers 404 for a resource a token may not see, which the
+            # directory read distinguishes.
+            if probe.get("when_absent") != "zero":
+                raise
+            parent = probe["path"].rsplit("/", 1)[0] if "/" in probe["path"] else ""
+            siblings = gh.tree_files(probe["repo"], parent)
+            if any(f == probe["path"] for f in siblings):
+                raise ObservationFailure(
+                    f"{probe['repo']}/{probe['path']} is in the tree but could "
+                    f"not be read — that is not an absence")
+            return 0, (f"{probe['repo']}/{probe['path']} is absent from a "
+                       f"directory of {len(siblings)} readable file(s), "
+                       f"declared as zero")
         pattern = re.compile(probe["pattern"], re.M)
         count = sum(1 for line in text.splitlines() if pattern.search(line))
         return count, (f"{count} line(s) in {probe['repo']}/{probe['path']} match "
@@ -401,13 +435,21 @@ def run_probe(gh: GitHub, probe: dict) -> tuple[int, str]:
             except yaml.YAMLError as exc:
                 raise ObservationFailure(f"{probe['repo']}/{path}: {exc}") from exc
             try:
-                if _yaml_lookup(document, probe["key"]) == wanted:
+                value = _yaml_lookup(document, probe["key"])
+                # Type-strict. `enabled: 1` is not `enabled: true`, for the
+                # same reason the fixture one line up pins that "true" is not
+                # either: this probe reads a value, not a spelling.
+                if type(value) is type(wanted) and value == wanted:
                     count += 1
             except KeyError:
                 continue  # the key is absent, which is not the value asked for
+        # Rendered the way the files spell it, not the way Python does: the
+        # 27 files examined all write `true`, and a page saying `True` invites
+        # the reader to go looking for a spelling that is not there.
+        shown = yaml.safe_dump(wanted, default_flow_style=True).strip().rstrip("...").strip()
         return count, (f"{count} of {len(candidates)} file(s) under "
                        f"{probe['repo']}/{probe['path']} set "
-                       f"{probe['key']} to {wanted!r}")
+                       f"{probe['key']} to {shown}")
     raise ObservationFailure(f"unknown probe kind {kind!r}")
 
 
@@ -420,6 +462,13 @@ REVIEW_VALUES = {"clean", "blocking-findings", "none", "unreviewed-head", "unkno
 MERGE_VALUES = {"ready", "draft", "conflicted", "none", "blocked-review",
                 "blocked-review-required", "blocked-checks", "blocked-behind-base",
                 "blocked-conversations", "blocked-unresolved-check"}
+# Keys a probe may omit. Everything else in PROBE_KEYS is required, so adding
+# an optional one to those sets without listing it here makes every existing
+# probe of that kind fail validation — exit 2, four times a day, over a
+# question those probes never asked.
+OPTIONAL_PROBE_KEYS = {"id", "when_absent"}
+WHEN_ABSENT_VALUES = {"zero"}
+
 PROBE_KEYS = {
     "file_line_match_count": {"id", "kind", "repo", "path", "pattern", "expect",
                               "when_absent"},
@@ -491,10 +540,16 @@ def validate_state(state: dict) -> list[str]:
             if kind not in PROBE_KEYS:
                 problems.append(f"{where}: probe {pid} has unknown kind {kind!r}")
                 continue
-            missing = PROBE_KEYS[kind] - set(probe) - {"id"}
+            missing = PROBE_KEYS[kind] - set(probe) - OPTIONAL_PROBE_KEYS
             if missing:
                 problems.append(
                     f"{where}: probe {pid} is missing {', '.join(sorted(missing))}")
+            if probe.get("when_absent") is not None and (
+                    probe["when_absent"] not in WHEN_ABSENT_VALUES):
+                problems.append(
+                    f"{where}: probe {pid}: when_absent {probe['when_absent']!r} "
+                    f"is not one of {', '.join(sorted(WHEN_ABSENT_VALUES))} — it "
+                    f"would read as armed and mean nothing")
             if "expect" in probe:
                 try:
                     compare(0, probe["expect"])
@@ -1008,7 +1063,8 @@ def selftest() -> int:
                 "nodes": nodes}}}}
 
     class StubGH(GitHub):
-        def __init__(self, issue=None, files=None, fail=None):
+        def __init__(self, issue=None, files=None, fail=None, file_error=None):
+            self._file_error = file_error
             super().__init__(runner=lambda args: (_ for _ in ()).throw(
                 ObservationFailure("stub should not shell out")))
             self._issue, self._files, self._fail = issue, files or {}, fail
@@ -1022,14 +1078,17 @@ def selftest() -> int:
             # Deliberately not gated on self._fail: a stub whose GraphQL is
             # down can still have readable files, which is the case the
             # probe-after-issue-failure fixture needs.
+            if self._file_error:
+                raise self._file_error
             if path not in self._files:
-                raise ObservationFailure(f"{path} not found")
+                raise NotFound(f"{path} not found")
             return self._files[path]
 
         def tree_files(self, repo, path):
             if self._fail:
                 raise ObservationFailure(self._fail)
-            return [p for p in self._files if p.startswith(path.rstrip('/') + '/')]
+            prefix = (path.rstrip("/") + "/") if path.strip("/") else ""
+            return [p for p in self._files if p.startswith(prefix)]
 
     item_active = {"id": "x", "title": "X", "issue": "o/r#1", "phase": "now",
                    "expected": {"issue": "open", "implementation": "active",
@@ -1468,6 +1527,43 @@ def selftest() -> int:
                                                  when_absent=None)]), {}, now)
     check(r.state == OBSERVATION_FAILED,
           f"an undeclared absence must still refuse: {r.state}")
+
+    # The one that matters: when_absent must act on an OBSERVED absence, not
+    # on any failure. A rate limit turning a standing DRIFT into ALIGNED would
+    # close the tracking issue as "true again" and announce the drift back on
+    # the next run — two notifications, both wrong.
+    r = reconcile_item(
+        StubGH(None, files={}, file_error=ObservationFailure("gh exited 1: HTTP 429")),
+        absent, {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"a rate limit was declared as zero: {r.state} {r.reasons}")
+    check(any("429" in x for x in r.reasons), f"the cause was lost: {r.reasons}")
+
+    # And a 404 on a file the tree says is there is not an absence either.
+    r = reconcile_item(StubGH(None, files={"gone.txt": ""},
+                              file_error=NotFound("gone.txt not found")),
+                       absent, {}, now)
+    check(r.state == OBSERVATION_FAILED,
+          f"a 404 on a file present in the tree must not count as absent: {r.state}")
+
+    # Type-strict equality: 1 is not true.
+    r = reconcile_item(StubGH(None, files={"svc/a/values.yaml": "otel:\n  enabled: 1\n"}),
+                       item_yaml, {}, now)
+    check(r.state == DRIFT, f"enabled: 1 satisfied equals: true: {r.state}")
+
+    # validate_state refuses a when_absent value that is not in the vocabulary.
+    problems = validate_state({"items": [
+        {"id": "wa", "probes": [{"id": "p", "kind": "file_line_match_count",
+                                 "repo": "o/r", "path": "p", "pattern": "x",
+                                 "expect": "== 0", "when_absent": 0}]}]})
+    check(any("when_absent" in x for x in problems),
+          f"an unrecognised when_absent passed validation: {problems}")
+    # And an omitted when_absent is not a missing required key.
+    check(validate_state({"items": [
+        {"id": "ok", "probes": [{"id": "p", "kind": "file_line_match_count",
+                                 "repo": "o/r", "path": "p", "pattern": "x",
+                                 "expect": "== 0"}]}]}) == [],
+        "omitting when_absent was treated as a missing required key")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

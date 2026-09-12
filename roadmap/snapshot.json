@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T23:53:56Z",
+  "generated_at": "2026-09-12T00:01:15Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -164,7 +164,7 @@
       "epic": "mctlhq/.github#55",
       "issue": null,
       "reasons": [
-        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to True, expected >= 1"
+        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to true, expected >= 1"
       ],
       "evidence": {
         "probes": {
