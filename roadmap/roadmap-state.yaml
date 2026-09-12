@@ -249,7 +249,6 @@ items:
     also:
       - mctlhq/mctl-telegram#616
       - mctlhq/mctl-telegram#617
-      - mctlhq/mctl-gitops#1181
     phase: now
     expected:
       issue: open
@@ -257,7 +256,10 @@ items:
     max_silence: 24h
     note: >-
       Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step
-      is measurement of what exists, not more servers.
+      is measurement of what exists, not more servers. mctl-gitops#1181
+      (Gateway routing on the portal) closed 2026-09-11 22:07Z and is dropped
+      from the set — the reconciler found that the moment `also:` stopped
+      being a key nobody read.
 
   # ── Client lifecycle ──────────────────────────────────────────────────
   - id: client-lifecycle.identity-attributes

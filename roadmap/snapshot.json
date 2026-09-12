@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-12T00:56:02Z",
+  "generated_at": "2026-09-12T01:07:08Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -15,6 +15,10 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-api#283",
+      "unlocks": [
+        "investigator.declarative-activation",
+        "agent-platform.capability-discovery"
+      ],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -35,11 +39,12 @@
       "state": "DRIFT",
       "epic": "mctlhq/.github#18",
       "issue": null,
+      "unlocks": [],
       "reasons": [
         "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/, expected == 1"
       ],
       "reason_keys": [
-        "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/, expected == 1"
+        "probe resolver-mode-in-gitops does not satisfy == 1"
       ],
       "evidence": {
         "probes": {
@@ -55,6 +60,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-agents#242",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -72,6 +78,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-agents#196",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -89,13 +96,18 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-agents#197",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "last_activity": "2026-08-29T06:28:13Z"
+        "last_activity": "2026-08-29T06:28:13Z",
+        "also": {
+          "mctlhq/mctl-agents#198": "open",
+          "mctlhq/mctl-agents#199": "open"
+        }
       },
       "note": "#198 is cited by .github#42 as the approval primitive but is not implemented; the durable wait that does exist is #150 / PR #212, and WAITING_FOR_APPROVAL appears nowhere in code."
     },
@@ -106,6 +118,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#20",
       "issue": "mctlhq/mctl-agents#264",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -123,6 +136,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#21",
       "issue": "mctlhq/mctl-api#227",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -140,6 +154,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#42",
       "issue": "mctlhq/mctl-agents#333",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -157,6 +172,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#55",
       "issue": "mctlhq/mctl-gitops#902",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -174,11 +190,12 @@
       "state": "DRIFT",
       "epic": "mctlhq/.github#55",
       "issue": null,
+      "unlocks": [],
       "reasons": [
         "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to true, expected >= 1"
       ],
       "reason_keys": [
-        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to true, expected >= 1"
+        "probe services-opted-into-otel does not satisfy >= 1"
       ],
       "evidence": {
         "probes": {
@@ -194,13 +211,17 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#55",
       "issue": "mctlhq/mctl-agents#195",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "last_activity": "2026-08-29T06:28:10Z"
+        "last_activity": "2026-08-29T06:28:10Z",
+        "also": {
+          "mctlhq/mctl-agent#38": "open"
+        }
       },
       "note": null
     },
@@ -211,6 +232,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#47",
       "issue": "mctlhq/mctl-gitops#1111",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -228,11 +250,12 @@
       "state": "DRIFT",
       "epic": "mctlhq/.github#47",
       "issue": "mctlhq/mctl-gitops#1178",
+      "unlocks": [],
       "reasons": [
         "probe zone-roots-still-local: 3 line(s) in mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots match /^(?!\\s*#)\\s*(?:\\./)?(?:infrastructure/cloudflare/)?zones//, expected == 0"
       ],
       "reason_keys": [
-        "probe zone-roots-still-local: 3 line(s) in mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots match /^(?!\\s*#)\\s*(?:\\./)?(?:infrastructure/cloudflare/)?zones//, expected == 0"
+        "probe zone-roots-still-local does not satisfy == 0"
       ],
       "evidence": {
         "issue_state": "open",
@@ -252,15 +275,20 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#35",
       "issue": "mctlhq/mctl-telegram#615",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
         "review": "none",
-        "last_activity": "2026-09-11T00:23:46Z"
+        "last_activity": "2026-09-11T00:23:46Z",
+        "also": {
+          "mctlhq/mctl-telegram#616": "open",
+          "mctlhq/mctl-telegram#617": "open"
+        }
       },
-      "note": "Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step is measurement of what exists, not more servers."
+      "note": "Phase 1 is live with three upstreams behind mcp.mctl.ai. The next step is measurement of what exists, not more servers. mctl-gitops#1181 (Gateway routing on the portal) closed 2026-09-11 22:07Z and is dropped from the set \u2014 the reconciler found that the moment `also:` stopped being a key nobody read."
     },
     {
       "id": "client-lifecycle.identity-attributes",
@@ -269,6 +297,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#22",
       "issue": "mctlhq/mctl-telegram#620",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -289,6 +318,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#22",
       "issue": "mctlhq/mctl-telegram#400",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
@@ -306,13 +336,14 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#38",
       "issue": "mctlhq/mctl-agents#292",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {
         "issue_state": "closed",
         "open_prs": [],
         "review": "none",
-        "last_activity": "2026-09-11T17:02:10Z"
+        "last_activity": "2026-09-12T00:57:18Z"
       },
       "note": null
     },
@@ -323,6 +354,7 @@
       "state": "ALIGNED",
       "epic": "mctlhq/.github#34",
       "issue": "mctlhq/.github#34",
+      "unlocks": [],
       "reasons": [],
       "reason_keys": [],
       "evidence": {

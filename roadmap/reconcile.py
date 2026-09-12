@@ -714,6 +714,7 @@ class ItemResult:
     state: str
     epic: str | None = None
     issue: str | None = None
+    unlocks: list[str] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
     # What `reportable_state` compares. Identical to `reasons` except where a
     # reason carries a figure that moves on its own: the text a person reads
@@ -929,6 +930,7 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         state=ALIGNED,
         epic=item.get("epic"),
         issue=item.get("issue"),
+        unlocks=list(item.get("unlocks") or []),
         note=item.get("note"),
     )
     expected = item.get("expected") or {}
@@ -949,9 +951,10 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # loop, so an item declaring both an issue and a probe lost its
             # probes to a GitHub hiccup -- or, since validate_state does not
             # check that the reference resolves, to a typo.
-            blind.append(f"could not observe {item['issue']}: {exc}")
+            blind.append((f"could not observe {item['issue']}: {exc}",
+                          f"could not observe {item['issue']}"))
         except ValueError as exc:
-            blind.append(str(exc))
+            blind.append((str(exc), str(exc)))
     if issue_obs:
         result.evidence["issue_state"] = issue_obs.state.lower()
         result.evidence["open_prs"] = [p["number"] for p in issue_obs.open_prs]
@@ -963,23 +966,61 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # and could not tell.
             result.evidence["review"] = "unobserved"
             if "review" in expected:
-                blind.append(f"could not observe review state: {exc}")
+                blind.append((f"could not observe review state: {exc}",
+                              "could not observe review state"))
         result.evidence["last_activity"] = issue_obs.last_activity
+
+    # `also:` issues are observed on the two axes that are about work rather
+    # than about a particular PR. They were accepted by the validator and read
+    # by nobody: enterprise-mcp.edge-properties declares `implementation: none`
+    # about one issue and lists three more, so a PR opening on any of those
+    # three left the item rendering OK. `review:` and `merge:` stay about the
+    # named issue's own PRs, which is what those axes mean.
+    also_obs: list[IssueObservation] = []
+    also_refs: list[str] = []
+    for ref in item.get("also") or []:
+        try:
+            also_obs.append(observe_issue(gh, ref))
+            also_refs.append(ref)
+        except ObservationFailure as exc:
+            blind.append((f"could not observe {ref}: {exc}",
+                          f"could not observe {ref}"))
+        except ValueError as exc:
+            blind.append((str(exc), str(exc)))
+    if also_obs:
+        # Keyed by the reference as declared, not derived from a URL: the
+        # declaration is the thing a reader will match it against.
+        result.evidence["also"] = {
+            ref: o.state.lower() for ref, o in zip(also_refs, also_obs)}
 
     want_issue = expected.get("issue")
     if want_issue and issue_obs:
+        divergent = [o for o in also_obs
+                     if o.state.lower() != str(want_issue).lower()]
+        if divergent and issue_obs.state.lower() == str(want_issue).lower():
+            names = ", ".join(
+                ref for ref, o in zip(also_refs, also_obs) if o in divergent)
+            mismatches.append((
+                f"issue expected {want_issue} across the set, actual "
+                f"{divergent[0].state.lower()} on {names}",
+                f"issue expected {want_issue} across the set"))
         if issue_obs.state.lower() != str(want_issue).lower():
             mismatches.append(
-                f"issue expected {want_issue}, actual {issue_obs.state.lower()}")
+                (f"issue expected {want_issue}, actual {issue_obs.state.lower()}",
+                 f"issue expected {want_issue}, actual {issue_obs.state.lower()}"))
 
     want_impl = expected.get("implementation")
     if want_impl and issue_obs:
-        actual_impl = "active" if issue_obs.open_prs else "none"
+        every = [issue_obs] + also_obs
+        actual_impl = "active" if any(o.open_prs for o in every) else "none"
         if actual_impl != want_impl:
-            detail = (f"PR {', '.join('#' + str(p['number']) for p in issue_obs.open_prs)}"
-                      if issue_obs.open_prs else "no open PR")
+            open_everywhere = [p for o in every for p in o.open_prs]
+            detail = (f"PR {', '.join('#' + str(p['number']) for p in open_everywhere)}"
+                      if open_everywhere else "no open PR")
             mismatches.append(
-                f"implementation expected {want_impl}, actual {actual_impl} ({detail})")
+                (f"implementation expected {want_impl}, actual {actual_impl} ({detail})",
+                 # The PR numbers move as work proceeds; the claim does not.
+                 f"implementation expected {want_impl}, actual {actual_impl}"))
 
     want_review = expected.get("review")
     if want_review and issue_obs:
@@ -990,14 +1031,16 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         # it is the absence of one wearing a finding's clothes.
         if actual_review != "unobserved" and not _satisfies(actual_review, want_review):
             mismatches.append(
-                f"review expected {_render_want(want_review)}, actual {actual_review}")
+                (f"review expected {_render_want(want_review)}, actual {actual_review}",
+                 f"review expected {_render_want(want_review)}, actual {actual_review}"))
 
     want_merge = expected.get("merge")
     if want_merge and issue_obs:
         try:
             actual_merge = _merge_summary(issue_obs.open_prs)
         except ObservationFailure as exc:
-            blind.append(f"could not observe mergeability: {exc}")
+            blind.append((f"could not observe mergeability: {exc}",
+                          "could not observe mergeability"))
             actual_merge = None
             # Recorded like the review axis, for the same reason: an absent
             # key reads as "not applicable" to anyone looking at the snapshot,
@@ -1013,16 +1056,21 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # is the one match that must never go green.
             if not _satisfies(actual_merge, want_merge):
                 mismatches.append(
-                    f"merge expected {_render_want(want_merge)}, actual {actual_merge}")
+                    (f"merge expected {_render_want(want_merge)}, actual {actual_merge}",
+                     # blocked-conversations:14 and :9 are the same situation.
+                     f"merge expected {_render_want(want_merge)}, "
+                     f"actual {actual_merge.split(chr(58))[0]}"))
 
     for probe in item.get("probes") or []:
         try:
             count, description = run_probe(gh, probe)
         except ObservationFailure as exc:
-            blind.append(f"probe {probe.get('id', '?')}: {exc}")
+            blind.append((f"probe {probe.get('id', '?')}: {exc}",
+                          f"probe {probe.get('id', '?')} could not be read"))
             continue
         except (KeyError, re.error) as exc:
-            blind.append(f"probe {probe.get('id', '?')} is malformed: {exc}")
+            blind.append((f"probe {probe.get('id', '?')} is malformed: {exc}",
+                          f"probe {probe.get('id', '?')} is malformed"))
             continue
         result.evidence.setdefault("probes", {})[probe.get("id", "?")] = count
         try:
@@ -1032,15 +1080,22 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # out of reconcile(), exit 1, and be published by the workflow as
             # an ordinary "not aligned" result -- a crash dressed as a finding.
             blind.append(
-                f"probe {probe.get('id', '?')} has no usable expectation: {exc}")
+                (f"probe {probe.get('id', '?')} has no usable expectation: {exc}",
+                 f"probe {probe.get('id', '?')} has no usable expectation"))
             continue
         if not satisfied:
             # The description carries the count. It used to be appended here
             # as well, so the one sentence that is a DRIFT row's entire
             # payload said the number twice.
             mismatches.append(
-                f"probe {probe.get('id', '?')}: {description}, "
-                f"expected {probe['expect']}")
+                (f"probe {probe.get('id', '?')}: {description}, "
+                 f"expected {probe['expect']}",
+                 # The description carries counts — the answer, and for the
+                 # directory kinds how many files were examined. The second
+                 # moves when somebody adds a service in another repository,
+                 # and announcing that would say nothing about the gap.
+                 f"probe {probe.get('id', '?')} does not satisfy "
+                 f"{probe['expect']}"))
 
     # One decision, made once. A blind spot outranks a divergence in the
     # state -- reporting DRIFT on an axis nobody could read would be inventing
@@ -1052,16 +1107,14 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     # move".
     if blind:
         result.state = OBSERVATION_FAILED
-        result.reasons.extend(blind)
-        result.reasons.extend(mismatches)
-        result.reason_keys.extend(blind)
-        result.reason_keys.extend(mismatches)
+        result.reasons.extend(text for text, _ in blind + mismatches)
+        result.reason_keys.extend(key for _, key in blind + mismatches)
         return result
 
     if mismatches:
         result.state = DRIFT
-        result.reasons.extend(mismatches)
-        result.reason_keys.extend(mismatches)
+        result.reasons.extend(text for text, _ in mismatches)
+        result.reason_keys.extend(key for _, key in mismatches)
         return result
 
     # Silence is only meaningful once the state itself agrees: an item in
@@ -1172,8 +1225,12 @@ def render_markdown(snapshot: dict) -> str:
             # tracking issue links to. The keys are the same claims without
             # the moving parts; the figure belongs in the channels that are
             # rewritten every run, which is what digest() feeds.
-            for reason in item.get("reason_keys") or item.get("reasons") or []:
+            keys = (item["reason_keys"] if "reason_keys" in item
+                    else item.get("reasons") or [])
+            for reason in keys:
                 out.append(f"- {reason}")
+            if item.get("unlocks"):
+                out.append(f"Unlocks {', '.join(item['unlocks'])}.")
             if item.get("note"):
                 out += ["", item["note"].strip()]
             out.append("")
@@ -1243,7 +1300,7 @@ def selftest() -> int:
                    mentions=(), head_seen=True, merge_status="CLEAN",
                    unresolved=0, mergeable="MERGEABLE", outdated=0,
                    timeline_truncated=False, threads_truncated=False,
-                   reviews_truncated=False):
+                   reviews_truncated=False, number=1):
         def node(n, d, closes):
             threads = ([{"isResolved": False, "isOutdated": False}] * unresolved
                        + [{"isResolved": False, "isOutdated": True}] * outdated)
@@ -1262,13 +1319,13 @@ def selftest() -> int:
                 "closingIssuesReferences": {
                     "pageInfo": {"hasNextPage": False},
                     "nodes": (
-                        [{"number": 1, "repository": {"nameWithOwner": "o/r"}}]
+                        [{"number": number, "repository": {"nameWithOwner": "o/r"}}]
                         if closes else
                         [{"number": 7, "repository": {"nameWithOwner": "o/other"}}])}}}
         nodes = [node(n, d, True) for n, d in prs]
         nodes += [node(n, "NONE", False) for n in mentions]
         return {"repository": {"issue": {
-            "number": 1, "title": "t", "url": "u", "state": state,
+            "number": number, "title": "t", "url": "u", "state": state,
             "updatedAt": updated,
             "timelineItems": {
                 "pageInfo": {"hasPreviousPage": timeline_truncated},
@@ -1959,6 +2016,70 @@ def selftest() -> int:
     check("quiet beyond" in page, f"the page lost the stable claim:\n{page}")
     text = digest({"items": [silent]})
     check("37h" in text, f"the digest lost the figure people need: {text}")
+
+    # A key must not carry a figure that moves on its own. "0 of 27 file(s)"
+    # changes when somebody adds a service in another repository, which would
+    # announce that nothing about the gap had changed.
+    probe_item = {"id": "pk", "title": "PK", "phase": "now", "expected": {},
+                  "probes": [{"id": "z", "kind": "dir_file_match_count",
+                              "repo": "o/r", "path": "svc",
+                              "file_pattern": r"values\.yaml$",
+                              "content_pattern": "^otel:", "expect": ">= 1"}]}
+    a = reconcile_item(StubGH(None, files={"svc/one/values.yaml": "x:\n"}),
+                       probe_item, {}, now)
+    b = reconcile_item(StubGH(None, files={"svc/one/values.yaml": "x:\n",
+                                           "svc/two/values.yaml": "x:\n"}),
+                       probe_item, {}, now)
+    check(a.state == DRIFT and b.state == DRIFT, "expected drift twice")
+    check(a.reasons != b.reasons,
+          f"the examined count is missing from the text: {a.reasons}")
+    check(a.reason_keys == b.reason_keys,
+          f"adding a service elsewhere changes the compared identity:\n"
+          f"  {a.reason_keys}\n  {b.reason_keys}")
+
+    # Every result carries one key per reason, or the page and the comparison
+    # drift apart silently.
+    for res in (a, b, r1, r2):
+        check(len(res.reasons) == len(res.reason_keys),
+              f"{res.id}: {len(res.reasons)} reasons, {len(res.reason_keys)} keys")
+
+    # `also:` issues are observed, not merely accepted. A PR opening on one of
+    # them is implementation of the item, which is the whole point of listing
+    # them.
+    class MultiGH(StubGH):
+        def __init__(self, by_ref):
+            super().__init__(None, files={})
+            self._by_ref = by_ref
+
+        def graphql(self, query, **variables):
+            ref = f"{variables['owner']}/{variables['repo']}#{variables['number']}"
+            return self._by_ref[ref]
+
+    quiet = fake_issue()
+    busy = fake_issue(prs=[(9, "CHANGES_REQUESTED")], number=2)
+    also_item = {"id": "al", "title": "AL", "phase": "now", "issue": "o/r#1",
+                 "also": ["o/r#2"], "expected": {"implementation": "none"}}
+    gh_multi = MultiGH({"o/r#1": quiet, "o/r#2": busy})
+    r = reconcile_item(gh_multi, also_item, {}, now)
+    check(r.state == DRIFT and any("implementation" in x for x in r.reasons),
+          f"a PR on an also: issue left the item aligned: {r.state} {r.reasons}")
+    check("also" in r.evidence, f"the also: issues were not recorded: {r.evidence}")
+    # And with nothing open anywhere, it aligns.
+    r = reconcile_item(MultiGH({"o/r#1": quiet, "o/r#2": fake_issue(number=2)}),
+                       also_item, {}, now)
+    check(r.state == ALIGNED, f"an idle set should align: {r.state} {r.reasons}")
+
+    # unlocks: is rendered rather than accepted and ignored.
+    page = render_markdown({"generated_at": "t", "overall": ALIGNED,
+                            "counts": {OBSERVATION_FAILED: 0, DRIFT: 0,
+                                       UNEXPECTED_SILENCE: 0, ALIGNED: 1},
+                            "items": [{"id": "u", "title": "U", "phase": "now",
+                                       "state": ALIGNED, "issue": None,
+                                       "epic": None, "note": None,
+                                       "reasons": [], "reason_keys": [],
+                                       "evidence": {}, "unlocks": ["a.b", "c.d"]}]})
+    check("a.b" in page and "c.d" in page,
+          f"unlocks: is accepted by the validator and rendered by nobody:\n{page}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
