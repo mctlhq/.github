@@ -506,6 +506,22 @@ REVIEW_VALUES = {"clean", "blocking-findings", "none", "unreviewed-head", "unkno
 MERGE_VALUES = {"ready", "draft", "conflicted", "none", "blocked-review",
                 "blocked-review-required", "blocked-checks", "blocked-behind-base",
                 "blocked-conversations", "blocked-unresolved-check"}
+# The blocks whose answer to "why has nothing moved" is already on the PR:
+# each names the person it is waiting for, so an item reporting one of them is
+# explained rather than stalled and the silence check stands down. `conflicted`
+# is deliberately absent — a conflicted branch can sit for weeks with nobody
+# owning it, which is exactly the case an item declares `conflicted` in order
+# to hear about. Module-level and pinned against the vocabularies below by the
+# selftest, because a hand-kept subset with nothing joining it to its superset
+# is how `blocked-behind-base` went missing from one of the two copies.
+WAITING_MERGE = {"blocked-review", "blocked-review-required",
+                 "blocked-conversations", "blocked-behind-base"}
+WAITING_REVIEW = {"blocking-findings", "unreviewed-head"}
+# A silence window may be declared absent rather than omitted: omitting it on
+# an active item is refused (the state would be unreachable and nobody would
+# know), so `none` is how an item says out loud that its silence needs a
+# person rather than a clock.
+SILENCE_OFF = "none"
 # Keys a probe may omit. `id` everywhere; everything else per kind, because a
 # global set is subtracted from the unknown-key check too — which let
 # `when_absent` validate clean on a kind that never reads it, the exact case
@@ -764,6 +780,40 @@ def validate_state(state: dict) -> list[str]:
                 f"{where}: declares implementation: active with no max_silence "
                 f"and no defaults.max_silence, so silence can never be reported "
                 f"for it")
+
+        # The same unreachability arrived at through the declaration instead
+        # of through the omission. Silence is only evaluated on an item whose
+        # axes already agree, so every value it can observe is one this item
+        # declared; if every declared value on either axis is a block that
+        # stands the check down, the window is decoration and the row reads as
+        # a plain OK forever. The remedy is a real choice, so the message
+        # names both halves: widen the declaration to a value that is not a
+        # block (a PR that becomes mergeable and is then left alone is
+        # precisely the silence worth hearing about), or say `max_silence:
+        # none` and let the note carry why a person is needed instead.
+        # `or {}` is not enough: a malformed `defaults:` scalar is its own
+        # finding, reported below, and this guard must not crash on the way
+        # there — an exception here would be exit 2 with no problem list at
+        # all, which reads as "the tool broke" rather than "your file is
+        # wrong".
+        item_defaults = state.get("defaults")
+        item_defaults = item_defaults if isinstance(item_defaults, dict) else {}
+        window = item.get("max_silence", item_defaults.get("max_silence"))
+        if (expected.get("implementation") == "active"
+                and window not in (None, SILENCE_OFF)):
+            for axis, waiting in (("merge", WAITING_MERGE),
+                                  ("review", WAITING_REVIEW)):
+                declared = expected.get(axis)
+                if declared is None:
+                    continue
+                values = declared if isinstance(declared, list) else [declared]
+                if values and all(v in waiting for v in values):
+                    problems.append(
+                        f"{where}: declares max_silence {window} but every "
+                        f"value it allows on {axis} ({', '.join(values)}) "
+                        f"stands the silence check down, so "
+                        f"UNEXPECTED_SILENCE is unreachable for it — widen "
+                        f"the declaration or say max_silence: none")
 
         issue_keys = {"issue", "implementation", "review", "merge"} & set(expected)
         if issue_keys and not item.get("issue"):
@@ -1331,6 +1381,8 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
     # Silence is only meaningful once the state itself agrees: an item in
     # DRIFT already has a reason to be looked at.
     silence_window = item.get("max_silence", defaults.get("max_silence"))
+    if silence_window == SILENCE_OFF:
+        silence_window = None
     if silence_window and issue_obs and expected.get("implementation") == "active":
         try:
             seconds = parse_duration(silence_window)
@@ -1352,23 +1404,12 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         # this tool's contract, dead, while the run-gap floor went on
         # certifying windows nobody could evaluate. Conditionally, an item
         # that stops being blocked is watched again without an edit.
-        # `blocked-behind-base` is here and `conflicted` is not, and the
-        # difference is who the block is waiting for. A branch behind a strict
-        # base is waiting for whoever updates it, exactly as unresolved
-        # conversations wait for whoever resolves them; the answer to "why has
-        # nothing moved" is on the PR, so reporting silence adds nothing.
-        # Conflicts are not: a conflicted branch can sit for weeks with nobody
-        # owning it, which is the case an item declares `conflicted` in order
-        # to hear about. Dropping it here cost the one row that declares
-        # `merge: [blocked-conversations, blocked-behind-base]` an
-        # ALIGNED → SILENT → ALIGNED flip every time #627's mergeability
-        # resolved to the second of its two declared values.
-        merge_now = result.evidence.get("merge") or ""
-        waiting = (merge_now in ("blocked-review", "blocked-review-required",
-                                 "blocked-behind-base")
-                   or merge_now.startswith("blocked-conversations")
-                   or result.evidence.get("review") in
-                   ("blocking-findings", "unreviewed-head"))
+        # Which blocks count as waiting, and why, is at WAITING_MERGE.
+        # `blocked-conversations` carries its count, so the head is what is
+        # compared: the vocabulary has one value, the evidence has fourteen.
+        merge_now = (result.evidence.get("merge") or "").split(":")[0]
+        waiting = (merge_now in WAITING_MERGE
+                   or result.evidence.get("review") in WAITING_REVIEW)
         if waiting:
             result.evidence["silence_accounted_for"] = (
                 f"waiting: review={result.evidence.get('review')}, "
@@ -2453,6 +2494,58 @@ def selftest() -> int:
     unchanged["generated_at"] = "2026-09-12T16:00:00Z"
     check("2026-09-10" in render_markdown(unchanged),
           "a run that changed nothing moved the date the page calls a change")
+
+    # The waiting sets are subsets of the vocabularies they are written in,
+    # pinned the way OPTIONAL_PER_KIND is pinned against PROBE_KEYS: a typo or
+    # a renamed merge state would otherwise leave a value in the suppression
+    # set that nothing can ever equal, and silence would come back on a row
+    # that is plainly blocked.
+    check(WAITING_MERGE <= MERGE_VALUES,
+          f"WAITING_MERGE names states no PR can report: "
+          f"{WAITING_MERGE - MERGE_VALUES}")
+    check(WAITING_REVIEW <= REVIEW_VALUES,
+          f"WAITING_REVIEW names states no review can report: "
+          f"{WAITING_REVIEW - REVIEW_VALUES}")
+    # `none` is also a legitimate observed value on both axes — "no open PRs",
+    # "nothing reviewed" — and it is not in either waiting set, so a row
+    # declaring it is watched. The sentinel lives under a different key and
+    # the two never meet; this fixture is here so the reading is on the record
+    # rather than rediscovered by whoever sees the same word twice.
+    check(SILENCE_OFF not in WAITING_MERGE | WAITING_REVIEW,
+          "the silence sentinel was read as a block that suppresses silence")
+
+    # A window on an item every one of whose declared values stands the check
+    # down is decoration: the row reads OK forever under a line saying 12h.
+    # This is the `max_silence: none` round arrived at through the suppression
+    # set instead of the declaration, so the guard is on the combination.
+    unreachable = {"defaults": {"max_silence": "12h", "longest_run_gap": "9h"},
+                   "items": [{"id": "u", "issue": "o/r#1",
+                              "expected": {"implementation": "active",
+                                           "merge": ["blocked-review",
+                                                     "blocked-review-required"]}}]}
+    check(any("UNEXPECTED_SILENCE is unreachable" in x
+              for x in validate_state(unreachable)),
+          f"a decorative window passed: {validate_state(unreachable)}")
+    # Both remedies the message names must actually work.
+    widened = copy.deepcopy(unreachable)
+    widened["items"][0]["expected"]["merge"].append("ready")
+    check(not any("unreachable" in x for x in validate_state(widened)),
+          f"widening the declaration did not clear it: {validate_state(widened)}")
+    off = copy.deepcopy(unreachable)
+    off["items"][0]["max_silence"] = SILENCE_OFF
+    check(not any("unreachable" in x for x in validate_state(off)),
+          f"max_silence: none did not clear it: {validate_state(off)}")
+    # And `none` must not be read as a duration at reconcile time: it is the
+    # absence of a window, not an unparsable one, which would report the item
+    # as OBSERVATION_FAILED four times a day.
+    silent_off = reconcile_item(
+        StubGH(fake_issue(prs=[(9, "APPROVED")], updated="2026-09-01T00:00:00Z")),
+        dict(idle, max_silence=SILENCE_OFF,
+             expected={"issue": "open", "implementation": "active",
+                       "review": "clean"}), {}, now)
+    check(silent_off.state == ALIGNED,
+          f"max_silence: none was read as a duration: {silent_off.state} "
+          f"{silent_off.reasons}")
 
     # An item believed active with no silence window can never report silence.
     problems = validate_state({"items": [

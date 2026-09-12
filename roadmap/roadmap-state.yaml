@@ -76,7 +76,14 @@ items:
       # and teach everyone to ignore the report.
       review: [blocking-findings, unreviewed-head]
       merge: [blocked-review, blocked-review-required]
-    max_silence: 12h
+    # Not a window: every value this item allows on either axis is a block
+    # that stands the silence check down, so a duration here would be
+    # decoration — an OK row under a `12h` line that can never fire. The
+    # validator refuses that combination; this is the other half of its
+    # remedy. What it is waiting for is a reviewer and an author, and the
+    # snapshot's `review` and `merge` fields say which, which is the answer a
+    # clock would only approximate.
+    max_silence: none
     note: >-
       The declarative agent architecture is a project rather than a production
       path until this lands: GitOps carries shadow ReleaseBindingIntent with
@@ -320,7 +327,10 @@ items:
       # `conflicted` is deliberately NOT in the list. The first two are
       # states the PR moves through on its own; conflicts are work somebody
       # has to do, and a row that reports them is the row doing its job.
-    max_silence: 12h
+    # Both declared merge values are blocks that stand the silence check down,
+    # so a window here could never fire — and the note below already says so
+    # in words: this row needs a person, not a clock.
+    max_silence: none
     note: >-
       Approved, green, and not mergeable. Which reason holds alternates —
       unresolved review conversations, or the branch behind a `strict` main —
