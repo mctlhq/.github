@@ -672,11 +672,20 @@ def validate_state(state: dict) -> list[str]:
                 parse_duration(item["max_silence"])
             except ValueError as exc:
                 problems.append(f"{where}: {exc}")
-    if "max_silence" in (state.get("defaults") or {}):
-        try:
-            parse_duration(state["defaults"]["max_silence"])
-        except ValueError as exc:
-            problems.append(f"defaults: {exc}")
+    defaults = state.get("defaults") or {}
+    if not isinstance(defaults, dict):
+        # `"max_silence" in defaults` is a substring test when defaults is a
+        # string, so the check silently did not apply and the failure arrived
+        # later as an AttributeError from somewhere else.
+        problems.append(f"defaults: must be a mapping, got {type(defaults).__name__}")
+    else:
+        for key in set(defaults) - {"max_silence"}:
+            problems.append(f"defaults: unknown key {key!r}")
+        if "max_silence" in defaults:
+            try:
+                parse_duration(defaults["max_silence"])
+            except ValueError as exc:
+                problems.append(f"defaults: {exc}")
     return problems
 
 
@@ -691,6 +700,11 @@ class ItemResult:
     epic: str | None = None
     issue: str | None = None
     reasons: list[str] = field(default_factory=list)
+    # What `reportable_state` compares. Identical to `reasons` except where a
+    # reason carries a figure that moves on its own: the text a person reads
+    # should say how long, and the identity that decides whether to wake
+    # someone must not change because time passed.
+    reason_keys: list[str] = field(default_factory=list)
     evidence: dict = field(default_factory=dict)
     note: str | None = None
 
@@ -842,23 +856,36 @@ def _merge_summary(open_prs: list[dict]) -> str:
     return min(states, key=rank)
 
 
+# Worst-first, like MERGE_RANK and for the same reason: a summary over several
+# PRs must not be decided by whichever GitHub returned first.
+REVIEW_RANK = ["blocking-findings", "unreviewed-head", "unknown", "clean", "none"]
+
+
 def _review_state(open_prs: list[dict]) -> str:
     """'clean' | 'blocking-findings' | 'none' | 'unreviewed-head' | 'unknown'.
 
     Derived on demand, like the merge state and for the same reason: computing
     it while building the observation let a blind spot in one assertion fail an
     item that only asked about another.
+
+    Ranked rather than short-circuited. `any(not head_reviewed)` returned
+    `unreviewed-head` the moment one PR's head was unread, discarding a
+    `blocking-findings` another PR had already yielded — the same shape fixed
+    in _merge_summary, and decided there by PR number, which is arrival order.
     """
     if not open_prs:
         return "none"
-    if any(not _head_is_reviewed(p["raw"]) for p in open_prs):
-        return "unreviewed-head"
-    decisions = {p["review_decision"] for p in open_prs}
-    if "CHANGES_REQUESTED" in decisions:
-        return "blocking-findings"
-    if "APPROVED" in decisions:
-        return "clean"
-    return "unknown"
+    states = []
+    for pr in open_prs:
+        if not _head_is_reviewed(pr["raw"]):
+            states.append("unreviewed-head")
+        elif pr["review_decision"] == "CHANGES_REQUESTED":
+            states.append("blocking-findings")
+        elif pr["review_decision"] == "APPROVED":
+            states.append("clean")
+        else:
+            states.append("unknown")
+    return min(states, key=lambda v: REVIEW_RANK.index(v))
 
 
 def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> ItemResult:
@@ -994,11 +1021,14 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         result.state = OBSERVATION_FAILED
         result.reasons.extend(blind)
         result.reasons.extend(mismatches)
+        result.reason_keys.extend(blind)
+        result.reason_keys.extend(mismatches)
         return result
 
     if mismatches:
         result.state = DRIFT
         result.reasons.extend(mismatches)
+        result.reason_keys.extend(mismatches)
         return result
 
     # Silence is only meaningful once the state itself agrees: an item in
@@ -1010,6 +1040,7 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
         except ValueError as exc:
             result.state = OBSERVATION_FAILED
             result.reasons.append(str(exc))
+            result.reason_keys.append(str(exc))
             return result
         last = dt.datetime.fromisoformat(issue_obs.last_activity.replace("Z", "+00:00"))
         quiet_for = (now - last).total_seconds()
@@ -1023,11 +1054,19 @@ def reconcile_item(gh: GitHub, item: dict, defaults: dict, now: dt.datetime) -> 
             # survive being true for a week. DRIFT and OBSERVATION_FAILED hold
             # the announce-once policy; this was the one state whose reason is
             # defined as an elapsed time.
-            result.evidence["quiet_hours"] = int(quiet_for // 3600)
+            hours = int(quiet_for // 3600)
+            result.evidence["quiet_hours"] = hours
+            # The figure is in the text, where it is the whole point: "longer
+            # than 6h" on a 6h window under a 6h cron cannot tell one tick
+            # late from three weeks. The key below carries the same claim
+            # without it, so a number that grows on its own does not wake
+            # anyone a second time.
             result.reasons.append(
                 f"believed to be under active implementation, but nothing has "
-                f"moved on {item['issue']} or its PRs for longer than "
-                f"{silence_window} (see quiet_hours)")
+                f"moved on {item['issue']} or its PRs for {hours}h "
+                f"(allowed {silence_window})")
+            result.reason_keys.append(
+                f"quiet beyond {silence_window} on {item['issue']}")
     return result
 
 
@@ -1139,7 +1178,12 @@ def reportable_state(snapshot: dict) -> dict:
     Timestamps and counts move on their own; what a person needs to hear about
     is an item changing state or changing its reasons.
     """
-    return {i["id"]: {"state": i["state"], "reasons": i["reasons"]}
+    return {i["id"]: {"state": i["state"],
+                      # reason_keys, not reasons: see ItemResult. Older
+                      # snapshots have no such field, and falling back to
+                      # reasons keeps a comparison against one honest rather
+                      # than declaring everything changed.
+                      "reasons": i.get("reason_keys") or i["reasons"]}
             for i in snapshot["items"]}
 
 
@@ -1763,11 +1807,17 @@ def selftest() -> int:
         quiet_item, {}, now + dt.timedelta(hours=6))
     check(r1.state == UNEXPECTED_SILENCE and r2.state == UNEXPECTED_SILENCE,
           f"expected silence twice: {r1.state} {r2.state}")
-    check(r1.reasons == r2.reasons,
-          f"the silence reason changes every run, so it announces every run:\n"
-          f"  {r1.reasons}\n  {r2.reasons}")
+    # The text a person reads carries the figure; the identity that decides
+    # whether to wake them does not.
+    check(r1.reasons != r2.reasons,
+          f"the elapsed figure is missing from the text people read: {r1.reasons}")
+    check(any("37h" in x for x in r1.reasons) and any("43h" in x for x in r2.reasons),
+          f"the figure is not the elapsed time: {r1.reasons} {r2.reasons}")
+    check(r1.reason_keys == r2.reason_keys,
+          f"the compared identity changes with time, so it announces every run:\n"
+          f"  {r1.reason_keys}\n  {r2.reason_keys}")
     check(r1.evidence.get("quiet_hours") != r2.evidence.get("quiet_hours"),
-          "the elapsed figure should still be recorded, in the evidence")
+          "the elapsed figure should also be recorded in the evidence")
     snap1 = {"items": [asdict(r1)]}
     snap2 = {"items": [asdict(r2)]}
     check(reportable_state(snap1) == reportable_state(snap2),
@@ -1809,6 +1859,30 @@ def selftest() -> int:
     ):
         got = validate_state(bad)
         check(any(needle in x for x in got), f"{needle!r} not reported: {got}")
+
+    # A definitive verdict must not be discarded because a sibling PR's head
+    # is unread, and the answer must not depend on which PR came back first.
+    def pr(number, decision, head_seen=True):
+        return {"number": number, "review_decision": decision,
+                "raw": {"number": number, "headRefOid": "abc",
+                        "reviews": {"pageInfo": {}, "nodes": [
+                            {"state": decision, "commit":
+                             {"oid": "abc" if head_seen else "old"}}]}}}
+    for order in ([pr(1, "CHANGES_REQUESTED"), pr(2, "APPROVED", head_seen=False)],
+                  [pr(1, "APPROVED", head_seen=False), pr(2, "CHANGES_REQUESTED")]):
+        got = _review_state(order)
+        check(got == "blocking-findings",
+              f"a blocking verdict was lost to an unread sibling: {got}")
+
+    # defaults is a mapping, and the membership test on it is not a substring test.
+    problems = validate_state({"defaults": "6h", "items": [
+        {"id": "d", "issue": "o/r#1", "expected": {"issue": "open"}}]})
+    check(any("defaults" in x and "mapping" in x for x in problems),
+          f"a string defaults: block passed validation: {problems}")
+    problems = validate_state({"defaults": {"max_silence": "soon"}, "items": [
+        {"id": "d", "issue": "o/r#1", "expected": {"issue": "open"}}]})
+    check(any("defaults" in x for x in problems),
+          f"an unparsable defaults.max_silence passed: {problems}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-12T00:38:24Z",
+  "generated_at": "2026-09-12T00:46:15Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -16,6 +16,7 @@
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-api#283",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [
@@ -37,6 +38,9 @@
       "reasons": [
         "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/, expected == 1"
       ],
+      "reason_keys": [
+        "probe resolver-mode-in-gitops: 0 of 1 file(s) under mctlhq/mctl-gitops/platform-gitops/argo-workflows/cluster-templates match /ISSUE_INVESTIGATOR_RESOLVER_MODE\\s*\\n\\s*value:\\s*\"?declarative\"?/, expected == 1"
+      ],
       "evidence": {
         "probes": {
           "resolver-mode-in-gitops": 0
@@ -52,6 +56,7 @@
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-agents#242",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -68,6 +73,7 @@
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-agents#196",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -84,6 +90,7 @@
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-agents#197",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -100,6 +107,7 @@
       "epic": "mctlhq/.github#20",
       "issue": "mctlhq/mctl-agents#264",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "closed",
         "open_prs": [],
@@ -116,6 +124,7 @@
       "epic": "mctlhq/.github#21",
       "issue": "mctlhq/mctl-api#227",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "closed",
         "open_prs": [],
@@ -132,6 +141,7 @@
       "epic": "mctlhq/.github#42",
       "issue": "mctlhq/mctl-agents#333",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -148,6 +158,7 @@
       "epic": "mctlhq/.github#55",
       "issue": "mctlhq/mctl-gitops#902",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "closed",
         "open_prs": [],
@@ -166,6 +177,9 @@
       "reasons": [
         "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to true, expected >= 1"
       ],
+      "reason_keys": [
+        "probe services-opted-into-otel: 0 of 27 file(s) under mctlhq/mctl-gitops/platform-gitops/services set otel.enabled to true, expected >= 1"
+      ],
       "evidence": {
         "probes": {
           "services-opted-into-otel": 0
@@ -181,6 +195,7 @@
       "epic": "mctlhq/.github#55",
       "issue": "mctlhq/mctl-agents#195",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -197,6 +212,7 @@
       "epic": "mctlhq/.github#47",
       "issue": "mctlhq/mctl-gitops#1111",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "closed",
         "open_prs": [],
@@ -213,6 +229,9 @@
       "epic": "mctlhq/.github#47",
       "issue": "mctlhq/mctl-gitops#1178",
       "reasons": [
+        "probe zone-roots-still-local: 3 line(s) in mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots match /^(?!\\s*#)\\s*(?:\\./)?(?:infrastructure/cloudflare/)?zones//, expected == 0"
+      ],
+      "reason_keys": [
         "probe zone-roots-still-local: 3 line(s) in mctlhq/mctl-gitops/infrastructure/cloudflare/.local-state-roots match /^(?!\\s*#)\\s*(?:\\./)?(?:infrastructure/cloudflare/)?zones//, expected == 0"
       ],
       "evidence": {
@@ -234,6 +253,7 @@
       "epic": "mctlhq/.github#35",
       "issue": "mctlhq/mctl-telegram#615",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -250,6 +270,7 @@
       "epic": "mctlhq/.github#22",
       "issue": "mctlhq/mctl-telegram#620",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [
@@ -269,6 +290,7 @@
       "epic": "mctlhq/.github#22",
       "issue": "mctlhq/mctl-telegram#400",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],
@@ -285,6 +307,7 @@
       "epic": "mctlhq/.github#38",
       "issue": "mctlhq/mctl-agents#292",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "closed",
         "open_prs": [],
@@ -301,6 +324,7 @@
       "epic": "mctlhq/.github#34",
       "issue": "mctlhq/.github#34",
       "reasons": [],
+      "reason_keys": [],
       "evidence": {
         "issue_state": "open",
         "open_prs": [],

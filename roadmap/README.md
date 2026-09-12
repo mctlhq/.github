@@ -279,4 +279,6 @@ is refused.
 
 Probes cover assertions GitHub issue state cannot make — a file's contents, a
 count of services that opted into something. A probe that cannot read what it
-needs raises rather than returning zero, which is the whole point.
+needs raises rather than returning zero, which is the whole point — with the
+single sanctioned exception documented above, and only under its three
+preconditions.
