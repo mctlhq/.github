@@ -633,6 +633,18 @@ def validate_state(state: dict) -> list[str]:
                         f"{where}: expected.{key} {value!r} is not a value this "
                         f"tool can produce (known: {', '.join(sorted(vocabulary))})")
 
+        for field_name in ("issue",):
+            if item.get(field_name) is not None:
+                try:
+                    parse_ref(item[field_name])
+                except ValueError as exc:
+                    problems.append(f"{where}: {exc}")
+        for ref in item.get("also") or []:
+            try:
+                parse_ref(ref)
+            except ValueError as exc:
+                problems.append(f"{where}: also: {exc}")
+
         issue_keys = {"issue", "implementation", "review", "merge"} & set(expected)
         if issue_keys and not item.get("issue"):
             problems.append(
@@ -725,20 +737,33 @@ def validate_state(state: dict) -> list[str]:
             except ValueError as exc:
                 problems.append(f"defaults: longest_run_gap: {exc}")
             else:
-                for item in items:
-                    if not isinstance(item, dict) or "max_silence" not in item:
+                # `defaults.max_silence` is checked too, and first: it is the
+                # value most items actually use, so exempting it let the whole
+                # file into the daily flap while the rule appeared to be
+                # enforced. The same shape as the empty-declaration finding —
+                # a refusal landing on the rare axis and skipping the one that
+                # carries the file.
+                windows = [("defaults", defaults.get("max_silence"))]
+                windows += [(i.get("id", "?"), i.get("max_silence"))
+                            for i in items if isinstance(i, dict)]
+                for where_, declared in windows:
+                    if declared is None:
                         continue
                     try:
-                        window = parse_duration(item["max_silence"])
+                        window = parse_duration(declared)
                     except ValueError:
                         continue  # already reported above
-                    if window < gap:
+                    # `<=`, not `<`. At W == G the escape condition is that the
+                    # item moved strictly inside the gap itself — between the
+                    # 21:00 and 06:00 runs — or it reports. That is the same
+                    # daily alarm, at the value a reader copies straight off
+                    # the line above.
+                    if window <= gap:
                         problems.append(
-                            f"{item.get('id', '?')}: max_silence "
-                            f"{item['max_silence']} is shorter than "
-                            f"defaults.longest_run_gap "
-                            f"{defaults['longest_run_gap']}, so this item "
-                            f"reports silence for behaving as declared")
+                            f"{where_}: max_silence {declared} is not longer "
+                            f"than defaults.longest_run_gap "
+                            f"{defaults['longest_run_gap']}, so it reports "
+                            f"silence for behaving as declared")
     return problems
 
 
@@ -2198,7 +2223,33 @@ def selftest() -> int:
         "defaults": {"max_silence": "12h", "longest_run_gap": "9h"},
         "items": [{"id": "s", "issue": "o/r#1", "max_silence": "12h",
                    "expected": {"implementation": "active"}}]})
-    check(problems == [], f"a window at or above the gap was refused: {problems}")
+    check(problems == [], f"a window above the gap was refused: {problems}")
+    # The boundary itself: at W == G the item must move strictly inside the
+    # gap or report, which is the same daily alarm.
+    problems = validate_state({
+        "defaults": {"max_silence": "12h", "longest_run_gap": "9h"},
+        "items": [{"id": "s", "issue": "o/r#1", "max_silence": "9h",
+                   "expected": {"implementation": "active"}}]})
+    check(any("longest_run_gap" in x for x in problems),
+          f"a window equal to the gap passed: {problems}")
+    # And the default, which is the window most items actually use.
+    problems = validate_state({
+        "defaults": {"max_silence": "6h", "longest_run_gap": "9h"},
+        "items": [{"id": "s", "issue": "o/r#1",
+                   "expected": {"implementation": "active"}}]})
+    check(any("defaults" in x and "longest_run_gap" in x for x in problems),
+          f"a too-short defaults.max_silence passed: {problems}")
+
+    # A malformed reference is a configuration failure, not a runtime one.
+    problems = validate_state({"items": [
+        {"id": "r", "issue": "not-a-ref", "expected": {"issue": "open"}}]})
+    check(any("not-a-ref" in x for x in problems),
+          f"a malformed issue reference passed validation: {problems}")
+    problems = validate_state({"items": [
+        {"id": "r", "issue": "o/r#1", "also": ["also-bad"],
+         "expected": {"issue": "open"}}]})
+    check(any("also-bad" in x for x in problems),
+          f"a malformed also: reference passed validation: {problems}")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
