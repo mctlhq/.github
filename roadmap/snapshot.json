@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-12T00:16:05Z",
+  "generated_at": "2026-09-12T00:23:05Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
@@ -259,7 +259,7 @@
         "last_activity": "2026-09-11T17:18:03Z",
         "merge": "blocked-behind-base"
       },
-      "note": "Approved on the current head, every check green, blocked on unresolved review conversations. Also carries steward:escalated, which is terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
+      "note": "Approved, green, and not mergeable. Which of the two reasons holds alternates \u2014 unresolved review conversations, or the branch behind a `strict` main \u2014 so the snapshot's `merge` field is the thing to read, not this sentence. It also carries steward:escalated, terminal for pr-steward: that label has to be cleared by a human before the lifecycle resumes, so silence here needs a person rather than time."
     },
     {
       "id": "client-lifecycle.lookup-account",

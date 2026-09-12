@@ -502,6 +502,10 @@ MERGE_VALUES = {"ready", "draft", "conflicted", "none", "blocked-review",
 # existing probe of that kind fail validation: exit 2, four times a day, over
 # a question those probes never asked.
 OPTIONAL_PROBE_KEYS = {"id"}
+# Every key here must also appear in PROBE_KEYS for its kind: one listed only
+# here would be optional AND unknown -- never required, never refused, read by
+# nobody. The self-test pins that, because it is the defect this constant was
+# added to fix, re-entering through the constant itself.
 OPTIONAL_PER_KIND = {
     "file_line_match_count": {"when_absent"},
     "dir_file_match_count": set(),
@@ -557,6 +561,17 @@ def validate_state(state: dict) -> list[str]:
         if expected.get("implementation") not in (None, "active", "none"):
             problems.append(f"{where}: expected.implementation must be active or none")
         for key, vocabulary in (("review", REVIEW_VALUES), ("merge", MERGE_VALUES)):
+            if key in expected and not expected[key]:
+                # `merge:` with nothing after it, or `merge: []`. Both read as
+                # assertions, are skipped by reconcile_item because the value
+                # is falsy, and leave the item ALIGNED on a line nobody
+                # evaluated -- the shape this whole function exists to refuse.
+                # The natural edit on an item declaring a list is to delete an
+                # entry, which is how you arrive at the empty one.
+                problems.append(
+                    f"{where}: expected.{key} is empty — it reads as an "
+                    f"assertion and is evaluated by nothing")
+                continue
             declared = expected.get(key)
             if declared is None:
                 continue
@@ -1644,6 +1659,22 @@ def selftest() -> int:
         exc = classify_gh_failure(1, other)
         check(isinstance(exc, ObservationFailure) and not isinstance(exc, NotFound),
               f"{other!r} was classified as an absence")
+
+    # An empty declaration reads as an assertion and is evaluated by nobody.
+    for empty in ([], None):
+        problems = validate_state({"items": [
+            {"id": "e", "issue": "o/r#1", "expected": {"issue": "open",
+                                                       "merge": empty}}]})
+        check(any("empty" in x for x in problems),
+              f"expected.merge = {empty!r} passed validation: {problems}")
+
+    # OPTIONAL_PER_KIND and PROBE_KEYS are hand-kept against each other, and a
+    # key in the first but not the second is optional AND unknown.
+    for kind, keys in OPTIONAL_PER_KIND.items():
+        check(kind in PROBE_KEYS, f"OPTIONAL_PER_KIND names unknown kind {kind!r}")
+        stray = keys - PROBE_KEYS.get(kind, set())
+        check(not stray,
+              f"{kind}: {sorted(stray)} is optional but not a key of that kind")
 
     # Severity ordering.
     check(SEVERITY.index(OBSERVATION_FAILED) < SEVERITY.index(DRIFT),
