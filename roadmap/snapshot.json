@@ -1,27 +1,31 @@
 {
-  "generated_at": "2026-09-12T11:18:07Z",
-  "state_changed_at": "2026-09-12T11:18:07Z",
+  "generated_at": "2026-09-12T11:26:34Z",
+  "state_changed_at": "2026-09-12T11:26:34Z",
   "overall": "DRIFT",
   "counts": {
     "OBSERVATION_FAILED": 0,
     "DRIFT": 4,
-    "UNEXPECTED_SILENCE": 0,
-    "ALIGNED": 14
+    "UNEXPECTED_SILENCE": 1,
+    "ALIGNED": 13
   },
   "items": [
     {
       "id": "agent-platform.registry",
       "title": "Registry-backed ReleaseBinding",
       "phase": "now",
-      "state": "ALIGNED",
+      "state": "UNEXPECTED_SILENCE",
       "epic": "mctlhq/.github#18",
       "issue": "mctlhq/mctl-api#283",
       "unlocks": [
         "investigator.declarative-activation",
         "agent-platform.capability-discovery"
       ],
-      "reasons": [],
-      "reason_keys": [],
+      "reasons": [
+        "believed to be under active implementation, but nothing has moved on mctlhq/mctl-api#283 or their PRs for 12h (allowed 12h)"
+      ],
+      "reason_keys": [
+        "quiet beyond 12h across mctlhq/mctl-api#283"
+      ],
       "evidence": {
         "issue_state": "open",
         "open_prs": [
@@ -29,7 +33,8 @@
         ],
         "review": "unreviewed-head",
         "last_activity": "2026-09-11T23:19:25Z",
-        "merge": "blocked-review"
+        "merge": "blocked-review",
+        "quiet_hours": 12
       },
       "note": "The declarative agent architecture is a project rather than a production path until this lands: GitOps carries shadow ReleaseBindingIntent with promotable:false, and the resolver refuses to proceed on bindingSource: registry."
     },

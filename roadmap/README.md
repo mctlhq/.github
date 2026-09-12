@@ -131,7 +131,13 @@ gap reported silence every morning on work behaving exactly as declared —
 comments and two snapshot commits. At exactly the gap the item has to move
 between the 21:00 and 06:00 runs or report, which is the same alarm.
 
-The constant is taken from the cron, so it is a floor rather than the truth:
+The constant is resolved against that cron at validation rather than trusted —
+the same discipline `unlocks:` applies to an item id — so lowering the number
+is refused as loudly as deleting the line. Trusting it was the gap: every
+window clears a smaller floor, no message moves, and the file still reads as
+armed.
+
+It is still a floor rather than the truth:
 GitHub delays scheduled runs and drops them, and a certified window can still
 flap after a missed tick. The liveness step reads the run history and knows the
 real gap; this is the cheap half.

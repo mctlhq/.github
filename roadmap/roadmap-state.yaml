@@ -36,8 +36,11 @@ defaults:
 
   # The longest interval between two runs of the reconciler, read off the cron
   # in .github/workflows/roadmap-reconcile.yml (0 6,11,16,21 — the overnight
-  # gap). Declared rather than inferred because this file cannot see that
-  # schedule.
+  # gap). Declared here because this file cannot see that schedule — and
+  # RESOLVED against it at validation, the way `unlocks:` resolves an item id,
+  # so lowering this number is refused as loudly as deleting the line.
+  # Trusting it was the gap: every window clears a smaller floor, no message
+  # moves, and the file still reads as armed.
   #
   # Load-bearing: a window shorter than the gap reports an item as silent for
   # behaving exactly as declared, and ALIGNED -> SILENT -> ALIGNED is two
