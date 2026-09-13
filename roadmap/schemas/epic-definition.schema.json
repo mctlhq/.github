@@ -6,12 +6,8 @@
   "additionalProperties": false,
   "required": ["apiVersion", "kind", "metadata", "spec"],
   "properties": {
-    "apiVersion": {
-      "const": "roadmap.mctl.ai/v1alpha1"
-    },
-    "kind": {
-      "const": "EpicDefinition"
-    },
+    "apiVersion": {"const": "roadmap.mctl.ai/v1alpha1"},
+    "kind": {"const": "EpicDefinition"},
     "metadata": {
       "type": "object",
       "additionalProperties": false,
@@ -23,16 +19,10 @@
           "minLength": 1,
           "maxLength": 63
         },
-        "owner": {
-          "type": "string",
-          "minLength": 1
-        },
+        "owner": {"type": "string", "minLength": 1},
         "labels": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
+          "items": {"type": "string", "minLength": 1},
           "uniqueItems": true
         }
       }
@@ -40,79 +30,44 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "title",
-        "goal",
-        "lifecycle",
-        "github",
-        "phases",
-        "workItems",
-        "completion",
-        "successCriteria"
-      ],
+      "required": ["title", "goal", "lifecycle", "github", "phases", "workItems", "completion", "successCriteria"],
       "properties": {
-        "title": {
-          "type": "string",
-          "minLength": 1
-        },
-        "goal": {
-          "type": "string",
-          "minLength": 1
-        },
-        "lifecycle": {
-          "enum": ["proposed", "active", "paused", "completed", "archived"]
-        },
+        "title": {"type": "string", "minLength": 1},
+        "goal": {"type": "string", "minLength": 1},
+        "lifecycle": {"enum": ["proposed", "active", "paused", "completed", "archived"]},
         "github": {
           "type": "object",
           "additionalProperties": false,
           "required": ["issue"],
           "properties": {
-            "issue": {
-              "$ref": "#/$defs/issueRef"
-            },
-            "issueType": {
-              "type": "string",
-              "minLength": 1
-            },
+            "issue": {"$ref": "#/$defs/issueRef"},
+            "issueType": {"type": "string", "minLength": 1},
             "project": {
               "type": "object",
-              "additionalProperties": {
-                "type": ["string", "number", "boolean", "null"]
-              }
+              "additionalProperties": {"type": ["string", "number", "boolean", "null"]}
             }
           }
         },
         "phases": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/phase"
-          }
+          "items": {"$ref": "#/$defs/phase"}
         },
         "workItems": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/workItem"
-          }
+          "items": {"$ref": "#/$defs/workItem"}
         },
         "completion": {
           "type": "object",
           "additionalProperties": false,
           "required": ["mode"],
-          "properties": {
-            "mode": {
-              "const": "allRequired"
-            }
-          }
+          "properties": {"mode": {"const": "allRequired"}}
         },
         "successCriteria": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "items": {"type": "string", "minLength": 1}
         }
       }
     }
@@ -125,12 +80,9 @@
       "properties": {
         "repository": {
           "type": "string",
-          "pattern": "^[^/]+/[^/]+$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
         },
-        "number": {
-          "type": "integer",
-          "minimum": 1
-        }
+        "number": {"type": "integer", "minimum": 1}
       }
     },
     "phase": {
@@ -138,13 +90,8 @@
       "additionalProperties": false,
       "required": ["id", "title"],
       "properties": {
-        "id": {
-          "$ref": "#/$defs/localId"
-        },
-        "title": {
-          "type": "string",
-          "minLength": 1
-        }
+        "id": {"$ref": "#/$defs/localId"},
+        "title": {"type": "string", "minLength": 1}
       }
     },
     "workItem": {
@@ -152,41 +99,21 @@
       "additionalProperties": false,
       "required": ["id", "phase", "required"],
       "properties": {
-        "id": {
-          "$ref": "#/$defs/localId"
-        },
-        "title": {
-          "type": "string",
-          "minLength": 1
-        },
-        "owner": {
-          "type": "string",
-          "minLength": 1
-        },
-        "phase": {
-          "$ref": "#/$defs/localId"
-        },
-        "required": {
-          "type": "boolean"
-        },
-        "issue": {
-          "$ref": "#/$defs/issueRef"
-        },
-        "parent": {
-          "$ref": "#/$defs/localId"
-        },
+        "id": {"$ref": "#/$defs/localId"},
+        "title": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "phase": {"$ref": "#/$defs/localId"},
+        "required": {"type": "boolean"},
+        "issue": {"$ref": "#/$defs/issueRef"},
+        "parent": {"$ref": "#/$defs/localId"},
         "dependsOn": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/localId"
-          },
+          "items": {"$ref": "#/$defs/localId"},
           "uniqueItems": true
         },
         "externalDependsOn": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/issueRef"
-          },
+          "items": {"$ref": "#/$defs/issueRef"},
           "uniqueItems": true
         }
       }
