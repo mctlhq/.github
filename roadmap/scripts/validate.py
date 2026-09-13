@@ -20,6 +20,7 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA = ROOT / "schemas" / "epic-definition.schema.json"
@@ -224,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         schema = _load_schema(Path(args.schema))
-    except (OSError, json.JSONDecodeError, Exception) as exc:  # schema failure is fatal
+    except (OSError, json.JSONDecodeError, SchemaError) as exc:
         print(f"schema: ERROR: {exc}", file=sys.stderr)
         return 2
 
