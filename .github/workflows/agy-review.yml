@@ -327,6 +327,10 @@ jobs:
               echo "::warning::$target_home missing — using the runner's default HOME instead"
               target_home="$HOME"
             fi
+            # --dangerously-skip-permissions is required in headless (-p) mode
+            # because tool calls cannot prompt interactively; without it,
+            # tool requests are auto-denied and abort with empty output
+            # (verified live on 2026-09-13). OS isolation is preserved by --sandbox.
             HOME="$target_home" agy \
               -p "$(cat prompt.md)" \
               --model "$AGY_MODEL" \
@@ -334,6 +338,7 @@ jobs:
               --output-format json \
               --print-timeout 15m \
               --sandbox \
+              --dangerously-skip-permissions \
               > result.json
           }
 
