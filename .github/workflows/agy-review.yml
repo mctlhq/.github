@@ -35,6 +35,9 @@ name: Agy PR review (reusable)
 on:
   workflow_call:
     inputs:
+      # Defaulted to gemini-3.8-flash-high to reduce review latency from
+      # the ~15-22m range observed with 3.1 Pro High while mitigating quota
+      # exhaustion across the shared subscription. Verified against agy CLI.
       model:
         description: Gemini model to use with agy.
         type: string
