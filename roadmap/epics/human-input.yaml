@@ -1,0 +1,96 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: human-input
+  owner: mctl-agents
+  labels:
+    - roadmap
+spec:
+  title: Durable agent clarification / feedback primitive
+  goal: >-
+    Allow an agent to suspend durable work, ask an authorized human for missing
+    information, and resume the same WorkItem without treating clarification as
+    approval.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 42
+    issueType: Epic
+    project:
+      priority: P1
+  phases:
+    - id: core
+      title: Core durable contract
+    - id: api
+      title: Platform API and read model
+    - id: surfaces
+      title: Human-facing adapters
+    - id: e2e
+      title: End-to-end continuation proof
+  workItems:
+    - id: human-input-core
+      phase: core
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 333
+
+    - id: human-input-api
+      phase: api
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 261
+      dependsOn:
+        - human-input-core
+
+    - id: telegram-adapter
+      phase: surfaces
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 571
+      dependsOn:
+        - human-input-core
+        - human-input-api
+      externalDependsOn:
+        - repository: mctlhq/mctl-telegram
+          number: 443
+
+    - id: portal-card
+      phase: surfaces
+      required: false
+      issue:
+        repository: mctlhq/mctl-portal
+        number: 124
+      dependsOn:
+        - human-input-api
+
+    - id: docs
+      phase: surfaces
+      required: false
+      issue:
+        repository: mctlhq/mctl-docs
+        number: 106
+      dependsOn:
+        - human-input-core
+        - human-input-api
+
+    - id: devloop-e2e
+      title: Prove investigator to human to automatic continuation
+      owner: mctl-agents
+      phase: e2e
+      required: true
+      dependsOn:
+        - telegram-adapter
+  completion:
+    mode: allRequired
+  successCriteria:
+    - HumanInputRequest and HumanInputResponse are versioned durable contracts.
+    - WAITING_FOR_INPUT remains distinct from WAITING_FOR_APPROVAL.
+    - No model or Argo pod stays alive solely while waiting for a human.
+    - An authorized response resumes the same WorkItem and workflow.
+    - The response becomes attributed evidence and produces a new immutable ContextSnapshot.
+    - Retry or replay cannot duplicate the question or consume the same response twice.
+    - Clarification never satisfies a separate consequential-action approval gate.
