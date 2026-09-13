@@ -72,39 +72,93 @@ def _duplicates(values: list[str]) -> list[str]:
 
 
 def _cycle(nodes: Iterable[str], edges: dict[str, list[str]]) -> list[str] | None:
-    """Return one deterministic cycle, including the repeated closing node."""
+    """Return one deterministic cycle without using Python recursion."""
 
-    state: dict[str, int] = {node: 0 for node in nodes}
-    stack: list[str] = []
-    stack_index: dict[str, int] = {}
+    node_set = set(nodes)
+    state: dict[str, int] = {node: 0 for node in node_set}
 
-    def visit(node: str) -> list[str] | None:
-        state[node] = 1
-        stack_index[node] = len(stack)
-        stack.append(node)
+    for start in sorted(node_set):
+        if state[start] != 0:
+            continue
 
-        for target in sorted(edges.get(node, [])):
-            if target not in state:
+        stack: list[tuple[str, list[str], int]] = []
+        path: list[str] = []
+        path_index: dict[str, int] = {}
+
+        state[start] = 1
+        path_index[start] = 0
+        path.append(start)
+        stack.append(
+            (
+                start,
+                [target for target in sorted(edges.get(start, [])) if target in node_set],
+                0,
+            )
+        )
+
+        while stack:
+            node, neighbours, index = stack[-1]
+
+            if index >= len(neighbours):
+                stack.pop()
+                path.pop()
+                path_index.pop(node, None)
+                state[node] = 2
                 continue
+
+            target = neighbours[index]
+            stack[-1] = (node, neighbours, index + 1)
+
             if state[target] == 0:
-                found = visit(target)
-                if found:
-                    return found
+                state[target] = 1
+                path_index[target] = len(path)
+                path.append(target)
+                stack.append(
+                    (
+                        target,
+                        [
+                            child
+                            for child in sorted(edges.get(target, []))
+                            if child in node_set
+                        ],
+                        0,
+                    )
+                )
             elif state[target] == 1:
-                start = stack_index[target]
-                return stack[start:] + [target]
+                cycle_start = path_index[target]
+                return path[cycle_start:] + [target]
 
-        stack.pop()
-        stack_index.pop(node, None)
-        state[node] = 2
-        return None
-
-    for node in sorted(state):
-        if state[node] == 0:
-            found = visit(node)
-            if found:
-                return found
     return None
+
+
+def _issue_key(ref: Any) -> tuple[str, int] | None:
+    if (
+        isinstance(ref, dict)
+        and isinstance(ref.get("repository"), str)
+        and isinstance(ref.get("number"), int)
+    ):
+        return (ref["repository"], ref["number"])
+    return None
+
+
+def _document_bindings(document: dict[str, Any]) -> list[tuple[tuple[str, int], str]]:
+    """Return every authored GitHub issue binding in one manifest."""
+
+    bindings: list[tuple[tuple[str, int], str]] = []
+    spec = document.get("spec", {})
+
+    root_key = _issue_key(spec.get("github", {}).get("issue"))
+    if root_key is not None:
+        bindings.append((root_key, "epic"))
+
+    for item in spec.get("workItems", []):
+        if not isinstance(item, dict):
+            continue
+        key = _issue_key(item.get("issue"))
+        if key is not None:
+            bindings.append((key, item.get("id", "<unknown>")))
+
+    return bindings
 
 
 def semantic_errors(document: dict[str, Any]) -> list[str]:
@@ -115,12 +169,16 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
     phases = spec.get("phases", [])
     work_items = spec.get("workItems", [])
 
-    phase_ids = [phase["id"] for phase in phases if isinstance(phase, dict) and "id" in phase]
+    phase_ids = [
+        phase["id"] for phase in phases if isinstance(phase, dict) and "id" in phase
+    ]
     for phase_id in _duplicates(phase_ids):
         errors.append(f"duplicate phase id: {phase_id}")
     phase_set = set(phase_ids)
 
-    item_ids = [item["id"] for item in work_items if isinstance(item, dict) and "id" in item]
+    item_ids = [
+        item["id"] for item in work_items if isinstance(item, dict) and "id" in item
+    ]
     for item_id in _duplicates(item_ids):
         errors.append(f"duplicate work item id: {item_id}")
     item_set = set(item_ids)
@@ -129,9 +187,11 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
     dependency_edges: dict[str, list[str]] = {item_id: [] for item_id in item_ids}
 
     issue_bindings: dict[tuple[str, int], str] = {}
-    root_issue = spec.get("github", {}).get("issue")
-    if isinstance(root_issue, dict) and "repository" in root_issue and "number" in root_issue:
-        issue_bindings[(root_issue["repository"], root_issue["number"])] = "epic"
+    root_key = _issue_key(spec.get("github", {}).get("issue"))
+    if root_key is not None:
+        issue_bindings[root_key] = "epic"
+
+    external_refs: list[tuple[str, tuple[str, int]]] = []
 
     for item in work_items:
         if not isinstance(item, dict) or "id" not in item:
@@ -153,20 +213,24 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
 
         for dependency in item.get("dependsOn", []):
             if dependency == item_id:
-                errors.append(f"work item {item_id}: dependsOn cannot reference itself")
+                errors.append(
+                    f"work item {item_id}: dependsOn cannot reference itself"
+                )
             elif dependency not in item_set:
-                errors.append(f"work item {item_id}: unknown dependsOn target {dependency!r}")
+                errors.append(
+                    f"work item {item_id}: unknown dependsOn target {dependency!r}"
+                )
             else:
                 dependency_edges[item_id].append(dependency)
 
         issue = item.get("issue")
+        key = _issue_key(issue)
         if issue is None:
             if not item.get("title"):
                 errors.append(f"work item {item_id}: unbound item requires title")
             if not item.get("owner"):
                 errors.append(f"work item {item_id}: unbound item requires owner")
-        elif isinstance(issue, dict) and "repository" in issue and "number" in issue:
-            key = (issue["repository"], issue["number"])
+        elif key is not None:
             existing = issue_bindings.get(key)
             if existing is not None:
                 errors.append(
@@ -175,6 +239,20 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
                 )
             else:
                 issue_bindings[key] = item_id
+
+        for external in item.get("externalDependsOn", []):
+            external_key = _issue_key(external)
+            if external_key is not None:
+                external_refs.append((item_id, external_key))
+
+    for item_id, external_key in external_refs:
+        local_owner = issue_bindings.get(external_key)
+        if local_owner is not None:
+            errors.append(
+                f"work item {item_id}: externalDependsOn "
+                f"{external_key[0]}#{external_key[1]} is locally bound by {local_owner}; "
+                "use dependsOn instead"
+            )
 
     parent_cycle = _cycle(item_ids, parent_edges)
     if parent_cycle:
@@ -194,6 +272,48 @@ def validate_document(
     if structural:
         return structural
     return semantic_errors(document)
+
+
+def corpus_errors(
+    documents: list[tuple[Path, dict[str, Any]]]
+) -> dict[Path, list[str]]:
+    """Validate invariants that span all EpicDefinition manifests."""
+
+    failures: dict[Path, list[str]] = {path: [] for path, _ in documents}
+    names: dict[str, Path] = {}
+    bindings: dict[tuple[str, int], tuple[Path, str]] = {}
+
+    for path, document in sorted(documents, key=lambda item: str(item[0])):
+        name = document["metadata"]["name"]
+        existing_name_path = names.get(name)
+        if existing_name_path is not None:
+            message = (
+                f"epic metadata.name {name!r} is duplicated across "
+                f"{existing_name_path} and {path}"
+            )
+            failures[existing_name_path].append(message)
+            failures[path].append(message)
+        else:
+            names[name] = path
+
+        for key, local_owner in _document_bindings(document):
+            existing = bindings.get(key)
+            if existing is not None:
+                existing_path, existing_owner = existing
+                message = (
+                    f"GitHub issue {key[0]}#{key[1]} is bound across manifests: "
+                    f"{existing_path} ({existing_owner}) and {path} ({local_owner})"
+                )
+                failures[existing_path].append(message)
+                failures[path].append(message)
+            else:
+                bindings[key] = (path, local_owner)
+
+    return {
+        path: sorted(set(messages))
+        for path, messages in failures.items()
+        if messages
+    }
 
 
 def _manifest_paths(arguments: list[str]) -> list[Path]:
@@ -234,14 +354,28 @@ def main(argv: list[str] | None = None) -> int:
         print("no EpicDefinition manifests found", file=sys.stderr)
         return 2
 
-    failed = False
+    failures_by_path: dict[Path, list[str]] = {}
+    valid_documents: list[tuple[Path, dict[str, Any]]] = []
+
     for path in manifests:
         try:
             document = _load_manifest(path)
             failures = validate_document(document, schema)
         except (OSError, yaml.YAMLError, ValueError) as exc:
             failures = [str(exc)]
+            document = None
 
+        if failures:
+            failures_by_path[path] = failures
+        elif document is not None:
+            valid_documents.append((path, document))
+
+    for path, failures in corpus_errors(valid_documents).items():
+        failures_by_path.setdefault(path, []).extend(failures)
+
+    failed = False
+    for path in manifests:
+        failures = sorted(set(failures_by_path.get(path, [])))
         if failures:
             failed = True
             print(f"FAIL {path}")
