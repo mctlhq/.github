@@ -38,7 +38,7 @@ on:
       model:
         description: Gemini model to use with agy.
         type: string
-        default: 'gemini-3.1-pro-high'
+        default: 'gemini-3.8-flash-high'
       effort:
         description: Reasoning effort level for agy (low, medium, high).
         type: string
