@@ -72,14 +72,19 @@ python roadmap/scripts/validate.py roadmap/epics
 python -m unittest discover -s roadmap/tests -p 'test_*.py'
 ```
 
-The validator has two layers:
+The same checks are enforced by `.github/workflows/roadmap-validate.yml` for roadmap
+changes, with no write permissions.
+
+The validator has three layers:
 
 1. JSON Schema checks the versioned structural contract and rejects undeclared fields
    such as authored `blocks`/`children`/`status`.
-2. Semantic validation checks graph invariants that JSON Schema cannot express
-   cleanly: unique phase/work-item IDs, valid local references, acyclic parent and
-   dependency graphs, unique GitHub bindings, and enough metadata to represent an
-   unbound future work item.
+2. Per-manifest semantic validation checks graph invariants that JSON Schema cannot
+   express cleanly: unique phase/work-item IDs, valid local references, acyclic parent
+   and dependency graphs, unique local GitHub bindings, external dependencies that
+   truly point outside the epic, and enough metadata for unbound future work.
+3. Corpus validation checks invariants across all `roadmap/epics/*` manifests,
+   including unique epic names and globally unique GitHub issue bindings.
 
 The validator is intentionally offline and read-only. It does not query or mutate
 GitHub.
@@ -93,7 +98,8 @@ intent to propose/create the issue.
 
 Local `dependsOn` edges reference work-item IDs in the same manifest.
 `externalDependsOn` records an existing GitHub issue outside this epic without
-pretending that the external issue is owned by this manifest.
+pretending that the external issue is owned by this manifest. If that issue is bound
+inside the same manifest, the validator requires the local `dependsOn` form instead.
 
 Nested issue decomposition is represented with `parent`, which references another
 local work-item ID. Omitting `parent` means the work item is a direct child of the
