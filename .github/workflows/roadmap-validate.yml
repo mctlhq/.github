@@ -1,0 +1,31 @@
+name: Roadmap validation
+
+on:
+  pull_request:
+    paths:
+      - 'roadmap/**'
+      - '.github/workflows/roadmap-validate.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'roadmap/**'
+      - '.github/workflows/roadmap-validate.yml'
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install roadmap validator dependencies
+        run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
+
+      - name: Validate EpicDefinition manifests
+        run: python3 roadmap/scripts/validate.py roadmap/epics
+
+      - name: Run roadmap validator tests
+        run: python3 -m unittest discover -s roadmap/tests -p 'test_*.py'
