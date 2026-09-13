@@ -36,10 +36,10 @@ on:
   workflow_call:
     inputs:
       # Defaulted to gemini-3.8-flash-high to reduce individual review latency
-      # from the ~11 min median recorded with 3.1 Pro High (see line 113) while
-      # mitigating quota exhaustion on the shared PRIMARY subscription (line 261).
-      # Model identifier verified live on 2026-09-13 against agy 1.2.2 with
-      # status: SUCCESS and 8.5s duration on single-turn evaluation.
+      # from the ~11 min median recorded with 3.1 Pro High while mitigating
+      # quota exhaustion on the shared PRIMARY subscription.
+      # Model identifier verified live on 2026-09-13 against agy 1.1.27
+      # with status: SUCCESS on test evaluation.
       model:
         description: Gemini model to use with agy.
         type: string
