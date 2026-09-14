@@ -35,7 +35,7 @@ name: Agy PR review (reusable)
 on:
   workflow_call:
     inputs:
-      # Defaulted to gemini-3.8-flash-high with effort: medium to reduce
+      # Defaulted to gemini-3.8-flash-medium with effort: medium to reduce
       # individual review latency from ~11-14 min to ~2-4 min, accelerating
       # queue drainage across the shared 2-slot runner pool and mitigating
       # token quota exhaustion. Repositories requiring deeper reasoning can
@@ -45,7 +45,7 @@ on:
       model:
         description: Gemini model to use with agy.
         type: string
-        default: 'gemini-3.8-flash-high'
+        default: 'gemini-3.8-flash-medium'
       effort:
         description: Reasoning effort level for agy (low, medium, high).
         type: string
@@ -318,6 +318,21 @@ jobs:
           # invocation is the last command in the body, but worth knowing
           # before adding a second failure-checking command after it.
           export PATH="$HOME/.local/bin:$PATH"
+
+          # agy 1.1.27 validates model identifiers against --effort: Gemini
+          # models encode the reasoning tier in their name (e.g. gemini-3.8-flash-medium
+          # vs gemini-3.8-flash-high) and agy exits 1 on mismatch ("--model X conflicts
+          # with --effort Y", observed 2026-09-13). Reconcile the suffix automatically
+          # so callers overriding only `effort:` without updating `model:` do not fail.
+          case "$AGY_MODEL" in
+            gemini-*-high|gemini-*-medium|gemini-*-low)
+              case "$AGY_EFFORT" in
+                high|medium|low)
+                  AGY_MODEL="${AGY_MODEL%-*}-${AGY_EFFORT}"
+                  ;;
+              esac
+              ;;
+          esac
 
           run_agy() {
             # This file is consumed by every mctlhq repository the moment it
