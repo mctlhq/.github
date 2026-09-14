@@ -324,15 +324,21 @@ jobs:
           # vs gemini-3.8-flash-high) and agy exits 1 on mismatch ("--model X conflicts
           # with --effort Y", observed 2026-09-13). Reconcile the suffix automatically
           # so callers overriding only `effort:` without updating `model:` do not fail.
+          effort_lower=$(printf '%s' "$AGY_EFFORT" | tr '[:upper:]' '[:lower:]')
           case "$AGY_MODEL" in
             gemini-*-high|gemini-*-medium|gemini-*-low)
-              case "$AGY_EFFORT" in
+              case "$effort_lower" in
                 high|medium|low)
-                  AGY_MODEL="${AGY_MODEL%-*}-${AGY_EFFORT}"
+                  reconciled_model="${AGY_MODEL%-*}-${effort_lower}"
+                  if [ "$reconciled_model" != "$AGY_MODEL" ]; then
+                    echo "::notice::reconciled agy model from $AGY_MODEL to $reconciled_model to match effort $AGY_EFFORT"
+                    AGY_MODEL="$reconciled_model"
+                  fi
                   ;;
               esac
               ;;
           esac
+          echo "model=$AGY_MODEL" >> "$GITHUB_OUTPUT"
 
           run_agy() {
             # This file is consumed by every mctlhq repository the moment it
@@ -484,10 +490,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          # Same rule as the run step above: a caller-supplied string reaches
-          # this script through env, never through `${{ }}`, because that
-          # substitution happens before bash parses the line.
-          AGY_MODEL: ${{ inputs.model }}
+          # Reconciled model from the agy step, with fallback to raw input if the
+          # run step failed before writing outputs.
+          AGY_MODEL: ${{ steps.agy.outputs.model || inputs.model }}
         run: |
           set -euo pipefail
           {
