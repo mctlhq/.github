@@ -35,7 +35,7 @@ name: Agy PR review (reusable)
 on:
   workflow_call:
     inputs:
-      # Defaulted to gemini-3.8-flash-high with effort: medium to reduce
+      # Defaulted to gemini-3.8-flash-medium with effort: medium to reduce
       # individual review latency from ~11-14 min to ~2-4 min, accelerating
       # queue drainage across the shared 2-slot runner pool and mitigating
       # token quota exhaustion. Repositories requiring deeper reasoning can
@@ -45,7 +45,7 @@ on:
       model:
         description: Gemini model to use with agy.
         type: string
-        default: 'gemini-3.8-flash-high'
+        default: 'gemini-3.8-flash-medium'
       effort:
         description: Reasoning effort level for agy (low, medium, high).
         type: string
@@ -319,6 +319,27 @@ jobs:
           # before adding a second failure-checking command after it.
           export PATH="$HOME/.local/bin:$PATH"
 
+          # agy 1.1.27 validates model identifiers against --effort: Gemini
+          # models encode the reasoning tier in their name (e.g. gemini-3.8-flash-medium
+          # vs gemini-3.8-flash-high) and agy exits 1 on mismatch ("--model X conflicts
+          # with --effort Y", observed 2026-09-13). Reconcile the suffix automatically
+          # so callers overriding only `effort:` without updating `model:` do not fail.
+          effort_lower=$(printf '%s' "$AGY_EFFORT" | tr '[:upper:]' '[:lower:]')
+          case "$AGY_MODEL" in
+            gemini-*-high|gemini-*-medium|gemini-*-low)
+              case "$effort_lower" in
+                high|medium|low)
+                  reconciled_model="${AGY_MODEL%-*}-${effort_lower}"
+                  if [ "$reconciled_model" != "$AGY_MODEL" ]; then
+                    echo "::notice::reconciled agy model from $AGY_MODEL to $reconciled_model to match effort $AGY_EFFORT"
+                    AGY_MODEL="$reconciled_model"
+                  fi
+                  ;;
+              esac
+              ;;
+          esac
+          echo "model=$AGY_MODEL" >> "$GITHUB_OUTPUT"
+
           run_agy() {
             # This file is consumed by every mctlhq repository the moment it
             # merges to main, with no per-repo rollout or version pin. A
@@ -469,10 +490,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          # Same rule as the run step above: a caller-supplied string reaches
-          # this script through env, never through `${{ }}`, because that
-          # substitution happens before bash parses the line.
-          AGY_MODEL: ${{ inputs.model }}
+          # Reconciled model from the agy step, with fallback to raw input if the
+          # run step failed before writing outputs.
+          AGY_MODEL: ${{ steps.agy.outputs.model || inputs.model }}
         run: |
           set -euo pipefail
           {
