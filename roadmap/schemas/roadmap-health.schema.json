@@ -82,6 +82,19 @@
                   }
                 }
               }
+            },
+            {
+              "description": "A snapshot was observed (source present) => completion must be present.",
+              "if": {
+                "required": [
+                  "source"
+                ]
+              },
+              "then": {
+                "required": [
+                  "completion"
+                ]
+              }
             }
           ]
         },
@@ -532,7 +545,7 @@
       }
     },
     "completion": {
-      "description": "allRequired completion. Separate from health state: an epic can be healthy and incomplete. Unobserved required items are unknown, never incomplete.",
+      "description": "allRequired completion. Separate from health state: an epic can be healthy and incomplete. Unobserved required items are unknown, never incomplete. Blocking/count/status consistency is checked by completion.consistency_errors(); JSON Schema cannot express it.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -624,7 +637,8 @@
                   "issue_not_found",
                   "unobserved",
                   "state_not_observed",
-                  "closed_reason_unrecognized"
+                  "closed_reason_unrecognized",
+                  "binding_ambiguous"
                 ]
               },
               "issue": {

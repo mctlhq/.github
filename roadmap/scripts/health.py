@@ -233,6 +233,16 @@ def document(
     return rendered
 
 
+def semantic_errors(result: dict[str, Any]) -> list[str]:
+    """Checks a RoadmapHealth document needs beyond its JSON Schema.
+
+    Pair with schema validation when consuming a document produced elsewhere.
+    """
+
+    block = result.get("completion")
+    return completion.consistency_errors(block) if block is not None else []
+
+
 def render(documents: Sequence[dict[str, Any]]) -> dict[str, Any]:
     ordered = sorted(documents, key=lambda item: item["epic"]["manifest"]["path"])
     if len(ordered) == 1:

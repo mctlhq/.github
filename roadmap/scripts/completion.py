@@ -44,6 +44,7 @@ def item_status(
     key: IssueKey | None,
     observed: ObservedGraph,
     unobserved: frozenset[IssueKey],
+    ambiguous: frozenset[IssueKey] = frozenset(),
 ) -> tuple[str, str]:
     """Return (status, reason) for one work item."""
 
@@ -51,6 +52,11 @@ def item_status(
         return INCOMPLETE, "unbound"
     if key in unobserved:
         return UNKNOWN, "unobserved"
+    if key in ambiguous:
+        # Two work items resolve to one live issue (a transfer can do this). That
+        # issue's state cannot be credited to either: the reconciler reports the
+        # same pair as BindingAmbiguous and suppresses it.
+        return UNKNOWN, "binding_ambiguous"
     if key in observed.missing:
         # Observed, and GitHub says the issue does not exist: that is evidence.
         return INCOMPLETE, "issue_not_found"
@@ -72,6 +78,64 @@ def item_status(
     return UNKNOWN, "closed_reason_unrecognized"
 
 
+def _colliding_bindings(
+    work_items: list[dict[str, Any]],
+    observed: ObservedGraph,
+    unobserved: frozenset[IssueKey],
+) -> frozenset[IssueKey]:
+    """Authored keys of work items that resolve onto the same live issue."""
+
+    by_target: dict[IssueKey, set[IssueKey]] = {}
+    for work_item in work_items:
+        key = validate.issue_key(work_item.get("issue"))
+        if key is None or key in unobserved:
+            continue
+        target = observed.resolve(key)
+        if target is not None:
+            by_target.setdefault(target, set()).add(key)
+    return frozenset(
+        key for keys in by_target.values() if len(keys) > 1 for key in keys
+    )
+
+
+def consistency_errors(block: dict[str, Any]) -> list[str]:
+    """Semantic checks a completion block must pass beyond its JSON Schema.
+
+    JSON Schema can say `blocking` is empty or not, but not that it is exactly the
+    required items that are not complete, nor that the counts and status agree
+    with the items. A consumer should run this on any RoadmapHealth it did not
+    compute itself.
+    """
+
+    errors: list[str] = []
+    items = block.get("items", [])
+    required = [item for item in items if item.get("required")]
+
+    expected_blocking = sorted(item["id"] for item in required if item["status"] != COMPLETE)
+    if sorted(block.get("blocking", [])) != expected_blocking:
+        errors.append(
+            f"blocking {sorted(block.get('blocking', []))} != required items not complete {expected_blocking}"
+        )
+
+    counts = {
+        "total": len(required),
+        **{status: sum(1 for item in required if item["status"] == status)
+           for status in (COMPLETE, INCOMPLETE, UNKNOWN)},
+    }
+    if block.get("required") != counts:
+        errors.append(f"required counts {block.get('required')} != derived {counts}")
+
+    if counts[INCOMPLETE]:
+        expected_status = INCOMPLETE
+    elif counts[UNKNOWN]:
+        expected_status = UNKNOWN
+    else:
+        expected_status = COMPLETE
+    if block.get("status") != expected_status:
+        errors.append(f"status {block.get('status')!r} != derived {expected_status!r}")
+    return errors
+
+
 def compute(
     document: dict[str, Any],
     observed: ObservedGraph,
@@ -91,10 +155,12 @@ def compute(
     if mode != MODE_ALL_REQUIRED:
         raise ValueError(f"unsupported completion mode: {mode!r}")
 
+    ambiguous = _colliding_bindings(spec["workItems"], observed, unobserved)
+
     items: list[dict[str, Any]] = []
     for work_item in sorted(spec["workItems"], key=lambda item: item["id"]):
         key = validate.issue_key(work_item.get("issue"))
-        status, reason = item_status(key, observed, unobserved)
+        status, reason = item_status(key, observed, unobserved, ambiguous)
         entry: dict[str, Any] = {
             "id": work_item["id"],
             "required": bool(work_item["required"]),

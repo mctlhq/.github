@@ -69,6 +69,22 @@ class CompletionTest(unittest.TestCase):
         self.assertEqual("live-capture", self.capture["source"]["mode"])
         self.assertEqual([], github_graph.snapshot_errors(self.capture))
 
+    def test_state_reason_is_optional_on_found_and_forbidden_on_not_found(self) -> None:
+        """Open issues have no state_reason; a not-found observation may carry none."""
+
+        open_without_reason = [
+            item for item in self.capture["issues"]
+            if item.get("state") == "open" and "stateReason" not in item
+        ]
+        self.assertTrue(open_without_reason)
+        self.assertEqual([], github_graph.snapshot_errors(self.capture))
+
+        forged = mutations.mark_missing(self.capture, APPLY)
+        for observation in forged["issues"]:
+            if observation["requested"] == mutations.ref(APPLY):
+                observation["stateReason"] = "completed"
+        self.assertNotEqual([], github_graph.snapshot_errors(forged))
+
     def test_epic_66_is_healthy_and_blocked_only_by_governed_apply(self) -> None:
         result = self._assess(self.capture)
         self.assertEqual("healthy", result["state"])
@@ -205,6 +221,49 @@ class CompletionTest(unittest.TestCase):
         forged = copy.deepcopy(result)
         forged["completion"]["blocking"] = []
         self.assertNotEqual([], list(self.validator.iter_errors(forged)))
+
+    def test_consistency_errors_reject_blocking_that_contradicts_the_items(self) -> None:
+        block = self._assess(self.capture)["completion"]
+        self.assertEqual([], completion.consistency_errors(block))
+
+        forged = {
+            "optional item listed as blocking": lambda b: b["blocking"].append("temporal-health"),
+            "complete item listed as blocking": lambda b: b["blocking"].append("reconciler"),
+            "counts disagree with items": lambda b: b["required"].__setitem__("complete", 3),
+            "status disagrees with items": lambda b: b.__setitem__("status", "unknown"),
+        }
+        for name, mutate in forged.items():
+            with self.subTest(case=name):
+                copy_block = copy.deepcopy(block)
+                mutate(copy_block)
+                self.assertNotEqual([], completion.consistency_errors(copy_block))
+                result = self._assess(self.capture)
+                result["completion"] = copy_block
+                self.assertNotEqual([], health.semantic_errors(result))
+
+    def test_observed_snapshot_without_completion_is_rejected(self) -> None:
+        partial = copy.deepcopy(self.capture)
+        partial["issues"] = [i for i in partial["issues"] if i["requested"] != mutations.ref(HEALTH)]
+        result = self._assess(partial)
+        self.assertEqual("observation_failed", result["state"])
+        self.assertIn("source", result)
+        forged = copy.deepcopy(result)
+        forged.pop("completion")
+        self.assertNotEqual([], list(self.validator.iter_errors(forged)))
+
+    def test_bindings_colliding_on_one_issue_are_not_credited(self) -> None:
+        """A transfer that folds two work items onto one closed issue must not complete both."""
+
+        moved = mutations.redirect(self.capture, APPLY, RECONCILER)
+        result = self._assess(moved)
+        block = result["completion"]
+        for item_id in ("reconciler", "governed-apply"):
+            item = self._item(block, item_id)
+            self.assertEqual(("unknown", "binding_ambiguous"), (item["status"], item["reason"]))
+        self.assertNotEqual("complete", block["status"])
+        self.assertIn("BindingAmbiguous", [d["code"] for d in result["diagnostics"]])
+        self.assertEqual([], completion.consistency_errors(block))
+        self.assertEqual([], [e.message for e in self.validator.iter_errors(result)])
 
     def test_invalid_epic_carries_no_completion(self) -> None:
         result = health.invalid(EPIC_66, None, {EPIC_66: ("schema failure",)})

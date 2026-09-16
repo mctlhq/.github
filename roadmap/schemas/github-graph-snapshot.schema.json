@@ -162,44 +162,15 @@
             ]
           },
           "then": {
-            "not": {
-              "anyOf": [
-                {
-                  "required": [
-                    "resolved"
-                  ]
-                },
-                {
-                  "required": [
-                    "parent"
-                  ]
-                },
-                {
-                  "required": [
-                    "subIssues"
-                  ]
-                },
-                {
-                  "required": [
-                    "blockedBy"
-                  ]
-                },
-                {
-                  "required": [
-                    "state"
-                  ]
-                },
-                {
-                  "required": [
-                    "updatedAt"
-                  ]
-                },
-                {
-                  "required": [
-                    "stateReason"
-                  ]
-                }
-              ]
+            "description": "A not-found observation carries no evidence about the issue: every one of these fields is forbidden (false schema).",
+            "properties": {
+              "resolved": false,
+              "parent": false,
+              "subIssues": false,
+              "blockedBy": false,
+              "state": false,
+              "updatedAt": false,
+              "stateReason": false
             }
           }
         }
