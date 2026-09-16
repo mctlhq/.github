@@ -191,11 +191,19 @@ the relations that touch them, and suppression holds in both directions: a withh
 endpoint never comes back as an "unexpected" relation on its neighbour. Otherwise one
 ambiguous binding would cascade into drift on every issue pointing at it.
 
-`BindingAmbiguous` also covers the reverse collision: when two authored bindings
-resolve to the *same* canonical issue -- which a transfer can cause, and which the
+`BindingAmbiguous` also covers the reverse collision: when two *owned* bindings
+resolve to the same canonical issue -- which a transfer can cause, and which the
 offline validator cannot see because the authored identities differ -- both are
 reported and both are suppressed. Otherwise one live object would quietly satisfy two
 work items.
+
+An `externalDependsOn` reference is an endpoint, not a binding. It names somebody
+else's issue, so it never participates in that collision rule: two external references
+landing on one issue says nothing about this epic, and letting them collide would
+suppress a perfectly good binding on the strength of an outside dependency. Several
+work items may name the same external issue; it is still one issue, so it is settled
+once and attributed to the first work item that referenced it rather than producing
+one entry per dependent item.
 
 An issue the snapshot never observed is an error, not a `BindingIssueNotFound`.
 Reporting "not found" for something nobody looked at would invent evidence. The same

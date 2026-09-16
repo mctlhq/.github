@@ -60,9 +60,11 @@ class _RecordingOpener:
     def __init__(self, routes: dict[str, object]):
         self.routes = routes
         self.calls: list[tuple[str, str, bytes | None]] = []
+        self.timeouts: list[float | None] = []
 
-    def open(self, request):
+    def open(self, request, timeout=None):
         self.calls.append((request.get_method(), request.full_url, request.data))
+        self.timeouts.append(timeout)
         url = request.full_url.split("?")[0]
         if url not in self.routes:
             raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
@@ -356,6 +358,24 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(False, snapshot["issues"][0]["found"])
         self.assertNotIn("resolved", snapshot["issues"][0])
 
+    def test_live_requests_carry_a_timeout(self) -> None:
+        """A hung endpoint must fail, not stall a read-only run forever."""
+
+        opener = _RecordingOpener(self._routes())
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        source.snapshot([("mctlhq/example", 1)])
+        self.assertTrue(opener.timeouts)
+        self.assertTrue(all(value for value in opener.timeouts))
+
+    def test_a_timed_out_read_is_an_observation_error(self) -> None:
+        class _Hanging:
+            def open(self, request, timeout=None):
+                raise TimeoutError("timed out")
+
+        source = github_graph.LiveGraphSource("token", opener=_Hanging())
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
     # -- T15 -------------------------------------------------------------
 
     def test_output_is_byte_identical_for_identical_input(self) -> None:
@@ -572,6 +592,33 @@ class ReconcileTest(unittest.TestCase):
             {entry["resolved"]["number"] for entry in ambiguous},
         )
 
+    def test_external_reference_never_collides_with_an_owned_binding(self) -> None:
+        """An external issue claims no ownership, so it cannot invalidate one."""
+
+        moved = mutations.redirect(self.converged, EXTERNAL, PORTAL)
+        result = self._diff(moved)
+        self.assertEqual(
+            [], [e for e in result["binding"] if e["type"] == "BindingAmbiguous"]
+        )
+        # portal-card's own binding stays comparable.
+        self.assertEqual([], result["hierarchy"])
+
+    def test_a_shared_external_reference_is_settled_once(self) -> None:
+        """One issue is one endpoint, however many work items point at it."""
+
+        document = copy.deepcopy(self.document)
+        for item in document["spec"]["workItems"]:
+            if item["id"] == "docs":
+                item["externalDependsOn"] = [mutations.ref(EXTERNAL)]
+
+        moved = mutations.redirect(self.converged, EXTERNAL, "mctlhq/mctl-telegram#900")
+        result = self._diff(moved, document=document)
+        redirected = [
+            entry for entry in result["binding"] if entry["type"] == "BindingRedirected"
+        ]
+        self.assertEqual(1, len(redirected))
+        self.assertEqual(mutations.ref(EXTERNAL), redirected[0]["requested"])
+
     # -- output contract and IO ------------------------------------------
 
     def test_diff_schema_rejects_a_mislabelled_entry(self) -> None:
@@ -594,6 +641,21 @@ class ReconcileTest(unittest.TestCase):
             }
         ]
         self.assertNotEqual([], sorted(validator.iter_errors(stripped)))
+
+    def test_capture_writes_the_snapshot_that_was_read(self) -> None:
+        source = github_graph.FixtureGraphSource(self.converged)
+        with tempfile.TemporaryDirectory() as raw:
+            captured = Path(raw) / "capture.json"
+            with mock.patch.object(reconcile, "_build_source", return_value=source):
+                with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    code = reconcile.main(
+                        [str(PILOT), "--capture", str(captured)]
+                    )
+            self.assertEqual(reconcile.EXIT_CONVERGED, code)
+            self.assertTrue(captured.exists())
+            written = json.loads(captured.read_text(encoding="utf-8"))
+        self.assertEqual([], github_graph.snapshot_errors(written))
+        self.assertEqual(self.converged["issues"], written["issues"])
 
     def test_exit_two_when_the_output_path_cannot_be_written(self) -> None:
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):

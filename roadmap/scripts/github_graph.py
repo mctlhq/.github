@@ -34,6 +34,10 @@ DEFAULT_SNAPSHOT_SCHEMA = ROOT / "schemas" / "github-graph-snapshot.schema.json"
 DEFAULT_API_BASE = "https://api.github.com"
 GITHUB_API_VERSION = "2022-11-28"
 PAGE_SIZE = 100
+# Without an explicit timeout urllib waits on the socket forever, so a hung
+# endpoint or proxy stalls the whole run with no error and no output -- the one
+# failure mode a read-only tool has no way to report.
+REQUEST_TIMEOUT_SECONDS = 30
 
 IssueKey = tuple[str, int]
 
@@ -266,12 +270,14 @@ class LiveGraphSource:
         token: str,
         api_base: str = DEFAULT_API_BASE,
         opener: Any | None = None,
+        timeout: float = REQUEST_TIMEOUT_SECONDS,
     ) -> None:
         if not token:
             raise ObservationError("live mode requires a GitHub token")
         self._token = token
         self._api_base = api_base.rstrip("/")
         self._opener = opener or urllib.request.build_opener()
+        self._timeout = timeout
         # One issue is observed once per process, however many manifests or
         # capture passes ask for it. Re-reading would also let a graph change
         # between two halves of the same diff.
@@ -295,7 +301,7 @@ class LiveGraphSource:
         request.add_header("Accept", "application/vnd.github+json")
         request.add_header("X-GitHub-Api-Version", GITHUB_API_VERSION)
         request.add_header("Authorization", f"Bearer {self._token}")
-        return self._opener.open(request)
+        return self._opener.open(request, timeout=self._timeout)
 
     def _get(self, url: str) -> tuple[int, Any, dict[str, str]]:
         try:
@@ -306,6 +312,8 @@ class LiveGraphSource:
             raise ObservationError(f"GET {url}: HTTP {error.code}") from error
         except urllib.error.URLError as error:
             raise ObservationError(f"GET {url}: {error.reason}") from error
+        except TimeoutError as error:
+            raise ObservationError(f"GET {url}: timed out") from error
 
         with response:
             raw = response.read()

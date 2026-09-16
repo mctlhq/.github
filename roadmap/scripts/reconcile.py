@@ -152,6 +152,28 @@ def _sorted(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda entry: json.dumps(entry, sort_keys=True))
 
 
+def _endpoints(desired: DesiredGraph) -> list[tuple[str, IssueKey]]:
+    """Every authored identity that has to be settled, each listed once.
+
+    Owned bindings come first and keep their own owner. An external reference
+    is not a binding -- it names somebody else's issue -- but it still has to
+    resolve before a dependency edge through it can be compared. Several work
+    items may name the same external issue; that endpoint is still one issue,
+    so it is settled once and attributed to the first work item that referenced
+    it, rather than producing one "redirected" entry per dependent item.
+    """
+
+    owned = {key for _, key in desired.authored_bindings()}
+    external: dict[IssueKey, str] = {}
+    for owner, key in sorted(desired.external_refs):
+        if key not in owned:
+            external.setdefault(key, owner)
+
+    return desired.authored_bindings() + [
+        (owner, key) for key, owner in sorted(external.items())
+    ]
+
+
 def _resolve_endpoints(
     desired: DesiredGraph, observed: ObservedGraph
 ) -> tuple[list[dict[str, Any]], dict[IssueKey, IssueKey], set[IssueKey]]:
@@ -167,11 +189,11 @@ def _resolve_endpoints(
     resolved: dict[IssueKey, IssueKey] = {}
     suppressed: set[IssueKey] = set()
 
-    authored: list[tuple[str, IssueKey]] = (
-        desired.authored_bindings() + sorted(desired.external_refs)
-    )
+    endpoints = _endpoints(desired)
+    owners = {key: owner for owner, key in endpoints}
+    owned_keys = {key for _, key in desired.authored_bindings()}
 
-    for owner, key in authored:
+    for owner, key in endpoints:
         if key in observed.missing:
             entries.append(
                 {
@@ -214,14 +236,19 @@ def _resolve_endpoints(
             )
             suppressed.add(key)
 
-    # Two authored bindings that resolve to one canonical issue are as
-    # ambiguous as one issue observed under two parents: a single live object
-    # would satisfy both work items and the duplicate would never surface,
-    # because the validator can only see the identities as authored.
+    # Two OWNED bindings that resolve to one canonical issue are as ambiguous as
+    # one issue observed under two parents: a single live object would satisfy
+    # both work items and the duplicate would never surface, because the
+    # validator can only compare the identities as authored.
+    #
+    # External references are deliberately excluded. They claim no ownership, so
+    # two of them landing on one issue says nothing about this epic, and letting
+    # them collide here would suppress a perfectly good binding on the strength
+    # of somebody else's dependency.
     collisions: dict[IssueKey, list[IssueKey]] = {}
     for key, target in sorted(resolved.items()):
-        collisions.setdefault(target, []).append(key)
-    owners_by_authored = {key: owner for owner, key in authored}
+        if key in owned_keys:
+            collisions.setdefault(target, []).append(key)
     for target, sources in sorted(collisions.items()):
         if len(sources) < 2:
             continue
@@ -230,7 +257,7 @@ def _resolve_endpoints(
                 {
                     "type": "BindingAmbiguous",
                     "severity": DRIFT,
-                    "owner": owners_by_authored.get(key, EPIC_OWNER),
+                    "owner": owners.get(key, EPIC_OWNER),
                     "requested": _ref(key),
                     "resolved": _ref(target),
                 }
