@@ -125,8 +125,12 @@ class HealthTest(unittest.TestCase):
         broken = copy.deepcopy(self.converged)
         broken["issues"][0].pop("subIssues")
 
-        # A replayed fixture validates itself and fails before assess() sees it.
-        self.assertEqual("observation_failed", self._assess(broken)["state"])
+        # A replayed fixture validates itself and fails before assess() sees it --
+        # it must still get the same code as the payload itself, not a code that
+        # depends on which adapter happened to notice.
+        replayed = self._assess(broken)
+        self.assertEqual("observation_failed", replayed["state"])
+        self.assertEqual(["SnapshotInvalid"], self._codes(replayed, "error"))
 
         # Any other source hands the snapshot over as-is; assess() must still
         # classify it as unusable evidence, not as an invalid manifest.
@@ -297,7 +301,64 @@ class HealthTest(unittest.TestCase):
         code, payload = self._run([str(PILOT), "--snapshot", "/nonexistent/snapshot.json"])
         self.assertEqual(health.EXIT_OBSERVATION_FAILED, code)
         self.assertEqual("observation_failed", payload["state"])
+        self.assertEqual(["ObservationFailed"], self._codes(payload, "error"))
+        # The epic stays identifiable on this path too.
+        self.assertEqual(
+            {"repository": "mctlhq/.github", "number": 42}, payload["epic"]["issue"]
+        )
         self.assertSchemaValid(payload)
+
+    def test_cli_malformed_snapshot_is_snapshot_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            for name, content in (("not json", "{not json"), ("not a snapshot", "{}")):
+                with self.subTest(case=name):
+                    path = directory / "snapshot.json"
+                    path.write_text(content, encoding="utf-8")
+                    code, payload = self._run([str(PILOT), "--snapshot", str(path)])
+                    self.assertEqual(health.EXIT_OBSERVATION_FAILED, code)
+                    self.assertEqual(["SnapshotInvalid"], self._codes(payload, "error"))
+                    self.assertIn("issue", payload["epic"])
+                    self.assertSchemaValid(payload)
+
+    def test_invalid_manifest_with_malformed_metadata_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "broken.yaml"
+            for metadata in ('"broken"', "[1, 2]", "null"):
+                with self.subTest(metadata=metadata):
+                    path.write_text(f"metadata: {metadata}\n", encoding="utf-8")
+                    result = health.invalid(path, None, {path: ("schema failure",)})
+                    self.assertEqual("invalid", result["state"])
+                    self.assertNotIn("name", result["epic"])
+                    self.assertSchemaValid(result)
+
+    def test_schema_binds_state_to_diagnostics_not_only_counters(self) -> None:
+        healthy = self._assess(self.converged)
+        drifting = self._assess(mutations.drop_parent_edge(self.converged, API))
+        failed = self._assess(self._without(self.converged, API))
+        error = {"code": "ObservationFailed", "level": "error", "message": "x"}
+
+        forged = {
+            "healthy carrying an error diagnostic": (healthy, lambda d: d["diagnostics"].append(error)),
+            "healthy carrying a drift diagnostic": (
+                healthy,
+                lambda d: d["diagnostics"].append({"code": "DependencyMissing", "level": "drift", "message": "x"}),
+            ),
+            "drift carrying an error diagnostic": (drifting, lambda d: d["diagnostics"].append(error)),
+            "drift with no drift diagnostic": (
+                drifting,
+                lambda d: d.__setitem__("diagnostics", [i for i in d["diagnostics"] if i["level"] != "drift"]),
+            ),
+            "observation_failed with no error diagnostic": (
+                failed,
+                lambda d: d.__setitem__("diagnostics", [i for i in d["diagnostics"] if i["level"] != "error"]),
+            ),
+        }
+        for name, (base, mutate) in forged.items():
+            with self.subTest(case=name):
+                document = copy.deepcopy(base)
+                mutate(document)
+                self.assertNotEqual([], list(self.validator.iter_errors(document)))
 
     def test_cli_requires_exactly_one_source(self) -> None:
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):

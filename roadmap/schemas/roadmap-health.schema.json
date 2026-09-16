@@ -63,6 +63,22 @@
                   }
                 }
               }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "contains": {
+                    "properties": {
+                      "level": {
+                        "const": "error"
+                      }
+                    },
+                    "required": [
+                      "level"
+                    ]
+                  }
+                }
+              }
             }
           ]
         },
@@ -122,6 +138,22 @@
                   "source"
                 ]
               }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "contains": {
+                    "properties": {
+                      "level": {
+                        "const": "error"
+                      }
+                    },
+                    "required": [
+                      "level"
+                    ]
+                  }
+                }
+              }
             }
           ]
         },
@@ -178,6 +210,40 @@
                   }
                 }
               }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "not": {
+                    "contains": {
+                      "properties": {
+                        "level": {
+                          "const": "error"
+                        }
+                      },
+                      "required": [
+                        "level"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "contains": {
+                    "properties": {
+                      "level": {
+                        "const": "drift"
+                      }
+                    },
+                    "required": [
+                      "level"
+                    ]
+                  }
+                }
+              }
             }
           ]
         },
@@ -230,6 +296,42 @@
                     },
                     "drift": {
                       "const": 0
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "not": {
+                    "contains": {
+                      "properties": {
+                        "level": {
+                          "const": "error"
+                        }
+                      },
+                      "required": [
+                        "level"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "not": {
+                    "contains": {
+                      "properties": {
+                        "level": {
+                          "const": "drift"
+                        }
+                      },
+                      "required": [
+                        "level"
+                      ]
                     }
                   }
                 }

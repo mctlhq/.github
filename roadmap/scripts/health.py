@@ -249,8 +249,10 @@ def _invalid_epic(path: Path, corpus: Path | None) -> dict[str, Any]:
         parsed = yaml.safe_load(raw.decode("utf-8"))
     except (yaml.YAMLError, UnicodeDecodeError):
         return epic
-    if isinstance(parsed, dict):
-        name = (parsed.get("metadata") or {}).get("name")
+    # The manifest failed validation, so nothing about its shape can be assumed.
+    metadata = parsed.get("metadata") if isinstance(parsed, dict) else None
+    if isinstance(metadata, dict):
+        name = metadata.get("name")
         if isinstance(name, str) and name:
             epic["name"] = name
     return epic
@@ -292,6 +294,36 @@ def invalid(
     return document(epic=_invalid_epic(path, corpus), state=state, diagnostics=diagnostics)
 
 
+def _epic(path: Path, loaded: reconcile.LoadedManifest, corpus: Path | None) -> dict[str, Any]:
+    """Identity of a validated epic -- the same shape on every path."""
+
+    desired = reconcile.desired_graph(loaded.document)
+    epic: dict[str, Any] = {
+        "name": desired.name,
+        "manifest": {
+            "path": reconcile._manifest_label(path, corpus),
+            "sha256": loaded.sha256,
+        },
+    }
+    if desired.root is not None:
+        epic["issue"] = {"repository": desired.root[0], "number": desired.root[1]}
+    return epic
+
+
+def _source_failure(exc: BaseException) -> Diagnostic:
+    """Classify why a snapshot could not be obtained, by what failed -- not by adapter.
+
+    A payload that was read but is not a valid snapshot (malformed JSON, schema
+    violation) is SnapshotInvalid. Failing to read at all (missing file, transport,
+    auth) is ObservationFailed. Both are observation failures in state; the code
+    tells a consumer which remediation applies.
+    """
+
+    if isinstance(exc, ValueError):  # includes json.JSONDecodeError
+        return Diagnostic(code=SNAPSHOT_INVALID, level=LEVEL_ERROR, message=str(exc))
+    return Diagnostic(code=OBSERVATION_FAILED, level=LEVEL_ERROR, message=str(exc))
+
+
 def assess(
     path: Path,
     loaded: reconcile.LoadedManifest,
@@ -303,22 +335,10 @@ def assess(
 
     desired = reconcile.desired_graph(loaded.document)
     keys = desired.authored_keys()
-    epic: dict[str, Any] = {
-        "name": desired.name,
-        "manifest": {
-            "path": reconcile._manifest_label(path, corpus),
-            "sha256": loaded.sha256,
-        },
-    }
-    if desired.root is not None:
-        epic["issue"] = {"repository": desired.root[0], "number": desired.root[1]}
+    epic = _epic(path, loaded, corpus)
 
-    def failed(code: str, message: str, subject: dict[str, Any] | None = None):
-        state, diagnostics = evaluate(
-            observation_errors=[
-                Diagnostic(code=code, level=LEVEL_ERROR, message=message, subject=subject)
-            ]
-        )
+    def failed(diagnostic: Diagnostic):
+        state, diagnostics = evaluate(observation_errors=[diagnostic])
         return document(epic=epic, state=state, diagnostics=diagnostics)
 
     try:
@@ -327,11 +347,13 @@ def assess(
         else:
             snapshot = source_adapter.snapshot(keys)
     except (ObservationError, SnapshotIncomplete, ValueError, OSError) as exc:
-        return failed(OBSERVATION_FAILED, str(exc))
+        return failed(_source_failure(exc))
 
     errors = github_graph.snapshot_errors(snapshot)
     if errors:
-        return failed(SNAPSHOT_INVALID, "; ".join(errors))
+        return failed(
+            Diagnostic(code=SNAPSHOT_INVALID, level=LEVEL_ERROR, message="; ".join(errors))
+        )
 
     observed = {
         github_graph._ref_key(item["requested"]) for item in snapshot.get("issues", [])
@@ -416,22 +438,10 @@ def main(argv: list[str] | None = None) -> int:
             source_adapter = reconcile._build_source(args)
         except (ObservationError, OSError, ValueError, json.JSONDecodeError) as exc:
             for path in selected:
-                loaded = validation.manifests[path]
-                desired = reconcile.desired_graph(loaded.document)
-                state, diagnostics = evaluate(
-                    observation_errors=[
-                        Diagnostic(code=OBSERVATION_FAILED, level=LEVEL_ERROR, message=str(exc))
-                    ]
-                )
+                state, diagnostics = evaluate(observation_errors=[_source_failure(exc)])
                 documents.append(
                     document(
-                        epic={
-                            "name": desired.name,
-                            "manifest": {
-                                "path": reconcile._manifest_label(path, corpus_root),
-                                "sha256": loaded.sha256,
-                            },
-                        },
+                        epic=_epic(path, validation.manifests[path], corpus_root),
                         state=state,
                         diagnostics=diagnostics,
                     )
