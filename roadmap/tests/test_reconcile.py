@@ -94,17 +94,6 @@ class _RecordingOpener:
         return _FakeResponse(payload)
 
 
-class _RefusingSource:
-    """A graph source that fails the test if anything asks it to observe."""
-
-    def __init__(self):
-        self.calls = 0
-
-    def snapshot(self, keys):
-        self.calls += 1
-        raise AssertionError("network access attempted before validation passed")
-
-
 class ReconcileTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -278,12 +267,21 @@ class ReconcileTest(unittest.TestCase):
             },
         }
 
-    def _run_main(self, argv: list[str]) -> tuple[int, _RefusingSource]:
-        source = _RefusingSource()
-        with mock.patch.object(reconcile, "_build_source", return_value=source):
+    def _run_main_expecting_no_snapshot_load(self, argv: list[str]) -> int:
+        """Run the CLI and fail the test if any graph source is built at all.
+
+        Corpus validation has to finish before any observed state is read. Every
+        source -- a replayed snapshot or a live read -- is created by
+        `_build_source`, so asserting it is never called covers both. The factory
+        is replaced with a mock so the assertion is on whether it was called, not
+        on anything it would have returned.
+        """
+
+        with mock.patch.object(reconcile, "_build_source") as built:
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                 code = reconcile.main(argv)
-        return code, source
+        built.assert_not_called()
+        return code
 
     def test_unselected_manifest_duplicate_binding_fails_before_any_read(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -295,11 +293,10 @@ class ReconcileTest(unittest.TestCase):
                 "number": 261,
             }
             selected = self._corpus(directory, other)
-            code, source = self._run_main(
+            code = self._run_main_expecting_no_snapshot_load(
                 [str(selected), "--corpus", str(directory), "--snapshot", str(CONVERGED)]
             )
             self.assertEqual(reconcile.EXIT_ERROR, code)
-            self.assertEqual(0, source.calls)
 
     def test_unselected_manifest_duplicate_name_fails_before_any_read(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -307,11 +304,10 @@ class ReconcileTest(unittest.TestCase):
             other = self._unrelated_manifest()
             other["metadata"]["name"] = "human-input"
             selected = self._corpus(directory, other)
-            code, source = self._run_main(
+            code = self._run_main_expecting_no_snapshot_load(
                 [str(selected), "--corpus", str(directory), "--snapshot", str(CONVERGED)]
             )
             self.assertEqual(reconcile.EXIT_ERROR, code)
-            self.assertEqual(0, source.calls)
 
     # -- T13 -------------------------------------------------------------
 
