@@ -264,13 +264,24 @@ class FixtureGraphSource:
     ) -> "FixtureGraphSource":
         return cls(load_snapshot(path, schema))
 
-    def snapshot(self, keys: Sequence[IssueKey]) -> dict[str, Any]:
+    def snapshot(
+        self, keys: Sequence[IssueKey], *, require_complete: bool = True
+    ) -> dict[str, Any]:
+        """Return the replayed snapshot.
+
+        By default a snapshot that never observed one of `keys` is an error.
+        Health evaluation passes `require_complete=False` so it can report which
+        endpoints were not observed instead of failing outright; it then treats
+        those endpoints as unobservable, never as absent.
+        """
+
         # A source built from a dict never went through load_snapshot(), so it
         # is validated here, before require_observations() indexes into it.
         errors = snapshot_errors(self._snapshot)
         if errors:
             raise ValueError("snapshot is invalid: " + "; ".join(errors))
-        require_observations(self._snapshot, keys)
+        if require_complete:
+            require_observations(self._snapshot, keys)
         return self._snapshot
 
 

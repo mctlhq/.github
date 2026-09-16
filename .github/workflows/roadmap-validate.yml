@@ -36,5 +36,12 @@ jobs:
             --snapshot roadmap/fixtures/human-input/converged-fixture.json \
             --output /dev/null
 
+      - name: Assess health against the synthetic converged fixture
+        run: |
+          python3 roadmap/scripts/health.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+            --output /dev/null
+
       - name: Run roadmap validator and reconciler tests
         run: python3 -m unittest discover -s roadmap/tests -p 'test_*.py'
