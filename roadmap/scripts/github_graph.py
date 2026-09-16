@@ -265,8 +265,35 @@ class FixtureGraphSource:
         return cls(load_snapshot(path, schema))
 
     def snapshot(self, keys: Sequence[IssueKey]) -> dict[str, Any]:
+        # A source built from a dict never went through load_snapshot(), so it
+        # is validated here, before require_observations() indexes into it.
+        errors = snapshot_errors(self._snapshot)
+        if errors:
+            raise ValueError("snapshot is invalid: " + "; ".join(errors))
         require_observations(self._snapshot, keys)
         return self._snapshot
+
+
+class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Follow redirects only within the API origin.
+
+    urllib's default handler copies every request header except content-length
+    and content-type onto the redirected request -- Authorization included --
+    for any Location, on any host. Redirects cannot simply be disabled: a
+    transferred issue answers with one. So each Location is held to the same
+    origin rule as the original URL before the credential goes with it.
+    """
+
+    def __init__(self, allowed: Any) -> None:
+        super().__init__()
+        self._allowed = allowed
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not self._allowed(newurl):
+            raise ObservationError(
+                f"refusing to follow a redirect off the API origin: {newurl}"
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class LiveGraphSource:
@@ -288,7 +315,16 @@ class LiveGraphSource:
         self._token = token
         self._api_base = api_base.rstrip("/")
         self._origin = urllib.parse.urlsplit(self._api_base)
-        self._opener = opener or urllib.request.build_opener()
+        # The token is sent with every request, so the base must be HTTPS. There
+        # is deliberately no insecure opt-in: nothing this tool does needs one.
+        if self._origin.scheme != "https" or not self._origin.netloc:
+            raise ObservationError(
+                f"api_base must be an https URL, got {api_base!r}: "
+                "the token is sent with every request"
+            )
+        self._opener = opener or urllib.request.build_opener(
+            _SameOriginRedirectHandler(self._is_allowed)
+        )
         self._timeout = timeout
         # One issue is observed once per process, however many manifests or
         # capture passes ask for it. Re-reading would also let a graph change
@@ -317,12 +353,9 @@ class LiveGraphSource:
         # Every request carries the bearer token, and pagination follows URLs
         # taken from a response header. Only the configured API origin may
         # receive the token: a malformed or cross-origin `rel="next"` link must
-        # fail the read, not forward the credential to another host.
-        target = urllib.parse.urlsplit(url)
-        if (target.scheme, target.netloc) != (self._origin.scheme, self._origin.netloc) or not (
-            target.path == self._origin.path
-            or target.path.startswith(self._origin.path.rstrip("/") + "/")
-        ):
+        # fail the read, not forward the credential to another host. Redirects
+        # are held to the same rule by _SameOriginRedirectHandler.
+        if not self._is_allowed(url):
             raise ObservationError(
                 f"refusing to send credentials outside {self._api_base}: {url}"
             )
@@ -332,6 +365,13 @@ class LiveGraphSource:
         request.add_header("X-GitHub-Api-Version", GITHUB_API_VERSION)
         request.add_header("Authorization", f"Bearer {self._token}")
         return self._opener.open(request, timeout=self._timeout)
+
+    def _is_allowed(self, url: str) -> bool:
+        target = urllib.parse.urlsplit(url)
+        if (target.scheme, target.netloc) != (self._origin.scheme, self._origin.netloc):
+            return False
+        prefix = self._origin.path.rstrip("/")
+        return not prefix or target.path == prefix or target.path.startswith(prefix + "/")
 
     def _get(self, url: str) -> tuple[int, Any, dict[str, str]]:
         try:
@@ -367,11 +407,23 @@ class LiveGraphSource:
 
         items: list[Any] = []
         next_url: str | None = f"{url}?per_page={PAGE_SIZE}"
+        visited: set[str] = set()
         while next_url:
+            # A `rel="next"` that points back at a page already read would loop
+            # forever without ever reaching a timeout.
+            if next_url in visited:
+                raise ObservationError(f"GET {next_url}: pagination revisits a page")
+            visited.add(next_url)
             status, payload, headers = self._get(next_url)
             if status in (404, 410):
                 raise ObservationError(
                     f"GET {next_url}: HTTP {status} on a relation listing"
+                )
+            # Only a 200 is a complete page. A 206 or any other non-200 success
+            # carrying an array is not evidence of the full relation set.
+            if status != 200:
+                raise ObservationError(
+                    f"GET {next_url}: HTTP {status} is not a complete relation page"
                 )
             # A 200 that is not a list, or a list holding something other than
             # issue objects, is a response we could not read -- not a response
@@ -427,6 +479,8 @@ class LiveGraphSource:
         status, payload, _ = self._get(base)
         if status in (404, 410):
             return {"requested": requested, "found": False}
+        if status != 200:
+            raise ObservationError(f"GET {base}: HTTP {status} is not a complete read")
         if not isinstance(payload, dict):
             # Only 404/410 mean "not found". Anything else unreadable is an
             # observation failure, never evidence that the issue does not exist.
@@ -467,6 +521,10 @@ class LiveGraphSource:
         elif parent_status == 410:
             raise ObservationError(
                 f"GET {resolved_base}/parent: HTTP 410 on an issue that exists"
+            )
+        elif parent_status != 200:
+            raise ObservationError(
+                f"GET {resolved_base}/parent: HTTP {parent_status} is not a complete read"
             )
         elif not isinstance(parent_payload, dict):
             raise ObservationError(

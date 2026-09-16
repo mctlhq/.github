@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 import urllib.error
+import urllib.request
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -60,12 +61,21 @@ class _FakeResponse:
 class _RecordingOpener:
     """Stands in for urllib's opener and remembers every call made through it."""
 
+    # A guard that loops forever does not fail, it hangs -- and a hung test reads
+    # as a slow CI rather than a red one. Past this many calls the opener raises,
+    # so a missing loop guard turns red instead of silent.
+    MAX_CALLS = 50
+
     def __init__(self, routes: dict[str, object]):
         self.routes = routes
         self.calls: list[tuple[str, str, bytes | None]] = []
         self.timeouts: list[float | None] = []
 
     def open(self, request, timeout=None):
+        if len(self.calls) >= self.MAX_CALLS:
+            raise AssertionError(
+                f"opener called more than {self.MAX_CALLS} times: a read is looping"
+            )
         self.calls.append((request.get_method(), request.full_url, request.data))
         self.timeouts.append(timeout)
         url = request.full_url
@@ -77,8 +87,8 @@ class _RecordingOpener:
         if isinstance(payload, int):
             raise urllib.error.HTTPError(url, payload, "error", {}, None)
         if isinstance(payload, tuple):
-            body, headers = payload
-            return _FakeResponse(body, headers=headers)
+            body, headers, *status = payload
+            return _FakeResponse(body, headers=headers, status=status[0] if status else 200)
         return _FakeResponse(payload)
 
 
@@ -541,6 +551,90 @@ class ReconcileTest(unittest.TestCase):
                 with self.assertRaises(github_graph.ObservationError):
                     source.snapshot([("mctlhq/example", 1)])
                 self.assertNotIn(foreign, [url for _, url, _ in opener.calls])
+
+    def test_a_plaintext_api_base_is_refused(self) -> None:
+        """The token rides every request; it must never go over plain HTTP."""
+
+        for base in ("http://api.github.com", "api.github.com", "ftp://api.github.com"):
+            with self.subTest(base=base):
+                with self.assertRaises(github_graph.ObservationError):
+                    github_graph.LiveGraphSource("token", api_base=base, opener=_RecordingOpener({}))
+
+        with mock.patch.dict("os.environ", {"GITHUB_TOKEN": "token"}):
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main([str(PILOT), "--live", "--api-base", "http://api.github.com"])
+        self.assertEqual(reconcile.EXIT_ERROR, code)
+
+    def test_redirects_are_held_to_the_api_origin(self) -> None:
+        """urllib would otherwise copy Authorization onto any Location."""
+
+        source = github_graph.LiveGraphSource("token")
+        handlers = [
+            h for h in source._opener.handlers
+            if isinstance(h, urllib.request.HTTPRedirectHandler)
+        ]
+        self.assertEqual(1, len(handlers))
+        self.assertIsInstance(handlers[0], github_graph._SameOriginRedirectHandler)
+
+        request = urllib.request.Request("https://api.github.com/repos/o/r/issues/1")
+        request.add_header("Authorization", "Bearer token")
+        for foreign in (
+            "https://attacker.example/x",
+            "http://api.github.com/repos/o/r/issues/2",
+            "https://api.github.com.attacker.example/x",
+        ):
+            with self.subTest(location=foreign):
+                with self.assertRaises(github_graph.ObservationError):
+                    handlers[0].redirect_request(request, None, 301, "Moved", {}, foreign)
+
+        same = "https://api.github.com/repositories/42/issues/1"
+        followed = handlers[0].redirect_request(request, None, 301, "Moved", {}, same)
+        self.assertEqual(same, followed.full_url)
+
+    def test_a_pagination_cycle_fails_instead_of_looping(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        first = f"{base}/sub_issues?per_page=100"
+        routes = {
+            base: {"number": 1, "repository_url": issue_url},
+            first: ([], {"Link": f'<{first}>; rel="next"'}),
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_only_a_200_is_a_complete_read(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        issue = {"number": 1, "repository_url": issue_url}
+        cases = {
+            "issue answered 203": {base: (issue, {}, 203)},
+            "parent answered 206": {
+                base: issue,
+                f"{base}/parent": ({"number": 9, "repository_url": issue_url}, {}, 206),
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": [],
+            },
+            "listing answered 206": {
+                base: issue,
+                f"{base}/sub_issues": ([], {}, 206),
+                f"{base}/dependencies/blocked_by": [],
+            },
+        }
+        for name, routes in cases.items():
+            with self.subTest(case=name):
+                source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+
+    def test_a_malformed_fixture_dict_fails_as_invalid_not_as_a_crash(self) -> None:
+        broken = copy.deepcopy(self.converged)
+        del broken["issues"][0]["requested"]
+        source = github_graph.FixtureGraphSource(broken)
+        with self.assertRaises(ValueError) as caught:
+            source.snapshot([("mctlhq/.github", 42)])
+        self.assertNotIsInstance(caught.exception, KeyError)
 
     def test_an_enterprise_api_base_keeps_its_path_prefix(self) -> None:
         api = "https://ghe.example/api/v3"
