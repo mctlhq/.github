@@ -727,6 +727,83 @@ class ReconcileTest(unittest.TestCase):
         fixture["source"] = {"mode": "live-capture"}
         self.assertNotEqual([], github_graph.snapshot_errors(fixture))
 
+    def test_iso_8601_forms_outside_rfc_3339_are_rejected(self) -> None:
+        for value in ("2026-09-16 10:00:00Z", "2026-09-16T10:00Z", "2026-09-16"):
+            with self.subTest(value=value):
+                fixture = copy.deepcopy(self.converged)
+                fixture["source"] = {
+                    "mode": "live-capture",
+                    "capturedAt": value,
+                    "apiBase": "https://api.github.com",
+                }
+                self.assertNotEqual([], github_graph.snapshot_errors(fixture))
+
+    def test_not_found_observation_cannot_carry_an_update_time(self) -> None:
+        fixture = mutations.mark_missing(self.converged, API)
+        for observation in fixture["issues"]:
+            if observation["requested"] == mutations.ref(API):
+                observation["updatedAt"] = "2026-09-16T10:00:00Z"
+        self.assertNotEqual([], github_graph.snapshot_errors(fixture))
+
+    def test_diff_records_the_digest_of_the_validated_bytes(self) -> None:
+        """Provenance is the bytes that were validated, not whatever is on disk later."""
+
+        validated = "0" * 64
+        result = reconcile.reconcile(
+            PILOT,
+            self.document,
+            github_graph.FixtureGraphSource(self.converged),
+            manifest_sha256=validated,
+        )
+        self.assertEqual(validated, result["epic"]["manifest"]["sha256"])
+
+    def test_corpus_outside_the_repository_yields_no_absolute_path(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw) / "corpus"
+            directory.mkdir()
+            manifest = directory / "human-input.yaml"
+            manifest.write_text(PILOT.read_text(encoding="utf-8"), encoding="utf-8")
+            output = Path(raw) / "out.json"
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main(
+                    [str(manifest), "--corpus", str(directory),
+                     "--snapshot", str(CONVERGED), "--output", str(output)]
+                )
+            rendered = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(reconcile.EXIT_CONVERGED, code)
+        self.assertEqual("corpus/human-input.yaml", rendered["epic"]["manifest"]["path"])
+        self.assertEqual(
+            __import__("hashlib").sha256(PILOT.read_bytes()).hexdigest(),
+            rendered["epic"]["manifest"]["sha256"],
+        )
+
+    def test_an_invalid_schema_exits_two_without_a_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            schema = Path(raw) / "bad.json"
+            schema.write_text('{"type": 12}', encoding="utf-8")
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main(
+                    [str(PILOT), "--snapshot", str(CONVERGED), "--schema", str(schema)]
+                )
+        self.assertEqual(reconcile.EXIT_ERROR, code)
+
+    def test_a_dependency_authored_twice_is_one_edge(self) -> None:
+        document = copy.deepcopy(self.document)
+        for item in document["spec"]["workItems"]:
+            if item["id"] == "telegram-adapter":
+                item["externalDependsOn"] = [
+                    mutations.ref(EXTERNAL),
+                    {"repository": EXTERNAL.split("#")[0].upper(),
+                     "number": int(EXTERNAL.split("#")[1])},
+                ]
+        desired = reconcile.desired_graph(document)
+        self.assertEqual(len(desired.dependencies), len(set(desired.dependencies)))
+        result = self._diff(
+            mutations.drop_dependency(self.converged, TELEGRAM, EXTERNAL),
+            document=document,
+        )
+        self.assertEqual(1, len(result["dependency"]))
+
     def test_live_capture_timestamp_must_be_a_real_timestamp(self) -> None:
         """`format` is an annotation; evidence needs an assertion."""
 

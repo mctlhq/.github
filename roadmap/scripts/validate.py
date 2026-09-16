@@ -284,10 +284,22 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
             else:
                 issue_bindings[key] = item_id
 
+        # JSON Schema's uniqueItems compares authored objects, so two spellings
+        # of one issue that differ only in case both pass it. Deduplicate on the
+        # canonical key, the same identity every other binding check uses.
+        seen_external: set[tuple[str, int]] = set()
         for external in item.get("externalDependsOn", []):
             external_key = issue_key(external)
-            if external_key is not None:
-                external_refs.append((item_id, external_key, issue_label(external)))
+            if external_key is None:
+                continue
+            if external_key in seen_external:
+                errors.append(
+                    f"work item {item_id}: externalDependsOn lists "
+                    f"{issue_label(external)} more than once"
+                )
+                continue
+            seen_external.add(external_key)
+            external_refs.append((item_id, external_key, issue_label(external)))
 
     for item_id, external_key, external_label in external_refs:
         local_owner = issue_bindings.get(external_key)

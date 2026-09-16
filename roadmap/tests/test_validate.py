@@ -286,6 +286,17 @@ class EpicDefinitionValidationTest(unittest.TestCase):
             validate.issue_key({"repository": "mctlhq/mctl-api", "number": 261}),
         )
 
+    def test_external_dependency_case_variants_are_one_issue(self) -> None:
+        document = self._base()
+        document["spec"]["workItems"][1]["externalDependsOn"] = [
+            {"repository": "mctlhq/x", "number": 1},
+            {"repository": "MCTLHQ/X", "number": 1},
+        ]
+        errors = validate.validate_document(document, self.schema)
+        self.assertIn(
+            "work item b: externalDependsOn lists MCTLHQ/X#1 more than once", errors
+        )
+
     def test_work_item_cannot_take_the_reserved_epic_id(self) -> None:
         document = self._base()
         document["spec"]["workItems"][0]["id"] = "epic"

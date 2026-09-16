@@ -41,6 +41,11 @@ REQUEST_TIMEOUT_SECONDS = 30
 
 IssueKey = tuple[str, int]
 
+# fromisoformat() alone also accepts ISO 8601 forms RFC 3339 does not: a space
+# instead of "T", omitted seconds, a date with no time. Shape first, then parse.
+_RFC3339 = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$"
+)
 _REPOSITORY_URL = re.compile(r"/repos/(?P<owner>[^/]+)/(?P<repo>[^/]+)$")
 _LINK_NEXT = re.compile(r'<(?P<url>[^>]+)>\s*;\s*rel="next"')
 
@@ -82,6 +87,9 @@ def _timestamp_errors(snapshot: dict[str, Any]) -> list[str]:
 
     def check(path: str, value: Any) -> None:
         if not isinstance(value, str):
+            return
+        if not _RFC3339.match(value):
+            errors.append(f"{path}: {value!r} is not an RFC 3339 timestamp")
             return
         try:
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))

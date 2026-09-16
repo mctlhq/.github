@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from jsonschema.exceptions import SchemaError
 
 import github_graph
 import validate
@@ -61,9 +62,11 @@ class DesiredGraph:
 
     name: str
     root: IssueKey | None
-    # Work items only. The root lives in its own field: a work item may legally
-    # be called "epic", and sharing one dict would let it silently displace the
-    # root binding, which would then never be compared at all.
+    # Work items only. The root lives in its own field rather than under a key in
+    # this dict. The validator reserves "epic" as a work-item id, but that is a
+    # guarantee about validated manifests only; a document from any other caller
+    # could still use it, and sharing one dict would let it silently displace
+    # the root binding, which would then never be compared at all.
     bindings: dict[str, IssueKey] = field(default_factory=dict)
     unbound: tuple[str, ...] = ()
     hierarchy: tuple[tuple[str, IssueKey, IssueKey], ...] = ()
@@ -141,8 +144,10 @@ def desired_graph(document: dict[str, Any]) -> DesiredGraph:
         root=root,
         bindings=bindings,
         unbound=tuple(sorted(unbound)),
-        hierarchy=tuple(sorted(hierarchy)),
-        dependencies=tuple(sorted(dependencies)),
+        hierarchy=tuple(sorted(set(hierarchy))),
+        # A set, so an edge authored twice -- e.g. one external issue spelled in
+        # two cases -- is one edge and cannot produce duplicate drift entries.
+        dependencies=tuple(sorted(set(dependencies))),
         external_refs=tuple(sorted(set(external_refs))),
     )
 
@@ -491,7 +496,21 @@ def has_drift(document: dict[str, Any]) -> bool:
 # --------------------------------------------------------------- preflight
 
 
-def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, dict[str, Any]]:
+@dataclass(frozen=True)
+class LoadedManifest:
+    """A manifest together with the digest of the exact bytes that were validated.
+
+    The digest is taken from the same read that was parsed and validated. Hashing
+    the path again later would record the bytes on disk at that moment, which
+    need not be the bytes the desired graph came from -- and the manifest hash is
+    what audit and exact-hash approval rely on.
+    """
+
+    document: dict[str, Any]
+    sha256: str
+
+
+def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, LoadedManifest]:
     """Validate the whole canonical corpus before anything reaches the network.
 
     Selecting one manifest must not narrow corpus-wide ownership: a duplicate
@@ -504,16 +523,18 @@ def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, dict[str, An
         raise ReconcileError(f"no EpicDefinition manifests found under {corpus}")
 
     documents: list[tuple[Path, dict[str, Any]]] = []
+    digests: dict[Path, str] = {}
     failures: dict[Path, list[str]] = {}
 
     for path in paths:
         try:
-            with path.open(encoding="utf-8") as handle:
-                document = yaml.safe_load(handle)
+            raw = path.read_bytes()
+            digests[path] = hashlib.sha256(raw).hexdigest()
+            document = yaml.safe_load(raw.decode("utf-8"))
             if not isinstance(document, dict):
                 raise ValueError("document root must be a mapping")
             errors = validate.validate_document(document, schema)
-        except (OSError, yaml.YAMLError, ValueError) as exc:
+        except (OSError, yaml.YAMLError, ValueError, UnicodeDecodeError) as exc:
             failures[path] = [str(exc)]
             continue
         if errors:
@@ -532,7 +553,10 @@ def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, dict[str, An
         )
         raise ReconcileError(f"corpus validation failed: {rendered}")
 
-    return {path.resolve(): document for path, document in documents}
+    return {
+        path.resolve(): LoadedManifest(document=document, sha256=digests[path])
+        for path, document in documents
+    }
 
 
 def _sha256(path: Path) -> str:
@@ -542,23 +566,37 @@ def _sha256(path: Path) -> str:
 REPO_ROOT = ROOT.parent
 
 
-def _manifest_label(path: Path) -> str:
-    """Render the manifest path repo-relative so the diff is machine-portable.
+def _manifest_label(path: Path, corpus: Path | None = None) -> str:
+    """Render a machine-portable manifest path for the diff.
 
-    An absolute path would put the checkout location into the output and two
-    machines reconciling identical bytes would disagree.
+    Repository-relative when the manifest is inside this repository, otherwise
+    relative to the corpus directory (prefixed with its name), otherwise just
+    the file name. Never absolute: an absolute path puts the checkout or temp
+    location into the output, and identical bytes would then diff differently
+    on two machines.
     """
 
+    resolved = path.resolve()
     try:
-        return path.resolve().relative_to(REPO_ROOT).as_posix()
+        return resolved.relative_to(REPO_ROOT).as_posix()
     except ValueError:
-        return path.as_posix()
+        pass
+    if corpus is not None:
+        try:
+            root = corpus.resolve()
+            return (Path(root.name) / resolved.relative_to(root)).as_posix()
+        except ValueError:
+            pass
+    return resolved.name
 
 
 def reconcile(
     manifest_path: Path,
     document: dict[str, Any],
     source_adapter: Any,
+    *,
+    manifest_sha256: str | None = None,
+    corpus: Path | None = None,
 ) -> dict[str, Any]:
     desired = desired_graph(document)
     snapshot = source_adapter.snapshot(desired.authored_keys())
@@ -571,8 +609,10 @@ def reconcile(
     return diff(
         desired,
         observed_graph(snapshot),
-        manifest_path=_manifest_label(manifest_path),
-        manifest_sha256=_sha256(manifest_path),
+        manifest_path=_manifest_label(manifest_path, corpus),
+        # Callers that loaded and validated the manifest pass the digest of those
+        # exact bytes; re-reading is only a fallback for direct API use.
+        manifest_sha256=manifest_sha256 or _sha256(manifest_path),
         source=snapshot["source"],
     )
 
@@ -637,11 +677,23 @@ def main(argv: list[str] | None = None) -> int:
         source_adapter = _build_source(args)
         documents = []
         for path in selected:
-            documents.append((path, reconcile(path, corpus[path], source_adapter)))
+            loaded = corpus[path]
+            documents.append(
+                (
+                    path,
+                    reconcile(
+                        path,
+                        loaded.document,
+                        source_adapter,
+                        manifest_sha256=loaded.sha256,
+                        corpus=Path(args.corpus),
+                    ),
+                )
+            )
     except (ReconcileError, SnapshotIncomplete, ObservationError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, SchemaError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
@@ -660,7 +712,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _emit(
     args: argparse.Namespace,
-    corpus: dict[Path, dict[str, Any]],
+    corpus: dict[Path, LoadedManifest],
     selected: list[Path],
     source_adapter: Any,
     documents: list[tuple[Path, dict[str, Any]]],
@@ -670,7 +722,7 @@ def _emit(
         # already read rather than issuing a second pass over GitHub.
         keys: set[IssueKey] = set()
         for path in selected:
-            keys.update(desired_graph(corpus[path]).authored_keys())
+            keys.update(desired_graph(corpus[path].document).authored_keys())
         snapshot = source_adapter.snapshot(sorted(keys))
         Path(args.capture).write_text(
             json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8"
