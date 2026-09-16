@@ -27,5 +27,14 @@ jobs:
       - name: Validate EpicDefinition manifests
         run: python3 roadmap/scripts/validate.py roadmap/epics
 
-      - name: Run roadmap validator tests
+      # Offline fixture replay only. Live mode needs a token and external
+      # state, so it stays a deliberate manual step and never runs here.
+      - name: Reconcile against the synthetic converged fixture
+        run: |
+          python3 roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+            --output /dev/null
+
+      - name: Run roadmap validator and reconciler tests
         run: python3 -m unittest discover -s roadmap/tests -p 'test_*.py'

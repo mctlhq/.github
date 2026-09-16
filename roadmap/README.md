@@ -49,12 +49,21 @@ roadmap/
   requirements.txt
   schemas/
     epic-definition.schema.json
+    github-graph-snapshot.schema.json
+    roadmap-diff.schema.json
   epics/
     human-input.yaml
+  fixtures/
+    human-input/
+      converged-fixture.json
   scripts/
     validate.py
+    github_graph.py
+    reconcile.py
   tests/
     test_validate.py
+    test_reconcile.py
+    mutations.py
 ```
 
 `human-input.yaml` is the first real pilot because it is cross-repository, already
@@ -105,7 +114,134 @@ Nested issue decomposition is represented with `parent`, which references anothe
 local work-item ID. Omitting `parent` means the work item is a direct child of the
 epic root for reconciliation purposes.
 
-## Planned reconciliation boundary
+## Reconciliation
+
+`reconcile.py` compares one or more manifests with an observed GitHub graph and emits
+a `RoadmapDiff`. It never mutates anything, and it performs no network I/O: the
+observed graph is a `GitHubGraphSnapshot` replayed from disk.
+
+```bash
+python roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
+  --corpus roadmap/epics \
+  --snapshot roadmap/fixtures/human-input/converged-fixture.json
+```
+
+Exit codes: `0` converged, `1` drift, `2` usage/IO/validation error.
+
+Reading the live GitHub graph -- and producing a `live-capture` snapshot from it -- is
+deliberately a separate change with its own security review. That is the only place
+credentials and untrusted network responses enter, and it is where every late review
+finding on the first implementation landed: token origin, redirects, response codes.
+The snapshot contract below already defines the `live-capture` provenance that change
+will produce.
+
+One manifest produces a single `RoadmapDiff`. Several produce a `RoadmapDiffList`
+envelope, items ordered by manifest path. Both are defined in
+`schemas/roadmap-diff.schema.json`, so every output validates against the published
+contract -- never a bare JSON array with no `kind`.
+
+**Unobserved or unreadable state must never be projected as absence.** Whatever
+produces a snapshot has to keep "observed absent" distinct from "could not observe":
+a failed or partial read is an error, never an empty relation set. The snapshot
+contract enforces its half of that -- see *Redirect and suppression* below.
+
+### Validation preflight
+
+Positional manifests select what is *diffed*. They never narrow what is *validated*:
+the entire canonical corpus under `--corpus` (default `roadmap/epics`) is schema-,
+semantic- and corpus-validated first, and any failure exits 2 before a snapshot is
+even loaded.
+Otherwise reconciling one file could pass while another manifest silently claims the
+same GitHub issue, and ownership that survives validation would be contradicted by the
+live graph.
+
+### Diff types
+
+| family | type | meaning | severity |
+| --- | --- | --- | --- |
+| binding | `BindingIssueNotFound` | the bound issue could not be resolved | drift |
+| binding | `BindingRedirected` | the issue answers under another canonical identity | drift |
+| binding | `BindingAmbiguous` | the endpoint is observable under more than one parent | drift |
+| binding | `BindingUnbound` | authored work with no issue yet | informational |
+| hierarchy | `HierarchyMissingParent` | expected parent edge absent | drift |
+| hierarchy | `HierarchyWrongParent` | the child sits under a different parent | drift |
+| hierarchy | `HierarchyUnexpectedChild` | observed child this manifest does not own | informational |
+| dependency | `DependencyMissing` | authored blocked-by edge absent | drift |
+| dependency | `DependencyUnexpected` | observed blocked-by edge nobody authored | drift |
+
+Informational entries are always emitted and never change exit 0 on their own. They
+are informational in severity, not optional in emission.
+
+### Redirect and suppression
+
+A transferred issue is *binding* drift, not relation drift. It resolves to a real
+canonical identity, so exactly one `BindingRedirected` is emitted, relation endpoints
+are rewritten onto the resolved key, and comparison continues. A snapshot records
+both the requested and the resolved identity of every observation for exactly this.
+
+Only endpoints that could not be pinned down -- unresolvable or ambiguous -- suppress
+the relations that touch them, and suppression holds in both directions: a withheld
+endpoint never comes back as an "unexpected" relation on its neighbour. Otherwise one
+ambiguous binding would cascade into drift on every issue pointing at it.
+
+`BindingAmbiguous` also covers the reverse collision: when two *owned* bindings
+resolve to the same canonical issue -- which a transfer can cause, and which the
+offline validator cannot see because the authored identities differ -- both are
+reported and both are suppressed. Otherwise one live object would quietly satisfy two
+work items.
+
+An `externalDependsOn` reference is an endpoint, not a binding. It names somebody
+else's issue, so it never participates in that collision rule: two external references
+landing on one issue says nothing about this epic, and letting them collide would
+suppress a perfectly good binding on the strength of an outside dependency. Several
+work items may name the same external issue; it is still one issue, so it is settled
+once and attributed to the first work item that referenced it rather than producing
+one entry per dependent item.
+
+An issue the snapshot never observed is an error, not a `BindingIssueNotFound`.
+Reporting "not found" for something nobody looked at would invent evidence. The same
+rule applies one level down: a `found` observation must carry `parent`, `subIssues`
+and `blockedBy`, so a relation nobody fetched can never read as an observed absence.
+A snapshot may also observe any issue at most once, since two entries for one request
+would make normalization depend on input order.
+
+`capturedAt` and `updatedAt` are checked as real RFC 3339 timestamps rather than left
+to the schema's `format` annotation, which asserts nothing on its own. Evidence that
+claims a time nobody can parse is not evidence.
+
+`epic` is reserved as a work-item id: it is the owner name the root binding reports
+under, in validator diagnostics and in every `RoadmapDiff` entry.
+
+### Determinism
+
+`RoadmapDiff` carries the SHA-256 of the exact manifest bytes, the manifest path
+relative to the repository root, and the snapshot's own provenance. It adds no
+timestamp or random value of its own -- the only time a diff carries is a live
+capture's `capturedAt`, copied from the snapshot as provenance -- so identical
+manifest and snapshot bytes produce byte-identical JSON on any machine, in any input
+order.
+
+### Fixtures
+
+Two different classes of artifact, never interchangeable:
+
+- `source.mode: live-capture` with `capturedAt` and `apiBase` -- immutable evidence of
+  a real read. Never hand-edited to make a test pass.
+- `source.mode: synthetic-fixture` with optional `derivedFrom` -- the green test graph.
+  It may be derived from a capture but may never claim a capture timestamp.
+
+The schema enforces the distinction, so a fixture cannot quietly promote itself to
+evidence.
+
+### Mutation testing
+
+`tests/mutations.py` holds pure deep-copy mutators for parent edges, dependency edges,
+bindings, redirects and ambiguity. The suite proves the detector in both directions:
+the converged fixture is green, each single mutation turns exactly one expected entry
+red without cascading into a neighbouring family, and restoration returns to green.
+A detector that can only report drift is as broken as a guard that can only pass.
+
+## Planned write boundary
 
 The target runtime split is:
 
@@ -126,10 +262,9 @@ The target runtime split is:
 Write reconciliation comes later and must be deterministic: no LLM is allowed in the
 apply path. The exact manifest revision/hash must be carried into audit/evidence.
 
-Before writes are enabled, the drift detector must be mutation-tested in both
-directions: it must stay green for a converged graph and turn red for deliberate
-missing/incorrect relations. A detector that can only report drift is as broken as a
-guard that can only pass.
+Operational health -- `ALIGNED`, `DRIFT`, `UNEXPECTED_SILENCE`, `OBSERVATION_FAILED` --
+is a later derived layer over `RoadmapDiff` plus observed state. It must not author a
+second graph or a competing desired-state file.
 
 ## RoadmapProposal integration
 
