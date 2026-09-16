@@ -186,7 +186,9 @@ def _endpoints(desired: DesiredGraph) -> list[tuple[str, IssueKey]]:
 
 
 def _resolve_endpoints(
-    desired: DesiredGraph, observed: ObservedGraph
+    desired: DesiredGraph,
+    observed: ObservedGraph,
+    unobserved: frozenset[IssueKey] = frozenset(),
 ) -> tuple[list[dict[str, Any]], dict[IssueKey, IssueKey], set[IssueKey]]:
     """Settle identity first, then say which endpoints may still be compared.
 
@@ -205,6 +207,14 @@ def _resolve_endpoints(
     owned_keys = {key for _, key in desired.authored_bindings()}
 
     for owner, key in endpoints:
+        if key in unobserved:
+            # Never looked at. Withheld from every comparison, and deliberately
+            # given no binding entry: "not found" would claim an observation
+            # that did not happen. The caller reports it as an observation
+            # failure instead.
+            suppressed.add(key)
+            continue
+
         if key in observed.missing:
             entries.append(
                 {
@@ -433,8 +443,17 @@ def diff(
     manifest_path: str,
     manifest_sha256: str,
     source: dict[str, Any],
+    unobserved: frozenset[IssueKey] = frozenset(),
 ) -> dict[str, Any]:
-    binding, resolved, suppressed = _resolve_endpoints(desired, observed)
+    """Diff desired against observed.
+
+    `unobserved` names authored identities the snapshot never observed. They are
+    withheld from comparison rather than reported, so a partial observation can
+    still yield drift on what WAS observed. By default it is empty, and an
+    unobserved identity raises SnapshotIncomplete as before.
+    """
+
+    binding, resolved, suppressed = _resolve_endpoints(desired, observed, unobserved)
     hierarchy = _hierarchy_entries(desired, observed, resolved, suppressed)
     dependency = _dependency_entries(desired, observed, resolved, suppressed)
 
@@ -510,12 +529,23 @@ class LoadedManifest:
     sha256: str
 
 
-def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, LoadedManifest]:
-    """Validate the whole canonical corpus before anything reaches the network.
+@dataclass(frozen=True)
+class CorpusValidation:
+    """Every manifest in a corpus, split into validated ones and failures.
 
-    Selecting one manifest must not narrow corpus-wide ownership: a duplicate
-    binding in a manifest nobody asked about still means this graph does not own
-    what it claims to own.
+    Failures are keyed by resolved path and hold every message for that file,
+    including corpus-wide invariants such as duplicate bindings.
+    """
+
+    manifests: dict[Path, LoadedManifest]
+    failures: dict[Path, tuple[str, ...]]
+
+
+def validate_corpus(corpus: Path, schema: dict[str, Any]) -> CorpusValidation:
+    """Validate the whole canonical corpus and report per file.
+
+    An invalid manifest is reported, not raised. Only an empty corpus -- nothing
+    to validate at all -- is a usage error.
     """
 
     paths = validate._manifest_paths([str(corpus)])
@@ -553,18 +583,36 @@ def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, LoadedManife
     for path, errors in validate.corpus_errors(documents).items():
         failures.setdefault(path, []).extend(errors)
 
-    if failures:
+    return CorpusValidation(
+        manifests={
+            path.resolve(): LoadedManifest(document=document, sha256=digests[path])
+            for path, document in documents
+            if path not in failures
+        },
+        failures={
+            path.resolve(): tuple(sorted(set(messages)))
+            for path, messages in failures.items()
+        },
+    )
+
+
+def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, LoadedManifest]:
+    """Validate the whole canonical corpus before anything reaches the network.
+
+    Selecting one manifest must not narrow corpus-wide ownership: a duplicate
+    binding in a manifest nobody asked about still means this graph does not own
+    what it claims to own.
+    """
+
+    result = validate_corpus(corpus, schema)
+    if result.failures:
         rendered = "; ".join(
             f"{path}: {message}"
-            for path in sorted(failures)
-            for message in sorted(set(failures[path]))
+            for path in sorted(result.failures)
+            for message in result.failures[path]
         )
         raise ReconcileError(f"corpus validation failed: {rendered}")
-
-    return {
-        path.resolve(): LoadedManifest(document=document, sha256=digests[path])
-        for path, document in documents
-    }
+    return result.manifests
 
 
 def _sha256(path: Path) -> str:

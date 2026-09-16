@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/roadmap-health-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapHealth or RoadmapHealthList",
+  "description": "Computed health of an epic. Precedence: observation_failed > invalid > drift > healthy. Unobserved state is never reported as absent.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/roadmapHealth"
+    },
+    {
+      "$ref": "#/$defs/roadmapHealthList"
+    }
+  ],
+  "$defs": {
+    "roadmapHealth": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "apiVersion",
+            "kind",
+            "epic",
+            "state",
+            "summary",
+            "diagnostics"
+          ],
+          "properties": {
+            "apiVersion": {
+              "const": "roadmap.mctl.ai/v1alpha1"
+            },
+            "kind": {
+              "const": "RoadmapHealth"
+            },
+            "epic": {
+              "$ref": "#/$defs/epic"
+            },
+            "state": {
+              "const": "observation_failed"
+            },
+            "summary": {
+              "$ref": "#/$defs/summary"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "source": {
+              "$ref": "#/$defs/source"
+            }
+          },
+          "description": "At least one error diagnostic: some state this epic depends on was not observed.",
+          "allOf": [
+            {
+              "properties": {
+                "summary": {
+                  "properties": {
+                    "error": {
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "contains": {
+                    "properties": {
+                      "level": {
+                        "const": "error"
+                      }
+                    },
+                    "required": [
+                      "level"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "apiVersion",
+            "kind",
+            "epic",
+            "state",
+            "summary",
+            "diagnostics"
+          ],
+          "properties": {
+            "apiVersion": {
+              "const": "roadmap.mctl.ai/v1alpha1"
+            },
+            "kind": {
+              "const": "RoadmapHealth"
+            },
+            "epic": {
+              "$ref": "#/$defs/epic"
+            },
+            "state": {
+              "const": "invalid"
+            },
+            "summary": {
+              "$ref": "#/$defs/summary"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "source": {
+              "$ref": "#/$defs/source"
+            }
+          },
+          "description": "The desired state failed validation. Nothing was observed, so no source is carried.",
+          "allOf": [
+            {
+              "properties": {
+                "summary": {
+                  "properties": {
+                    "error": {
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "not": {
+                "required": [
+                  "source"
+                ]
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "contains": {
+                    "properties": {
+                      "level": {
+                        "const": "error"
+                      }
+                    },
+                    "required": [
+                      "level"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "apiVersion",
+            "kind",
+            "epic",
+            "state",
+            "summary",
+            "diagnostics",
+            "source"
+          ],
+          "properties": {
+            "apiVersion": {
+              "const": "roadmap.mctl.ai/v1alpha1"
+            },
+            "kind": {
+              "const": "RoadmapHealth"
+            },
+            "epic": {
+              "$ref": "#/$defs/epic"
+            },
+            "state": {
+              "const": "drift"
+            },
+            "summary": {
+              "$ref": "#/$defs/summary"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "source": {
+              "$ref": "#/$defs/source"
+            }
+          },
+          "description": "Fully observed and valid, with at least one drift diagnostic.",
+          "allOf": [
+            {
+              "properties": {
+                "summary": {
+                  "properties": {
+                    "error": {
+                      "const": 0
+                    },
+                    "drift": {
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "not": {
+                    "contains": {
+                      "properties": {
+                        "level": {
+                          "const": "error"
+                        }
+                      },
+                      "required": [
+                        "level"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "contains": {
+                    "properties": {
+                      "level": {
+                        "const": "drift"
+                      }
+                    },
+                    "required": [
+                      "level"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "apiVersion",
+            "kind",
+            "epic",
+            "state",
+            "summary",
+            "diagnostics",
+            "source"
+          ],
+          "properties": {
+            "apiVersion": {
+              "const": "roadmap.mctl.ai/v1alpha1"
+            },
+            "kind": {
+              "const": "RoadmapHealth"
+            },
+            "epic": {
+              "$ref": "#/$defs/epic"
+            },
+            "state": {
+              "const": "healthy"
+            },
+            "summary": {
+              "$ref": "#/$defs/summary"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "source": {
+              "$ref": "#/$defs/source"
+            }
+          },
+          "description": "Fully observed, valid, zero drift. Requires the observation's provenance.",
+          "allOf": [
+            {
+              "properties": {
+                "summary": {
+                  "properties": {
+                    "error": {
+                      "const": 0
+                    },
+                    "drift": {
+                      "const": 0
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "not": {
+                    "contains": {
+                      "properties": {
+                        "level": {
+                          "const": "error"
+                        }
+                      },
+                      "required": [
+                        "level"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "properties": {
+                "diagnostics": {
+                  "not": {
+                    "contains": {
+                      "properties": {
+                        "level": {
+                          "const": "drift"
+                        }
+                      },
+                      "required": [
+                        "level"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "roadmapHealthList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapHealthList"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/roadmapHealth"
+          }
+        }
+      }
+    },
+    "epic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue": {
+          "$ref": "#/$defs/issueRef"
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error",
+        "drift",
+        "info"
+      ],
+      "properties": {
+        "error": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "drift": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "level",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z]+$"
+        },
+        "level": {
+          "enum": [
+            "error",
+            "drift",
+            "info"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "object"
+        }
+      }
+    },
+    "source": {
+      "description": "Provenance. A synthetic fixture may never claim a live capture timestamp.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
+          "properties": {
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

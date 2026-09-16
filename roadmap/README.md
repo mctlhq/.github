@@ -269,6 +269,66 @@ the converged fixture is green, each single mutation turns exactly one expected 
 red without cascading into a neighbouring family, and restoration returns to green.
 A detector that can only report drift is as broken as a guard that can only pass.
 
+## Health
+
+`health.py` turns a reconciliation run into a computed `RoadmapHealth` per epic: a state
+and the diagnostics that produced it, so a consumer can say *whether* an epic is healthy
+and *why* without re-running reconciliation.
+
+```bash
+python roadmap/scripts/health.py roadmap/epics/human-input.yaml \
+  --snapshot roadmap/fixtures/human-input/converged-fixture.json
+```
+
+| state | meaning | exit |
+| --- | --- | --- |
+| `healthy` | observed, valid, zero drift | 0 |
+| `drift` | observed and valid, at least one drift entry | 1 |
+| `invalid` | the authored desired state (manifest or corpus) did not validate; nothing was observed | 3 |
+| `observation_failed` | some state this epic depends on could not be observed | 4 |
+
+Exit `2` stays a usage error. With several epics the output is a `RoadmapHealthList` and
+the exit code is the most severe state. Both shapes are in
+`schemas/roadmap-health.schema.json`.
+
+Precedence, most severe first:
+
+```text
+observation_failed > invalid > drift > healthy
+```
+
+The invariant:
+
+```text
+Observed absence != unobservable state.
+
+A missing relationship may be projected as absent only when the
+authoritative source was successfully observed.
+```
+
+So:
+
+- `healthy` requires a successful observation. Evaluating with no observation at all is
+  `observation_failed` (`ObservationAbsent`), never a vacuous `healthy`.
+- A snapshot that never observed some bound issue does not fail the whole run. Those
+  endpoints are withheld from comparison and reported as `ObservationMissing` errors;
+  drift on the observed remainder is still carried as diagnostics, and the state is
+  `observation_failed`, not `drift`. No absence entry is ever produced for an unobserved
+  endpoint.
+- An unusable snapshot (`SnapshotInvalid`) or an unreadable source (`ObservationFailed`) is
+  an observation failure. `invalid` is reserved for the authored desired state.
+- A more severe state never discards less severe evidence: every validation error,
+  observation failure and diff entry stays in `diagnostics`.
+
+Diagnostics carry a stable `code` (a `RoadmapDiff` entry type, or one of `ObservationFailed`,
+`ObservationMissing`, `ObservationAbsent`, `SnapshotInvalid`, `ManifestInvalid`,
+`CorpusInvalid`), a `level` (`error`, `drift`, `info`) and structured `subject` evidence.
+Evaluation is pure and deterministic: no network I/O and no clock.
+
+`UNEXPECTED_SILENCE` from #56 is deliberately not a state here. It needs liveness windows
+and a notion of "now", which conflicts with deterministic evaluation of one snapshot; it is
+tracked as a follow-up.
+
 ## Planned write boundary
 
 The target runtime split is:
@@ -290,9 +350,8 @@ The target runtime split is:
 Write reconciliation comes later and must be deterministic: no LLM is allowed in the
 apply path. The exact manifest revision/hash must be carried into audit/evidence.
 
-Operational health -- `ALIGNED`, `DRIFT`, `UNEXPECTED_SILENCE`, `OBSERVATION_FAILED` --
-is a later derived layer over `RoadmapDiff` plus observed state. It must not author a
-second graph or a competing desired-state file.
+Health is derived (see *Health* above) and must never author a second graph or a
+competing desired-state file.
 
 ## RoadmapProposal integration
 
