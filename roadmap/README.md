@@ -117,69 +117,43 @@ epic root for reconciliation purposes.
 ## Reconciliation
 
 `reconcile.py` compares one or more manifests with an observed GitHub graph and emits
-a `RoadmapDiff`. It never mutates anything.
+a `RoadmapDiff`. It never mutates anything, and it performs no network I/O: the
+observed graph is a `GitHubGraphSnapshot` replayed from disk.
 
 ```bash
-# offline: replay the synthetic converged fixture
 python roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
   --corpus roadmap/epics \
   --snapshot roadmap/fixtures/human-input/converged-fixture.json
-
-# live: GET-only read of the real graph (needs GITHUB_TOKEN or GH_TOKEN)
-python roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml --live
-
-# live plus an immutable capture of exactly what was read
-python roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
-  --capture roadmap/fixtures/human-input/live-capture.json
 ```
 
-Exit codes: `0` converged, `1` drift, `2` usage/IO/auth/validation error.
+Exit codes: `0` converged, `1` drift, `2` usage/IO/validation error.
+
+Reading the live GitHub graph -- and producing a `live-capture` snapshot from it -- is
+deliberately a separate change with its own security review. That is the only place
+credentials and untrusted network responses enter, and it is where every late review
+finding on the first implementation landed: token origin, redirects, response codes.
+The snapshot contract below already defines the `live-capture` provenance that change
+will produce.
 
 One manifest produces a single `RoadmapDiff`. Several produce a `RoadmapDiffList`
 envelope, items ordered by manifest path. Both are defined in
 `schemas/roadmap-diff.schema.json`, so every output validates against the published
 contract -- never a bare JSON array with no `kind`.
 
-**Unobserved or unreadable state must never be projected as absence.** The reader
-distinguishes "observed absent" from "could not observe", and only three responses
-mean absent:
-
-| request | absent means |
-| --- | --- |
-| `GET .../issues/{n}` | 404 or 410 — the issue does not exist |
-| `GET .../issues/{n}/parent` | 404 — the issue has no parent |
-| `GET .../sub_issues`, `.../dependencies/blocked_by` | `200 []` — no relations |
-
-Everything else is an observation error (exit 2), never an empty relation set: a 404 or
-410 on a relation listing, a later page failing after earlier pages succeeded, a 410 on
-`/parent` for an issue that was just read, or any body that is not the expected shape.
-A live capture is also validated against the snapshot schema before it is returned, so
-the producer is held to the same contract replay loads it under.
+**Unobserved or unreadable state must never be projected as absence.** Whatever
+produces a snapshot has to keep "observed absent" distinct from "could not observe":
+a failed or partial read is an error, never an empty relation set. The snapshot
+contract enforces its half of that -- see *Redirect and suppression* below.
 
 ### Validation preflight
 
 Positional manifests select what is *diffed*. They never narrow what is *validated*:
 the entire canonical corpus under `--corpus` (default `roadmap/epics`) is schema-,
-semantic- and corpus-validated first, and any failure exits 2 with zero network calls.
+semantic- and corpus-validated first, and any failure exits 2 before a snapshot is
+even loaded.
 Otherwise reconciling one file could pass while another manifest silently claims the
 same GitHub issue, and ownership that survives validation would be contradicted by the
 live graph.
-
-### Read-only by construction
-
-The live adapter uses four documented REST endpoints and nothing else:
-
-```text
-GET /repos/{owner}/{repo}/issues/{number}
-GET /repos/{owner}/{repo}/issues/{number}/parent
-GET /repos/{owner}/{repo}/issues/{number}/sub_issues
-GET /repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by
-```
-
-Every request funnels through one helper that raises `WriteAttempted` on a non-GET
-method or a request body *before* transmission. GraphQL is deliberately unused: the
-safety property of this slice is that read-only is checkable by construction, not
-promised by convention. CI never runs live mode.
 
 ### Diff types
 
@@ -202,10 +176,8 @@ are informational in severity, not optional in emission.
 
 A transferred issue is *binding* drift, not relation drift. It resolves to a real
 canonical identity, so exactly one `BindingRedirected` is emitted, relation endpoints
-are rewritten onto the resolved key, and comparison continues. Requested identity is
-recorded from the request URL before transmission and resolved identity from the
-response body, because an HTTP client may follow the 301 itself and leave the final
-URL useless as evidence.
+are rewritten onto the resolved key, and comparison continues. A snapshot records
+both the requested and the resolved identity of every observation for exactly this.
 
 Only endpoints that could not be pinned down -- unresolvable or ambiguous -- suppress
 the relations that touch them, and suppression holds in both directions: a withheld
