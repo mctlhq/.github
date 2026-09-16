@@ -707,7 +707,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         _emit(args, corpus, selected, source_adapter, documents)
-    except OSError as exc:
+    # --capture asks the source for its snapshot a second time, and that call is
+    # held to the same contract as the first: a snapshot that fails validation or
+    # is incomplete is exit 2, not a traceback.
+    except (OSError, ValueError, ObservationError, SnapshotIncomplete) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
 

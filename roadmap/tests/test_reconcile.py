@@ -1193,6 +1193,32 @@ class ReconcileTest(unittest.TestCase):
         names = [item["epic"]["name"] for item in rendered["items"]]
         self.assertEqual(["human-input", "other"], names)
 
+    def test_a_capture_that_fails_its_contract_exits_two(self) -> None:
+        """The capture read is held to the same exit contract as the diff read."""
+
+        converged = self.converged
+
+        class _FailsOnCapture(github_graph.FixtureGraphSource):
+            def __init__(self):
+                super().__init__(converged)
+                self.reads = 0
+
+            def snapshot(self, keys):
+                self.reads += 1
+                if self.reads > 1:
+                    raise github_graph.ObservationError("capture violates the schema")
+                return super().snapshot(keys)
+
+        source = _FailsOnCapture()
+        with tempfile.TemporaryDirectory() as raw:
+            captured = Path(raw) / "capture.json"
+            with mock.patch.object(reconcile, "_build_source", return_value=source):
+                with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    code = reconcile.main([str(PILOT), "--capture", str(captured)])
+            self.assertFalse(captured.exists())
+        self.assertEqual(2, source.reads)
+        self.assertEqual(reconcile.EXIT_ERROR, code)
+
     def test_exit_two_when_the_output_path_cannot_be_written(self) -> None:
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
             code = reconcile.main(
