@@ -191,8 +191,25 @@ the relations that touch them, and suppression holds in both directions: a withh
 endpoint never comes back as an "unexpected" relation on its neighbour. Otherwise one
 ambiguous binding would cascade into drift on every issue pointing at it.
 
+`BindingAmbiguous` also covers the reverse collision: when two authored bindings
+resolve to the *same* canonical issue -- which a transfer can cause, and which the
+offline validator cannot see because the authored identities differ -- both are
+reported and both are suppressed. Otherwise one live object would quietly satisfy two
+work items.
+
 An issue the snapshot never observed is an error, not a `BindingIssueNotFound`.
-Reporting "not found" for something nobody looked at would invent evidence.
+Reporting "not found" for something nobody looked at would invent evidence. The same
+rule applies one level down: a `found` observation must carry `parent`, `subIssues`
+and `blockedBy`, so a relation nobody fetched can never read as an observed absence.
+A snapshot may also observe any issue at most once, since two entries for one request
+would make normalization depend on input order.
+
+`capturedAt` and `updatedAt` are checked as real RFC 3339 timestamps rather than left
+to the schema's `format` annotation, which asserts nothing on its own. Evidence that
+claims a time nobody can parse is not evidence.
+
+`epic` is reserved as a work-item id: it is the owner name the root binding reports
+under, in validator diagnostics and in every `RoadmapDiff` entry.
 
 ### Determinism
 

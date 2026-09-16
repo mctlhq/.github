@@ -286,6 +286,15 @@ class EpicDefinitionValidationTest(unittest.TestCase):
             validate.issue_key({"repository": "mctlhq/mctl-api", "number": 261}),
         )
 
+    def test_work_item_cannot_take_the_reserved_epic_id(self) -> None:
+        document = self._base()
+        document["spec"]["workItems"][0]["id"] = "epic"
+        document["spec"]["workItems"][1]["dependsOn"] = ["epic"]
+        errors = validate.validate_document(document, self.schema)
+        self.assertIn(
+            "work item epic: id is reserved for the epic root binding", errors
+        )
+
     def test_main_returns_zero_for_valid_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "valid.yaml"

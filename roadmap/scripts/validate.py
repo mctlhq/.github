@@ -193,6 +193,13 @@ def _document_bindings(
     return bindings
 
 
+# "epic" names the root binding wherever an owner is reported -- validator
+# diagnostics, and the reconciler's RoadmapDiff entries. A work item allowed to
+# take the same name would make those messages ambiguous about which binding
+# they are talking about.
+RESERVED_WORK_ITEM_IDS = frozenset({"epic"})
+
+
 def semantic_errors(document: dict[str, Any]) -> list[str]:
     """Validate invariants over a schema-valid EpicDefinition document."""
 
@@ -229,6 +236,11 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
         if not isinstance(item, dict) or "id" not in item:
             continue
         item_id = item["id"]
+
+        if item_id in RESERVED_WORK_ITEM_IDS:
+            errors.append(
+                f"work item {item_id}: id is reserved for the epic root binding"
+            )
 
         phase_id = item.get("phase")
         if phase_id not in phase_set:

@@ -5,14 +5,27 @@
   "description": "Provider-neutral observed issue graph. Carries identity and native relations only; issue prose is never captured.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["apiVersion", "kind", "source", "issues"],
+  "required": [
+    "apiVersion",
+    "kind",
+    "source",
+    "issues"
+  ],
   "properties": {
-    "apiVersion": {"const": "roadmap.mctl.ai/v1alpha1"},
-    "kind": {"const": "GitHubGraphSnapshot"},
-    "source": {"$ref": "#/$defs/source"},
+    "apiVersion": {
+      "const": "roadmap.mctl.ai/v1alpha1"
+    },
+    "kind": {
+      "const": "GitHubGraphSnapshot"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
     "issues": {
       "type": "array",
-      "items": {"$ref": "#/$defs/issueObservation"}
+      "items": {
+        "$ref": "#/$defs/issueObservation"
+      }
     }
   },
   "$defs": {
@@ -22,19 +35,38 @@
       "oneOf": [
         {
           "additionalProperties": false,
-          "required": ["mode", "capturedAt", "apiBase"],
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
           "properties": {
-            "mode": {"const": "live-capture"},
-            "capturedAt": {"type": "string", "format": "date-time"},
-            "apiBase": {"type": "string", "minLength": 1}
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         {
           "additionalProperties": false,
-          "required": ["mode"],
+          "required": [
+            "mode"
+          ],
           "properties": {
-            "mode": {"const": "synthetic-fixture"},
-            "derivedFrom": {"type": "string", "minLength": 1}
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       ]
@@ -42,7 +74,10 @@
     "issueObservation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["requested", "found"],
+      "required": [
+        "requested",
+        "found"
+      ],
       "properties": {
         "requested": {
           "$ref": "#/$defs/issueRef",
@@ -52,37 +87,103 @@
           "$ref": "#/$defs/issueRef",
           "description": "Canonical identity from the response body. Differs from requested for a transferred issue."
         },
-        "found": {"type": "boolean"},
-        "state": {"enum": ["open", "closed"]},
-        "updatedAt": {"type": "string", "format": "date-time"},
+        "found": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "open",
+            "closed"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
         "parent": {
           "description": "Observed parent, or null when the issue is known to have none.",
-          "oneOf": [{"$ref": "#/$defs/issueRef"}, {"type": "null"}]
+          "oneOf": [
+            {
+              "$ref": "#/$defs/issueRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "subIssues": {
           "type": "array",
-          "items": {"$ref": "#/$defs/issueRef"}
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
         },
         "blockedBy": {
           "type": "array",
-          "items": {"$ref": "#/$defs/issueRef"}
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
         }
       },
       "allOf": [
         {
-          "if": {"properties": {"found": {"const": true}}, "required": ["found"]},
-          "then": {"required": ["resolved"]}
+          "if": {
+            "properties": {
+              "found": {
+                "const": true
+              }
+            },
+            "required": [
+              "found"
+            ]
+          },
+          "then": {
+            "required": [
+              "resolved",
+              "parent",
+              "subIssues",
+              "blockedBy"
+            ]
+          }
         },
         {
-          "if": {"properties": {"found": {"const": false}}, "required": ["found"]},
+          "if": {
+            "properties": {
+              "found": {
+                "const": false
+              }
+            },
+            "required": [
+              "found"
+            ]
+          },
           "then": {
             "not": {
               "anyOf": [
-                {"required": ["resolved"]},
-                {"required": ["parent"]},
-                {"required": ["subIssues"]},
-                {"required": ["blockedBy"]},
-                {"required": ["state"]}
+                {
+                  "required": [
+                    "resolved"
+                  ]
+                },
+                {
+                  "required": [
+                    "parent"
+                  ]
+                },
+                {
+                  "required": [
+                    "subIssues"
+                  ]
+                },
+                {
+                  "required": [
+                    "blockedBy"
+                  ]
+                },
+                {
+                  "required": [
+                    "state"
+                  ]
+                }
               ]
             }
           }
@@ -92,13 +193,19 @@
     "issueRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "number"],
+      "required": [
+        "repository",
+        "number"
+      ],
       "properties": {
         "repository": {
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
         },
-        "number": {"type": "integer", "minimum": 1}
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     }
   }

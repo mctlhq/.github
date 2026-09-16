@@ -5,23 +5,50 @@
   "description": "Deterministic comparison of one EpicDefinition against an observed GitHub graph. Binding, hierarchy and dependency drift are separate families and are never conflated.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["apiVersion", "kind", "epic", "source", "summary", "binding", "hierarchy", "dependency"],
+  "required": [
+    "apiVersion",
+    "kind",
+    "epic",
+    "source",
+    "summary",
+    "binding",
+    "hierarchy",
+    "dependency"
+  ],
   "properties": {
-    "apiVersion": {"const": "roadmap.mctl.ai/v1alpha1"},
-    "kind": {"const": "RoadmapDiff"},
+    "apiVersion": {
+      "const": "roadmap.mctl.ai/v1alpha1"
+    },
+    "kind": {
+      "const": "RoadmapDiff"
+    },
     "epic": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "manifest"],
+      "required": [
+        "name",
+        "manifest"
+      ],
       "properties": {
-        "name": {"type": "string", "minLength": 1},
-        "issue": {"$ref": "#/$defs/issueRef"},
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue": {
+          "$ref": "#/$defs/issueRef"
+        },
         "manifest": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["path", "sha256"],
+          "required": [
+            "path",
+            "sha256"
+          ],
           "properties": {
-            "path": {"type": "string", "minLength": 1},
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
             "sha256": {
               "description": "SHA-256 of the exact manifest bytes that produced this diff.",
               "type": "string",
@@ -38,103 +65,342 @@
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["binding", "hierarchy", "dependency", "drift", "informational"],
+      "required": [
+        "binding",
+        "hierarchy",
+        "dependency",
+        "drift",
+        "informational"
+      ],
       "properties": {
-        "binding": {"type": "integer", "minimum": 0},
-        "hierarchy": {"type": "integer", "minimum": 0},
-        "dependency": {"type": "integer", "minimum": 0},
-        "drift": {"type": "integer", "minimum": 0},
-        "informational": {"type": "integer", "minimum": 0}
+        "binding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hierarchy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dependency": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "drift": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "informational": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "binding": {
       "type": "array",
-      "items": {"$ref": "#/$defs/bindingEntry"}
+      "items": {
+        "$ref": "#/$defs/bindingEntry"
+      }
     },
     "hierarchy": {
       "type": "array",
-      "items": {"$ref": "#/$defs/hierarchyEntry"}
+      "items": {
+        "$ref": "#/$defs/hierarchyEntry"
+      }
     },
     "dependency": {
       "type": "array",
-      "items": {"$ref": "#/$defs/dependencyEntry"}
+      "items": {
+        "$ref": "#/$defs/dependencyEntry"
+      }
     }
   },
   "$defs": {
-    "severity": {
-      "description": "Only 'drift' changes the exit code. 'informational' is always emitted, never optional.",
-      "enum": ["drift", "informational"]
-    },
     "owner": {
       "description": "Local work-item id, or 'epic' for the manifest root binding.",
       "type": "string",
       "minLength": 1
     },
     "bindingEntry": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type", "severity", "owner"],
-      "properties": {
-        "type": {
-          "enum": [
-            "BindingIssueNotFound",
-            "BindingRedirected",
-            "BindingAmbiguous",
-            "BindingUnbound"
-          ]
+      "description": "One binding result. Each type fixes its own severity and its own required evidence.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "requested"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingIssueNotFound"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
         },
-        "severity": {"$ref": "#/$defs/severity"},
-        "owner": {"$ref": "#/$defs/owner"},
-        "requested": {"$ref": "#/$defs/issueRef"},
-        "resolved": {"$ref": "#/$defs/issueRef"},
-        "observedParents": {
-          "description": "Every distinct parent observed for an ambiguous endpoint.",
-          "type": "array",
-          "items": {"$ref": "#/$defs/issueRef"}
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "requested",
+            "resolved"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingRedirected"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "resolved": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "requested",
+            "resolved"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingAmbiguous"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "resolved": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParents": {
+              "description": "Present when the ambiguity is more than one observed parent; absent when two authored bindings collapsed onto one issue.",
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/issueRef"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingUnbound"
+            },
+            "severity": {
+              "const": "informational"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            }
+          }
         }
-      }
+      ]
     },
     "hierarchyEntry": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type", "severity", "child"],
-      "properties": {
-        "type": {
-          "enum": [
-            "HierarchyMissingParent",
-            "HierarchyWrongParent",
-            "HierarchyUnexpectedChild"
-          ]
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "child",
+            "expectedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyMissingParent"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "expectedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
         },
-        "severity": {"$ref": "#/$defs/severity"},
-        "owner": {"$ref": "#/$defs/owner"},
-        "child": {"$ref": "#/$defs/issueRef"},
-        "expectedParent": {"$ref": "#/$defs/issueRef"},
-        "observedParent": {"$ref": "#/$defs/issueRef"}
-      }
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "child",
+            "expectedParent",
+            "observedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyWrongParent"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "expectedParent": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "child",
+            "observedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyUnexpectedChild"
+            },
+            "severity": {
+              "const": "informational"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        }
+      ]
     },
     "dependencyEntry": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type", "severity", "blocked", "blocker"],
-      "properties": {
-        "type": {"enum": ["DependencyMissing", "DependencyUnexpected"]},
-        "severity": {"$ref": "#/$defs/severity"},
-        "owner": {"$ref": "#/$defs/owner"},
-        "blocked": {"$ref": "#/$defs/issueRef"},
-        "blocker": {"$ref": "#/$defs/issueRef"}
-      }
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "blocked",
+            "blocker"
+          ],
+          "properties": {
+            "type": {
+              "const": "DependencyMissing"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "blocked": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "blocker": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "blocked",
+            "blocker"
+          ],
+          "properties": {
+            "type": {
+              "const": "DependencyUnexpected"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "blocked": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "blocker": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        }
+      ]
     },
     "issueRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "number"],
+      "required": [
+        "repository",
+        "number"
+      ],
       "properties": {
         "repository": {
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
         },
-        "number": {"type": "integer", "minimum": 1}
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     }
   }

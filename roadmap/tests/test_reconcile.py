@@ -518,6 +518,96 @@ class ReconcileTest(unittest.TestCase):
         fixture["source"] = {"mode": "live-capture"}
         self.assertNotEqual([], github_graph.snapshot_errors(fixture))
 
+    def test_live_capture_timestamp_must_be_a_real_timestamp(self) -> None:
+        """`format` is an annotation; evidence needs an assertion."""
+
+        fixture = copy.deepcopy(self.converged)
+        fixture["source"] = {
+            "mode": "live-capture",
+            "capturedAt": "yesterday",
+            "apiBase": "https://api.github.com",
+        }
+        self.assertNotEqual([], github_graph.snapshot_errors(fixture))
+
+    def test_duplicate_observation_of_one_issue_is_rejected(self) -> None:
+        """Two observations of one request make normalization order-dependent."""
+
+        fixture = copy.deepcopy(self.converged)
+        fixture["issues"].append(copy.deepcopy(fixture["issues"][0]))
+        self.assertNotEqual([], github_graph.snapshot_errors(fixture))
+
+    def test_found_observation_must_carry_its_relations(self) -> None:
+        """An unasked-for relation must not read as an observed absence."""
+
+        fixture = copy.deepcopy(self.converged)
+        fixture["issues"][0].pop("subIssues")
+        self.assertNotEqual([], github_graph.snapshot_errors(fixture))
+
+    # -- binding namespace and collisions --------------------------------
+
+    def test_root_binding_survives_a_work_item_called_epic(self) -> None:
+        document = copy.deepcopy(self.document)
+        document["spec"]["workItems"][0]["id"] = "epic"
+        for item in document["spec"]["workItems"]:
+            item["dependsOn"] = [
+                "epic" if target == "human-input-core" else target
+                for target in item.get("dependsOn", [])
+            ]
+        desired = reconcile.desired_graph(document)
+        self.assertEqual(mutations.ref(ROOT_ISSUE)["number"], desired.root[1])
+        self.assertIn(validate.issue_key(mutations.ref(ROOT_ISSUE)), desired.authored_keys())
+        self.assertIn(validate.issue_key(mutations.ref(CORE)), desired.authored_keys())
+
+    def test_two_bindings_resolving_to_one_issue_are_ambiguous(self) -> None:
+        """A transfer can make two work items name one live object."""
+
+        moved = mutations.redirect(self.converged, PORTAL, DOCS)
+        result = self._diff(moved)
+        ambiguous = [
+            entry for entry in result["binding"] if entry["type"] == "BindingAmbiguous"
+        ]
+        self.assertEqual(2, len(ambiguous))
+        self.assertEqual(
+            {mutations.ref(DOCS)["number"]},
+            {entry["resolved"]["number"] for entry in ambiguous},
+        )
+
+    # -- output contract and IO ------------------------------------------
+
+    def test_diff_schema_rejects_a_mislabelled_entry(self) -> None:
+        from jsonschema import Draft202012Validator
+
+        validator = Draft202012Validator(self.diff_schema)
+        result = self._diff(self.converged)
+
+        promoted = copy.deepcopy(result)
+        promoted["binding"][0]["severity"] = "drift"
+        self.assertNotEqual([], sorted(validator.iter_errors(promoted)))
+
+        stripped = copy.deepcopy(result)
+        stripped["binding"] = [
+            {
+                "type": "BindingRedirected",
+                "severity": "drift",
+                "owner": "portal-card",
+                "requested": mutations.ref(PORTAL),
+            }
+        ]
+        self.assertNotEqual([], sorted(validator.iter_errors(stripped)))
+
+    def test_exit_two_when_the_output_path_cannot_be_written(self) -> None:
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            code = reconcile.main(
+                [
+                    str(PILOT),
+                    "--snapshot",
+                    str(CONVERGED),
+                    "--output",
+                    "/nonexistent-directory/diff.json",
+                ]
+            )
+        self.assertEqual(reconcile.EXIT_ERROR, code)
+
     def test_committed_fixture_is_synthetic_and_valid(self) -> None:
         self.assertEqual([], github_graph.snapshot_errors(self.converged))
         self.assertEqual("synthetic-fixture", self.converged["source"]["mode"])

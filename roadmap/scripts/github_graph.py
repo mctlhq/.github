@@ -65,6 +65,60 @@ def load_schema(path: Path = DEFAULT_SNAPSHOT_SCHEMA) -> dict[str, Any]:
     return schema
 
 
+def _timestamp_errors(snapshot: dict[str, Any]) -> list[str]:
+    """Check the `format: date-time` fields the JSON Schema only annotates.
+
+    `format` is an annotation, not an assertion, unless a format checker is
+    wired in -- and wiring one in would mean a new runtime dependency for
+    RFC 3339. A live capture whose `capturedAt` is free text would be evidence
+    that claims a time nobody can read, so it is checked here instead.
+    """
+
+    errors: list[str] = []
+
+    def check(path: str, value: Any) -> None:
+        if not isinstance(value, str):
+            return
+        try:
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            errors.append(f"{path}: {value!r} is not an RFC 3339 timestamp")
+
+    source = snapshot.get("source")
+    if isinstance(source, dict):
+        check("$.source.capturedAt", source.get("capturedAt"))
+    for index, observation in enumerate(snapshot.get("issues", []) or []):
+        if isinstance(observation, dict):
+            check(f"$.issues[{index}].updatedAt", observation.get("updatedAt"))
+    return errors
+
+
+def _duplicate_request_errors(snapshot: dict[str, Any]) -> list[str]:
+    """One canonical issue may be observed at most once.
+
+    Two observations of the same request make normalization order-dependent:
+    whichever lands last decides the resolved identity, and a found/missing
+    pair leaves the issue in two states at once. That is an unusable input, not
+    a graph to diff.
+    """
+
+    seen: set[tuple[str, int]] = set()
+    duplicates: set[tuple[str, int]] = set()
+    for observation in snapshot.get("issues", []) or []:
+        if not isinstance(observation, dict):
+            continue
+        key = issue_key(observation.get("requested"))
+        if key is None:
+            continue
+        if key in seen:
+            duplicates.add(key)
+        seen.add(key)
+    return [
+        f"$.issues: {repository}#{number} is observed more than once"
+        for repository, number in sorted(duplicates)
+    ]
+
+
 def snapshot_errors(
     snapshot: dict[str, Any], schema: dict[str, Any] | None = None
 ) -> list[str]:
@@ -73,7 +127,12 @@ def snapshot_errors(
         validator.iter_errors(snapshot),
         key=lambda error: (list(error.absolute_path), error.message),
     )
-    return [f"{_json_path(error.absolute_path)}: {error.message}" for error in failures]
+    errors = [
+        f"{_json_path(error.absolute_path)}: {error.message}" for error in failures
+    ]
+    if errors:
+        return errors
+    return _timestamp_errors(snapshot) + _duplicate_request_errors(snapshot)
 
 
 def load_snapshot(path: Path, schema: dict[str, Any] | None = None) -> dict[str, Any]:

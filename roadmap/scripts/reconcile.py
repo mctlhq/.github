@@ -61,14 +61,29 @@ class DesiredGraph:
 
     name: str
     root: IssueKey | None
+    # Work items only. The root lives in its own field: a work item may legally
+    # be called "epic", and sharing one dict would let it silently displace the
+    # root binding, which would then never be compared at all.
     bindings: dict[str, IssueKey] = field(default_factory=dict)
     unbound: tuple[str, ...] = ()
     hierarchy: tuple[tuple[str, IssueKey, IssueKey], ...] = ()
     dependencies: tuple[tuple[str, IssueKey, IssueKey], ...] = ()
     external_refs: tuple[tuple[str, IssueKey], ...] = ()
 
+    def authored_bindings(self) -> list[tuple[str, IssueKey]]:
+        """Every binding this manifest owns, root first."""
+
+        bindings: list[tuple[str, IssueKey]] = []
+        if self.root is not None:
+            bindings.append((EPIC_OWNER, self.root))
+        bindings.extend(sorted(self.bindings.items()))
+        return bindings
+
+    def owned_keys(self) -> list[IssueKey]:
+        return [key for _, key in self.authored_bindings()]
+
     def authored_keys(self) -> list[IssueKey]:
-        keys = set(self.bindings.values())
+        keys = set(self.owned_keys())
         keys.update(key for _, key in self.external_refs)
         return sorted(keys)
 
@@ -78,9 +93,6 @@ def desired_graph(document: dict[str, Any]) -> DesiredGraph:
     root = validate.issue_key(spec["github"]["issue"])
 
     bindings: dict[str, IssueKey] = {}
-    if root is not None:
-        bindings[EPIC_OWNER] = root
-
     unbound: list[str] = []
     for item in spec["workItems"]:
         key = validate.issue_key(item.get("issue"))
@@ -155,8 +167,8 @@ def _resolve_endpoints(
     resolved: dict[IssueKey, IssueKey] = {}
     suppressed: set[IssueKey] = set()
 
-    authored: list[tuple[str, IssueKey]] = sorted(
-        list(desired.bindings.items()) + list(desired.external_refs)
+    authored: list[tuple[str, IssueKey]] = (
+        desired.authored_bindings() + sorted(desired.external_refs)
     )
 
     for owner, key in authored:
@@ -198,6 +210,29 @@ def _resolve_endpoints(
                     "requested": _ref(key),
                     "resolved": _ref(target),
                     "observedParents": [_ref(parent) for parent in parents],
+                }
+            )
+            suppressed.add(key)
+
+    # Two authored bindings that resolve to one canonical issue are as
+    # ambiguous as one issue observed under two parents: a single live object
+    # would satisfy both work items and the duplicate would never surface,
+    # because the validator can only see the identities as authored.
+    collisions: dict[IssueKey, list[IssueKey]] = {}
+    for key, target in sorted(resolved.items()):
+        collisions.setdefault(target, []).append(key)
+    owners_by_authored = {key: owner for owner, key in authored}
+    for target, sources in sorted(collisions.items()):
+        if len(sources) < 2:
+            continue
+        for key in sources:
+            entries.append(
+                {
+                    "type": "BindingAmbiguous",
+                    "severity": DRIFT,
+                    "owner": owners_by_authored.get(key, EPIC_OWNER),
+                    "requested": _ref(key),
+                    "resolved": _ref(target),
                 }
             )
             suppressed.add(key)
@@ -273,9 +308,9 @@ def _hierarchy_entries(
                 }
             )
 
-    owned = {resolved[key] for key in desired.bindings.values() if key in resolved}
+    owned = {resolved[key] for key in desired.owned_keys() if key in resolved}
     owned |= _suppressed_identities(resolved, suppressed)
-    for owner, key in sorted(desired.bindings.items()):
+    for owner, key in desired.authored_bindings():
         if key in suppressed:
             continue
         parent_key = resolved.get(key)
@@ -330,7 +365,7 @@ def _dependency_entries(
     # blocked-by list of somebody else's issue is not ours to have an opinion on.
     owners_by_key = {
         resolved[key]: owner
-        for owner, key in sorted(desired.bindings.items())
+        for owner, key in desired.authored_bindings()
         if key in resolved and key not in suppressed
     }
     withheld = _suppressed_identities(resolved, suppressed)
@@ -553,6 +588,26 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
+    try:
+        _emit(args, corpus, selected, source_adapter, documents)
+    except OSError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+
+    return (
+        EXIT_DRIFT
+        if any(has_drift(document) for _, document in documents)
+        else EXIT_CONVERGED
+    )
+
+
+def _emit(
+    args: argparse.Namespace,
+    corpus: dict[Path, dict[str, Any]],
+    selected: list[Path],
+    source_adapter: Any,
+    documents: list[tuple[Path, dict[str, Any]]],
+) -> None:
     if args.capture and documents:
         # The adapter caches observations, so this re-serializes what was
         # already read rather than issuing a second pass over GitHub.
@@ -574,8 +629,6 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.output).write_text(rendered + "\n", encoding="utf-8")
     else:
         print(rendered)
-
-    return EXIT_DRIFT if any(has_drift(item) for item in payload) else EXIT_CONVERGED
 
 
 if __name__ == "__main__":
