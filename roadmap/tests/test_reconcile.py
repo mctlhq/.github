@@ -41,7 +41,7 @@ def _types(entries: list[dict]) -> list[str]:
 
 class _FakeResponse:
     def __init__(self, payload, status=200, headers=None):
-        if isinstance(payload, bytes):
+        if isinstance(payload, (bytes, BaseException)):
             self._raw = payload
         else:
             self._raw = json.dumps(payload).encode() if payload is not None else b""
@@ -49,6 +49,8 @@ class _FakeResponse:
         self.headers = headers or {}
 
     def read(self):
+        if isinstance(self._raw, BaseException):
+            raise self._raw
         return self._raw
 
     def __enter__(self):
@@ -563,6 +565,38 @@ class ReconcileTest(unittest.TestCase):
         with mock.patch.dict("os.environ", {"GITHUB_TOKEN": "token"}):
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                 code = reconcile.main([str(PILOT), "--live", "--api-base", "http://api.github.com"])
+        self.assertEqual(reconcile.EXIT_ERROR, code)
+
+    def test_an_api_base_cannot_smuggle_another_host_or_data(self) -> None:
+        for base in (
+            "https://api.github.com@attacker.example",
+            "https://user:secret@api.github.com",
+            "https://api.github.com?token=leak",
+            "https://api.github.com#frag",
+        ):
+            with self.subTest(base=base):
+                with self.assertRaises(github_graph.ObservationError):
+                    github_graph.LiveGraphSource("token", api_base=base, opener=_RecordingOpener({}))
+
+    def test_a_timeout_while_reading_the_body_is_an_observation_error(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        source = github_graph.LiveGraphSource(
+            "token", opener=_RecordingOpener({base: TimeoutError("read timed out")})
+        )
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_a_permissive_schema_override_cannot_drop_the_required_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            (directory / "empty.yaml").write_text("anything: at-all\n", encoding="utf-8")
+            permissive = directory / "permissive.json"
+            permissive.write_text('{"type": "object"}', encoding="utf-8")
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main(
+                    ["--corpus", str(directory), "--snapshot", str(CONVERGED),
+                     "--schema", str(permissive)]
+                )
         self.assertEqual(reconcile.EXIT_ERROR, code)
 
     def test_redirects_are_held_to_the_api_origin(self) -> None:

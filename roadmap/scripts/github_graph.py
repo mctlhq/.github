@@ -317,10 +317,24 @@ class LiveGraphSource:
         self._origin = urllib.parse.urlsplit(self._api_base)
         # The token is sent with every request, so the base must be HTTPS. There
         # is deliberately no insecure opt-in: nothing this tool does needs one.
-        if self._origin.scheme != "https" or not self._origin.netloc:
+        if self._origin.scheme != "https" or not self._origin.hostname:
             raise ObservationError(
                 f"api_base must be an https URL, got {api_base!r}: "
                 "the token is sent with every request"
+            )
+        # `https://api.github.com@attacker.example` has scheme https and a
+        # non-empty netloc, yet its host is attacker.example -- the text before
+        # "@" is userinfo. A base may carry no userinfo, query or fragment: the
+        # first would redirect the token, the others would copy whatever they
+        # hold into every request and into `source.apiBase` of every capture.
+        if (
+            "@" in self._origin.netloc
+            or self._origin.query
+            or self._origin.fragment
+        ):
+            raise ObservationError(
+                "api_base must not contain userinfo, a query or a fragment: "
+                f"{api_base!r}"
             )
         self._opener = opener or urllib.request.build_opener(
             _SameOriginRedirectHandler(self._is_allowed)
@@ -385,10 +399,15 @@ class LiveGraphSource:
         except TimeoutError as error:
             raise ObservationError(f"GET {url}: timed out") from error
 
-        with response:
-            raw = response.read()
-            headers = {key.lower(): value for key, value in response.headers.items()}
-            status = getattr(response, "status", 200) or 200
+        # The timeout covers reading the body too, not only opening the
+        # connection; a stall or reset mid-body is the same failed read.
+        try:
+            with response:
+                raw = response.read()
+                headers = {key.lower(): value for key, value in response.headers.items()}
+                status = getattr(response, "status", 200) or 200
+        except OSError as error:
+            raise ObservationError(f"GET {url}: failed reading the response: {error}") from error
         try:
             payload = json.loads(raw) if raw else None
         except (json.JSONDecodeError, UnicodeDecodeError) as error:

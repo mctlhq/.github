@@ -522,6 +522,12 @@ def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, LoadedManife
     if not paths:
         raise ReconcileError(f"no EpicDefinition manifests found under {corpus}")
 
+    # The reconciler indexes metadata.name, spec.github and the rest of the
+    # v1alpha1 shape directly, so that contract is enforced whatever --schema
+    # says. An override can add constraints; it cannot remove the ones this
+    # code depends on, or a permissive schema turns into a KeyError traceback.
+    required = validate._load_schema(validate.DEFAULT_SCHEMA)
+
     documents: list[tuple[Path, dict[str, Any]]] = []
     digests: dict[Path, str] = {}
     failures: dict[Path, list[str]] = {}
@@ -533,7 +539,9 @@ def load_corpus(corpus: Path, schema: dict[str, Any]) -> dict[Path, LoadedManife
             document = yaml.safe_load(raw.decode("utf-8"))
             if not isinstance(document, dict):
                 raise ValueError("document root must be a mapping")
-            errors = validate.validate_document(document, schema)
+            errors = validate.validate_document(document, required)
+            if not errors and schema is not required:
+                errors = validate.validate_document(document, schema)
         except (OSError, yaml.YAMLError, ValueError, UnicodeDecodeError) as exc:
             failures[path] = [str(exc)]
             continue
