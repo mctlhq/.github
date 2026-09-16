@@ -35,6 +35,7 @@ from typing import Any, Iterable, Sequence
 import yaml
 from jsonschema.exceptions import SchemaError
 
+import completion
 import github_graph
 import reconcile
 import validate
@@ -212,6 +213,7 @@ def document(
     state: HealthState,
     diagnostics: Sequence[Diagnostic],
     source: dict[str, Any] | None = None,
+    completion_block: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rendered: dict[str, Any] = {
         "apiVersion": API_VERSION,
@@ -226,6 +228,8 @@ def document(
     }
     if source is not None:
         rendered["source"] = dict(source)
+    if completion_block is not None:
+        rendered["completion"] = completion_block
     return rendered
 
 
@@ -369,9 +373,10 @@ def assess(
         for repository, number in sorted(unobserved)
     ]
 
+    graph = observed_graph(snapshot)
     diff = reconcile.diff(
         desired,
-        observed_graph(snapshot),
+        graph,
         manifest_path=epic["manifest"]["path"],
         manifest_sha256=loaded.sha256,
         source=snapshot["source"],
@@ -379,7 +384,13 @@ def assess(
     )
     state, diagnostics = evaluate(diff=diff, observation_errors=observation_errors)
     return document(
-        epic=epic, state=state, diagnostics=diagnostics, source=snapshot["source"]
+        epic=epic,
+        state=state,
+        diagnostics=diagnostics,
+        source=snapshot["source"],
+        # Completion is a separate axis from health: computed whenever a snapshot
+        # was observed, with unobserved required items reported as unknown.
+        completion_block=completion.compute(loaded.document, graph, unobserved),
     )
 
 

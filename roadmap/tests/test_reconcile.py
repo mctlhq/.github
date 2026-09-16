@@ -366,6 +366,24 @@ class ReconcileTest(unittest.TestCase):
         self.assertTrue(all(method == "GET" for method, _, _ in opener.calls))
         self.assertTrue(all(body is None for _, _, body in opener.calls))
 
+    def test_live_source_captures_state_and_state_reason(self) -> None:
+        """Completion needs to tell closed-as-completed from closed-as-not-planned."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {
+                "number": 1,
+                "state": "closed",
+                "state_reason": "not_planned",
+                "repository_url": "https://api.github.com/repos/mctlhq/example",
+            },
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
+        self.assertEqual(("closed", "not_planned"), (observation["state"], observation["stateReason"]))
+
     def test_live_source_reads_identity_from_the_body_not_the_url(self) -> None:
         base = "https://api.github.com/repos"
         routes = {

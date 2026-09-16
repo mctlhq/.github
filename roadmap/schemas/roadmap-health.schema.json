@@ -49,6 +49,9 @@
             },
             "source": {
               "$ref": "#/$defs/source"
+            },
+            "completion": {
+              "$ref": "#/$defs/completion"
             }
           },
           "description": "At least one error diagnostic: some state this epic depends on was not observed.",
@@ -117,6 +120,9 @@
             },
             "source": {
               "$ref": "#/$defs/source"
+            },
+            "completion": {
+              "$ref": "#/$defs/completion"
             }
           },
           "description": "The desired state failed validation. Nothing was observed, so no source is carried.",
@@ -154,6 +160,13 @@
                   }
                 }
               }
+            },
+            {
+              "not": {
+                "required": [
+                  "completion"
+                ]
+              }
             }
           ]
         },
@@ -162,12 +175,13 @@
           "additionalProperties": false,
           "required": [
             "apiVersion",
-            "kind",
-            "epic",
-            "state",
-            "summary",
+            "completion",
             "diagnostics",
-            "source"
+            "epic",
+            "kind",
+            "source",
+            "state",
+            "summary"
           ],
           "properties": {
             "apiVersion": {
@@ -193,6 +207,9 @@
             },
             "source": {
               "$ref": "#/$defs/source"
+            },
+            "completion": {
+              "$ref": "#/$defs/completion"
             }
           },
           "description": "Fully observed and valid, with at least one drift diagnostic.",
@@ -252,12 +269,13 @@
           "additionalProperties": false,
           "required": [
             "apiVersion",
-            "kind",
-            "epic",
-            "state",
-            "summary",
+            "completion",
             "diagnostics",
-            "source"
+            "epic",
+            "kind",
+            "source",
+            "state",
+            "summary"
           ],
           "properties": {
             "apiVersion": {
@@ -283,6 +301,9 @@
             },
             "source": {
               "$ref": "#/$defs/source"
+            },
+            "completion": {
+              "$ref": "#/$defs/completion"
             }
           },
           "description": "Fully observed, valid, zero drift. Requires the observation's provenance.",
@@ -509,6 +530,146 @@
           "minimum": 1
         }
       }
+    },
+    "completion": {
+      "description": "allRequired completion. Separate from health state: an epic can be healthy and incomplete. Unobserved required items are unknown, never incomplete.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "status",
+        "required",
+        "blocking",
+        "items"
+      ],
+      "properties": {
+        "mode": {
+          "const": "allRequired"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "incomplete",
+            "unknown"
+          ]
+        },
+        "required": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total",
+            "complete",
+            "incomplete",
+            "unknown"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "complete": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "incomplete": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unknown": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "blocking": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "required",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "status": {
+                "enum": [
+                  "complete",
+                  "incomplete",
+                  "unknown"
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "closed",
+                  "open",
+                  "closed_not_planned",
+                  "closed_duplicate",
+                  "unbound",
+                  "issue_not_found",
+                  "unobserved",
+                  "state_not_observed"
+                ]
+              },
+              "issue": {
+                "$ref": "#/$defs/issueRef"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blocking": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "incomplete",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blocking": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

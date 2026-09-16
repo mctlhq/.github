@@ -329,6 +329,60 @@ Evaluation is pure and deterministic: no network I/O and no clock.
 and a notion of "now", which conflicts with deterministic evaluation of one snapshot; it is
 tracked as a follow-up.
 
+## Completion
+
+`allRequired` is computed, not declared. Every `RoadmapHealth` built from an observed
+snapshot carries a `completion` block:
+
+```json
+"completion": {
+  "mode": "allRequired",
+  "status": "incomplete",
+  "required": {"total": 3, "complete": 2, "incomplete": 1, "unknown": 0},
+  "blocking": ["governed-apply"],
+  "items": [{"id": "temporal-health", "required": false, "status": "incomplete", "reason": "open", ...}]
+}
+```
+
+Per work item:
+
+| status | reason | when |
+| --- | --- | --- |
+| `complete` | `closed` | issue closed as `completed`, or closed with no recorded reason |
+| `incomplete` | `open` | issue open |
+| `incomplete` | `closed_not_planned`, `closed_duplicate` | closed without delivering the work |
+| `incomplete` | `unbound` | no GitHub issue yet |
+| `incomplete` | `issue_not_found` | observed, and the issue does not exist |
+| `unknown` | `unobserved`, `state_not_observed` | the state could not be observed |
+
+Epic status looks at required items only: `incomplete` if any was observed incomplete,
+otherwise `unknown` if any could not be observed, otherwise `complete`. Optional items
+(`required: false`) are always listed and never appear in `blocking`.
+
+Completion is a separate axis from health — an epic can be `healthy` and `incomplete`, and
+it does not change the CLI exit code. An item nobody could observe is `unknown`, never
+`incomplete` and never `complete`. Snapshots carry GitHub's `stateReason` so closed-as-done
+can be told apart from closed-as-not-planned.
+
+## Dogfood: epic #66
+
+`epics/roadmap-control-plane.yaml` is the canonical `EpicDefinition` for this control plane
+itself (`mctlhq/.github#66`): the reconciler (#67), `RoadmapHealth` (#83) and governed apply
+(#68) are required; temporal health (#85) is `required: false`.
+
+`fixtures/roadmap-control-plane/live-capture.json` is an immutable live capture of that
+graph. Replayed:
+
+```bash
+python roadmap/scripts/health.py roadmap/epics/roadmap-control-plane.yaml \
+  --snapshot roadmap/fixtures/roadmap-control-plane/live-capture.json
+```
+
+it is `healthy`, with completion `incomplete` and `blocking: ["governed-apply"]` — #85 is
+open but does not hold completion back. The first live run against #66 reported three
+`DependencyMissing` entries: the dependencies existed only as prose in the issue bodies.
+Native `blocked_by` relations were then created on GitHub, and the graph converged.
+
 ## Planned write boundary
 
 The target runtime split is:
