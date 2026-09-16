@@ -90,7 +90,13 @@ class DesiredGraph:
 
 def desired_graph(document: dict[str, Any]) -> DesiredGraph:
     spec = document["spec"]
-    root = validate.issue_key(spec["github"]["issue"])
+    # The schema requires spec.github.issue and the CLI validates before this
+    # runs, so this cannot be reached through reconcile.py. It is read
+    # defensively anyway because `root` is typed Optional and callers may hold
+    # a document from elsewhere -- a type that says None is possible should not
+    # be contradicted by a KeyError.
+    github = spec.get("github")
+    root = validate.issue_key(github.get("issue")) if isinstance(github, dict) else None
 
     bindings: dict[str, IssueKey] = {}
     unbound: list[str] = []

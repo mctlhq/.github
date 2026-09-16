@@ -352,6 +352,42 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual({"repository": "mctlhq/old", "number": 1}, observation["requested"])
         self.assertEqual({"repository": "mctlhq/new", "number": 77}, observation["resolved"])
 
+    def test_relations_are_fetched_from_the_resolved_identity(self) -> None:
+        """A transferred issue's relations live at its new address, not its old one."""
+
+        base = "https://api.github.com/repos"
+        routes = {
+            f"{base}/mctlhq/old/issues/1": {
+                "number": 77,
+                "repository_url": f"{base}/mctlhq/new",
+            },
+            f"{base}/mctlhq/new/issues/77/parent": {
+                "number": 5,
+                "repository_url": f"{base}/mctlhq/new",
+            },
+            f"{base}/mctlhq/new/issues/77/sub_issues": [
+                {"number": 8, "repository_url": f"{base}/mctlhq/new"}
+            ],
+            f"{base}/mctlhq/new/issues/77/dependencies/blocked_by": [
+                {"number": 9, "repository_url": f"{base}/mctlhq/new"}
+            ],
+        }
+        opener = _RecordingOpener(routes)
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        observation = source.snapshot([("mctlhq/old", 1)])["issues"][0]
+
+        self.assertEqual({"repository": "mctlhq/new", "number": 5}, observation["parent"])
+        self.assertEqual(
+            [{"repository": "mctlhq/new", "number": 8}], observation["subIssues"]
+        )
+        self.assertEqual(
+            [{"repository": "mctlhq/new", "number": 9}], observation["blockedBy"]
+        )
+        relation_calls = [
+            url for _, url, _ in opener.calls if "/issues/1/" in url
+        ]
+        self.assertEqual([], relation_calls, "relations were asked of the old address")
+
     def test_live_source_reports_a_missing_issue_as_not_found(self) -> None:
         source = github_graph.LiveGraphSource("token", opener=_RecordingOpener({}))
         snapshot = source.snapshot([("mctlhq/example", 1)])
@@ -545,6 +581,15 @@ class ReconcileTest(unittest.TestCase):
         fixture["source"] = {
             "mode": "live-capture",
             "capturedAt": "yesterday",
+            "apiBase": "https://api.github.com",
+        }
+        self.assertNotEqual([], github_graph.snapshot_errors(fixture))
+
+    def test_a_timestamp_without_an_offset_is_not_rfc_3339(self) -> None:
+        fixture = copy.deepcopy(self.converged)
+        fixture["source"] = {
+            "mode": "live-capture",
+            "capturedAt": "2026-09-16T10:00:00",
             "apiBase": "https://api.github.com",
         }
         self.assertNotEqual([], github_graph.snapshot_errors(fixture))

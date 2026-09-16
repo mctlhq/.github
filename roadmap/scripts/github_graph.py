@@ -84,9 +84,12 @@ def _timestamp_errors(snapshot: dict[str, Any]) -> list[str]:
         if not isinstance(value, str):
             return
         try:
-            datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             errors.append(f"{path}: {value!r} is not an RFC 3339 timestamp")
+            return
+        if parsed.tzinfo is None:
+            errors.append(f"{path}: {value!r} has no timezone offset")
 
     source = snapshot.get("source")
     if isinstance(source, dict):
@@ -392,7 +395,15 @@ class LiveGraphSource:
         if isinstance(updated_at, str):
             observation["updatedAt"] = updated_at
 
-        parent_status, parent_payload, _ = self._get(f"{base}/parent")
+        # Sub-resources are fetched from the RESOLVED identity. The issue GET
+        # may have followed a transfer redirect, and asking the old location
+        # for relations either 404s or answers about a different object --
+        # either way the graph would come back empty and every relation on a
+        # transferred issue would look like drift, which is exactly the
+        # cascade the redirect contract exists to prevent.
+        resolved_base = self._issue_url(resolved)
+
+        parent_status, parent_payload, _ = self._get(f"{resolved_base}/parent")
         if parent_status in (404, 410) or not isinstance(parent_payload, dict):
             observation["parent"] = None
         else:
@@ -402,12 +413,12 @@ class LiveGraphSource:
                 "number": parent_key[1],
             }
 
-        sub_issues = self._get_all(f"{base}/sub_issues")
+        sub_issues = self._get_all(f"{resolved_base}/sub_issues")
         observation["subIssues"] = [
             self._as_ref(item) for item in sub_issues or [] if isinstance(item, dict)
         ]
 
-        blocked_by = self._get_all(f"{base}/dependencies/blocked_by")
+        blocked_by = self._get_all(f"{resolved_base}/dependencies/blocked_by")
         observation["blockedBy"] = [
             self._as_ref(item) for item in blocked_by or [] if isinstance(item, dict)
         ]
