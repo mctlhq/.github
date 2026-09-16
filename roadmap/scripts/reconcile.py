@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,6 +29,8 @@ import validate
 from github_graph import (
     FixtureGraphSource,
     IssueKey,
+    LiveGraphSource,
+    ObservationError,
     ObservedGraph,
     SnapshotIncomplete,
     observed_graph,
@@ -625,6 +628,13 @@ def reconcile(
 # --------------------------------------------------------------------- CLI
 
 
+def _build_source(args: argparse.Namespace) -> Any:
+    if args.snapshot:
+        return FixtureGraphSource.from_path(Path(args.snapshot))
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+    return LiveGraphSource(token, api_base=args.api_base)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -638,13 +648,23 @@ def main(argv: list[str] | None = None) -> int:
         help="canonical corpus root, always validated in full (default: roadmap/epics)",
     )
     parser.add_argument("--schema", default=str(validate.DEFAULT_SCHEMA))
+    parser.add_argument("--snapshot", help="replay a captured or synthetic snapshot")
     parser.add_argument(
-        "--snapshot",
-        required=True,
-        help="replay a captured or synthetic GitHubGraphSnapshot",
+        "--live", action="store_true", help="read live GitHub state (GET only)"
     )
+    parser.add_argument("--capture", help="live mode; also write the snapshot here")
+    parser.add_argument("--api-base", default=github_graph.DEFAULT_API_BASE)
     parser.add_argument("--output", help="write the diff here instead of stdout")
     args = parser.parse_args(argv)
+
+    if args.capture:
+        args.live = True
+    if bool(args.snapshot) == bool(args.live):
+        print(
+            "exactly one of --snapshot or --live/--capture is required",
+            file=sys.stderr,
+        )
+        return EXIT_ERROR
 
     try:
         schema = validate._load_schema(Path(args.schema))
@@ -662,7 +682,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             selected = sorted(corpus)
 
-        source_adapter = FixtureGraphSource.from_path(Path(args.snapshot))
+        source_adapter = _build_source(args)
         documents = []
         for path in selected:
             loaded = corpus[path]
@@ -678,7 +698,7 @@ def main(argv: list[str] | None = None) -> int:
                     ),
                 )
             )
-    except (ReconcileError, SnapshotIncomplete) as exc:
+    except (ReconcileError, SnapshotIncomplete, ObservationError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
     except (OSError, ValueError, json.JSONDecodeError, SchemaError) as exc:
@@ -686,7 +706,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
 
     try:
-        _emit(args, documents)
+        _emit(args, corpus, selected, source_adapter, documents)
     except OSError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
@@ -700,8 +720,22 @@ def main(argv: list[str] | None = None) -> int:
 
 def _emit(
     args: argparse.Namespace,
+    corpus: dict[Path, LoadedManifest],
+    selected: list[Path],
+    source_adapter: Any,
     documents: list[tuple[Path, dict[str, Any]]],
 ) -> None:
+    if args.capture and documents:
+        # The adapter caches observations, so this re-serializes what was
+        # already read rather than issuing a second pass over GitHub.
+        keys: set[IssueKey] = set()
+        for path in selected:
+            keys.update(desired_graph(corpus[path].document).authored_keys())
+        snapshot = source_adapter.snapshot(sorted(keys))
+        Path(args.capture).write_text(
+            json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+
     rendered = json.dumps(render(documents), indent=2, sort_keys=True)
     if args.output:
         Path(args.output).write_text(rendered + "\n", encoding="utf-8")

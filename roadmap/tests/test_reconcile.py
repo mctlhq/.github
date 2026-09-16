@@ -5,6 +5,8 @@ import json
 import sys
 import tempfile
 import unittest
+import urllib.error
+import urllib.request
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -35,6 +37,61 @@ EXTERNAL = "mctlhq/mctl-telegram#443"
 
 def _types(entries: list[dict]) -> list[str]:
     return sorted(entry["type"] for entry in entries)
+
+
+class _FakeResponse:
+    def __init__(self, payload, status=200, headers=None):
+        if isinstance(payload, (bytes, BaseException)):
+            self._raw = payload
+        else:
+            self._raw = json.dumps(payload).encode() if payload is not None else b""
+        self.status = status
+        self.headers = headers or {}
+
+    def read(self):
+        if isinstance(self._raw, BaseException):
+            raise self._raw
+        return self._raw
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+class _RecordingOpener:
+    """Stands in for urllib's opener and remembers every call made through it."""
+
+    # A guard that loops forever does not fail, it hangs -- and a hung test reads
+    # as a slow CI rather than a red one. Past this many calls the opener raises,
+    # so a missing loop guard turns red instead of silent.
+    MAX_CALLS = 50
+
+    def __init__(self, routes: dict[str, object]):
+        self.routes = routes
+        self.calls: list[tuple[str, str, bytes | None]] = []
+        self.timeouts: list[float | None] = []
+
+    def open(self, request, timeout=None):
+        if len(self.calls) >= self.MAX_CALLS:
+            raise AssertionError(
+                f"opener called more than {self.MAX_CALLS} times: a read is looping"
+            )
+        self.calls.append((request.get_method(), request.full_url, request.data))
+        self.timeouts.append(timeout)
+        url = request.full_url
+        if url not in self.routes:
+            url = url.split("?")[0]
+        if url not in self.routes:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        payload = self.routes[url]
+        if isinstance(payload, int):
+            raise urllib.error.HTTPError(url, payload, "error", {}, None)
+        if isinstance(payload, tuple):
+            body, headers, *status = payload
+            return _FakeResponse(body, headers=headers, status=status[0] if status else 200)
+        return _FakeResponse(payload)
 
 
 class _RefusingSource:
@@ -223,14 +280,9 @@ class ReconcileTest(unittest.TestCase):
 
     def _run_main(self, argv: list[str]) -> tuple[int, _RefusingSource]:
         source = _RefusingSource()
-        # Corpus validation must fail before any snapshot is even loaded.
-        with mock.patch.object(
-            reconcile.FixtureGraphSource, "from_path", return_value=source
-        ) as loaded:
+        with mock.patch.object(reconcile, "_build_source", return_value=source):
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                 code = reconcile.main(argv)
-            if loaded.called:
-                source.calls += 1
         return code, source
 
     def test_unselected_manifest_duplicate_binding_fails_before_any_read(self) -> None:
@@ -263,6 +315,21 @@ class ReconcileTest(unittest.TestCase):
 
     # -- T13 -------------------------------------------------------------
 
+    def test_live_source_refuses_non_get_before_transmission(self) -> None:
+        opener = _RecordingOpener({})
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        with self.assertRaises(github_graph.WriteAttempted):
+            source._request("POST", "https://api.github.com/repos/o/r/issues/1")
+        with self.assertRaises(github_graph.WriteAttempted):
+            source._request(
+                "GET", "https://api.github.com/repos/o/r/issues/1", body=b"{}"
+            )
+        self.assertEqual([], opener.calls)
+
+    def test_live_source_requires_a_token(self) -> None:
+        with self.assertRaises(github_graph.ObservationError):
+            github_graph.LiveGraphSource("")
+
     # -- T14 -------------------------------------------------------------
 
     def _routes(self) -> dict[str, object]:
@@ -285,6 +352,240 @@ class ReconcileTest(unittest.TestCase):
             ],
         }
 
+    def test_live_source_normalizes_every_native_relation(self) -> None:
+        opener = _RecordingOpener(self._routes())
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        snapshot = source.snapshot([("mctlhq/example", 1)])
+
+        self.assertEqual([], github_graph.snapshot_errors(snapshot))
+        observation = snapshot["issues"][0]
+        self.assertTrue(observation["found"])
+        self.assertEqual({"repository": "mctlhq/example", "number": 9}, observation["parent"])
+        self.assertEqual(
+            [{"repository": "mctlhq/example", "number": 2}], observation["subIssues"]
+        )
+        self.assertEqual(
+            [{"repository": "mctlhq/other", "number": 3}], observation["blockedBy"]
+        )
+        self.assertTrue(all(method == "GET" for method, _, _ in opener.calls))
+        self.assertTrue(all(body is None for _, _, body in opener.calls))
+
+    def test_live_source_reads_identity_from_the_body_not_the_url(self) -> None:
+        base = "https://api.github.com/repos"
+        routes = {
+            f"{base}/mctlhq/old/issues/1": {
+                "number": 77,
+                "repository_url": f"{base}/mctlhq/new",
+            },
+            # "No relations" is 200 [] -- a missing route would 404, which is
+            # now an observation error rather than an empty list.
+            f"{base}/mctlhq/new/issues/77/sub_issues": [],
+            f"{base}/mctlhq/new/issues/77/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        snapshot = source.snapshot([("mctlhq/old", 1)])
+        observation = snapshot["issues"][0]
+        self.assertEqual({"repository": "mctlhq/old", "number": 1}, observation["requested"])
+        self.assertEqual({"repository": "mctlhq/new", "number": 77}, observation["resolved"])
+
+    def test_relations_are_fetched_from_the_resolved_identity(self) -> None:
+        """A transferred issue's relations live at its new address, not its old one."""
+
+        base = "https://api.github.com/repos"
+        routes = {
+            f"{base}/mctlhq/old/issues/1": {
+                "number": 77,
+                "repository_url": f"{base}/mctlhq/new",
+            },
+            f"{base}/mctlhq/new/issues/77/parent": {
+                "number": 5,
+                "repository_url": f"{base}/mctlhq/new",
+            },
+            f"{base}/mctlhq/new/issues/77/sub_issues": [
+                {"number": 8, "repository_url": f"{base}/mctlhq/new"}
+            ],
+            f"{base}/mctlhq/new/issues/77/dependencies/blocked_by": [
+                {"number": 9, "repository_url": f"{base}/mctlhq/new"}
+            ],
+        }
+        opener = _RecordingOpener(routes)
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        observation = source.snapshot([("mctlhq/old", 1)])["issues"][0]
+
+        self.assertEqual({"repository": "mctlhq/new", "number": 5}, observation["parent"])
+        self.assertEqual(
+            [{"repository": "mctlhq/new", "number": 8}], observation["subIssues"]
+        )
+        self.assertEqual(
+            [{"repository": "mctlhq/new", "number": 9}], observation["blockedBy"]
+        )
+        relation_calls = [
+            url for _, url, _ in opener.calls if "/issues/1/" in url
+        ]
+        self.assertEqual([], relation_calls, "relations were asked of the old address")
+
+    def test_paginated_relations_are_read_to_the_last_page(self) -> None:
+        """A relation list truncated to page one would pass as complete."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        page_two = f"{base}/sub_issues?per_page=100&page=2"
+        routes = {
+            base: {"number": 1, "repository_url": issue_url},
+            f"{base}/sub_issues?per_page=100": (
+                [{"number": 2, "repository_url": issue_url}],
+                {"Link": f'<{page_two}>; rel="next", <{page_two}>; rel="last"'},
+            ),
+            page_two: [{"number": 3, "repository_url": issue_url}],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        opener = _RecordingOpener(routes)
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
+
+        self.assertEqual(
+            [
+                {"repository": "mctlhq/example", "number": 2},
+                {"repository": "mctlhq/example", "number": 3},
+            ],
+            observation["subIssues"],
+        )
+        self.assertIn(page_two, [url for _, url, _ in opener.calls])
+
+    def test_unreadable_relation_state_is_never_projected_as_absence(self) -> None:
+        """Unobserved or unreadable state must never be projected as absence.
+
+        Only "200 []" means a relation listing is empty, and only a 404 on
+        /parent means there is no parent. Everything else that fails to read
+        is an error -- including a later page failing after earlier pages
+        succeeded, which would otherwise hand back a truncated list as complete.
+        """
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        issue = {"number": 1, "repository_url": issue_url}
+        page_two = f"{base}/sub_issues?per_page=100&page=2"
+        cases = {
+            "second page of a listing is 404": {
+                base: issue,
+                f"{base}/sub_issues?per_page=100": (
+                    [{"number": 2, "repository_url": issue_url}],
+                    {"Link": f'<{page_two}>; rel="next"'},
+                ),
+                page_two: 404,
+                f"{base}/dependencies/blocked_by": [],
+            },
+            "first page of a listing is 404": {
+                base: issue,
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": 404,
+            },
+            "first page of a listing is 410": {
+                base: issue,
+                f"{base}/sub_issues": 410,
+                f"{base}/dependencies/blocked_by": [],
+            },
+            "parent is 410 on an issue that exists": {
+                base: issue,
+                f"{base}/parent": 410,
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": [],
+            },
+        }
+        for name, routes in cases.items():
+            with self.subTest(case=name):
+                source = github_graph.LiveGraphSource(
+                    "token", opener=_RecordingOpener(routes)
+                )
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+
+    def test_live_source_never_emits_a_capture_that_replay_would_reject(self) -> None:
+        """The producer is held to the contract its own captures are loaded under."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {
+                "number": 1,
+                "repository_url": "https://api.github.com/repos/mctlhq/example",
+                "updated_at": "sometime last week",
+            },
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_parent_404_is_the_one_documented_absence(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {"number": 1, "repository_url": "https://api.github.com/repos/mctlhq/example"},
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
+        self.assertIsNone(observation["parent"])
+        self.assertEqual([], observation["subIssues"])
+        self.assertEqual([], observation["blockedBy"])
+
+    def test_credentials_never_follow_a_link_off_the_api_origin(self) -> None:
+        """A pagination header must not be able to redirect the bearer token."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue = {"number": 1, "repository_url": "https://api.github.com/repos/mctlhq/example"}
+        for name, foreign in (
+            ("other host", "https://attacker.example/steal?page=2"),
+            ("downgraded scheme", "http://api.github.com/repos/mctlhq/example/issues/1/sub_issues?page=2"),
+            ("lookalike host", "https://api.github.com.attacker.example/x?page=2"),
+        ):
+            with self.subTest(case=name):
+                routes = {
+                    base: issue,
+                    f"{base}/sub_issues?per_page=100": (
+                        [], {"Link": f'<{foreign}>; rel="next"'}
+                    ),
+                    f"{base}/dependencies/blocked_by": [],
+                }
+                opener = _RecordingOpener(routes)
+                source = github_graph.LiveGraphSource("token", opener=opener)
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+                self.assertNotIn(foreign, [url for _, url, _ in opener.calls])
+
+    def test_a_plaintext_api_base_is_refused(self) -> None:
+        """The token rides every request; it must never go over plain HTTP."""
+
+        for base in ("http://api.github.com", "api.github.com", "ftp://api.github.com"):
+            with self.subTest(base=base):
+                with self.assertRaises(github_graph.ObservationError):
+                    github_graph.LiveGraphSource("token", api_base=base, opener=_RecordingOpener({}))
+
+        with mock.patch.dict("os.environ", {"GITHUB_TOKEN": "token"}):
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main([str(PILOT), "--live", "--api-base", "http://api.github.com"])
+        self.assertEqual(reconcile.EXIT_ERROR, code)
+
+    def test_an_api_base_cannot_smuggle_another_host_or_data(self) -> None:
+        for base in (
+            "https://api.github.com@attacker.example",
+            "https://user:secret@api.github.com",
+            "https://api.github.com?token=leak",
+            "https://api.github.com#frag",
+        ):
+            with self.subTest(base=base):
+                with self.assertRaises(github_graph.ObservationError):
+                    github_graph.LiveGraphSource("token", api_base=base, opener=_RecordingOpener({}))
+
+    def test_a_timeout_while_reading_the_body_is_an_observation_error(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        source = github_graph.LiveGraphSource(
+            "token", opener=_RecordingOpener({base: TimeoutError("read timed out")})
+        )
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
     def test_a_permissive_schema_override_cannot_drop_the_required_shape(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             directory = Path(raw)
@@ -298,6 +599,69 @@ class ReconcileTest(unittest.TestCase):
                 )
         self.assertEqual(reconcile.EXIT_ERROR, code)
 
+    def test_redirects_are_held_to_the_api_origin(self) -> None:
+        """urllib would otherwise copy Authorization onto any Location."""
+
+        source = github_graph.LiveGraphSource("token")
+        handlers = [
+            h for h in source._opener.handlers
+            if isinstance(h, urllib.request.HTTPRedirectHandler)
+        ]
+        self.assertEqual(1, len(handlers))
+        self.assertIsInstance(handlers[0], github_graph._SameOriginRedirectHandler)
+
+        request = urllib.request.Request("https://api.github.com/repos/o/r/issues/1")
+        request.add_header("Authorization", "Bearer token")
+        for foreign in (
+            "https://attacker.example/x",
+            "http://api.github.com/repos/o/r/issues/2",
+            "https://api.github.com.attacker.example/x",
+        ):
+            with self.subTest(location=foreign):
+                with self.assertRaises(github_graph.ObservationError):
+                    handlers[0].redirect_request(request, None, 301, "Moved", {}, foreign)
+
+        same = "https://api.github.com/repositories/42/issues/1"
+        followed = handlers[0].redirect_request(request, None, 301, "Moved", {}, same)
+        self.assertEqual(same, followed.full_url)
+
+    def test_a_pagination_cycle_fails_instead_of_looping(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        first = f"{base}/sub_issues?per_page=100"
+        routes = {
+            base: {"number": 1, "repository_url": issue_url},
+            first: ([], {"Link": f'<{first}>; rel="next"'}),
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_only_a_200_is_a_complete_read(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        issue = {"number": 1, "repository_url": issue_url}
+        cases = {
+            "issue answered 203": {base: (issue, {}, 203)},
+            "parent answered 206": {
+                base: issue,
+                f"{base}/parent": ({"number": 9, "repository_url": issue_url}, {}, 206),
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": [],
+            },
+            "listing answered 206": {
+                base: issue,
+                f"{base}/sub_issues": ([], {}, 206),
+                f"{base}/dependencies/blocked_by": [],
+            },
+        }
+        for name, routes in cases.items():
+            with self.subTest(case=name):
+                source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+
     def test_a_malformed_fixture_dict_fails_as_invalid_not_as_a_crash(self) -> None:
         broken = copy.deepcopy(self.converged)
         del broken["issues"][0]["requested"]
@@ -305,6 +669,50 @@ class ReconcileTest(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             source.snapshot([("mctlhq/.github", 42)])
         self.assertNotIsInstance(caught.exception, KeyError)
+
+    def test_an_enterprise_api_base_keeps_its_path_prefix(self) -> None:
+        api = "https://ghe.example/api/v3"
+        base = f"{api}/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {"number": 1, "repository_url": f"{api}/repos/mctlhq/example"},
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", api_base=api, opener=_RecordingOpener(routes))
+        self.assertTrue(source.snapshot([("mctlhq/example", 1)])["issues"][0]["found"])
+        with self.assertRaises(github_graph.ObservationError):
+            source._request("GET", "https://ghe.example/other/repos/x")
+
+    def test_invalid_utf8_from_the_provider_is_an_observation_error(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        source = github_graph.LiveGraphSource(
+            # Detected as UTF-8 by json.loads, then fails to decode. A leading
+            # BOM would be sniffed as UTF-16 and raise JSONDecodeError instead,
+            # which is caught either way and would not exercise this path.
+            "token", opener=_RecordingOpener({base: b'{"number": "\xff"}'})
+        )
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_two_aliases_of_one_transferred_issue_are_read_once(self) -> None:
+        api = "https://api.github.com/repos"
+        new = {"number": 77, "repository_url": f"{api}/mctlhq/new"}
+        routes = {
+            f"{api}/mctlhq/old/issues/1": new,
+            f"{api}/mctlhq/new/issues/77": new,
+            f"{api}/mctlhq/new/issues/77/sub_issues": [],
+            f"{api}/mctlhq/new/issues/77/dependencies/blocked_by": [],
+        }
+        opener = _RecordingOpener(routes)
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        issues = source.snapshot([("mctlhq/old", 1), ("mctlhq/new", 77)])["issues"]
+
+        relation_reads = [
+            url for _, url, _ in opener.calls if "/sub_issues" in url or "/blocked_by" in url
+        ]
+        self.assertEqual(2, len(relation_reads), "relations were read once per alias")
+        strip = lambda o: {k: v for k, v in o.items() if k != "requested"}
+        self.assertEqual(strip(issues[0]), strip(issues[1]))
 
     def test_diff_schema_holds_provenance_to_the_snapshot_variants(self) -> None:
         from jsonschema import Draft202012Validator
@@ -321,6 +729,56 @@ class ReconcileTest(unittest.TestCase):
                 forged = copy.deepcopy(result)
                 forged["source"] = source
                 self.assertNotEqual([], sorted(validator.iter_errors(forged)))
+
+    def test_malformed_provider_responses_are_errors_not_absences(self) -> None:
+        """Unreadable data must never be reported as an observed lack of relations."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue = {"number": 1, "repository_url": "https://api.github.com/repos/mctlhq/example"}
+        cases = {
+            "issue body is not an object": {base: ["unexpected"]},
+            "parent body is not an object": {base: issue, f"{base}/parent": ["unexpected"]},
+            "sub-issues body is not an array": {
+                base: issue,
+                f"{base}/sub_issues": {"message": "unexpected"},
+            },
+            "blocked-by holds a non-object": {
+                base: issue,
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": ["unexpected"],
+            },
+        }
+        for name, routes in cases.items():
+            with self.subTest(case=name):
+                source = github_graph.LiveGraphSource(
+                    "token", opener=_RecordingOpener(routes)
+                )
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+
+    def test_live_source_reports_a_missing_issue_as_not_found(self) -> None:
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener({}))
+        snapshot = source.snapshot([("mctlhq/example", 1)])
+        self.assertEqual(False, snapshot["issues"][0]["found"])
+        self.assertNotIn("resolved", snapshot["issues"][0])
+
+    def test_live_requests_carry_a_timeout(self) -> None:
+        """A hung endpoint must fail, not stall a read-only run forever."""
+
+        opener = _RecordingOpener(self._routes())
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        source.snapshot([("mctlhq/example", 1)])
+        self.assertTrue(opener.timeouts)
+        self.assertTrue(all(value for value in opener.timeouts))
+
+    def test_a_timed_out_read_is_an_observation_error(self) -> None:
+        class _Hanging:
+            def open(self, request, timeout=None):
+                raise TimeoutError("timed out")
+
+        source = github_graph.LiveGraphSource("token", opener=_Hanging())
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
 
     # -- T15 -------------------------------------------------------------
 
@@ -390,12 +848,19 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(reconcile.EXIT_ERROR, code)
 
     def test_exit_two_without_a_source(self) -> None:
-        """--snapshot is required; argparse exits 2 before anything runs."""
-
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
-            with self.assertRaises(SystemExit) as caught:
-                reconcile.main([str(PILOT)])
-        self.assertEqual(reconcile.EXIT_ERROR, caught.exception.code)
+            self.assertEqual(reconcile.EXIT_ERROR, reconcile.main([str(PILOT)]))
+
+    def test_exit_two_when_live_auth_is_missing(self) -> None:
+        environment = {
+            key: value
+            for key, value in __import__("os").environ.items()
+            if key not in ("GITHUB_TOKEN", "GH_TOKEN")
+        }
+        with mock.patch.dict("os.environ", environment, clear=True):
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main([str(PILOT), "--live"])
+        self.assertEqual(reconcile.EXIT_ERROR, code)
 
     def test_exit_two_when_the_snapshot_never_observed_a_bound_issue(self) -> None:
         partial = copy.deepcopy(self.converged)
@@ -666,6 +1131,21 @@ class ReconcileTest(unittest.TestCase):
             }
         ]
         self.assertNotEqual([], sorted(validator.iter_errors(stripped)))
+
+    def test_capture_writes_the_snapshot_that_was_read(self) -> None:
+        source = github_graph.FixtureGraphSource(self.converged)
+        with tempfile.TemporaryDirectory() as raw:
+            captured = Path(raw) / "capture.json"
+            with mock.patch.object(reconcile, "_build_source", return_value=source):
+                with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                    code = reconcile.main(
+                        [str(PILOT), "--capture", str(captured)]
+                    )
+            self.assertEqual(reconcile.EXIT_CONVERGED, code)
+            self.assertTrue(captured.exists())
+            written = json.loads(captured.read_text(encoding="utf-8"))
+        self.assertEqual([], github_graph.snapshot_errors(written))
+        self.assertEqual(self.converged["issues"], written["issues"])
 
     def test_several_manifests_emit_a_schema_valid_envelope(self) -> None:
         from jsonschema import Draft202012Validator
