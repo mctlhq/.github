@@ -37,17 +37,6 @@ def _types(entries: list[dict]) -> list[str]:
     return sorted(entry["type"] for entry in entries)
 
 
-class _RefusingSource:
-    """A graph source that fails the test if anything asks it to observe."""
-
-    def __init__(self):
-        self.calls = 0
-
-    def snapshot(self, keys):
-        self.calls += 1
-        raise AssertionError("network access attempted before validation passed")
-
-
 class ReconcileTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -221,17 +210,19 @@ class ReconcileTest(unittest.TestCase):
             },
         }
 
-    def _run_main(self, argv: list[str]) -> tuple[int, _RefusingSource]:
-        source = _RefusingSource()
-        # Corpus validation must fail before any snapshot is even loaded.
-        with mock.patch.object(
-            reconcile.FixtureGraphSource, "from_path", return_value=source
-        ) as loaded:
+    def _run_main_expecting_no_snapshot_load(self, argv: list[str]) -> int:
+        """Run the CLI and fail the test if a snapshot is loaded at all.
+
+        Corpus validation has to finish before any observed state is read. The
+        loader is replaced with a mock so the assertion is on whether it was
+        called, not on anything it would have returned.
+        """
+
+        with mock.patch.object(reconcile.FixtureGraphSource, "from_path") as loaded:
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                 code = reconcile.main(argv)
-            if loaded.called:
-                source.calls += 1
-        return code, source
+        loaded.assert_not_called()
+        return code
 
     def test_unselected_manifest_duplicate_binding_fails_before_any_read(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -243,11 +234,10 @@ class ReconcileTest(unittest.TestCase):
                 "number": 261,
             }
             selected = self._corpus(directory, other)
-            code, source = self._run_main(
+            code = self._run_main_expecting_no_snapshot_load(
                 [str(selected), "--corpus", str(directory), "--snapshot", str(CONVERGED)]
             )
             self.assertEqual(reconcile.EXIT_ERROR, code)
-            self.assertEqual(0, source.calls)
 
     def test_unselected_manifest_duplicate_name_fails_before_any_read(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -255,35 +245,10 @@ class ReconcileTest(unittest.TestCase):
             other = self._unrelated_manifest()
             other["metadata"]["name"] = "human-input"
             selected = self._corpus(directory, other)
-            code, source = self._run_main(
+            code = self._run_main_expecting_no_snapshot_load(
                 [str(selected), "--corpus", str(directory), "--snapshot", str(CONVERGED)]
             )
             self.assertEqual(reconcile.EXIT_ERROR, code)
-            self.assertEqual(0, source.calls)
-
-    # -- T13 -------------------------------------------------------------
-
-    # -- T14 -------------------------------------------------------------
-
-    def _routes(self) -> dict[str, object]:
-        base = "https://api.github.com/repos"
-        return {
-            f"{base}/mctlhq/example/issues/1": {
-                "number": 1,
-                "state": "open",
-                "repository_url": f"{base}/mctlhq/example",
-            },
-            f"{base}/mctlhq/example/issues/1/parent": {
-                "number": 9,
-                "repository_url": f"{base}/mctlhq/example",
-            },
-            f"{base}/mctlhq/example/issues/1/sub_issues": [
-                {"number": 2, "repository_url": f"{base}/mctlhq/example"}
-            ],
-            f"{base}/mctlhq/example/issues/1/dependencies/blocked_by": [
-                {"number": 3, "repository_url": f"{base}/mctlhq/other"}
-            ],
-        }
 
     def test_a_permissive_schema_override_cannot_drop_the_required_shape(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
