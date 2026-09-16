@@ -243,9 +243,11 @@ under, in validator diagnostics and in every `RoadmapDiff` entry.
 ### Determinism
 
 `RoadmapDiff` carries the SHA-256 of the exact manifest bytes, the manifest path
-relative to the repository root, and the snapshot's own provenance. It contains no
-timestamp and no random value of its own, so identical manifest and snapshot bytes
-produce byte-identical JSON on any machine, in any input order.
+relative to the repository root, and the snapshot's own provenance. It adds no
+timestamp or random value of its own -- the only time a diff carries is a live
+capture's `capturedAt`, copied from the snapshot as provenance -- so identical
+manifest and snapshot bytes produce byte-identical JSON on any machine, in any input
+order.
 
 ### Fixtures
 

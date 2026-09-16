@@ -357,8 +357,7 @@
           }
         },
         "source": {
-          "description": "Copied verbatim from the snapshot. This diff carries no clock of its own.",
-          "type": "object"
+          "$ref": "#/$defs/source"
         },
         "summary": {
           "type": "object",
@@ -438,6 +437,48 @@
           }
         }
       }
+    },
+    "source": {
+      "description": "Copied verbatim from the snapshot, with the same provenance variants the snapshot schema enforces. A live capture's `capturedAt` is the only time a diff carries.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
+          "properties": {
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
     }
   }
 }

@@ -287,12 +287,18 @@ class LiveGraphSource:
             raise ObservationError("live mode requires a GitHub token")
         self._token = token
         self._api_base = api_base.rstrip("/")
+        self._origin = urllib.parse.urlsplit(self._api_base)
         self._opener = opener or urllib.request.build_opener()
         self._timeout = timeout
         # One issue is observed once per process, however many manifests or
         # capture passes ask for it. Re-reading would also let a graph change
         # between two halves of the same diff.
         self._cache: dict[IssueKey, dict[str, Any]] = {}
+        # Keyed by RESOLVED identity. A transferred issue can be requested under
+        # its old key and its new one in the same run; without this, the second
+        # alias re-reads the same live object and the snapshot can describe it
+        # in two states at once.
+        self._resolved: dict[IssueKey, dict[str, Any]] = {}
         self._captured_at = (
             datetime.now(timezone.utc)
             .replace(microsecond=0)
@@ -307,6 +313,19 @@ class LiveGraphSource:
             raise WriteAttempted(f"{method} {url}: this source may only read")
         if body is not None:
             raise WriteAttempted(f"request body for {url}: this source may only read")
+
+        # Every request carries the bearer token, and pagination follows URLs
+        # taken from a response header. Only the configured API origin may
+        # receive the token: a malformed or cross-origin `rel="next"` link must
+        # fail the read, not forward the credential to another host.
+        target = urllib.parse.urlsplit(url)
+        if (target.scheme, target.netloc) != (self._origin.scheme, self._origin.netloc) or not (
+            target.path == self._origin.path
+            or target.path.startswith(self._origin.path.rstrip("/") + "/")
+        ):
+            raise ObservationError(
+                f"refusing to send credentials outside {self._api_base}: {url}"
+            )
 
         request = urllib.request.Request(url, method="GET")
         request.add_header("Accept", "application/vnd.github+json")
@@ -332,7 +351,7 @@ class LiveGraphSource:
             status = getattr(response, "status", 200) or 200
         try:
             payload = json.loads(raw) if raw else None
-        except json.JSONDecodeError as error:
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
             raise ObservationError(f"GET {url}: malformed JSON") from error
         return status, payload, headers
 
@@ -416,6 +435,10 @@ class LiveGraphSource:
             )
 
         resolved = self._resolved_key(payload)
+        known = self._resolved.get(resolved)
+        if known is not None:
+            return {"requested": requested, **known}
+
         observation: dict[str, Any] = {
             "requested": requested,
             "resolved": {"repository": resolved[0], "number": resolved[1]},
@@ -466,6 +489,9 @@ class LiveGraphSource:
         observation["blockedBy"] = [
             self._as_ref(item) for item in blocked_by
         ]
+        self._resolved[resolved] = {
+            key: value for key, value in observation.items() if key != "requested"
+        }
         return observation
 
     def _as_ref(self, payload: dict[str, Any]) -> dict[str, Any]:

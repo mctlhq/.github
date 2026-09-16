@@ -40,7 +40,10 @@ def _types(entries: list[dict]) -> list[str]:
 
 class _FakeResponse:
     def __init__(self, payload, status=200, headers=None):
-        self._raw = json.dumps(payload).encode() if payload is not None else b""
+        if isinstance(payload, bytes):
+            self._raw = payload
+        else:
+            self._raw = json.dumps(payload).encode() if payload is not None else b""
         self.status = status
         self.headers = headers or {}
 
@@ -514,6 +517,90 @@ class ReconcileTest(unittest.TestCase):
         self.assertIsNone(observation["parent"])
         self.assertEqual([], observation["subIssues"])
         self.assertEqual([], observation["blockedBy"])
+
+    def test_credentials_never_follow_a_link_off_the_api_origin(self) -> None:
+        """A pagination header must not be able to redirect the bearer token."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue = {"number": 1, "repository_url": "https://api.github.com/repos/mctlhq/example"}
+        for name, foreign in (
+            ("other host", "https://attacker.example/steal?page=2"),
+            ("downgraded scheme", "http://api.github.com/repos/mctlhq/example/issues/1/sub_issues?page=2"),
+            ("lookalike host", "https://api.github.com.attacker.example/x?page=2"),
+        ):
+            with self.subTest(case=name):
+                routes = {
+                    base: issue,
+                    f"{base}/sub_issues?per_page=100": (
+                        [], {"Link": f'<{foreign}>; rel="next"'}
+                    ),
+                    f"{base}/dependencies/blocked_by": [],
+                }
+                opener = _RecordingOpener(routes)
+                source = github_graph.LiveGraphSource("token", opener=opener)
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+                self.assertNotIn(foreign, [url for _, url, _ in opener.calls])
+
+    def test_an_enterprise_api_base_keeps_its_path_prefix(self) -> None:
+        api = "https://ghe.example/api/v3"
+        base = f"{api}/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {"number": 1, "repository_url": f"{api}/repos/mctlhq/example"},
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", api_base=api, opener=_RecordingOpener(routes))
+        self.assertTrue(source.snapshot([("mctlhq/example", 1)])["issues"][0]["found"])
+        with self.assertRaises(github_graph.ObservationError):
+            source._request("GET", "https://ghe.example/other/repos/x")
+
+    def test_invalid_utf8_from_the_provider_is_an_observation_error(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        source = github_graph.LiveGraphSource(
+            # Detected as UTF-8 by json.loads, then fails to decode. A leading
+            # BOM would be sniffed as UTF-16 and raise JSONDecodeError instead,
+            # which is caught either way and would not exercise this path.
+            "token", opener=_RecordingOpener({base: b'{"number": "\xff"}'})
+        )
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_two_aliases_of_one_transferred_issue_are_read_once(self) -> None:
+        api = "https://api.github.com/repos"
+        new = {"number": 77, "repository_url": f"{api}/mctlhq/new"}
+        routes = {
+            f"{api}/mctlhq/old/issues/1": new,
+            f"{api}/mctlhq/new/issues/77": new,
+            f"{api}/mctlhq/new/issues/77/sub_issues": [],
+            f"{api}/mctlhq/new/issues/77/dependencies/blocked_by": [],
+        }
+        opener = _RecordingOpener(routes)
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        issues = source.snapshot([("mctlhq/old", 1), ("mctlhq/new", 77)])["issues"]
+
+        relation_reads = [
+            url for _, url, _ in opener.calls if "/sub_issues" in url or "/blocked_by" in url
+        ]
+        self.assertEqual(2, len(relation_reads), "relations were read once per alias")
+        strip = lambda o: {k: v for k, v in o.items() if k != "requested"}
+        self.assertEqual(strip(issues[0]), strip(issues[1]))
+
+    def test_diff_schema_holds_provenance_to_the_snapshot_variants(self) -> None:
+        from jsonschema import Draft202012Validator
+
+        validator = Draft202012Validator(self.diff_schema)
+        result = self._diff(self.converged)
+        for name, source in (
+            ("empty", {}),
+            ("synthetic claiming a capture time",
+             {"mode": "synthetic-fixture", "capturedAt": "2026-09-16T10:00:00Z"}),
+            ("live without apiBase", {"mode": "live-capture", "capturedAt": "2026-09-16T10:00:00Z"}),
+        ):
+            with self.subTest(case=name):
+                forged = copy.deepcopy(result)
+                forged["source"] = source
+                self.assertNotEqual([], sorted(validator.iter_errors(forged)))
 
     def test_malformed_provider_responses_are_errors_not_absences(self) -> None:
         """Unreadable data must never be reported as an observed lack of relations."""
