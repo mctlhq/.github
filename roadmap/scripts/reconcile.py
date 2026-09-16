@@ -562,6 +562,11 @@ def reconcile(
 ) -> dict[str, Any]:
     desired = desired_graph(document)
     snapshot = source_adapter.snapshot(desired.authored_keys())
+    # Every source is held to the same contract here, including a
+    # FixtureGraphSource built directly from a dict rather than loaded from disk.
+    errors = github_graph.snapshot_errors(snapshot)
+    if errors:
+        raise ReconcileError("snapshot is invalid: " + "; ".join(errors))
     github_graph.require_observations(snapshot, desired.authored_keys())
     return diff(
         desired,

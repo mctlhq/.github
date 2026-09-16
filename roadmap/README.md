@@ -140,10 +140,21 @@ envelope, items ordered by manifest path. Both are defined in
 `schemas/roadmap-diff.schema.json`, so every output validates against the published
 contract -- never a bare JSON array with no `kind`.
 
-Only a 404 or 410 means an issue does not exist, and only a 404 or 410 on `/parent`
-means it has no parent. Any other response that cannot be read as the expected shape
-is an observation error (exit 2), never an empty relation list: malformed provider data
-must not become an observed absence.
+**Unobserved or unreadable state must never be projected as absence.** The reader
+distinguishes "observed absent" from "could not observe", and only three responses
+mean absent:
+
+| request | absent means |
+| --- | --- |
+| `GET .../issues/{n}` | 404 or 410 — the issue does not exist |
+| `GET .../issues/{n}/parent` | 404 — the issue has no parent |
+| `GET .../sub_issues`, `.../dependencies/blocked_by` | `200 []` — no relations |
+
+Everything else is an observation error (exit 2), never an empty relation set: a 404 or
+410 on a relation listing, a later page failing after earlier pages succeeded, a 410 on
+`/parent` for an issue that was just read, or any body that is not the expected shape.
+A live capture is also validated against the snapshot schema before it is returned, so
+the producer is held to the same contract replay loads it under.
 
 ### Validation preflight
 

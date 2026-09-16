@@ -328,17 +328,24 @@ class LiveGraphSource:
             raise ObservationError(f"GET {url}: malformed JSON") from error
         return status, payload, headers
 
-    def _get_all(self, url: str) -> list[Any] | None:
-        """Follow rel=next. Returns None when the endpoint reports 404/410."""
+    def _get_all(self, url: str) -> list[Any]:
+        """Follow rel=next to the last page, or raise.
+
+        An empty relation list is `200 []`. A 404 or 410 on a collection
+        endpoint -- first page or any later one -- means the observation failed
+        or came back partial, never that there are no relations. Returning what
+        was accumulated so far would pass a truncated list off as complete and
+        report drift on the pages nobody read.
+        """
 
         items: list[Any] = []
         next_url: str | None = f"{url}?per_page={PAGE_SIZE}"
-        first = True
         while next_url:
             status, payload, headers = self._get(next_url)
             if status in (404, 410):
-                return None if first else items
-            first = False
+                raise ObservationError(
+                    f"GET {next_url}: HTTP {status} on a relation listing"
+                )
             # A 200 that is not a list, or a list holding something other than
             # issue objects, is a response we could not read -- not a response
             # saying there are no relations. Dropping it would turn malformed
@@ -422,8 +429,14 @@ class LiveGraphSource:
         resolved_base = self._issue_url(resolved)
 
         parent_status, parent_payload, _ = self._get(f"{resolved_base}/parent")
-        if parent_status in (404, 410):
+        if parent_status == 404:
+            # GitHub documents 404 on /parent as "this issue has no parent".
+            # 410 is not that: the issue itself was just read successfully.
             observation["parent"] = None
+        elif parent_status == 410:
+            raise ObservationError(
+                f"GET {resolved_base}/parent: HTTP 410 on an issue that exists"
+            )
         elif not isinstance(parent_payload, dict):
             raise ObservationError(
                 f"GET {resolved_base}/parent: expected an issue object, "
@@ -438,12 +451,12 @@ class LiveGraphSource:
 
         sub_issues = self._get_all(f"{resolved_base}/sub_issues")
         observation["subIssues"] = [
-            self._as_ref(item) for item in sub_issues or []
+            self._as_ref(item) for item in sub_issues
         ]
 
         blocked_by = self._get_all(f"{resolved_base}/dependencies/blocked_by")
         observation["blockedBy"] = [
-            self._as_ref(item) for item in blocked_by or []
+            self._as_ref(item) for item in blocked_by
         ]
         return observation
 
@@ -458,7 +471,7 @@ class LiveGraphSource:
 
     def snapshot(self, keys: Sequence[IssueKey]) -> dict[str, Any]:
         issues = [self._observation(key) for key in sorted(set(keys))]
-        return {
+        snapshot = {
             "apiVersion": "roadmap.mctl.ai/v1alpha1",
             "kind": "GitHubGraphSnapshot",
             "source": {
@@ -468,3 +481,13 @@ class LiveGraphSource:
             },
             "issues": issues,
         }
+        # The live source is a producer of the published contract, not an
+        # exception to it: replay validates on load, so the capture that replay
+        # will later load has to satisfy the same schema when it is written.
+        errors = snapshot_errors(snapshot)
+        if errors:
+            raise ObservationError(
+                "live snapshot violates github-graph-snapshot.schema.json: "
+                + "; ".join(errors)
+            )
+        return snapshot

@@ -361,7 +361,11 @@ class ReconcileTest(unittest.TestCase):
             f"{base}/mctlhq/old/issues/1": {
                 "number": 77,
                 "repository_url": f"{base}/mctlhq/new",
-            }
+            },
+            # "No relations" is 200 [] -- a missing route would 404, which is
+            # now an observation error rather than an empty list.
+            f"{base}/mctlhq/new/issues/77/sub_issues": [],
+            f"{base}/mctlhq/new/issues/77/dependencies/blocked_by": [],
         }
         source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
         snapshot = source.snapshot([("mctlhq/old", 1)])
@@ -418,6 +422,7 @@ class ReconcileTest(unittest.TestCase):
                 {"Link": f'<{page_two}>; rel="next", <{page_two}>; rel="last"'},
             ),
             page_two: [{"number": 3, "repository_url": issue_url}],
+            f"{base}/dependencies/blocked_by": [],
         }
         opener = _RecordingOpener(routes)
         source = github_graph.LiveGraphSource("token", opener=opener)
@@ -431,6 +436,84 @@ class ReconcileTest(unittest.TestCase):
             observation["subIssues"],
         )
         self.assertIn(page_two, [url for _, url, _ in opener.calls])
+
+    def test_unreadable_relation_state_is_never_projected_as_absence(self) -> None:
+        """Unobserved or unreadable state must never be projected as absence.
+
+        Only "200 []" means a relation listing is empty, and only a 404 on
+        /parent means there is no parent. Everything else that fails to read
+        is an error -- including a later page failing after earlier pages
+        succeeded, which would otherwise hand back a truncated list as complete.
+        """
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        issue = {"number": 1, "repository_url": issue_url}
+        page_two = f"{base}/sub_issues?per_page=100&page=2"
+        cases = {
+            "second page of a listing is 404": {
+                base: issue,
+                f"{base}/sub_issues?per_page=100": (
+                    [{"number": 2, "repository_url": issue_url}],
+                    {"Link": f'<{page_two}>; rel="next"'},
+                ),
+                page_two: 404,
+                f"{base}/dependencies/blocked_by": [],
+            },
+            "first page of a listing is 404": {
+                base: issue,
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": 404,
+            },
+            "first page of a listing is 410": {
+                base: issue,
+                f"{base}/sub_issues": 410,
+                f"{base}/dependencies/blocked_by": [],
+            },
+            "parent is 410 on an issue that exists": {
+                base: issue,
+                f"{base}/parent": 410,
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": [],
+            },
+        }
+        for name, routes in cases.items():
+            with self.subTest(case=name):
+                source = github_graph.LiveGraphSource(
+                    "token", opener=_RecordingOpener(routes)
+                )
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+
+    def test_live_source_never_emits_a_capture_that_replay_would_reject(self) -> None:
+        """The producer is held to the contract its own captures are loaded under."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {
+                "number": 1,
+                "repository_url": "https://api.github.com/repos/mctlhq/example",
+                "updated_at": "sometime last week",
+            },
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        with self.assertRaises(github_graph.ObservationError):
+            source.snapshot([("mctlhq/example", 1)])
+
+    def test_parent_404_is_the_one_documented_absence(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        routes = {
+            base: {"number": 1, "repository_url": "https://api.github.com/repos/mctlhq/example"},
+            f"{base}/sub_issues": [],
+            f"{base}/dependencies/blocked_by": [],
+        }
+        source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+        observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
+        self.assertIsNone(observation["parent"])
+        self.assertEqual([], observation["subIssues"])
+        self.assertEqual([], observation["blockedBy"])
 
     def test_malformed_provider_responses_are_errors_not_absences(self) -> None:
         """Unreadable data must never be reported as an observed lack of relations."""
