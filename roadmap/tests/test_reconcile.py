@@ -65,12 +65,17 @@ class _RecordingOpener:
     def open(self, request, timeout=None):
         self.calls.append((request.get_method(), request.full_url, request.data))
         self.timeouts.append(timeout)
-        url = request.full_url.split("?")[0]
+        url = request.full_url
+        if url not in self.routes:
+            url = url.split("?")[0]
         if url not in self.routes:
             raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
         payload = self.routes[url]
         if isinstance(payload, int):
             raise urllib.error.HTTPError(url, payload, "error", {}, None)
+        if isinstance(payload, tuple):
+            body, headers = payload
+            return _FakeResponse(body, headers=headers)
         return _FakeResponse(payload)
 
 
@@ -136,6 +141,18 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(mutations.ref(ROOT_ISSUE), entry["expectedParent"])
         self.assertEqual(mutations.ref(CORE), entry["observedParent"])
         self.assertEqual([], result["dependency"])
+
+    def test_unowned_child_is_reported_but_is_not_drift(self) -> None:
+        result = self._diff(
+            mutations.add_unexpected_child(self.converged, ROOT_ISSUE, "mctlhq/mctl-web#5")
+        )
+        self.assertEqual(["HierarchyUnexpectedChild"], _types(result["hierarchy"]))
+        entry = result["hierarchy"][0]
+        self.assertEqual("informational", entry["severity"])
+        self.assertEqual("epic", entry["owner"])
+        self.assertEqual(mutations.ref("mctlhq/mctl-web#5"), entry["child"])
+        self.assertEqual(mutations.ref(ROOT_ISSUE), entry["observedParent"])
+        self.assertFalse(reconcile.has_drift(result))
 
     # -- T4, T5 ----------------------------------------------------------
 
@@ -387,6 +404,33 @@ class ReconcileTest(unittest.TestCase):
             url for _, url, _ in opener.calls if "/issues/1/" in url
         ]
         self.assertEqual([], relation_calls, "relations were asked of the old address")
+
+    def test_paginated_relations_are_read_to_the_last_page(self) -> None:
+        """A relation list truncated to page one would pass as complete."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue_url = "https://api.github.com/repos/mctlhq/example"
+        page_two = f"{base}/sub_issues?per_page=100&page=2"
+        routes = {
+            base: {"number": 1, "repository_url": issue_url},
+            f"{base}/sub_issues?per_page=100": (
+                [{"number": 2, "repository_url": issue_url}],
+                {"Link": f'<{page_two}>; rel="next", <{page_two}>; rel="last"'},
+            ),
+            page_two: [{"number": 3, "repository_url": issue_url}],
+        }
+        opener = _RecordingOpener(routes)
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
+
+        self.assertEqual(
+            [
+                {"repository": "mctlhq/example", "number": 2},
+                {"repository": "mctlhq/example", "number": 3},
+            ],
+            observation["subIssues"],
+        )
+        self.assertIn(page_two, [url for _, url, _ in opener.calls])
 
     def test_malformed_provider_responses_are_errors_not_absences(self) -> None:
         """Unreadable data must never be reported as an observed lack of relations."""

@@ -143,3 +143,14 @@ def redirect(snapshot: dict[str, Any], requested: str, resolved: str) -> dict[st
                 for item in observation.get(relation, [])
             ]
     return result
+
+
+def add_unexpected_child(
+    snapshot: dict[str, Any], parent: str, child: str
+) -> dict[str, Any]:
+    """Attach an issue the manifest does not own under one it does."""
+
+    result = copy.deepcopy(snapshot)
+    _find(result, ref(parent)).setdefault("subIssues", []).append(ref(child))
+    return result
+
