@@ -1,0 +1,50 @@
+name: Agy PR review
+
+# This repository hosts the reusable agy reviewer that other mctlhq
+# repositories call, and until #78 nothing called it for this repository's own
+# pull requests -- the ones that change the shared reviewers.
+#
+# File name: the standard caller path, .github/workflows/agy-review.yml, is the
+# reusable definition itself in this repository, so the caller lives here
+# instead -- the same split as pr-review.yml -> claude-review.yml.
+#
+# Reference: @main, not a local path. A pull request that edits agy-review.yml
+# -- its prompt, its verdict parsing, its fail-closed rules -- is then reviewed
+# by the copy already on main rather than by the version it proposes.
+#
+# What @main does NOT guarantee: on a `pull_request` event this caller file is
+# itself read from the pull request head, so a pull request that also edits
+# this file can change `uses:` or the inputs below. That is visible in the diff,
+# but it is not prevented. A reviewer the pull request cannot alter needs a
+# workflow run from the default branch (for example an org-level required
+# workflow) and is tracked org-wide, not here.
+#
+# No `conventions` input, on purpose. The reusable workflow appends that input
+# to the prompt as trusted "Repository guidance", outside the untrusted-data
+# fence it puts around the diff, and a caller read from the pull request head
+# makes it pull-request-controlled. Policy text for the reviewer belongs in the
+# reusable workflow on main; a caller should pass only narrow, non-instructional
+# data.
+#
+# blocking: false is set explicitly for the staged rollout in #11. Relying on the
+# default would let a change to the default on mutable @main silently turn this
+# into a merge gate.
+#
+# No `concurrency` block: a caller-level group overrides the reusable workflow's
+# own cancel-in-progress: false and kills in-flight reviews on push
+# (mctl-gitops#1131).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  agy-review:
+    uses: mctlhq/.github/.github/workflows/agy-review.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      blocking: false
