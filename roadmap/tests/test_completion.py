@@ -118,6 +118,22 @@ class CompletionTest(unittest.TestCase):
                 block = self._compute(_set_state(self.capture, APPLY, "closed", reason))
                 self.assertEqual("complete", self._item(block, "governed-apply")["status"])
 
+    def test_closed_for_an_unrecognized_reason_is_unknown_not_complete(self) -> None:
+        """Fail closed: a reason that is not evidence of delivery never counts as done."""
+
+        for reason in ("reopened", "some_future_reason"):
+            with self.subTest(reason=reason):
+                block = self._compute(_set_state(self.capture, APPLY, "closed", reason))
+                item = self._item(block, "governed-apply")
+                self.assertEqual(("unknown", "closed_reason_unrecognized"), (item["status"], item["reason"]))
+                self.assertEqual("unknown", block["status"])
+                self.assertIn("governed-apply", block["blocking"])
+                result = health.assess(
+                    EPIC_66, self.loaded,
+                    github_graph.FixtureGraphSource(_set_state(self.capture, APPLY, "closed", reason)),
+                )
+                self.assertEqual([], [e.message for e in self.validator.iter_errors(result)])
+
     def test_unbound_required_item_is_incomplete(self) -> None:
         document = copy.deepcopy(self.document)
         for item in document["spec"]["workItems"]:

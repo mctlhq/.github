@@ -31,8 +31,12 @@ COMPLETE = "complete"
 INCOMPLETE = "incomplete"
 UNKNOWN = "unknown"
 
-# GitHub closes issues with a reason. Only these count as delivered work; an issue
-# closed as not planned or as a duplicate did not complete the item it stands for.
+# GitHub closes issues with a reason. Only `completed` -- or no recorded reason,
+# which is how issues closed before reasons existed appear -- counts as delivered.
+# Closed as not planned or duplicate did not complete the item. Any other reason
+# (`reopened` on a closed issue, or a value GitHub adds later) is not evidence
+# either way, so it is unknown: fail closed rather than count it as done.
+_DELIVERED = {None, "completed"}
 _NOT_DELIVERED = {"not_planned", "duplicate"}
 
 
@@ -63,7 +67,9 @@ def item_status(
         return INCOMPLETE, "open"
     if reason in _NOT_DELIVERED:
         return INCOMPLETE, f"closed_{reason}"
-    return COMPLETE, "closed"
+    if reason in _DELIVERED:
+        return COMPLETE, "closed"
+    return UNKNOWN, "closed_reason_unrecognized"
 
 
 def compute(

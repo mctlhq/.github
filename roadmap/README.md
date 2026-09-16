@@ -349,6 +349,7 @@ Per work item:
 | status | reason | when |
 | --- | --- | --- |
 | `complete` | `closed` | issue closed as `completed`, or closed with no recorded reason |
+| `unknown` | `closed_reason_unrecognized` | closed with any other reason (e.g. `reopened`, or a value GitHub adds later) — fail closed, never counted as done |
 | `incomplete` | `open` | issue open |
 | `incomplete` | `closed_not_planned`, `closed_duplicate` | closed without delivering the work |
 | `incomplete` | `unbound` | no GitHub issue yet |
@@ -362,7 +363,8 @@ otherwise `unknown` if any could not be observed, otherwise `complete`. Optional
 Completion is a separate axis from health — an epic can be `healthy` and `incomplete`, and
 it does not change the CLI exit code. An item nobody could observe is `unknown`, never
 `incomplete` and never `complete`. Snapshots carry GitHub's `stateReason` so closed-as-done
-can be told apart from closed-as-not-planned.
+can be told apart from closed-as-not-planned; the reason is kept verbatim, so an unrecognised
+value surfaces as `unknown` instead of being dropped and read as delivered.
 
 ## Dogfood: epic #66
 

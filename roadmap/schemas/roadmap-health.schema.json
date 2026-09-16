@@ -623,7 +623,8 @@
                   "unbound",
                   "issue_not_found",
                   "unobserved",
-                  "state_not_observed"
+                  "state_not_observed",
+                  "closed_reason_unrecognized"
                 ]
               },
               "issue": {

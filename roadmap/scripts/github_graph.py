@@ -539,8 +539,11 @@ class LiveGraphSource:
         state = payload.get("state")
         if state in ("open", "closed"):
             observation["state"] = state
+        # Kept verbatim, whatever the value: dropping a reason this code does not
+        # recognise would turn "closed for an unknown reason" into "closed", which
+        # completion would count as delivered.
         state_reason = payload.get("state_reason")
-        if state_reason in ("completed", "not_planned", "duplicate", "reopened"):
+        if isinstance(state_reason, str) and state_reason:
             observation["stateReason"] = state_reason
         updated_at = payload.get("updated_at")
         if isinstance(updated_at, str):

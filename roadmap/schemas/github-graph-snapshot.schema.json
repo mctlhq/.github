@@ -124,13 +124,9 @@
           }
         },
         "stateReason": {
-          "description": "GitHub's state_reason. Distinguishes an issue closed as completed from one closed as not planned or duplicate; completion depends on it.",
-          "enum": [
-            "completed",
-            "not_planned",
-            "duplicate",
-            "reopened"
-          ]
+          "description": "GitHub's state_reason, verbatim. Known values include completed, not_planned, duplicate and reopened; unrecognised values are kept so completion can treat them as unknown instead of delivered.",
+          "type": "string",
+          "minLength": 1
         }
       },
       "allOf": [

@@ -384,6 +384,29 @@ class ReconcileTest(unittest.TestCase):
         observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
         self.assertEqual(("closed", "not_planned"), (observation["state"], observation["stateReason"]))
 
+    def test_live_source_keeps_every_state_reason_and_omits_a_null_one(self) -> None:
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        cases = {
+            "open, null reason": ("open", None, None),
+            "closed as completed": ("closed", "completed", "completed"),
+            "closed, null reason": ("closed", None, None),
+            "closed, reason unknown to this code": ("closed", "some_future_reason", "some_future_reason"),
+        }
+        for name, (state, reason, expected) in cases.items():
+            with self.subTest(case=name):
+                routes = {
+                    base: {
+                        "number": 1, "state": state, "state_reason": reason,
+                        "repository_url": "https://api.github.com/repos/mctlhq/example",
+                    },
+                    f"{base}/sub_issues": [],
+                    f"{base}/dependencies/blocked_by": [],
+                }
+                source = github_graph.LiveGraphSource("token", opener=_RecordingOpener(routes))
+                observation = source.snapshot([("mctlhq/example", 1)])["issues"][0]
+                self.assertEqual(state, observation["state"])
+                self.assertEqual(expected, observation.get("stateReason"))
+
     def test_live_source_reads_identity_from_the_body_not_the_url(self) -> None:
         base = "https://api.github.com/repos"
         routes = {
