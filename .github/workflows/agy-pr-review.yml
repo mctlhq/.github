@@ -1,0 +1,48 @@
+name: Agy PR review
+
+# This repository hosts the reusable agy reviewer that other mctlhq
+# repositories call, and until #78 nothing called it for this repository's own
+# pull requests -- the ones that change the shared reviewers.
+#
+# Two things differ from a normal caller, both on purpose:
+#
+# - File name. The standard caller path, .github/workflows/agy-review.yml, is
+#   the reusable definition itself in this repository, so the caller lives
+#   here instead -- the same split as pr-review.yml -> claude-review.yml.
+#
+# - Reference. pr-review.yml may call the Claude reviewer by local path because
+#   claude-code-action refuses to run when the executing workflow differs from
+#   the default branch. agy has no such guard, so a local path would let a pull
+#   request that edits agy-review.yml -- its prompt, its verdict parsing, its
+#   fail-closed rules -- be reviewed by the version it is proposing. Calling
+#   @main means a change to the reviewer is always judged by the reviewer
+#   already on main.
+#
+# Non-blocking to start, in line with the staged rollout in #11.
+#
+# No `concurrency` block here: a caller-level group overrides the reusable
+# workflow's own, which lets a started review finish rather than cancelling it
+# on the next push.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  agy-review:
+    uses: mctlhq/.github/.github/workflows/agy-review.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      conventions: |
+        This repository holds shared CI (reusable review workflows used by
+        every mctlhq repository) and the declarative roadmap control plane
+        under roadmap/. Focus on: GitHub Actions safety (least-privilege
+        permissions, untrusted input in `run:` steps, pinned or deliberately
+        unpinned references, fail-open vs fail-closed behaviour of review
+        gates), and for roadmap/: whether a validator or reconciler can report
+        something it did not actually establish -- an unobserved relation read
+        as absent, a failed read read as clean, or a check that can only pass.
