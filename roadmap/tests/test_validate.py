@@ -203,6 +203,89 @@ class EpicDefinitionValidationTest(unittest.TestCase):
         self.assertIn(expected, failures[path_a])
         self.assertIn(expected, failures[path_b])
 
+    def test_repository_case_variant_collides_with_epic_root_binding(self) -> None:
+        """T0a: root and a work item naming one issue in different case."""
+
+        document = self._base()
+        document["spec"]["github"]["issue"] = {
+            "repository": "mctlhq/example",
+            "number": 10,
+        }
+        document["spec"]["workItems"][0]["issue"] = {
+            "repository": "MCTLHQ/EXAMPLE",
+            "number": 10,
+        }
+        errors = validate.validate_document(document, self.schema)
+        self.assertIn(
+            "GitHub issue MCTLHQ/EXAMPLE#10 is bound more than once: epic, a",
+            errors,
+        )
+
+    def test_repository_case_variant_collides_between_work_items(self) -> None:
+        document = self._base()
+        document["spec"]["workItems"][1]["issue"] = {
+            "repository": "MCTLHQ/A",
+            "number": 10,
+        }
+        errors = validate.validate_document(document, self.schema)
+        self.assertIn(
+            "GitHub issue MCTLHQ/A#10 is bound more than once: a, b", errors
+        )
+
+    def test_corpus_rejects_case_variant_across_root_and_work_item(self) -> None:
+        """T0b: ownership crosses manifests and binding classes."""
+
+        first = self._base()
+        first["spec"]["github"]["issue"] = {
+            "repository": "mctlhq/example",
+            "number": 10,
+        }
+
+        second = self._base()
+        second["metadata"]["name"] = "second"
+        second["spec"]["github"]["issue"] = {
+            "repository": "mctlhq/.github",
+            "number": 2,
+        }
+        second["spec"]["workItems"][0]["issue"] = {
+            "repository": "MCTLHQ/EXAMPLE",
+            "number": 10,
+        }
+        second["spec"]["workItems"][1]["issue"] = {
+            "repository": "mctlhq/c",
+            "number": 30,
+        }
+
+        path_a = Path("a.yaml")
+        path_b = Path("b.yaml")
+        failures = validate.corpus_errors([(path_a, first), (path_b, second)])
+        expected = (
+            "GitHub issue MCTLHQ/EXAMPLE#10 is bound across manifests: "
+            "a.yaml (epic) and b.yaml (a)"
+        )
+        self.assertIn(expected, failures[path_a])
+        self.assertIn(expected, failures[path_b])
+
+    def test_external_dependency_case_variant_of_local_binding_fails(self) -> None:
+        """T0c: a case variant does not escape the local-binding rule."""
+
+        document = self._base()
+        document["spec"]["workItems"][1]["externalDependsOn"] = [
+            {"repository": "MCTLHQ/A", "number": 10}
+        ]
+        errors = validate.validate_document(document, self.schema)
+        self.assertIn(
+            "work item b: externalDependsOn MCTLHQ/A#10 is locally bound by a; "
+            "use dependsOn instead",
+            errors,
+        )
+
+    def test_issue_key_canonicalizes_repository_case(self) -> None:
+        self.assertEqual(
+            validate._issue_key({"repository": "MCTLHQ/Mctl-API", "number": 261}),
+            validate._issue_key({"repository": "mctlhq/mctl-api", "number": 261}),
+        )
+
     def test_main_returns_zero_for_valid_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "valid.yaml"
