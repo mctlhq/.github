@@ -4,25 +4,35 @@ name: Agy PR review
 # repositories call, and until #78 nothing called it for this repository's own
 # pull requests -- the ones that change the shared reviewers.
 #
-# Two things differ from a normal caller, both on purpose:
+# File name: the standard caller path, .github/workflows/agy-review.yml, is the
+# reusable definition itself in this repository, so the caller lives here
+# instead -- the same split as pr-review.yml -> claude-review.yml.
 #
-# - File name. The standard caller path, .github/workflows/agy-review.yml, is
-#   the reusable definition itself in this repository, so the caller lives
-#   here instead -- the same split as pr-review.yml -> claude-review.yml.
+# Reference: @main, not a local path. A pull request that edits agy-review.yml
+# -- its prompt, its verdict parsing, its fail-closed rules -- is then reviewed
+# by the copy already on main rather than by the version it proposes.
 #
-# - Reference. pr-review.yml may call the Claude reviewer by local path because
-#   claude-code-action refuses to run when the executing workflow differs from
-#   the default branch. agy has no such guard, so a local path would let a pull
-#   request that edits agy-review.yml -- its prompt, its verdict parsing, its
-#   fail-closed rules -- be reviewed by the version it is proposing. Calling
-#   @main means a change to the reviewer is always judged by the reviewer
-#   already on main.
+# What @main does NOT guarantee: on a `pull_request` event this caller file is
+# itself read from the pull request head, so a pull request that also edits
+# this file can change `uses:` or the inputs below. That is visible in the diff,
+# but it is not prevented. A reviewer the pull request cannot alter needs a
+# workflow run from the default branch (for example an org-level required
+# workflow) and is tracked org-wide, not here.
 #
-# Non-blocking to start, in line with the staged rollout in #11.
+# No `conventions` input, on purpose. The reusable workflow appends that input
+# to the prompt as trusted "Repository guidance", outside the untrusted-data
+# fence it puts around the diff, and a caller read from the pull request head
+# makes it pull-request-controlled. Policy text for the reviewer belongs in the
+# reusable workflow on main; a caller should pass only narrow, non-instructional
+# data.
 #
-# No `concurrency` block here: a caller-level group overrides the reusable
-# workflow's own, which lets a started review finish rather than cancelling it
-# on the next push.
+# blocking: false is set explicitly for the staged rollout in #11. Relying on the
+# default would let a change to the default on mutable @main silently turn this
+# into a merge gate.
+#
+# No `concurrency` block: a caller-level group overrides the reusable workflow's
+# own cancel-in-progress: false and kills in-flight reviews on push
+# (mctl-gitops#1131).
 
 on:
   pull_request:
@@ -37,12 +47,4 @@ jobs:
       contents: read
       pull-requests: write
     with:
-      conventions: |
-        This repository holds shared CI (reusable review workflows used by
-        every mctlhq repository) and the declarative roadmap control plane
-        under roadmap/. Focus on: GitHub Actions safety (least-privilege
-        permissions, untrusted input in `run:` steps, pinned or deliberately
-        unpinned references, fail-open vs fail-closed behaviour of review
-        gates), and for roadmap/: whether a validator or reconciler can report
-        something it did not actually establish -- an unobserved relation read
-        as absent, a failed read read as clean, or a check that can only pass.
+      blocking: false
