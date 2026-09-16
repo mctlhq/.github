@@ -388,6 +388,32 @@ class ReconcileTest(unittest.TestCase):
         ]
         self.assertEqual([], relation_calls, "relations were asked of the old address")
 
+    def test_malformed_provider_responses_are_errors_not_absences(self) -> None:
+        """Unreadable data must never be reported as an observed lack of relations."""
+
+        base = "https://api.github.com/repos/mctlhq/example/issues/1"
+        issue = {"number": 1, "repository_url": "https://api.github.com/repos/mctlhq/example"}
+        cases = {
+            "issue body is not an object": {base: ["unexpected"]},
+            "parent body is not an object": {base: issue, f"{base}/parent": ["unexpected"]},
+            "sub-issues body is not an array": {
+                base: issue,
+                f"{base}/sub_issues": {"message": "unexpected"},
+            },
+            "blocked-by holds a non-object": {
+                base: issue,
+                f"{base}/sub_issues": [],
+                f"{base}/dependencies/blocked_by": ["unexpected"],
+            },
+        }
+        for name, routes in cases.items():
+            with self.subTest(case=name):
+                source = github_graph.LiveGraphSource(
+                    "token", opener=_RecordingOpener(routes)
+                )
+                with self.assertRaises(github_graph.ObservationError):
+                    source.snapshot([("mctlhq/example", 1)])
+
     def test_live_source_reports_a_missing_issue_as_not_found(self) -> None:
         source = github_graph.LiveGraphSource("token", opener=_RecordingOpener({}))
         snapshot = source.snapshot([("mctlhq/example", 1)])
@@ -701,6 +727,56 @@ class ReconcileTest(unittest.TestCase):
             written = json.loads(captured.read_text(encoding="utf-8"))
         self.assertEqual([], github_graph.snapshot_errors(written))
         self.assertEqual(self.converged["issues"], written["issues"])
+
+    def test_several_manifests_emit_a_schema_valid_envelope(self) -> None:
+        from jsonschema import Draft202012Validator
+
+        with tempfile.TemporaryDirectory() as raw:
+            directory = Path(raw)
+            (directory / "human-input.yaml").write_text(
+                PILOT.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            other = self._unrelated_manifest()
+            (directory / "other.yaml").write_text(
+                yaml.safe_dump(other, sort_keys=False), encoding="utf-8"
+            )
+            snapshot = copy.deepcopy(self.converged)
+            for number, repository in ((99, "mctlhq/.github"), (7, "mctlhq/mctl-web")):
+                ref = {"repository": repository, "number": number}
+                snapshot["issues"].append(
+                    {
+                        "requested": ref,
+                        "resolved": ref,
+                        "found": True,
+                        "parent": None,
+                        "subIssues": [],
+                        "blockedBy": [],
+                    }
+                )
+            snapshot_path = directory / "snapshot.json"
+            snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+            output = directory / "out.json"
+
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                reconcile.main(
+                    [
+                        "--corpus",
+                        str(directory),
+                        "--snapshot",
+                        str(snapshot_path),
+                        "--output",
+                        str(output),
+                    ]
+                )
+            rendered = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual("RoadmapDiffList", rendered["kind"])
+        self.assertEqual(2, len(rendered["items"]))
+        self.assertEqual(
+            [], sorted(Draft202012Validator(self.diff_schema).iter_errors(rendered))
+        )
+        names = [item["epic"]["name"] for item in rendered["items"]]
+        self.assertEqual(["human-input", "other"], names)
 
     def test_exit_two_when_the_output_path_cannot_be_written(self) -> None:
         with redirect_stdout(StringIO()), redirect_stderr(StringIO()):

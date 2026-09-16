@@ -339,8 +339,20 @@ class LiveGraphSource:
             if status in (404, 410):
                 return None if first else items
             first = False
-            if isinstance(payload, list):
-                items.extend(payload)
+            # A 200 that is not a list, or a list holding something other than
+            # issue objects, is a response we could not read -- not a response
+            # saying there are no relations. Dropping it would turn malformed
+            # provider data into an observed absence and report drift on it.
+            if not isinstance(payload, list):
+                raise ObservationError(
+                    f"GET {next_url}: expected a JSON array, got {type(payload).__name__}"
+                )
+            for item in payload:
+                if not isinstance(item, dict):
+                    raise ObservationError(
+                        f"GET {next_url}: expected issue objects, got {type(item).__name__}"
+                    )
+            items.extend(payload)
             match = _LINK_NEXT.search(headers.get("link", ""))
             next_url = match.group("url") if match else None
         return items
@@ -379,8 +391,14 @@ class LiveGraphSource:
         base = self._issue_url(key)
 
         status, payload, _ = self._get(base)
-        if status in (404, 410) or not isinstance(payload, dict):
+        if status in (404, 410):
             return {"requested": requested, "found": False}
+        if not isinstance(payload, dict):
+            # Only 404/410 mean "not found". Anything else unreadable is an
+            # observation failure, never evidence that the issue does not exist.
+            raise ObservationError(
+                f"GET {base}: expected an issue object, got {type(payload).__name__}"
+            )
 
         resolved = self._resolved_key(payload)
         observation: dict[str, Any] = {
@@ -404,8 +422,13 @@ class LiveGraphSource:
         resolved_base = self._issue_url(resolved)
 
         parent_status, parent_payload, _ = self._get(f"{resolved_base}/parent")
-        if parent_status in (404, 410) or not isinstance(parent_payload, dict):
+        if parent_status in (404, 410):
             observation["parent"] = None
+        elif not isinstance(parent_payload, dict):
+            raise ObservationError(
+                f"GET {resolved_base}/parent: expected an issue object, "
+                f"got {type(parent_payload).__name__}"
+            )
         else:
             parent_key = self._resolved_key(parent_payload)
             observation["parent"] = {
@@ -415,12 +438,12 @@ class LiveGraphSource:
 
         sub_issues = self._get_all(f"{resolved_base}/sub_issues")
         observation["subIssues"] = [
-            self._as_ref(item) for item in sub_issues or [] if isinstance(item, dict)
+            self._as_ref(item) for item in sub_issues or []
         ]
 
         blocked_by = self._get_all(f"{resolved_base}/dependencies/blocked_by")
         observation["blockedBy"] = [
-            self._as_ref(item) for item in blocked_by or [] if isinstance(item, dict)
+            self._as_ref(item) for item in blocked_by or []
         ]
         return observation
 

@@ -465,6 +465,25 @@ def diff(
     }
 
 
+def render(documents: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
+    """Shape run output so it always validates against roadmap-diff.schema.json.
+
+    One manifest yields a bare RoadmapDiff. Several yield a RoadmapDiffList
+    envelope rather than a JSON array: a bare array carries no `kind`, matches
+    no published contract, and a consumer could not tell it from a single diff
+    without guessing.
+    """
+
+    ordered = [document for _, document in sorted(documents, key=lambda item: str(item[0]))]
+    if len(ordered) == 1:
+        return ordered[0]
+    return {
+        "apiVersion": "roadmap.mctl.ai/v1alpha1",
+        "kind": "RoadmapDiffList",
+        "items": ordered,
+    }
+
+
 def has_drift(document: dict[str, Any]) -> bool:
     return document["summary"]["drift"] > 0
 
@@ -652,12 +671,7 @@ def _emit(
             json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
 
-    payload = [document for _, document in documents]
-    rendered = json.dumps(
-        payload[0] if len(payload) == 1 else payload,
-        indent=2,
-        sort_keys=True,
-    )
+    rendered = json.dumps(render(documents), indent=2, sort_keys=True)
     if args.output:
         Path(args.output).write_text(rendered + "\n", encoding="utf-8")
     else:

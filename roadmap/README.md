@@ -135,6 +135,16 @@ python roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
 
 Exit codes: `0` converged, `1` drift, `2` usage/IO/auth/validation error.
 
+One manifest produces a single `RoadmapDiff`. Several produce a `RoadmapDiffList`
+envelope, items ordered by manifest path. Both are defined in
+`schemas/roadmap-diff.schema.json`, so every output validates against the published
+contract -- never a bare JSON array with no `kind`.
+
+Only a 404 or 410 means an issue does not exist, and only a 404 or 410 on `/parent`
+means it has no parent. Any other response that cannot be read as the expected shape
+is an observation error (exit 2), never an empty relation list: malformed provider data
+must not become an observed absence.
+
 ### Validation preflight
 
 Positional manifests select what is *diffed*. They never narrow what is *validated*:

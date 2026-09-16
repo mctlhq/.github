@@ -1,119 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://mctl.ai/schemas/roadmap/roadmap-diff-v1alpha1.json",
-  "title": "roadmap.mctl.ai/v1alpha1 RoadmapDiff",
-  "description": "Deterministic comparison of one EpicDefinition against an observed GitHub graph. Binding, hierarchy and dependency drift are separate families and are never conflated.",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "apiVersion",
-    "kind",
-    "epic",
-    "source",
-    "summary",
-    "binding",
-    "hierarchy",
-    "dependency"
-  ],
-  "properties": {
-    "apiVersion": {
-      "const": "roadmap.mctl.ai/v1alpha1"
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapDiff or RoadmapDiffList",
+  "description": "Output of reconcile.py: one RoadmapDiff for a single manifest, a RoadmapDiffList envelope for several.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/roadmapDiff"
     },
-    "kind": {
-      "const": "RoadmapDiff"
-    },
-    "epic": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "name",
-        "manifest"
-      ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "issue": {
-          "$ref": "#/$defs/issueRef"
-        },
-        "manifest": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "path",
-            "sha256"
-          ],
-          "properties": {
-            "path": {
-              "type": "string",
-              "minLength": 1
-            },
-            "sha256": {
-              "description": "SHA-256 of the exact manifest bytes that produced this diff.",
-              "type": "string",
-              "pattern": "^[0-9a-f]{64}$"
-            }
-          }
-        }
-      }
-    },
-    "source": {
-      "description": "Copied verbatim from the snapshot. This diff carries no clock of its own.",
-      "type": "object"
-    },
-    "summary": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "binding",
-        "hierarchy",
-        "dependency",
-        "drift",
-        "informational"
-      ],
-      "properties": {
-        "binding": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "hierarchy": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "dependency": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "drift": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "informational": {
-          "type": "integer",
-          "minimum": 0
-        }
-      }
-    },
-    "binding": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/bindingEntry"
-      }
-    },
-    "hierarchy": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/hierarchyEntry"
-      }
-    },
-    "dependency": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/dependencyEntry"
-      }
+    {
+      "$ref": "#/$defs/roadmapDiffList"
     }
-  },
+  ],
   "$defs": {
     "owner": {
       "description": "Local work-item id, or 'epic' for the manifest root binding.",
@@ -400,6 +297,145 @@
         "number": {
           "type": "integer",
           "minimum": 1
+        }
+      }
+    },
+    "roadmapDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "epic",
+        "source",
+        "summary",
+        "binding",
+        "hierarchy",
+        "dependency"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapDiff"
+        },
+        "epic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "manifest"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issue": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "description": "SHA-256 of the exact manifest bytes that produced this diff.",
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "source": {
+          "description": "Copied verbatim from the snapshot. This diff carries no clock of its own.",
+          "type": "object"
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "binding",
+            "hierarchy",
+            "dependency",
+            "drift",
+            "informational"
+          ],
+          "properties": {
+            "binding": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hierarchy": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "dependency": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "drift": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "informational": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "binding": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bindingEntry"
+          }
+        },
+        "hierarchy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hierarchyEntry"
+          }
+        },
+        "dependency": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependencyEntry"
+          }
+        }
+      },
+      "description": "Deterministic comparison of one EpicDefinition against an observed GitHub graph. Binding, hierarchy and dependency drift are separate families and are never conflated."
+    },
+    "roadmapDiffList": {
+      "description": "Emitted when more than one manifest is reconciled in one run. Items are ordered by manifest path so the envelope is as deterministic as each diff inside it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapDiffList"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/roadmapDiff"
+          }
         }
       }
     }
