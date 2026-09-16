@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/roadmap-diff-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapDiff",
+  "description": "Deterministic comparison of one EpicDefinition against an observed GitHub graph. Binding, hierarchy and dependency drift are separate families and are never conflated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "epic", "source", "summary", "binding", "hierarchy", "dependency"],
+  "properties": {
+    "apiVersion": {"const": "roadmap.mctl.ai/v1alpha1"},
+    "kind": {"const": "RoadmapDiff"},
+    "epic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "manifest"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "issue": {"$ref": "#/$defs/issueRef"},
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "sha256"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "sha256": {
+              "description": "SHA-256 of the exact manifest bytes that produced this diff.",
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "description": "Copied verbatim from the snapshot. This diff carries no clock of its own.",
+      "type": "object"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding", "hierarchy", "dependency", "drift", "informational"],
+      "properties": {
+        "binding": {"type": "integer", "minimum": 0},
+        "hierarchy": {"type": "integer", "minimum": 0},
+        "dependency": {"type": "integer", "minimum": 0},
+        "drift": {"type": "integer", "minimum": 0},
+        "informational": {"type": "integer", "minimum": 0}
+      }
+    },
+    "binding": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/bindingEntry"}
+    },
+    "hierarchy": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/hierarchyEntry"}
+    },
+    "dependency": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/dependencyEntry"}
+    }
+  },
+  "$defs": {
+    "severity": {
+      "description": "Only 'drift' changes the exit code. 'informational' is always emitted, never optional.",
+      "enum": ["drift", "informational"]
+    },
+    "owner": {
+      "description": "Local work-item id, or 'epic' for the manifest root binding.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bindingEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "severity", "owner"],
+      "properties": {
+        "type": {
+          "enum": [
+            "BindingIssueNotFound",
+            "BindingRedirected",
+            "BindingAmbiguous",
+            "BindingUnbound"
+          ]
+        },
+        "severity": {"$ref": "#/$defs/severity"},
+        "owner": {"$ref": "#/$defs/owner"},
+        "requested": {"$ref": "#/$defs/issueRef"},
+        "resolved": {"$ref": "#/$defs/issueRef"},
+        "observedParents": {
+          "description": "Every distinct parent observed for an ambiguous endpoint.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/issueRef"}
+        }
+      }
+    },
+    "hierarchyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "severity", "child"],
+      "properties": {
+        "type": {
+          "enum": [
+            "HierarchyMissingParent",
+            "HierarchyWrongParent",
+            "HierarchyUnexpectedChild"
+          ]
+        },
+        "severity": {"$ref": "#/$defs/severity"},
+        "owner": {"$ref": "#/$defs/owner"},
+        "child": {"$ref": "#/$defs/issueRef"},
+        "expectedParent": {"$ref": "#/$defs/issueRef"},
+        "observedParent": {"$ref": "#/$defs/issueRef"}
+      }
+    },
+    "dependencyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "severity", "blocked", "blocker"],
+      "properties": {
+        "type": {"enum": ["DependencyMissing", "DependencyUnexpected"]},
+        "severity": {"$ref": "#/$defs/severity"},
+        "owner": {"$ref": "#/$defs/owner"},
+        "blocked": {"$ref": "#/$defs/issueRef"},
+        "blocker": {"$ref": "#/$defs/issueRef"}
+      }
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "number"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

@@ -131,7 +131,7 @@ def _cycle(nodes: Iterable[str], edges: dict[str, list[str]]) -> list[str] | Non
     return None
 
 
-def _canonical_repository(repository: str) -> str:
+def canonical_repository(repository: str) -> str:
     """Return the case-insensitive canonical form of a repository identity.
 
     GitHub repository names are case-insensitive, so two authored spellings that
@@ -143,12 +143,12 @@ def _canonical_repository(repository: str) -> str:
     return repository.lower()
 
 
-def _issue_key(ref: Any) -> tuple[str, int] | None:
+def issue_key(ref: Any) -> tuple[str, int] | None:
     """Return the canonical identity of an issue ref, or None if it is not one.
 
     This is the single identity boundary shared by the validator and the
     reconciler. Authored spelling is preserved only for diagnostics; see
-    _issue_label.
+    issue_label.
     """
 
     if (
@@ -156,11 +156,11 @@ def _issue_key(ref: Any) -> tuple[str, int] | None:
         and isinstance(ref.get("repository"), str)
         and isinstance(ref.get("number"), int)
     ):
-        return (_canonical_repository(ref["repository"]), ref["number"])
+        return (canonical_repository(ref["repository"]), ref["number"])
     return None
 
 
-def _issue_label(ref: Any) -> str:
+def issue_label(ref: Any) -> str:
     """Render an issue ref the way its author spelled it, for messages only."""
 
     return f"{ref['repository']}#{ref['number']}"
@@ -178,17 +178,17 @@ def _document_bindings(
     spec = document.get("spec", {})
 
     root_issue = spec.get("github", {}).get("issue")
-    root_key = _issue_key(root_issue)
+    root_key = issue_key(root_issue)
     if root_key is not None:
-        bindings.append((root_key, "epic", _issue_label(root_issue)))
+        bindings.append((root_key, "epic", issue_label(root_issue)))
 
     for item in spec.get("workItems", []):
         if not isinstance(item, dict):
             continue
         issue = item.get("issue")
-        key = _issue_key(issue)
+        key = issue_key(issue)
         if key is not None:
-            bindings.append((key, item.get("id", "<unknown>"), _issue_label(issue)))
+            bindings.append((key, item.get("id", "<unknown>"), issue_label(issue)))
 
     return bindings
 
@@ -219,7 +219,7 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
     dependency_edges: dict[str, list[str]] = {item_id: [] for item_id in item_ids}
 
     issue_bindings: dict[tuple[str, int], str] = {}
-    root_key = _issue_key(spec.get("github", {}).get("issue"))
+    root_key = issue_key(spec.get("github", {}).get("issue"))
     if root_key is not None:
         issue_bindings[root_key] = "epic"
 
@@ -256,7 +256,7 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
                 dependency_edges[item_id].append(dependency)
 
         issue = item.get("issue")
-        key = _issue_key(issue)
+        key = issue_key(issue)
         if issue is None:
             if not item.get("title"):
                 errors.append(f"work item {item_id}: unbound item requires title")
@@ -266,16 +266,16 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
             existing = issue_bindings.get(key)
             if existing is not None:
                 errors.append(
-                    f"GitHub issue {_issue_label(issue)} is bound more than once: "
+                    f"GitHub issue {issue_label(issue)} is bound more than once: "
                     f"{existing}, {item_id}"
                 )
             else:
                 issue_bindings[key] = item_id
 
         for external in item.get("externalDependsOn", []):
-            external_key = _issue_key(external)
+            external_key = issue_key(external)
             if external_key is not None:
-                external_refs.append((item_id, external_key, _issue_label(external)))
+                external_refs.append((item_id, external_key, issue_label(external)))
 
     for item_id, external_key, external_label in external_refs:
         local_owner = issue_bindings.get(external_key)

@@ -282,8 +282,8 @@ class EpicDefinitionValidationTest(unittest.TestCase):
 
     def test_issue_key_canonicalizes_repository_case(self) -> None:
         self.assertEqual(
-            validate._issue_key({"repository": "MCTLHQ/Mctl-API", "number": 261}),
-            validate._issue_key({"repository": "mctlhq/mctl-api", "number": 261}),
+            validate.issue_key({"repository": "MCTLHQ/Mctl-API", "number": 261}),
+            validate.issue_key({"repository": "mctlhq/mctl-api", "number": 261}),
         )
 
     def test_main_returns_zero_for_valid_manifest(self) -> None:
