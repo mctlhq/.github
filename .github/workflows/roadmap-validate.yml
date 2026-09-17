@@ -12,9 +12,7 @@ on:
       - 'roadmap/**'
       - '.github/workflows/roadmap-validate.yml'
 
-permissions:
-  contents: read
-  issues: read
+permissions: {}
 
 jobs:
   validate:
@@ -29,25 +27,8 @@ jobs:
       - name: Validate EpicDefinition manifests
         run: python3 roadmap/scripts/validate.py roadmap/epics
 
-      - name: Live read-only reconcile all epics
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set +e
-          python3 roadmap/scripts/reconcile.py roadmap/epics/*.yaml \
-            --corpus roadmap/epics \
-            --live \
-            --output /tmp/roadmap-live.json
-          rc=$?
-          cat /tmp/roadmap-live.json
-          echo "reconcile_exit=$rc"
-          if [ "$rc" -eq 2 ]; then
-            exit "$rc"
-          fi
-          exit 0
-
-      # Offline fixture replay only. Live mode is added temporarily above for
-      # this migration audit and will be removed after its output is captured.
+      # Offline fixture replay only. Live mode needs a token and external
+      # state, so it stays a deliberate manual step and never runs here.
       - name: Reconcile against the synthetic converged fixture
         run: |
           python3 roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
