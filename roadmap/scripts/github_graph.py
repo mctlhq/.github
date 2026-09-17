@@ -214,7 +214,9 @@ def observed_graph(snapshot: dict[str, Any]) -> ObservedGraph:
         resolved = _ref_key(observation["resolved"])
         resolution[requested] = resolved
         observed.add(resolved)
-        if "state" in observation:
+        # A reason without a state is not a captured state; the schema rejects it,
+        # and this reader must not crash on it if handed an unvalidated snapshot.
+        if observation.get("state") in ("open", "closed"):
             states[resolved] = (observation["state"], observation.get("stateReason"))
 
         parent = observation.get("parent")

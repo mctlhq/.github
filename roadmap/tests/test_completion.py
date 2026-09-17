@@ -85,6 +85,24 @@ class CompletionTest(unittest.TestCase):
                 observation["stateReason"] = "completed"
         self.assertNotEqual([], github_graph.snapshot_errors(forged))
 
+    def test_state_reason_without_state_is_rejected_and_never_crashes(self) -> None:
+        """A reason is evidence only alongside a state; alone it is neither valid nor fatal."""
+
+        forged = copy.deepcopy(self.capture)
+        for observation in forged["issues"]:
+            if observation["requested"] == mutations.ref(APPLY):
+                observation.pop("state")
+                observation["stateReason"] = "completed"
+        self.assertTrue(
+            any("state" in error for error in github_graph.snapshot_errors(forged))
+        )
+        with self.assertRaises(ValueError):
+            github_graph.FixtureGraphSource(forged).snapshot(
+                [("mctlhq/.github", 68)], require_complete=False
+            )
+        item = self._item(self._compute(forged), "governed-apply")
+        self.assertEqual(("unknown", "state_not_observed"), (item["status"], item["reason"]))
+
     def test_epic_66_is_healthy_and_blocked_only_by_governed_apply(self) -> None:
         result = self._assess(self.capture)
         self.assertEqual("healthy", result["state"])

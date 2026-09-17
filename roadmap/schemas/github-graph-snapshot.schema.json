@@ -129,6 +129,11 @@
           "minLength": 1
         }
       },
+      "dependentRequired": {
+        "stateReason": [
+          "state"
+        ]
+      },
       "allOf": [
         {
           "if": {
