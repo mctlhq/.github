@@ -1,0 +1,75 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: cloudflare-iac
+  owner: mctl-gitops
+  labels:
+    - roadmap
+    - cloudflare
+    - infrastructure
+spec:
+  title: Cloudflare infrastructure as reviewed GitOps
+  goal: >-
+    Move Cloudflare account and zone configuration from manually applied drift into
+    reviewed, least-privilege, remotely stateful OpenTofu roots with safe plan/apply separation.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 47
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: bootstrap
+      title: Plan and state bootstrap
+    - id: authority
+      title: Apply identity and protected execution
+    - id: zones
+      title: Zone state migration
+    - id: access
+      title: Account and Access imports
+  workItems:
+    - id: apply-identity
+      phase: authority
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1111
+    - id: zone-state-migration
+      phase: zones
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1178
+      dependsOn:
+        - apply-identity
+    - id: account-access-import
+      title: Import remaining account-scoped Access configuration
+      owner: mctlhq/mctl-gitops
+      phase: access
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1088
+      dependsOn:
+        - apply-identity
+    - id: portal-access-import
+      title: Import remaining Portal and Access policy configuration
+      owner: mctlhq/mctl-gitops
+      phase: access
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1092
+      dependsOn:
+        - apply-identity
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Cloudflare plan and apply use separate least-privilege identities.
+    - Writable state credentials are available only behind reviewed protected execution.
+    - Zone roots use remote R2 state with locking and participate in scheduled drift detection.
+    - Reviewed changes can be applied without manual API drift as the normal path.
+    - Account and Access resources are imported without destructive plans.
+    - Blind automatic reconciliation remains out of scope; drift fails closed for operator review.
