@@ -1,0 +1,80 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: agent-platform
+  owner: mctl-agents
+  labels:
+    - roadmap
+    - agents
+    - platform
+spec:
+  title: Agent Platform
+  goal: >-
+    Make agent definitions, execution profiles, release bindings, capabilities and
+    governed agent creation explicit, versioned and resolvable across mctl.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 18
+    issueType: Epic
+    project:
+      priority: P1
+  phases:
+    - id: contract
+      title: Agent and execution profile contract
+    - id: gitops
+      title: Reviewed execution profiles and release intents
+    - id: registry
+      title: Immutable registry and release binding
+    - id: capabilities
+      title: Governed capability discovery and invocation
+    - id: rollout
+      title: Declarative resolver rollout
+  workItems:
+    - id: resolver-pilot
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 227
+    - id: gitops-catalog
+      phase: gitops
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 950
+    - id: release-binding-registry
+      phase: registry
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 283
+      dependsOn:
+        - resolver-pilot
+        - gitops-catalog
+    - id: capability-discovery
+      phase: capabilities
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 242
+      dependsOn:
+        - resolver-pilot
+    - id: declarative-rollout
+      title: Activate registry-backed declarative resolution for production agents
+      owner: mctlhq/mctl-agents
+      phase: rollout
+      required: true
+      dependsOn:
+        - release-binding-registry
+        - capability-discovery
+  completion:
+    mode: allRequired
+  successCriteria:
+    - AgentDefinition and ExecutionProfile are versioned and independently governed.
+    - ReleaseBinding resolves an immutable compatible definition/profile pair per environment.
+    - GitOps intents can publish into the authoritative registry without a second release database.
+    - Runtime execution records the exact resolved agent and profile versions.
+    - Capability discovery is policy-aware and separate from context relevance.
+    - Declarative resolution can replace legacy mode without changing orchestration semantics.
