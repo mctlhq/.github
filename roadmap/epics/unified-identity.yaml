@@ -1,0 +1,140 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: unified-identity
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+    - identity
+    - security
+    - mcp
+spec:
+  title: MCTL Unified Identity and Agent Identity Broker
+  goal: >-
+    Decouple MCTL principals from GitHub identity and introduce a canonical identity
+    model for humans, agents and services, while retaining GitHub, Telegram, Google
+    and other providers as linked upstream identities.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 91
+  phases:
+    - id: model
+      title: Canonical principal model
+    - id: federation
+      title: Identity federation and broker
+    - id: oauth
+      title: MCP OAuth and CIMD integration
+    - id: agents
+      title: Agent and delegated identity
+    - id: migration
+      title: GitHub identity decoupling
+  workItems:
+    - id: canonical-principal
+      title: Introduce canonical MCTL principal identity
+      owner: mctlhq/mctl-api
+      phase: model
+      required: true
+
+    - id: linked-identities
+      title: Model external identities as issuer and subject links
+      owner: mctlhq/mctl-api
+      phase: model
+      required: true
+      dependsOn:
+        - canonical-principal
+
+    - id: identity-broker
+      title: Establish a swappable OIDC identity broker boundary
+      owner: mctlhq/mctl-gitops
+      phase: federation
+      required: true
+      dependsOn:
+        - canonical-principal
+
+    - id: oidc-federation
+      title: Federate upstream identities into canonical MCTL principals
+      owner: mctlhq/mctl-api
+      phase: federation
+      required: true
+      dependsOn:
+        - identity-broker
+        - linked-identities
+
+    - id: evaluate-identity-provider
+      title: Evaluate Dex, Authentik, ZITADEL and other broker implementations
+      owner: mctlhq/mctl-gitops
+      phase: federation
+      required: false
+      dependsOn:
+        - canonical-principal
+
+    - id: cimd
+      title: Make MCP OAuth client identity CIMD-first
+      owner: mctlhq/mctl-api
+      phase: oauth
+      required: true
+
+    - id: canonical-token-subject
+      title: Issue MCTL tokens with canonical principal subjects
+      owner: mctlhq/mctl-api
+      phase: oauth
+      required: true
+      dependsOn:
+        - canonical-principal
+        - oidc-federation
+
+    - id: agent-principal
+      title: Introduce first-class agent and service principals
+      owner: mctlhq/mctl-api
+      phase: agents
+      required: true
+      dependsOn:
+        - canonical-principal
+
+    - id: delegated-identity
+      title: Represent actor and on-behalf-of identity for delegated actions
+      owner: mctlhq/mctl-api
+      phase: agents
+      required: true
+      dependsOn:
+        - agent-principal
+        - canonical-token-subject
+
+    - id: execution-identity-propagation
+      title: Propagate delegated identity through agent execution and audit
+      owner: mctlhq/mctl-agents
+      phase: agents
+      required: true
+      dependsOn:
+        - delegated-identity
+
+    - id: github-linked-identity
+      title: Treat GitHub as a linked capability identity rather than the MCTL principal
+      owner: mctlhq/mctl-api
+      phase: migration
+      required: true
+      dependsOn:
+        - linked-identities
+        - canonical-token-subject
+
+    - id: migrate-tenant-membership
+      title: Migrate tenant membership and authorization to canonical principals
+      owner: mctlhq/mctl-gitops
+      phase: migration
+      required: true
+      dependsOn:
+        - github-linked-identity
+  completion:
+    mode: allRequired
+  successCriteria:
+    - MCTL principal identity is independent of GitHub username and email.
+    - Human, agent and service principals use stable canonical subjects.
+    - External identities are represented as linked identities using issuer and subject.
+    - GitHub remains an integration and capability provider rather than the canonical MCTL identity.
+    - MCP OAuth supports CIMD without coupling client identity to human identity.
+    - Tenant membership and authorization use canonical MCTL principals.
+    - Agent actions distinguish the acting agent from the human or service on whose behalf it operates.
+    - Delegated identity is propagated into policy decisions and audit evidence.
+    - Identity-provider choice can change without changing the MCTL authorization model.
