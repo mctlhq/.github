@@ -1,0 +1,60 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: context-platform
+  owner: mctl-agents
+  labels:
+    - roadmap
+    - context
+    - retrieval
+spec:
+  title: Context Platform and ContextSnapshot
+  goal: >-
+    Make context selection a first-class, versioned execution input with deterministic
+    provenance, budgeting and evaluation before adding more advanced retrieval/ranking.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 20
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: contract
+      title: ContextSnapshot contract
+    - id: assembly
+      title: Deterministic context assembly
+    - id: evaluation
+      title: Context quality and retrieval evaluation
+  workItems:
+    - id: context-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 264
+    - id: investigator-context
+      phase: assembly
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 265
+      dependsOn:
+        - context-contract
+    - id: context-evals
+      title: Evaluate context selection quality and ranking strategies
+      owner: mctlhq/mctl-agents
+      phase: evaluation
+      required: true
+      dependsOn:
+        - investigator-context
+  completion:
+    mode: allRequired
+  successCriteria:
+    - ContextSnapshot is immutable, versioned and correlated to execution identity.
+    - Selected context carries provenance without copying unrestricted raw payloads into telemetry.
+    - Freshness, deduplication and context-budget behavior are deterministic and observable.
+    - Context relevance never becomes an authorization mechanism.
+    - Investigator execution can consume bounded context from heterogeneous governed sources.
+    - Retrieval and ranking changes can be evaluated against stable context-quality metrics.
