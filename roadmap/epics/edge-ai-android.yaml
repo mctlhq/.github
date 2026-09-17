@@ -1,0 +1,48 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: edge-ai-android
+  owner: mctl-agents
+  labels:
+    - roadmap
+    - edge-ai
+    - android
+spec:
+  title: Edge AI on Android
+  goal: >-
+    Evaluate whether Android devices can provide a governed local execution surface for
+    mctl agents without weakening identity, policy, evidence or remote fallback semantics.
+  lifecycle: paused
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 34
+    issueType: Epic
+    project:
+      priority: PARK
+  phases:
+    - id: feasibility
+      title: Runtime and device feasibility
+    - id: contract
+      title: Governed local execution contract
+  workItems:
+    - id: feasibility-spike
+      title: Evaluate Android local inference and bridge feasibility
+      owner: mctlhq/mctl-agents
+      phase: feasibility
+      required: true
+    - id: local-execution-contract
+      title: Define identity, capability, policy and evidence boundary for local execution
+      owner: mctlhq/mctl-agents
+      phase: contract
+      required: true
+      dependsOn:
+        - feasibility-spike
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A feasibility result identifies supported Android inference/runtime paths and hard blockers.
+    - Local execution preserves canonical mctl principal and agent identity.
+    - Device-local capabilities remain explicitly policy-gated and auditable.
+    - Local execution can fail closed or fall back remotely without hidden privilege changes.
+    - No implementation vendor or model runtime is made canonical before the feasibility result.
