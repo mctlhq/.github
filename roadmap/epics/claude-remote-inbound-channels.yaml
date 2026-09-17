@@ -80,6 +80,7 @@ spec:
         number: 55
       dependsOn:
         - telegram-producer
+        - github-producer
 
     - id: e2e-audit
       phase: proof

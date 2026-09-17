@@ -154,6 +154,10 @@
         {
           "number": 646,
           "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 323,
+          "repository": "mctlhq/mctl-api"
         }
       ],
       "found": true,
@@ -224,7 +228,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-17T06:34:20Z",
+    "capturedAt": "2026-09-17T06:52:29Z",
     "mode": "live-capture"
   }
 }

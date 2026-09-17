@@ -8,7 +8,7 @@
   "subject": {
     "kind": "github.pull_request",
     "repository": "mctlhq/.github",
-    "number": 89,
+    "number": "89",
     "head_sha": "3e737a5d7c1f0f8f5c9a2b64a1e0d9c2b7f41a0e"
   }
 }

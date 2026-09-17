@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -33,7 +34,25 @@ class EnvelopeSchemaTest(unittest.TestCase):
     def test_invalid_examples(self) -> None:
         for path in self.examples("invalid"):
             with self.subTest(path.name):
-                self.assertFalse(self.validator.is_valid(json.loads(path.read_text())))
+                doc = json.loads(path.read_text())
+                self.assertFalse(
+                    self.validator.is_valid(doc) and self.timestamp_parses(doc),
+                    "accepted by the schema and by the consumer-side timestamp parse",
+                )
+
+    @staticmethod
+    def timestamp_parses(doc: dict) -> bool:
+        """What every consumer does after the schema: parse occurred_at for real.
+
+        The schema pattern bounds each field's range but cannot know that
+        February has no 30th; a consumer that parses the value can.
+        """
+
+        try:
+            datetime.fromisoformat(str(doc.get("occurred_at", "")).replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        return True
 
 
 if __name__ == "__main__":

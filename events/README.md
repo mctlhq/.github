@@ -26,11 +26,11 @@ examples in [`examples/`](examples/) (CI validates both directions).
 |---|---|
 | `specversion` | `mctl.events/v1` |
 | `id` | stable dedup key derived from the source's own identity (Telegram `event_id`, `X-GitHub-Delivery`) |
-| `type` | `<domain>.<entity>.<action>` |
+| `type` | exactly `<domain>.<entity>.<action>` |
 | `source` | producing service |
-| `occurred_at` | RFC 3339 with offset, when the source observed the fact |
+| `occurred_at` | RFC 3339 with offset, when the source observed the fact; consumers parse it |
 | `correlation_id` | carried unchanged through every stage and the audit stream |
-| `subject` | `kind` plus up to 11 scalar references (no nested values) |
+| `subject` | `kind` (≤ 64) plus up to 11 string references, each ≤ 256 characters; no numbers, lists or objects |
 
 The envelope is closed and capped at 4096 bytes. Consumers enforce the same rules
 (`mctl-claude-remote/events/mctl_events/envelope.py`) and reject, audit and
