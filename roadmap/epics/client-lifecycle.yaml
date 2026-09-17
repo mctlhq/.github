@@ -1,0 +1,64 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: client-lifecycle
+  owner: mctl-telegram
+  labels:
+    - roadmap
+    - clients
+    - identity
+spec:
+  title: Client identity, reachability, consent and product communication
+  goal: >-
+    Build one canonical client record for identity, reachability and consent, then layer
+    explicitly opted-in product communication on top without introducing a second directory.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 22
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: identity
+      title: Client identity and provenance
+    - id: reachability
+      title: Reachability and consent
+    - id: communication
+      title: Product communication
+  workItems:
+    - id: client-identity-epic
+      title: Client identity, reachability and consent
+      owner: mctlhq/mctl-telegram
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 515
+    - id: identity-attributes
+      phase: identity
+      required: true
+      parent: client-identity-epic
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 620
+    - id: product-communication
+      title: Product communication over the login bot
+      owner: mctlhq/mctl-telegram
+      phase: communication
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 618
+      dependsOn:
+        - client-identity-epic
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Client identity, reachability and consent are queryable from one canonical record.
+    - Missing identity attributes carry provenance instead of inferred values.
+    - Self and admin identity lookup use the same underlying projection with least privilege.
+    - Account deletion clears communication consent and preference state.
+    - Product communication remains gated by an explicit product decision and user consent.
+    - Broadcast execution cannot target arbitrary model-selected Telegram recipients.
