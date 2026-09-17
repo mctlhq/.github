@@ -1,0 +1,53 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: devloop-pr-adoption
+  owner: mctl-agents
+  labels:
+    - roadmap
+    - dev-loop
+    - ownership
+spec:
+  title: Adopt proposal-less PRs into governed review remediation
+  goal: >-
+    Ensure same-repository PRs with blocking review findings cannot fall into a zero-owner
+    gap merely because they were created outside the normal proposal-backed DevLoop path.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 38
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: ownership
+      title: Canonical ownership prerequisite
+    - id: adoption
+      title: Proposal-less PR adoption
+  workItems:
+    - id: lifecycle-ownership
+      title: Canonical lifecycle ownership prerequisite
+      owner: mctlhq/mctl-agents
+      phase: ownership
+      required: true
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 57
+    - id: proposal-less-adoption
+      phase: adoption
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 334
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 292
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Same-repository PRs with current-head blocking findings can be adopted without inventing fake proposals.
+    - Existing healthy DevLoop or steward ownership always wins over adoption.
+    - Forks and policy-excluded repositories are never mutated.
+    - Adoption grants remediation ownership but never merge authority.
+    - Every adoption and remediation attempt is pinned to the current PR head and auditable.
