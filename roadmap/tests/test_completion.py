@@ -265,6 +265,21 @@ class CompletionTest(unittest.TestCase):
         self.assertEqual([], completion.consistency_errors(block))
         self.assertEqual([], [e.message for e in self.validator.iter_errors(result)])
 
+    def test_closed_issue_under_two_parents_is_not_credited(self) -> None:
+        """The reconciler calls a binding with two observed parents ambiguous; so must completion."""
+
+        closed = _set_state(self.capture, APPLY, "closed", "completed")
+        self.assertEqual("complete", self._item(self._compute(closed), "governed-apply")["status"])
+
+        result = self._assess(mutations.add_second_parent(closed, APPLY, HEALTH))
+        block = result["completion"]
+        item = self._item(block, "governed-apply")
+        self.assertEqual(("unknown", "binding_ambiguous"), (item["status"], item["reason"]))
+        self.assertIn("governed-apply", block["blocking"])
+        self.assertIn("BindingAmbiguous", [d["code"] for d in result["diagnostics"]])
+        self.assertEqual([], completion.consistency_errors(block))
+        self.assertEqual([], [e.message for e in self.validator.iter_errors(result)])
+
     def test_invalid_epic_carries_no_completion(self) -> None:
         result = health.invalid(EPIC_66, None, {EPIC_66: ("schema failure",)})
         self.assertNotIn("completion", result)

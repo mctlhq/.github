@@ -83,19 +83,26 @@ def _colliding_bindings(
     observed: ObservedGraph,
     unobserved: frozenset[IssueKey],
 ) -> frozenset[IssueKey]:
-    """Authored keys of work items that resolve onto the same live issue."""
+    """Authored keys whose binding the reconciler reports as BindingAmbiguous.
 
+    Both of its causes count: two work items resolving onto one live issue, and a
+    live issue observed under more than one parent.
+    """
+
+    ambiguous: set[IssueKey] = set()
     by_target: dict[IssueKey, set[IssueKey]] = {}
     for work_item in work_items:
         key = validate.issue_key(work_item.get("issue"))
         if key is None or key in unobserved:
             continue
         target = observed.resolve(key)
-        if target is not None:
-            by_target.setdefault(target, set()).add(key)
-    return frozenset(
-        key for keys in by_target.values() if len(keys) > 1 for key in keys
-    )
+        if target is None:
+            continue
+        by_target.setdefault(target, set()).add(key)
+        if len(observed.parent_of(target)) > 1:
+            ambiguous.add(key)
+    ambiguous.update(key for keys in by_target.values() if len(keys) > 1 for key in keys)
+    return frozenset(ambiguous)
 
 
 def consistency_errors(block: dict[str, Any]) -> list[str]:
