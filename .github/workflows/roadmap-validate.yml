@@ -50,5 +50,12 @@ jobs:
             --snapshot roadmap/fixtures/roadmap-control-plane/live-capture.json \
             --output /dev/null
 
+      - name: Dogfood epic #87 against its immutable live capture
+        run: |
+          python3 roadmap/scripts/health.py roadmap/epics/claude-remote-inbound-channels.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/claude-remote-inbound-channels/live-capture.json \
+            --output /dev/null
+
       - name: Run roadmap validator and reconciler tests
         run: python3 -m unittest discover -s roadmap/tests -p 'test_*.py'

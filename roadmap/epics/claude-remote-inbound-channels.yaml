@@ -1,0 +1,102 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: claude-remote-inbound-channels
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: Event-driven inbound Channels for Claude Remote
+  goal: >-
+    A Telegram message or a GitHub pull request event wakes an already running
+    Claude Code session in mctl-claude-remote through platform Valkey Streams and a
+    Claude Code channel, with no polling and no Slack/Gmail bridge. Events carry
+    references only; Claude hydrates canonical state through MCP and GitHub tools.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 87
+  phases:
+    - id: skeleton
+      title: Walking skeleton — synthetic event reaches a running session
+    - id: telegram
+      title: Real Telegram message hydrated through MCP
+    - id: github
+      title: GitHub pull request events
+    - id: hardening
+      title: Routing, dedup and restart recovery
+    - id: proof
+      title: Correlation audit and end-to-end proof
+  workItems:
+    - id: valkey
+      phase: skeleton
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1260
+
+    - id: channel-skeleton
+      phase: skeleton
+      required: true
+      issue:
+        repository: mctlhq/mctl-claude-remote
+        number: 54
+      dependsOn:
+        - valkey
+
+    - id: envelope
+      phase: telegram
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 88
+
+    - id: telegram-producer
+      phase: telegram
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 646
+      dependsOn:
+        - channel-skeleton
+        - envelope
+
+    - id: github-producer
+      phase: github
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 323
+      dependsOn:
+        - envelope
+        - telegram-producer
+
+    - id: delivery-guarantees
+      phase: hardening
+      required: true
+      issue:
+        repository: mctlhq/mctl-claude-remote
+        number: 55
+      dependsOn:
+        - telegram-producer
+
+    - id: e2e-audit
+      phase: proof
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 89
+      dependsOn:
+        - telegram-producer
+        - github-producer
+        - delivery-guarantees
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A Telegram message published through Valkey triggers a reaction in the running claude-remote session, and Claude hydrates it through the mctl-telegram MCP.
+    - A GitHub pull request event takes the same path and Claude reads canonical PR state through GitHub tools.
+    - Nothing on the delivery path polls, and no Slack or Gmail bridge is involved.
+    - Duplicate delivery causes no duplicate side effect; an adapter restart is covered by a test.
+    - No message body or pull request content is ever written to the event transport.
+    - Every stage is traceable by event_id and correlation_id in the audit stream.

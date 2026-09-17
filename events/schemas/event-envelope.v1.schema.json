@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mctlhq/.github/events/schemas/event-envelope.v1.schema.json",
+  "title": "MCTL event envelope v1",
+  "description": "A signal that something happened, never a copy of it. The envelope carries identity and references only; the content stays in its system of record and is hydrated by the consumer through that system's own tools. Closed on purpose: an extra field is how a body would start riding the transport. Serialized envelopes are also capped at 4096 UTF-8 bytes, which JSON Schema cannot express and consumers enforce.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specversion", "id", "type", "source", "occurred_at", "correlation_id", "subject"],
+  "properties": {
+    "specversion": {
+      "const": "mctl.events/v1"
+    },
+    "id": {
+      "description": "Globally unique and stable across redelivery: the deduplication key. Producers derive it from the source's own identity (e.g. the Telegram event_id, the X-GitHub-Delivery id), never from a random value generated at publish time.",
+      "$ref": "#/$defs/identifier"
+    },
+    "type": {
+      "description": "Dotted, lower-case: <domain>.<entity>.<action>, e.g. telegram.message.created, github.pull_request.opened.",
+      "type": "string",
+      "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+){1,5}$"
+    },
+    "source": {
+      "description": "The producing service, e.g. mctl-telegram, mctl-api.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+    },
+    "occurred_at": {
+      "description": "RFC 3339 with an explicit offset: when the source observed the fact, not when it was published.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "correlation_id": {
+      "description": "Carried unchanged through producer, stream, channel, Claude and audit so one fact can be traced end to end.",
+      "$ref": "#/$defs/identifier"
+    },
+    "subject": {
+      "description": "References to the thing the event is about. Scalars only: a nested object or list is refused because that is where content would hide.",
+      "type": "object",
+      "required": ["kind"],
+      "maxProperties": 12,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {"type": "string", "minLength": 1, "maxLength": 256},
+          {"type": "integer"}
+        ]
+      },
+      "properties": {
+        "kind": {"type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)*$"}
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9:._/@#-]{0,255}$"
+    }
+  }
+}
