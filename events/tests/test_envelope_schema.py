@@ -31,28 +31,22 @@ class EnvelopeSchemaTest(unittest.TestCase):
                 self.assertEqual([], errors)
                 self.assertLessEqual(len(path.read_bytes()), 4096)
 
-    def test_invalid_examples(self) -> None:
+    def test_invalid_examples_are_rejected_by_the_schema_itself(self) -> None:
         for path in self.examples("invalid"):
             with self.subTest(path.name):
+                self.assertFalse(self.validator.is_valid(json.loads(path.read_text())))
+
+    def test_calendar_invalid_examples_pass_the_schema_but_not_a_parse(self) -> None:
+        """What only a parsing consumer can catch: the pattern cannot know that
+        February has no 30th. Kept apart so the schema assertion above is never
+        satisfied by the parse instead."""
+
+        for path in self.examples("calendar-invalid"):
+            with self.subTest(path.name):
                 doc = json.loads(path.read_text())
-                self.assertFalse(
-                    self.validator.is_valid(doc) and self.timestamp_parses(doc),
-                    "accepted by the schema and by the consumer-side timestamp parse",
-                )
-
-    @staticmethod
-    def timestamp_parses(doc: dict) -> bool:
-        """What every consumer does after the schema: parse occurred_at for real.
-
-        The schema pattern bounds each field's range but cannot know that
-        February has no 30th; a consumer that parses the value can.
-        """
-
-        try:
-            datetime.fromisoformat(str(doc.get("occurred_at", "")).replace("Z", "+00:00"))
-        except ValueError:
-            return False
-        return True
+                self.assertTrue(self.validator.is_valid(doc))
+                with self.assertRaises(ValueError):
+                    datetime.fromisoformat(doc["occurred_at"].replace("Z", "+00:00"))
 
 
 if __name__ == "__main__":

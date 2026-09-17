@@ -33,9 +33,9 @@
       "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
     },
     "occurred_at": {
-      "description": "RFC 3339 with an explicit offset: when the source observed the fact, not when it was published. The pattern bounds every field's range; day-of-month validity (e.g. 02-30) is enforced by consumers, which parse the value.",
+      "description": "RFC 3339 with an explicit offset: when the source observed the fact, not when it was published. The pattern bounds every field's range and excludes leap second 60, which common parsers reject; day-of-month validity (e.g. 02-30) is enforced by consumers, which parse the value.",
       "type": "string",
-      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:([0-5]\\d|60)(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$"
+      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)$"
     },
     "correlation_id": {
       "description": "Carried unchanged through producer, stream, channel, Claude and audit so one fact can be traced end to end.",

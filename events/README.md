@@ -20,7 +20,7 @@ consumer can always re-read the current state from the `subject` references.
 ## Envelope v1
 
 [`schemas/event-envelope.v1.schema.json`](schemas/event-envelope.v1.schema.json);
-examples in [`examples/`](examples/) (CI validates both directions).
+examples in [`examples/`](examples/): `valid/` must pass, `invalid/` must be rejected by the schema, and `calendar-invalid/` passes the schema but fails a real timestamp parse, which consumers must perform.
 
 | Field | Meaning |
 |---|---|
