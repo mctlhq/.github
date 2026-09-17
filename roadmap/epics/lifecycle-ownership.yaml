@@ -1,0 +1,84 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: lifecycle-ownership
+  owner: mctl-agents
+  labels:
+    - roadmap
+    - lifecycle
+    - governance
+spec:
+  title: Lifecycle ownership and execution claims
+  goal: >-
+    Make lifecycle ownership explicit, durable and queryable, then fence concrete
+    executors so exactly one actor may mutate one entity phase at a time.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 57
+    issueType: Epic
+    project:
+      priority: P0
+  phases:
+    - id: contract
+      title: Canonical ownership contract
+    - id: ownership
+      title: Durable DevLoop ownership
+    - id: claims
+      title: Executor claims and fencing
+    - id: reconcile
+      title: Ownership reconciliation
+    - id: api
+      title: Operator read and recovery surface
+  workItems:
+    - id: ownership-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 350
+    - id: devloop-ownership
+      phase: ownership
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 351
+      dependsOn:
+        - ownership-contract
+    - id: execution-claims
+      phase: claims
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 352
+      dependsOn:
+        - ownership-contract
+        - devloop-ownership
+    - id: ownership-reconciler
+      phase: reconcile
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 353
+      dependsOn:
+        - execution-claims
+    - id: ownership-api
+      phase: api
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 293
+      dependsOn:
+        - ownership-contract
+        - devloop-ownership
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Every managed lifecycle phase has one durable canonical owner.
+    - Ownership survives process, pod and Temporal replay boundaries.
+    - Exactly one mutating executor can act for one entity, phase and version.
+    - Owner handoff fences stale executors before mutation.
+    - Zero-owner, stale-owner and conflicting-owner states are detected explicitly.
+    - Operators can inspect ownership and guarded recovery state through mctl API and MCP.
+    - Lifecycle ownership never grants merge, approval or tool authorization by itself.
