@@ -1,0 +1,81 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: observability
+  owner: mctl-gitops
+  labels:
+    - roadmap
+    - observability
+    - otel
+spec:
+  title: Agent execution observability and trace correlation
+  goal: >-
+    Build backend-neutral end-to-end execution tracing for mctl across Temporal, Argo,
+    model calls, MCP tools and GitHub while keeping sensitive payloads out by default.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 55
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: gateway
+      title: OpenTelemetry gateway
+    - id: backend
+      title: Trace backend evaluation
+    - id: producers
+      title: Execution trace instrumentation
+    - id: correlation
+      title: Cross-system correlation
+  workItems:
+    - id: otel-collector
+      phase: gateway
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 902
+    - id: backend-evaluation
+      phase: backend
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 903
+      dependsOn:
+        - otel-collector
+    - id: agents-tracing
+      phase: producers
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 195
+      dependsOn:
+        - otel-collector
+    - id: agent-tracing
+      phase: producers
+      required: true
+      issue:
+        repository: mctlhq/mctl-agent
+        number: 38
+      dependsOn:
+        - otel-collector
+    - id: incident-correlation
+      phase: correlation
+      required: true
+      issue:
+        repository: mctlhq/mctl-agent
+        number: 97
+      dependsOn:
+        - agents-tracing
+        - agent-tracing
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Workloads emit OTLP through an internal OpenTelemetry Collector boundary.
+    - Trace backend selection does not require producer code changes.
+    - One DevLoop reconstructs Temporal, Argo, model, tool and GitHub spans under stable execution identity.
+    - Search and correlation work by workflow, repository, issue, PR, agent and model metadata.
+    - Prompts, credentials and unrestricted tool payloads are excluded from telemetry by default.
+    - Backend outage does not block mctl execution.
+    - Incidents, logs and execution traces can be correlated without making the backend the source of truth.
