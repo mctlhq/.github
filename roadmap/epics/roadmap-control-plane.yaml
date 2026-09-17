@@ -1,0 +1,74 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: roadmap-control-plane
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: Declarative EpicDefinition and GitHub graph reconciliation
+  goal: >-
+    Make a versioned EpicDefinition manifest the canonical desired graph for an epic,
+    and derive drift, health and completion from the observed GitHub graph
+    deterministically, with GitHub remaining the human planning surface.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 66
+  phases:
+    - id: detect
+      title: Read-only reconciliation
+    - id: health
+      title: Derived snapshot health
+    - id: apply
+      title: Governed apply
+    - id: temporal
+      title: Temporal health
+  workItems:
+    - id: reconciler
+      phase: detect
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 67
+
+    - id: roadmap-health
+      phase: health
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 83
+      dependsOn:
+        - reconciler
+
+    - id: governed-apply
+      phase: apply
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 68
+      dependsOn:
+        - reconciler
+
+    # Deliberately non-blocking: temporal health needs a notion of "now", which the
+    # deterministic reconciler and RoadmapHealth exclude. It stays visible in the graph
+    # but never holds allRequired completion back.
+    - id: temporal-health
+      phase: temporal
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 85
+      dependsOn:
+        - roadmap-health
+  completion:
+    mode: allRequired
+  successCriteria:
+    - EpicDefinition v1alpha1 schema and semantic validator reject cycles, unknown references and duplicate bindings.
+    - Read-only reconciliation compares a manifest with the live GitHub graph and produces deterministic drift.
+    - Converged and mutated fixtures prove the detector in both directions.
+    - Unobserved or unreadable state is never reported as absent, drifted or silent.
+    - RoadmapHealth and allRequired completion are computed, not authored.
+    - Governed apply uses deterministic GitHub operations bound to the exact manifest hash.
+    - GitHub remains the planning UI; the manifest is the canonical desired graph.

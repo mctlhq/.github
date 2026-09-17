@@ -122,7 +122,17 @@
           "items": {
             "$ref": "#/$defs/issueRef"
           }
+        },
+        "stateReason": {
+          "description": "GitHub's state_reason, verbatim. Known values include completed, not_planned, duplicate and reopened; unrecognised values are kept so completion can treat them as unknown instead of delivered.",
+          "type": "string",
+          "minLength": 1
         }
+      },
+      "dependentRequired": {
+        "stateReason": [
+          "state"
+        ]
       },
       "allOf": [
         {
@@ -157,39 +167,15 @@
             ]
           },
           "then": {
-            "not": {
-              "anyOf": [
-                {
-                  "required": [
-                    "resolved"
-                  ]
-                },
-                {
-                  "required": [
-                    "parent"
-                  ]
-                },
-                {
-                  "required": [
-                    "subIssues"
-                  ]
-                },
-                {
-                  "required": [
-                    "blockedBy"
-                  ]
-                },
-                {
-                  "required": [
-                    "state"
-                  ]
-                },
-                {
-                  "required": [
-                    "updatedAt"
-                  ]
-                }
-              ]
+            "description": "A not-found observation carries no evidence about the issue: every one of these fields is forbidden (false schema).",
+            "properties": {
+              "resolved": false,
+              "parent": false,
+              "subIssues": false,
+              "blockedBy": false,
+              "state": false,
+              "updatedAt": false,
+              "stateReason": false
             }
           }
         }

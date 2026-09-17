@@ -19,7 +19,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -176,6 +176,10 @@ class ObservedGraph:
     parents: dict[IssueKey, tuple[IssueKey, ...]]
     children: dict[IssueKey, tuple[IssueKey, ...]]
     blocked_by: frozenset[tuple[IssueKey, IssueKey]]
+    # Resolved identity -> (state, stateReason) for every found issue whose state
+    # was observed. An issue with no entry had no state captured: its completion is
+    # unknown, never assumed open or closed.
+    states: dict[IssueKey, tuple[str, str | None]] = field(default_factory=dict)
 
     def resolve(self, key: IssueKey) -> IssueKey | None:
         return self.resolution.get(key)
@@ -199,6 +203,7 @@ def observed_graph(snapshot: dict[str, Any]) -> ObservedGraph:
     observed: set[IssueKey] = set()
     parent_edges: set[tuple[IssueKey, IssueKey]] = set()
     blocked_by: set[tuple[IssueKey, IssueKey]] = set()
+    states: dict[IssueKey, tuple[str, str | None]] = {}
 
     for observation in snapshot.get("issues", []):
         requested = _ref_key(observation["requested"])
@@ -209,6 +214,10 @@ def observed_graph(snapshot: dict[str, Any]) -> ObservedGraph:
         resolved = _ref_key(observation["resolved"])
         resolution[requested] = resolved
         observed.add(resolved)
+        # A reason without a state is not a captured state; the schema rejects it,
+        # and this reader must not crash on it if handed an unvalidated snapshot.
+        if observation.get("state") in ("open", "closed"):
+            states[resolved] = (observation["state"], observation.get("stateReason"))
 
         parent = observation.get("parent")
         if parent is not None:
@@ -239,6 +248,7 @@ def observed_graph(snapshot: dict[str, Any]) -> ObservedGraph:
         parents={key: tuple(sorted(value)) for key, value in sorted(parents.items())},
         children={key: tuple(sorted(value)) for key, value in sorted(children.items())},
         blocked_by=frozenset(blocked_by),
+        states=dict(sorted(states.items())),
     )
 
 
@@ -531,6 +541,12 @@ class LiveGraphSource:
         state = payload.get("state")
         if state in ("open", "closed"):
             observation["state"] = state
+        # Kept verbatim, whatever the value: dropping a reason this code does not
+        # recognise would turn "closed for an unknown reason" into "closed", which
+        # completion would count as delivered.
+        state_reason = payload.get("state_reason")
+        if isinstance(state_reason, str) and state_reason:
+            observation["stateReason"] = state_reason
         updated_at = payload.get("updated_at")
         if isinstance(updated_at, str):
             observation["updatedAt"] = updated_at
