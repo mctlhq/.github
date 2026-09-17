@@ -1,0 +1,1 @@
+{"specversion":"mctl.events/v1","id":"t:1","type":"github.pull_request.opened","source":"mctl-api","occurred_at":"2026-09-17T08:00:00Z","correlation_id":"t:1","subject":{"kind":"github.pull_request","number":123456789012345678901234567890}}
