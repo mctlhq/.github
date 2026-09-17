@@ -1,0 +1,91 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: enterprise-mcp
+  owner: mctl-api
+  labels:
+    - roadmap
+    - mcp
+    - enterprise
+spec:
+  title: Enterprise MCP access, correlation and protocol capabilities
+  goal: >-
+    Provide governed enterprise access to mctl MCP servers through the Portal while
+    preserving upstream authorization, audit correlation and protocol-level capabilities.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 35
+    issueType: Epic
+    project:
+      priority: P1
+  phases:
+    - id: portal
+      title: Enterprise portal and access gate
+    - id: correlation
+      title: Cross-layer request and audit correlation
+    - id: tasks
+      title: Durable MCP Tasks
+    - id: apps
+      title: MCP Apps
+    - id: bypass
+      title: Direct-URL bypass and enterprise identity boundary
+  workItems:
+    - id: portal-pilot
+      phase: portal
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 44
+    - id: correlation
+      phase: correlation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 617
+      dependsOn:
+        - portal-pilot
+    - id: tasks-contract
+      phase: tasks
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 41
+      dependsOn:
+        - portal-pilot
+    - id: tasks-pilot
+      phase: tasks
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 284
+      dependsOn:
+        - tasks-contract
+        - correlation
+    - id: telegram-app
+      phase: apps
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 569
+      dependsOn:
+        - portal-pilot
+    - id: direct-url-bypass
+      phase: bypass
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 616
+      dependsOn:
+        - correlation
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Enterprise users can reach approved MCP upstreams through the Portal under explicit Access policy.
+    - Upstream mctl authorization remains authoritative for tool execution.
+    - Portal-originated calls are distinguishable and correlated through mctl audit and traces.
+    - One durable Temporal-backed execution is exposed as a standards-compliant MCP Task.
+    - Portal support for task create, get, update and cancel is measured rather than assumed.
+    - Direct consumer URLs and enterprise-gated access are documented as distinct security boundaries.
+    - MCP Apps, when supported, preserve server-side authorization and confirmation semantics.
