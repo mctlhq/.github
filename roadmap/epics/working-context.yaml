@@ -1,0 +1,59 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: working-context
+  owner: mctl-api
+  labels:
+    - roadmap
+    - work-item
+    - surfaces
+spec:
+  title: Canonical WorkItem and cross-surface working context
+  goal: >-
+    Give Telegram, ChatGPT/MCP, CLI/API and portal surfaces one durable canonical work
+    state so work can resume across executions and surfaces without replaying chat transcripts.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 21
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: contract
+      title: Canonical WorkItem contract
+    - id: resume
+      title: Cross-surface resume semantics
+    - id: adapters
+      title: Surface adapters
+  workItems:
+    - id: work-item-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 227
+    - id: investigator-resume
+      phase: resume
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 267
+      dependsOn:
+        - work-item-contract
+    - id: surface-adapter-pilot
+      title: Prove one WorkItem resumed across two authenticated surfaces
+      owner: mctlhq/mctl-api
+      phase: adapters
+      required: true
+      dependsOn:
+        - investigator-resume
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Surfaces are adapters and never become owners of canonical work state.
+    - One WorkItem can correlate multiple immutable executions and ContextSnapshots.
+    - Resume re-evaluates current actor authorization and pending approval state.
+    - Cross-surface resume does not require replaying the original raw conversation transcript.
+    - Concurrent resume attempts are deterministic and idempotent or explicitly rejected.
