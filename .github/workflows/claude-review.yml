@@ -295,6 +295,15 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
+      # claude-code-action installs a github_ci MCP server so the reviewer can
+      # see whether the PR's checks pass; that server calls GET actions/runs
+      # and needs this. A called workflow's own permissions block is what the
+      # job runs with — the caller's block only caps it — so granting
+      # `actions: read` in a caller has no effect at all unless it is also
+      # here. It was granted in mctlhq/projects-mcp and changed nothing,
+      # which is how this was found: the job kept answering 403 and logging
+      # "Skipping CI server installation".
+      actions: read
     env:
       REPO: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
@@ -1007,7 +1016,39 @@ jobs:
               "⏳ The Claude reviewer hit the shared usage limit and could not finish. This is **transient** and is *not* a code issue. Re-run with \`@claude review\` once the window resets." || true
             exit 0
           fi
+          # The line below used to say "see the step logs" and send whoever
+          # read it nowhere: claude-code-action prints "full output hidden for
+          # security" and the only trace of why a run died is this file, which
+          # nothing ever opened. A reviewer that fails without saying why is a
+          # reviewer nobody can fix — mctlhq/projects-mcp#1 sat on the same
+          # 2-second, 1-turn, $0 failure through nine runs and two tokens with
+          # no error text anywhere.
+          #
+          # So print the diagnosis, and only that: the result entry's scalar
+          # fields and the first 800 characters of its message. Not the whole
+          # file — that holds the model's entire pass over the diff, which is
+          # what the action hides on purpose.
+          if [ -f "$OUT" ]; then
+            echo "::group::Reviewer failure diagnostics"
+            jq -r '
+              (if type == "array" then [.[] | select(.type == "result")] else [] end)
+              | if length == 0 then
+                  "no result entry in the execution output"
+                else
+                  .[-1] as $r
+                  | "subtype: \($r.subtype // "?")",
+                    "is_error: \($r.is_error // "?")",
+                    "num_turns: \($r.num_turns // "?")",
+                    "duration_ms: \($r.duration_ms // "?")",
+                    "total_cost_usd: \($r.total_cost_usd // "?")",
+                    "permission_denials: \($r.permission_denials_count // "?")",
+                    "message: \(($r.result // $r.error // "<none>") | tostring | .[0:800])"
+                end' "$OUT" 2>/dev/null || echo "execution output was not valid JSON"
+            echo "::endgroup::"
+          else
+            echo "no execution output was written at all — the action failed before it ran"
+          fi
           gh pr comment "$PR_NUMBER" --repo "$REPO" \
-            --body "Claude review failed to complete on both tokens (see the [run log]($RUN_URL)). Re-trigger with \`@claude review\` once the underlying issue is resolved."
-          echo "::error::Claude reviewer failed for a non-quota reason — see the 'Claude review' step logs."
+            --body "Claude review failed to complete on both tokens (see the [run log]($RUN_URL); the 'Reviewer failure diagnostics' group in the review job says why). Re-trigger with \`@claude review\` once the underlying issue is resolved."
+          echo "::error::Claude reviewer failed for a non-quota reason — see the 'Reviewer failure diagnostics' group in this job."
           exit 1
