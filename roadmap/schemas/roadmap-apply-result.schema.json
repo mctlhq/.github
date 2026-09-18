@@ -135,7 +135,8 @@
         "proposal",
         "manifest",
         "planId",
-        "targets"
+        "targets",
+        "manifestsSelected"
       ],
       "properties": {
         "actor": {
@@ -204,6 +205,11 @@
           "items": {
             "$ref": "#/$defs/issueRef"
           }
+        },
+        "manifestsSelected": {
+          "description": "How many manifests the run selected. A result list shorter than this count is a run that stopped early: a truncated run and a complete one are otherwise byte-identical in the artifact, since the exit code is not archived with it.",
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

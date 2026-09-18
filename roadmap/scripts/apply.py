@@ -432,6 +432,7 @@ def result(
     mode: str,
     actor: str,
     git_revision: str,
+    manifests_selected: int,
     proposal: dict[str, Any] | None = None,
     schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -473,6 +474,15 @@ def result(
             },
             "planId": plan_document["planId"],
             "targets": [_ref(key) for key in sorted(touched)],
+            # How many manifests the run SELECTED, recorded on every result so
+            # that a truncated run is legible from the artifact alone. Without
+            # it, a corpus run that applied manifest 1 and then raised on
+            # manifest 2 emits exactly one bare RoadmapApplyResult -- byte
+            # identical to a clean single-manifest run, with the process exit
+            # code as the only signal, and that is not in the file the operator
+            # archives. Comparing this against the number of results present
+            # answers "did the run finish?" without it.
+            "manifestsSelected": manifests_selected,
         },
     }
 
@@ -638,6 +648,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         _emit(documents, args)
         return EXIT_ERROR
+    except BaseException:
+        # Ctrl-C from an operator watching a long `--live --execute` run, a CI
+        # cancellation delivering SIGINT, `SystemExit` -- none of them is a
+        # licence to drop the record of writes that already landed. The two
+        # tuples above do not catch them, and `documents` is exactly non-empty
+        # in the case that matters: part-way through the corpus.
+        #
+        # A handler rather than a `finally`, because the success path below has
+        # to be able to turn a failed emission into EXIT_ERROR, which a
+        # `finally` cannot do without swallowing the interrupt. `raise`
+        # preserves the status Python gives the interrupt, and re-emitting is
+        # harmless -- `_emit` is silent on an empty list.
+        _emit(documents, args)
+        raise
 
     if not _emit(documents, args):
         return EXIT_ERROR
@@ -909,6 +933,10 @@ def _run(
         _check_issue_ids(prepared, resolve_id)
 
     # -- phase 2: write --------------------------------------------------
+    # Whether phase 2 came back normally, read by the capture `finally` below
+    # to tell "the capture failed" from "the capture failed while something
+    # else was already unwinding".
+    phase_two_returned = False
     try:
         for item in prepared:
             operations: list[dict[str, Any]] = []
@@ -936,29 +964,60 @@ def _run(
                 # tripped by `apply_plan` itself, or the very first operation)
                 # still has nothing to report, same as before this fix.
                 if completed or operations:
-                    documents.append(
-                        (
-                            item.path,
-                            result(
-                                item.document,
-                                operations,
-                                mode=mode,
-                                actor=args.actor,
-                                git_revision=item.git_revision,
-                                proposal=proposal,
-                                schema=result_schema,
-                            ),
+                    # Non-throwing on purpose. `result` raises `ApplyError` on
+                    # its leak and schema checks, and this call sits in a
+                    # `finally`: an `ApplyError` raised while a
+                    # `MutationRefused` is in flight would REPLACE it, so the
+                    # refusal never reaches stderr, the exit code flips from
+                    # refused to error, and the append never runs -- losing the
+                    # partial record this block exists to preserve. Report and
+                    # let the original exception continue unwinding.
+                    try:
+                        documents.append(
+                            (
+                                item.path,
+                                result(
+                                    item.document,
+                                    operations,
+                                    mode=mode,
+                                    actor=args.actor,
+                                    git_revision=item.git_revision,
+                                    manifests_selected=len(prepared),
+                                    proposal=proposal,
+                                    schema=result_schema,
+                                ),
+                            )
                         )
-                    )
+                    except ApplyError as exc:
+                        if completed:
+                            # Nothing is unwinding -- this IS the failure, and
+                            # a result that does not validate must not be
+                            # reported as a clean run.
+                            raise
+                        print(
+                            f"ERROR: the result for {item.path} could not be "
+                            f"built: {exc}",
+                            file=sys.stderr,
+                        )
+        phase_two_returned = True
     finally:
         # The snapshot is mutated in place by every applied write, so it is
         # worth capturing even from a run that stopped early -- that is when
         # knowing the post-run state matters most.
+        #
+        # Non-throwing for the same reason as the result append above: an
+        # `OSError` from `write_text` raised in a `finally` would mask whatever
+        # phase 2 was unwinding, and a missing capture file is the lesser loss.
         if args.capture and snapshot is not None:
-            Path(args.capture).write_text(
-                json.dumps(snapshot, indent=2, sort_keys=True) + "\n",
-                encoding="utf-8",
-            )
+            try:
+                Path(args.capture).write_text(
+                    json.dumps(snapshot, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+            except OSError as exc:
+                if phase_two_returned:
+                    raise
+                print(f"ERROR: the capture could not be written: {exc}", file=sys.stderr)
 
 
 if __name__ == "__main__":

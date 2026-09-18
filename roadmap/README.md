@@ -582,8 +582,11 @@ Guards, in order:
 3. `--approved-sha256`, when given, must equal the digest of those bytes, otherwise
    `ApprovalHashMismatch` and zero writes. Approval is bound to content, so a
    force-push after approval invalidates it automatically.
-4. The owned-target assertion is re-run immediately before each write, against the
-   operation actually about to be transmitted.
+4. Every operation endpoint must be an authored identity of the manifest, and every
+   identity a write is made *against* must be an owned one — `externalDependsOn` is
+   authority to depend on a third party's issue, never to edit it. Both are asserted
+   in phase 1; the authored assertion is re-run immediately before each write, and the
+   owned-target rule is re-checked by the write client itself.
 5. `--max-operations` (default 25) bounds the blast radius of the **run**, not of each
    manifest: every selected manifest is planned first and the operation counts are
    summed, so the whole-corpus invocation is capped at 25 writes in total. It refuses

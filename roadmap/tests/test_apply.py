@@ -482,6 +482,7 @@ class ApplyTest(ApplyTestBase):
             mode=apply_module.MODE_EXECUTE,
             actor="mctl-agents[bot]",
             git_revision=REVISION,
+            manifests_selected=1,
             proposal={"id": "rp-42", "url": "https://example.invalid/proposals/42"},
             schema=self.result_schema,
             **kwargs,
@@ -514,6 +515,7 @@ class ApplyTest(ApplyTestBase):
             mode=apply_module.MODE_PLAN_ONLY,
             actor="operator",
             git_revision=REVISION,
+            manifests_selected=1,
             schema=self.result_schema,
         )
         self.assertIn("proposal", built["audit"])
@@ -548,6 +550,7 @@ class ApplyTest(ApplyTestBase):
                 mode=apply_module.MODE_PLAN_ONLY,
                 actor="operator\nwith prose",
                 git_revision=REVISION,
+                manifests_selected=1,
                 schema=self.result_schema,
             )
 
@@ -560,6 +563,7 @@ class ApplyTest(ApplyTestBase):
                 mode=apply_module.MODE_PLAN_ONLY,
                 actor="operator",
                 git_revision=REVISION[:7],
+                manifests_selected=1,
                 schema=self.result_schema,
             )
 
@@ -924,13 +928,22 @@ class ApplyMultiManifestTest(ApplyTestBase):
         return epics
 
     @contextmanager
-    def _recorded(self, fail_above: int | None = None):
+    def _recorded(
+        self,
+        fail_above: int | None = None,
+        raising: type[BaseException] = github_apply.MutationRefused,
+    ):
         """Capture the CLI's mutators, optionally breaking the sibling's writes.
 
         `fail_above` makes any write whose target issue number is above the
-        threshold raise `MutationRefused` -- i.e. the sibling manifest fails
-        while the pilot has already been applied, which is the shape that used
-        to exit 3 with no audit record at all.
+        threshold raise `raising` -- i.e. the sibling manifest fails while the
+        pilot has already been applied, which is the shape that used to exit 3
+        with no audit record at all.
+
+        `raising` is a parameter because the interesting failures are not all
+        `Exception`s: an operator's Ctrl-C during a long `--live --execute` run
+        arrives as `KeyboardInterrupt`, which unwinds past every `except`
+        clause `main` names.
         """
 
         created: list[github_apply.FakeMutator] = []
@@ -943,7 +956,7 @@ class ApplyMultiManifestTest(ApplyTestBase):
 
         def _perform(mutator, request):
             if fail_above is not None and request.target[1] > fail_above:
-                raise github_apply.MutationRefused("the sibling manifest is cursed")
+                raise raising("the sibling manifest is cursed")
             original_perform(mutator, request)
 
         github_apply.FakeMutator.__init__ = _init
@@ -961,26 +974,32 @@ class ApplyMultiManifestTest(ApplyTestBase):
         extra: list[str],
         *,
         fail_above: int | None = None,
-    ) -> tuple[int, str, list]:
+        raising: type[BaseException] = github_apply.MutationRefused,
+    ) -> tuple[int | None, str, list]:
         with tempfile.TemporaryDirectory() as raw_repo, tempfile.TemporaryDirectory() as raw_work:
             epics = self._checkout(Path(raw_repo))
             path = Path(raw_work) / "snapshot.json"
             path.write_text(json.dumps(self._snapshot(first, second)), encoding="utf-8")
 
             out, err = StringIO(), StringIO()
-            with self._recorded(fail_above) as mutators:
+            with self._recorded(fail_above, raising) as mutators:
                 with redirect_stdout(out), redirect_stderr(err):
-                    code = apply_module.main(
-                        [
-                            "--corpus",
-                            str(epics),
-                            "--snapshot",
-                            str(path),
-                            "--actor",
-                            "roadmap-tests",
-                        ]
-                        + extra
-                    )
+                    argv = [
+                        "--corpus",
+                        str(epics),
+                        "--snapshot",
+                        str(path),
+                        "--actor",
+                        "roadmap-tests",
+                    ] + extra
+                    try:
+                        code = apply_module.main(argv)
+                    except KeyboardInterrupt:
+                        # An interrupt has no exit code to report, and the
+                        # caller is asserting on what `main` emitted before it
+                        # re-raised. Any other exception escaping `main` is a
+                        # real failure and is left to propagate.
+                        code = None
             writes = [write for mutator in mutators for write in mutator.writes]
             return code, out.getvalue(), writes
 
@@ -1057,6 +1076,33 @@ class ApplyMultiManifestTest(ApplyTestBase):
         self.assertEqual("human-input", document["epic"]["name"])
         self.assertEqual(1, document["summary"]["applied"])
         self.assertEqual(40, len(document["audit"]["manifest"]["gitRevision"]))
+        # Two manifests were selected and one result came back: the artifact
+        # says so on its own, without the exit code beside it.
+        self.assertEqual(2, document["audit"]["manifestsSelected"])
+
+    def test_an_interrupt_after_a_write_still_emits_the_audit_record(self) -> None:
+        """Ctrl-C is not a licence to drop the record of a write that landed.
+
+        `KeyboardInterrupt` derives from `BaseException`, so it unwinds past
+        both `except` tuples in `main` -- the shape that used to end at exit
+        130 with an empty stdout while the pilot's mutation was already on
+        GitHub.
+        """
+
+        code, rendered, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            mutations.drop_parent_edge(self.converged, DOCS),
+            ["--execute"],
+            fail_above=self.OFFSET,
+            raising=KeyboardInterrupt,
+        )
+        self.assertIsNone(code)
+        self.assertEqual(1, len(writes))
+
+        document = json.loads(rendered)
+        self.assertEqual([], apply_module.schema_errors(document, self.result_schema))
+        self.assertEqual(1, document["summary"]["applied"])
+        self.assertEqual(2, document["audit"]["manifestsSelected"])
 
 
 
