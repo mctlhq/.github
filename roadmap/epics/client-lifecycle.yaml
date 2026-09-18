@@ -1,0 +1,89 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: client-lifecycle
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Client onboarding and product communication
+  goal: >-
+    Model client identity, reachability and notification preferences, then build
+    a consent-aware, previewable and audited path for product communication
+    without granting a model direct broadcast authority.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 22
+  phases:
+    - id: identity
+      title: Operator identity lookup
+    - id: lifecycle
+      title: Reachability and preferences
+    - id: broadcast
+      title: Safe broadcast control path
+    - id: updates
+      title: Curated product-update feed
+    - id: onboarding
+      title: Integrated onboarding and communication lifecycle
+  workItems:
+    - id: operator-identity-lookup
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 400
+
+    - id: client-reachability-preferences
+      phase: lifecycle
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 438
+
+    - id: login-bot-update-receiver
+      title: Provide the safe login-bot update receiver required for notification preferences and broadcast delivery
+      owner: mctl-telegram
+      phase: broadcast
+      required: true
+      dependsOn:
+        - client-reachability-preferences
+
+    - id: safe-broadcast
+      phase: broadcast
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 439
+      dependsOn:
+        - client-reachability-preferences
+        - login-bot-update-receiver
+
+    - id: product-update-feed
+      phase: updates
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 440
+      dependsOn:
+        - safe-broadcast
+
+    - id: onboarding-integration
+      title: Integrate identity, consent, reachability and product communication into the client lifecycle
+      owner: mctl-telegram
+      phase: onboarding
+      required: true
+      dependsOn:
+        - operator-identity-lookup
+        - safe-broadcast
+        - product-update-feed
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Operator-facing identity lookup is scoped, auditable and privacy-safe.
+    - Authentication, bot reachability and notification consent remain separate concepts.
+    - Product updates require explicit category-level user choice.
+    - Broadcast preview and approval bind exact content and audience.
+    - Delivery is rate-limited, idempotent, cancellable and audited.
+    - Capability claims originate from deterministic release/tool evidence.
