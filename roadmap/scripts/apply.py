@@ -332,6 +332,7 @@ def apply_plan(
     authored: frozenset[IssueKey],
     execute: bool = False,
     max_operations: int | None = DEFAULT_MAX_OPERATIONS,
+    results: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Run every operation in a plan, in plan order.
 
@@ -339,6 +340,13 @@ def apply_plan(
     multi-manifest run has to sum plan sizes before the first write to cap the
     run rather than each manifest, so `_run` checks it there and passes None
     here; a direct caller of this function still gets the default cap.
+
+    `results`, when given, is the list each operation's record is appended to
+    the moment it completes, rather than a list assembled only on return. A
+    caller that holds the same reference still sees every operation that
+    completed before one of them raised -- a write that landed and was never
+    recorded is the one outcome this tool may not produce, and a list built
+    entirely inside a comprehension that never finishes cannot honor that.
     """
 
     if document["refusals"]:
@@ -357,16 +365,19 @@ def apply_plan(
     for operation in operations:
         plan_module.assert_authored(operation, authored)
 
-    return [
-        run_operation(
-            operation,
-            source_factory=source_factory,
-            mutator=mutator,
-            authored=authored,
-            execute=execute,
+    if results is None:
+        results = []
+    for operation in operations:
+        results.append(
+            run_operation(
+                operation,
+                source_factory=source_factory,
+                mutator=mutator,
+                authored=authored,
+                execute=execute,
+            )
         )
-        for operation in operations
-    ]
+    return results
 
 
 # ----------------------------------------------------------------- result
@@ -684,6 +695,46 @@ def _related_endpoint(operation: dict[str, Any]) -> IssueKey:
     return _key(operation["blocker"])
 
 
+def _operation_targets(operation: dict[str, Any]) -> list[IssueKey]:
+    """The identity (or identities) a write is made *against*, by path.
+
+    This is `check_request`'s `request.target`, computed here so the same
+    boundary can be asserted before any write is attempted, not only at
+    transmission. `AddSubIssue`/`AddDependency`/`RemoveDependency` each target
+    one key; `MoveSubIssue` decomposes into two writes -- a remove against
+    `observedParent` and an add against `parent` -- so it names both.
+    """
+
+    if operation["type"] == plan_module.ADD_SUB_ISSUE:
+        return [_key(operation["parent"])]
+    if operation["type"] == plan_module.MOVE_SUB_ISSUE:
+        return [_key(operation["observedParent"]), _key(operation["parent"])]
+    return [_key(operation["blocked"])]
+
+
+def assert_owned_targets(
+    operation: dict[str, Any], owned: frozenset[IssueKey]
+) -> None:
+    """Refuse any operation whose write target is not in the owned set.
+
+    `plan_module.assert_authored` holds every endpoint of an operation to the
+    wider authored boundary. `check_request` holds the narrower one at
+    transmission: the issue a write is made against must be owned, not merely
+    authored -- `externalDependsOn` is authority to depend on a third party's
+    issue, never to edit it. Asserting it again here, in phase 1, means a
+    `MoveSubIssue` out of a foreign `observedParent` refuses the run before the
+    first write of any selected manifest, the same as every other guard.
+    """
+
+    foreign = [key for key in _operation_targets(operation) if key not in owned]
+    if foreign:
+        rendered = ", ".join(f"{key[0]}#{key[1]}" for key in foreign)
+        raise ApplyRefused(
+            f"{operation['type']} writes against an identity outside the "
+            f"owned set: {rendered}"
+        )
+
+
 def _prepare(
     args: argparse.Namespace,
     path: Path,
@@ -749,6 +800,7 @@ def _prepare(
         raise ApplyRefused(f"the plan refuses this manifest: {rendered}")
     for operation in document["operations"]:
         plan_module.assert_authored(operation, authored)
+        assert_owned_targets(operation, owned)
 
     return _Prepared(
         path=path,
@@ -859,29 +911,45 @@ def _run(
     # -- phase 2: write --------------------------------------------------
     try:
         for item in prepared:
-            operations = apply_plan(
-                item.document,
-                source_factory=item.source_factory,
-                mutator=item.mutator,
-                authored=item.authored,
-                execute=args.execute,
-                # Already enforced run-wide above.
-                max_operations=None,
-            )
-            documents.append(
-                (
-                    item.path,
-                    result(
-                        item.document,
-                        operations,
-                        mode=mode,
-                        actor=args.actor,
-                        git_revision=item.git_revision,
-                        proposal=proposal,
-                        schema=result_schema,
-                    ),
+            operations: list[dict[str, Any]] = []
+            completed = False
+            try:
+                apply_plan(
+                    item.document,
+                    source_factory=item.source_factory,
+                    mutator=item.mutator,
+                    authored=item.authored,
+                    execute=args.execute,
+                    # Already enforced run-wide above.
+                    max_operations=None,
+                    results=operations,
                 )
-            )
+                completed = True
+            finally:
+                # `operations` already holds a record for every operation that
+                # completed, even the ones before whichever operation raised --
+                # `apply_plan` appends into it as it goes. So the manifest's
+                # result is built and appended here too, not only after a
+                # normal return: a write that landed on GitHub for operation N
+                # must not go unrecorded just because operation N+1 raised.
+                # A manifest that raised before recording anything (a guard
+                # tripped by `apply_plan` itself, or the very first operation)
+                # still has nothing to report, same as before this fix.
+                if completed or operations:
+                    documents.append(
+                        (
+                            item.path,
+                            result(
+                                item.document,
+                                operations,
+                                mode=mode,
+                                actor=args.actor,
+                                git_revision=item.git_revision,
+                                proposal=proposal,
+                                schema=result_schema,
+                            ),
+                        )
+                    )
     finally:
         # The snapshot is mutated in place by every applied write, so it is
         # worth capturing even from a run that stopped early -- that is when

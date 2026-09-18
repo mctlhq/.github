@@ -741,6 +741,20 @@ class ApplyCliTest(ApplyTestBase):
         self.assertEqual(apply_module.EXIT_REFUSED, code)
         self.assertEqual([], writes)
 
+    def test_a_move_out_of_an_external_parent_is_refused_before_any_write(self) -> None:
+        """The owned-target boundary is a phase 1 guard, like every other one.
+
+        `externalDependsOn` grants no write authority over a foreign issue, so
+        a `MoveSubIssue` whose `observedParent` is that foreign ref must refuse
+        before the first write of the run -- not unwind partway through phase
+        2, which is where `check_request` alone would catch it.
+        """
+
+        snapshot = mutations.repoint_parent(self.converged, TELEGRAM, EXTERNAL)
+        code, _, writes = self._run(snapshot, ["--execute"])
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+
     def test_a_failed_operation_exits_four(self) -> None:
         snapshot = mutations.drop_parent_edge(self.converged, API)
         # The parent answers the re-read but refuses the write, so this is a
@@ -785,6 +799,45 @@ class ApplyCliTest(ApplyTestBase):
                 ["--corpus", str(ROADMAP / "epics"), "--actor", "roadmap-tests"]
             )
         self.assertEqual(apply_module.EXIT_ERROR, code)
+
+    def test_a_later_operation_raising_still_records_an_earlier_write(self) -> None:
+        """One manifest, two operations: op 1's landed write must survive op 2.
+
+        `_write` only catches `MutationFailed`. A `MutationRefused` (or any
+        other exception) raised by the second operation used to unwind
+        `apply_plan`'s list comprehension entirely, discarding the first
+        operation's already-recorded `APPLIED` outcome even though its write
+        had already landed -- the one outcome `README.md` and `apply.py`'s own
+        module docstring say this tool may not produce.
+        """
+
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        snapshot = mutations.drop_dependency(snapshot, DOCS, CORE)
+        # AddDependency plans before AddSubIssue for this pilot; breaking the
+        # second one lets the first one's write land first.
+        original = github_apply.FakeMutator._perform
+
+        def _broken(mutator, request):
+            if request.kind == github_apply.ADD_SUB_ISSUE:
+                raise github_apply.MutationRefused("simulated mid-manifest refusal")
+            original(mutator, request)
+
+        github_apply.FakeMutator._perform = _broken
+        try:
+            code, rendered, writes = self._run(snapshot, ["--execute"])
+        finally:
+            github_apply.FakeMutator._perform = original
+
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual(1, len(writes))
+
+        document = json.loads(rendered)
+        self.assertEqual([], apply_module.schema_errors(document, self.result_schema))
+        self.assertEqual(1, document["summary"]["applied"])
+        applied = [
+            op for op in document["operations"] if op["outcome"] == apply_module.APPLIED
+        ]
+        self.assertEqual(["AddDependency"], [op["type"] for op in applied])
 
 
 class ApplyMultiManifestTest(ApplyTestBase):
