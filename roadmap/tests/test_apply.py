@@ -1,0 +1,714 @@
+from __future__ import annotations
+
+import copy
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from io import StringIO
+from pathlib import Path
+from unittest import mock
+
+import yaml
+
+ROADMAP = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROADMAP / "scripts"))
+sys.path.insert(0, str(ROADMAP / "tests"))
+
+import apply as apply_module  # noqa: E402
+import github_apply  # noqa: E402
+import github_graph  # noqa: E402
+import mutations  # noqa: E402
+import plan as plan_module  # noqa: E402
+import reconcile  # noqa: E402
+
+PILOT = ROADMAP / "epics" / "human-input.yaml"
+CONVERGED = ROADMAP / "fixtures" / "human-input" / "converged-fixture.json"
+
+ROOT_ISSUE = "mctlhq/.github#42"
+CORE = "mctlhq/mctl-agents#333"
+API = "mctlhq/mctl-api#261"
+TELEGRAM = "mctlhq/mctl-telegram#571"
+PORTAL = "mctlhq/mctl-portal#124"
+DOCS = "mctlhq/mctl-docs#106"
+FOREIGN = "mctlhq/mctl-web#5"
+
+REVISION = "0123456789abcdef0123456789abcdef01234567"
+
+
+class _RecordingOpener:
+    """Stands in for urllib's opener and records every call that reaches it."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, bytes | None]] = []
+
+    def open(self, request, timeout=None):
+        self.calls.append((request.get_method(), request.full_url, request.data))
+        raise AssertionError("a refused request reached the transport")
+
+
+class ApplyTestBase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.document = yaml.safe_load(PILOT.read_text(encoding="utf-8"))
+        cls.converged = json.loads(CONVERGED.read_text(encoding="utf-8"))
+        cls.authored = frozenset(
+            reconcile.desired_graph(cls.document).authored_keys()
+        )
+        cls.result_schema = apply_module.load_schema()
+
+    def _plan(self, snapshot: dict) -> dict:
+        diff = reconcile.reconcile(
+            PILOT, self.document, github_graph.FixtureGraphSource(snapshot)
+        )
+        return plan_module.plan(diff, document=self.document)
+
+    def _apply(
+        self,
+        snapshot: dict,
+        *,
+        execute: bool = True,
+        plan_document: dict | None = None,
+        max_operations: int = apply_module.DEFAULT_MAX_OPERATIONS,
+    ) -> tuple[list[dict], github_apply.FakeMutator]:
+        mutator = github_apply.FakeMutator(snapshot, self.authored)
+        operations = apply_module.apply_plan(
+            plan_document if plan_document is not None else self._plan(snapshot),
+            source_factory=lambda: github_graph.FixtureGraphSource(snapshot),
+            mutator=mutator,
+            authored=self.authored,
+            execute=execute,
+            max_operations=max_operations,
+        )
+        return operations, mutator
+
+    def _drift(self, snapshot: dict) -> dict:
+        return reconcile.reconcile(
+            PILOT, self.document, github_graph.FixtureGraphSource(snapshot)
+        )
+
+
+class ApplyTest(ApplyTestBase):
+    # -- T6 --------------------------------------------------------------
+
+    def test_applying_one_operation_converges_the_graph(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        self.assertTrue(reconcile.has_drift(self._drift(snapshot)))
+
+        operations, mutator = self._apply(snapshot)
+        self.assertEqual([apply_module.APPLIED], [op["outcome"] for op in operations])
+        self.assertEqual(["AddSubIssue"], [op["type"] for op in operations])
+        self.assertEqual(1, len(mutator.writes))
+
+        # The mutated snapshot is still the published contract, not a private
+        # shape only this test can read.
+        self.assertEqual([], github_graph.snapshot_errors(mutator.state))
+        self.assertFalse(reconcile.has_drift(self._drift(mutator.state)))
+
+    def test_reconcile_exits_zero_against_the_applied_snapshot(self) -> None:
+        snapshot = mutations.drop_dependency(self.converged, API, CORE)
+        _, mutator = self._apply(snapshot)
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "applied.json"
+            path.write_text(json.dumps(mutator.state), encoding="utf-8")
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = reconcile.main(
+                    [
+                        str(PILOT),
+                        "--corpus",
+                        str(ROADMAP / "epics"),
+                        "--snapshot",
+                        str(path),
+                    ]
+                )
+        self.assertEqual(reconcile.EXIT_CONVERGED, code)
+
+    def test_every_operation_type_converges_its_own_family(self) -> None:
+        cases = {
+            "AddSubIssue": lambda s: mutations.drop_parent_edge(s, API),
+            "MoveSubIssue": lambda s: mutations.repoint_parent(s, API, CORE),
+            "AddDependency": lambda s: mutations.drop_dependency(s, API, CORE),
+            "RemoveDependency": lambda s: mutations.add_dependency(s, DOCS, PORTAL),
+        }
+        for kind, mutate in cases.items():
+            with self.subTest(operation=kind):
+                snapshot = mutate(self.converged)
+                operations, mutator = self._apply(snapshot)
+                self.assertEqual([kind], [op["type"] for op in operations])
+                self.assertEqual(
+                    [apply_module.APPLIED], [op["outcome"] for op in operations]
+                )
+                self.assertEqual([], github_graph.snapshot_errors(mutator.state))
+                self.assertFalse(reconcile.has_drift(self._drift(mutator.state)))
+
+    # -- T7 --------------------------------------------------------------
+
+    def test_replay_is_already_satisfied_and_writes_nothing(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        document = self._plan(snapshot)
+        self._apply(snapshot, plan_document=document)
+
+        operations, mutator = self._apply(snapshot, plan_document=document)
+        self.assertEqual(
+            [apply_module.ALREADY_SATISFIED], [op["outcome"] for op in operations]
+        )
+        self.assertEqual([], mutator.writes)
+        self.assertNotIn("reason", operations[0])
+
+    def test_an_already_converged_graph_plans_and_writes_nothing(self) -> None:
+        snapshot = copy.deepcopy(self.converged)
+        operations, mutator = self._apply(snapshot)
+        self.assertEqual([], operations)
+        self.assertEqual([], mutator.writes)
+
+    # -- T8 --------------------------------------------------------------
+
+    def test_a_graph_changed_after_planning_is_skipped_not_overwritten(self) -> None:
+        planned = mutations.drop_parent_edge(self.converged, API)
+        document = self._plan(planned)
+
+        # Somebody re-parented the issue between plan and apply.
+        changed = mutations.repoint_parent(self.converged, API, CORE)
+        operations, mutator = self._apply(changed, plan_document=document)
+        self.assertEqual([apply_module.SKIPPED], [op["outcome"] for op in operations])
+        self.assertEqual(
+            [apply_module.PRECONDITION_CHANGED], [op["reason"] for op in operations]
+        )
+        self.assertEqual([], mutator.writes)
+
+    def test_an_endpoint_that_moved_identity_is_skipped(self) -> None:
+        planned = mutations.drop_dependency(self.converged, API, CORE)
+        document = self._plan(planned)
+
+        moved = mutations.redirect(planned, API, "mctlhq/mctl-web#999")
+        operations, mutator = self._apply(moved, plan_document=document)
+        self.assertEqual([apply_module.SKIPPED], [op["outcome"] for op in operations])
+        self.assertEqual(
+            [apply_module.PRECONDITION_CHANGED], [op["reason"] for op in operations]
+        )
+        self.assertEqual([], mutator.writes)
+
+    def test_a_failed_write_is_recorded_and_the_run_continues(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        snapshot = mutations.drop_dependency(snapshot, DOCS, CORE)
+        document = self._plan(snapshot)
+        self.assertEqual(2, len(document["operations"]))
+
+        class _BrokenMutator(github_apply.FakeMutator):
+            def _perform(self, request):
+                if request.kind == github_apply.ADD_SUB_ISSUE:
+                    raise github_apply.MutationFailed("HTTP 500")
+                super()._perform(request)
+
+        mutator = _BrokenMutator(snapshot, self.authored)
+        operations = apply_module.apply_plan(
+            document,
+            source_factory=lambda: github_graph.FixtureGraphSource(snapshot),
+            mutator=mutator,
+            authored=self.authored,
+            execute=True,
+        )
+        outcomes = {op["type"]: op["outcome"] for op in operations}
+        self.assertEqual(apply_module.FAILED, outcomes["AddSubIssue"])
+        self.assertEqual(apply_module.APPLIED, outcomes["AddDependency"])
+        failed = next(op for op in operations if op["outcome"] == apply_module.FAILED)
+        self.assertEqual(apply_module.WRITE_FAILED, failed["reason"])
+
+    def test_a_half_finished_move_names_the_orphaned_child(self) -> None:
+        snapshot = mutations.repoint_parent(self.converged, API, CORE)
+        document = self._plan(snapshot)
+
+        class _AddFails(github_apply.FakeMutator):
+            def _perform(self, request):
+                if request.kind == github_apply.ADD_SUB_ISSUE:
+                    raise github_apply.MutationFailed("HTTP 422")
+                super()._perform(request)
+
+        mutator = _AddFails(snapshot, self.authored)
+        operations = apply_module.apply_plan(
+            document,
+            source_factory=lambda: github_graph.FixtureGraphSource(snapshot),
+            mutator=mutator,
+            authored=self.authored,
+            execute=True,
+        )
+        self.assertEqual([apply_module.FAILED], [op["outcome"] for op in operations])
+        self.assertEqual(
+            [apply_module.MOVE_INCOMPLETE], [op["reason"] for op in operations]
+        )
+        self.assertIn(mutations.ref(API), operations[0]["targets"])
+        # The remove half did happen, so the child is genuinely orphaned now --
+        # recorded, not hidden, and the next replay finishes the move.
+        self.assertIsNone(
+            next(
+                item
+                for item in mutator.state["issues"]
+                if item["requested"] == mutations.ref(API)
+            )["parent"]
+        )
+
+    # -- T9 --------------------------------------------------------------
+
+    def test_without_execute_nothing_is_written(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        before = copy.deepcopy(snapshot)
+        operations, mutator = self._apply(snapshot, execute=False)
+        self.assertEqual([apply_module.SKIPPED], [op["outcome"] for op in operations])
+        self.assertEqual(
+            [apply_module.NOT_EXECUTED], [op["reason"] for op in operations]
+        )
+        self.assertEqual([], mutator.writes)
+        self.assertEqual(before, snapshot)
+
+    def test_max_operations_refuses_rather_than_truncating(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        snapshot = mutations.drop_dependency(snapshot, DOCS, CORE)
+        before = copy.deepcopy(snapshot)
+        with self.assertRaises(apply_module.ApplyRefused):
+            self._apply(snapshot, max_operations=1)
+        self.assertEqual(before, snapshot)
+
+    def test_a_refused_plan_is_never_applied(self) -> None:
+        snapshot = mutations.mark_missing(self.converged, API)
+        before = copy.deepcopy(snapshot)
+        with self.assertRaises(apply_module.ApplyRefused):
+            self._apply(snapshot)
+        self.assertEqual(before, snapshot)
+
+    def test_a_hand_widened_plan_cannot_reach_a_foreign_issue(self) -> None:
+        """Defense in depth: the assertion runs again against the live operation."""
+
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        document = self._plan(snapshot)
+        document["operations"][0]["child"] = mutations.ref(FOREIGN)
+        before = copy.deepcopy(snapshot)
+        with self.assertRaises(plan_module.PlanRefused):
+            self._apply(snapshot, plan_document=document)
+        self.assertEqual(before, snapshot)
+
+    # -- T10 -------------------------------------------------------------
+
+    def test_the_write_client_refuses_before_transmission(self) -> None:
+        owned = frozenset({("mctlhq/.github", 42), ("mctlhq/mctl-api", 261)})
+        opener = _RecordingOpener()
+        mutator = github_apply.LiveMutator(
+            "token", owned, opener=opener, resolve_id=lambda key: 7
+        )
+        target = ("mctlhq/.github", 42)
+        related = ("mctlhq/mctl-api", 261)
+
+        cases = {
+            "a GET": github_apply.MutationRequest(
+                kind=github_apply.ADD_SUB_ISSUE,
+                method="GET",
+                template=github_apply.SUB_ISSUES,
+                path="/repos/mctlhq/.github/issues/42/sub_issues",
+                target=target,
+                related=related,
+            ),
+            "an endpoint outside the allow-list": github_apply.MutationRequest(
+                kind=github_apply.ADD_SUB_ISSUE,
+                method="POST",
+                template="/repos/{owner}/{repo}/issues/{number}/comments",
+                path="/repos/mctlhq/.github/issues/42/comments",
+                target=target,
+                related=related,
+                body={"body": "hello"},
+            ),
+            "a cross-origin URL": github_apply.MutationRequest(
+                kind=github_apply.ADD_SUB_ISSUE,
+                method="POST",
+                template=github_apply.SUB_ISSUES,
+                path="https://attacker.example/repos/mctlhq/.github/issues/42/sub_issues",
+                target=target,
+                related=related,
+                body={"sub_issue_id": 7},
+            ),
+            "a target outside the owned set": github_apply.MutationRequest(
+                kind=github_apply.ADD_SUB_ISSUE,
+                method="POST",
+                template=github_apply.SUB_ISSUES,
+                path="/repos/mctlhq/mctl-web/issues/5/sub_issues",
+                target=("mctlhq/mctl-web", 5),
+                related=related,
+                body={"sub_issue_id": 7},
+            ),
+        }
+        for name, request in cases.items():
+            with self.subTest(case=name):
+                with self.assertRaises(github_apply.MutationRefused):
+                    mutator._perform(request)
+        self.assertEqual([], opener.calls)
+
+    def test_the_vocabulary_refuses_an_unowned_identity(self) -> None:
+        opener = _RecordingOpener()
+        mutator = github_apply.LiveMutator(
+            "token",
+            {("mctlhq/.github", 42)},
+            opener=opener,
+            resolve_id=lambda key: 7,
+        )
+        with self.assertRaises(github_apply.MutationRefused):
+            mutator.add_sub_issue(("mctlhq/.github", 42), ("mctlhq/mctl-web", 5))
+        with self.assertRaises(github_apply.MutationRefused):
+            mutator.add_dependency(("mctlhq/mctl-web", 5), ("mctlhq/.github", 42))
+        self.assertEqual([], opener.calls)
+
+    def test_live_writes_need_an_issue_id_resolver(self) -> None:
+        opener = _RecordingOpener()
+        mutator = github_apply.LiveMutator(
+            "token", {("mctlhq/.github", 42), ("mctlhq/mctl-api", 261)}, opener=opener
+        )
+        with self.assertRaises(github_apply.MutationRefused):
+            mutator.add_sub_issue(("mctlhq/.github", 42), ("mctlhq/mctl-api", 261))
+        self.assertEqual([], opener.calls)
+
+    def test_the_write_client_inherits_the_read_clients_origin_rules(self) -> None:
+        for base in (
+            "http://api.github.com",
+            "api.github.com",
+            "https://api.github.com@attacker.example",
+            "https://api.github.com?token=leak",
+        ):
+            with self.subTest(base=base):
+                with self.assertRaises(github_apply.MutationRefused):
+                    github_apply.LiveMutator(
+                        "token", set(), api_base=base, opener=_RecordingOpener()
+                    )
+
+    def test_the_allow_list_is_four_relation_endpoints(self) -> None:
+        self.assertEqual(4, len(github_apply.ALLOWED))
+        self.assertEqual({"POST", "DELETE"}, {method for method, _ in github_apply.ALLOWED})
+        for _, template in github_apply.ALLOWED:
+            self.assertIn("/issues/{number}", template)
+
+    def test_the_offline_mutator_holds_the_same_guard(self) -> None:
+        snapshot = copy.deepcopy(self.converged)
+        mutator = github_apply.FakeMutator(snapshot, {("mctlhq/.github", 42)})
+        with self.assertRaises(github_apply.MutationRefused):
+            mutator.add_sub_issue(("mctlhq/.github", 42), ("mctlhq/mctl-api", 261))
+        self.assertEqual([], mutator.writes)
+        self.assertEqual(self.converged, snapshot)
+
+    # -- T11 -------------------------------------------------------------
+
+    def _result(self, snapshot: dict, **kwargs) -> dict:
+        document = self._plan(snapshot)
+        operations, _ = self._apply(snapshot, plan_document=document)
+        return apply_module.result(
+            document,
+            operations,
+            mode=apply_module.MODE_EXECUTE,
+            actor="mctl-agents[bot]",
+            git_revision=REVISION,
+            proposal={"id": "rp-42", "url": "https://example.invalid/proposals/42"},
+            schema=self.result_schema,
+            **kwargs,
+        )
+
+    def test_the_result_validates_and_carries_the_full_audit_block(self) -> None:
+        document = self._result(mutations.drop_parent_edge(self.converged, API))
+        self.assertEqual([], apply_module.schema_errors(document, self.result_schema))
+
+        audit = document["audit"]
+        self.assertEqual("mctl-agents[bot]", audit["actor"])
+        self.assertEqual("rp-42", audit["proposal"]["id"])
+        self.assertEqual(REVISION, audit["manifest"]["gitRevision"])
+        self.assertEqual(
+            "roadmap/epics/human-input.yaml", audit["manifest"]["path"]
+        )
+        self.assertEqual(reconcile._sha256(PILOT), audit["manifest"]["sha256"])
+        self.assertEqual(64, len(audit["planId"]))
+        self.assertIn(mutations.ref(API), audit["targets"])
+        self.assertEqual(
+            {"applied": 1, "alreadySatisfied": 0, "skipped": 0, "failed": 0},
+            document["summary"],
+        )
+
+    def test_an_unattributed_run_records_an_explicit_null_proposal(self) -> None:
+        document = self._plan(self.converged)
+        built = apply_module.result(
+            document,
+            [],
+            mode=apply_module.MODE_PLAN_ONLY,
+            actor="operator",
+            git_revision=REVISION,
+            schema=self.result_schema,
+        )
+        self.assertIn("proposal", built["audit"])
+        self.assertIsNone(built["audit"]["proposal"])
+        self.assertEqual([], built["audit"]["targets"])
+
+    def test_the_result_carries_no_issue_prose(self) -> None:
+        rendered = json.dumps(
+            self._result(mutations.drop_parent_edge(self.converged, API))
+        )
+        for word in ('"title"', '"body"', '"state"', '"labels"'):
+            self.assertNotIn(word, rendered)
+
+    def test_the_content_check_rejects_a_polluted_result(self) -> None:
+        document = self._result(mutations.drop_parent_edge(self.converged, API))
+        polluted = copy.deepcopy(document)
+        polluted["audit"]["targets"][0]["title"] = "Durable agent clarification"
+        errors = apply_module._forbidden_content_errors(polluted)
+        self.assertTrue(errors)
+        self.assertTrue(any("title" in error for error in errors))
+
+        multiline = copy.deepcopy(document)
+        multiline["audit"]["actor"] = "bot\nwith a body pasted in"
+        self.assertTrue(apply_module._forbidden_content_errors(multiline))
+
+    def test_a_result_that_would_leak_is_never_emitted(self) -> None:
+        document = self._plan(self.converged)
+        with self.assertRaises(apply_module.ApplyError):
+            apply_module.result(
+                document,
+                [],
+                mode=apply_module.MODE_PLAN_ONLY,
+                actor="operator\nwith prose",
+                git_revision=REVISION,
+                schema=self.result_schema,
+            )
+
+    def test_an_abbreviated_git_revision_is_not_an_audit_record(self) -> None:
+        document = self._plan(self.converged)
+        with self.assertRaises(apply_module.ApplyError):
+            apply_module.result(
+                document,
+                [],
+                mode=apply_module.MODE_PLAN_ONLY,
+                actor="operator",
+                git_revision=REVISION[:7],
+                schema=self.result_schema,
+            )
+
+    # -- T12 -------------------------------------------------------------
+
+    def test_the_human_input_acceptance_path(self) -> None:
+        """A merged manifest converges the epic with no hand-maintained graph."""
+
+        snapshot = mutations.drop_parent_edge(self.converged, TELEGRAM)
+        snapshot = mutations.drop_dependency(snapshot, DOCS, API)
+        snapshot = mutations.drop_dependency(snapshot, TELEGRAM, "mctlhq/mctl-telegram#443")
+
+        document = self._plan(snapshot)
+        self.assertEqual(
+            ["AddDependency", "AddDependency", "AddSubIssue"],
+            sorted(op["type"] for op in document["operations"]),
+        )
+
+        operations, mutator = self._apply(snapshot, plan_document=document)
+        self.assertEqual(
+            {apply_module.APPLIED}, {op["outcome"] for op in operations}
+        )
+        self.assertEqual([], github_graph.snapshot_errors(mutator.state))
+
+        drift = self._drift(mutator.state)
+        self.assertFalse(reconcile.has_drift(drift))
+        self.assertEqual(0, drift["summary"]["drift"])
+
+
+@unittest.skipIf(shutil.which("git") is None, "git is not available")
+class ApplyCliTest(ApplyTestBase):
+    """CLI guards, exercised against a real one-manifest checkout."""
+
+    def _repository(self, directory: Path) -> Path:
+        epics = directory / "roadmap" / "epics"
+        epics.mkdir(parents=True)
+        manifest = epics / "human-input.yaml"
+        manifest.write_text(PILOT.read_text(encoding="utf-8"), encoding="utf-8")
+        for args in (
+            ["init", "-q", "-b", "main"],
+            ["add", "-A"],
+            [
+                "-c",
+                "user.email=roadmap@example.invalid",
+                "-c",
+                "user.name=roadmap",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-qm",
+                "seed",
+            ],
+        ):
+            subprocess.run(
+                ["git", "-C", str(directory), *args], check=True, capture_output=True
+            )
+        return manifest
+
+    @contextmanager
+    def _recorded(self):
+        """Hold on to the mutators the CLI builds, so writes can be counted.
+
+        The CLI owns its mutator, and the offline one mutates a dict in memory:
+        re-reading the snapshot file afterwards would show no change whether a
+        guard refused the run or not, which is exactly the distinction these
+        tests exist to make. `Mutator.writes` is the real accounting, recorded
+        the moment a request passes the guard.
+        """
+
+        created: list[github_apply.FakeMutator] = []
+        original = github_apply.FakeMutator.__init__
+
+        def _init(mutator, snapshot, owned):
+            original(mutator, snapshot, owned)
+            created.append(mutator)
+
+        github_apply.FakeMutator.__init__ = _init
+        try:
+            yield created
+        finally:
+            github_apply.FakeMutator.__init__ = original
+
+    def _run(
+        self, snapshot: dict, extra: list[str], *, dirty: bool = False
+    ) -> tuple[int, str, list]:
+        with tempfile.TemporaryDirectory() as raw_repo, tempfile.TemporaryDirectory() as raw_work:
+            repository = Path(raw_repo)
+            manifest = self._repository(repository)
+            if dirty:
+                (repository / "roadmap" / "epics" / "scratch.txt").write_text(
+                    "uncommitted\n", encoding="utf-8"
+                )
+            # The snapshot lives outside the checkout: writing it inside would
+            # dirty the tree the git guard is there to check.
+            path = Path(raw_work) / "snapshot.json"
+            path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+            out, err = StringIO(), StringIO()
+            with self._recorded() as mutators:
+                with redirect_stdout(out), redirect_stderr(err):
+                    code = apply_module.main(
+                        [
+                            str(manifest),
+                            "--corpus",
+                            str(repository / "roadmap" / "epics"),
+                            "--snapshot",
+                            str(path),
+                            "--actor",
+                            "roadmap-tests",
+                        ]
+                        + extra
+                    )
+            writes = [write for mutator in mutators for write in mutator.writes]
+            return code, out.getvalue(), writes
+
+    def test_execute_converges_and_exits_zero(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        with tempfile.TemporaryDirectory() as raw:
+            capture = Path(raw) / "applied.json"
+            code, rendered, writes = self._run(
+                snapshot, ["--execute", "--capture", str(capture)]
+            )
+            applied = json.loads(capture.read_text(encoding="utf-8"))
+
+        self.assertEqual(apply_module.EXIT_OK, code)
+        self.assertEqual(1, len(writes))
+        document = json.loads(rendered)
+        self.assertEqual([], apply_module.schema_errors(document, self.result_schema))
+        self.assertEqual("execute", document["mode"])
+        self.assertEqual(1, document["summary"]["applied"])
+        self.assertEqual(40, len(document["audit"]["manifest"]["gitRevision"]))
+        self.assertEqual([], github_graph.snapshot_errors(applied))
+        self.assertFalse(reconcile.has_drift(self._drift(applied)))
+
+    def test_plan_only_writes_nothing_and_exits_one(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        code, rendered, writes = self._run(snapshot, [])
+        self.assertEqual(apply_module.EXIT_SKIPPED, code)
+        self.assertEqual([], writes)
+        document = json.loads(rendered)
+        self.assertEqual("plan-only", document["mode"])
+        self.assertEqual(0, document["summary"]["applied"])
+        self.assertEqual([], document["audit"]["targets"])
+
+    def test_a_dirty_checkout_refuses_with_zero_writes(self) -> None:
+        code, _, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API), ["--execute"], dirty=True
+        )
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+
+    def test_a_mismatched_approval_hash_refuses_with_zero_writes(self) -> None:
+        code, _, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            ["--execute", "--approved-sha256", "b" * 64],
+        )
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+
+    def test_the_matching_approval_hash_is_accepted(self) -> None:
+        code, _, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            ["--execute", "--approved-sha256", reconcile._sha256(PILOT)],
+        )
+        self.assertEqual(apply_module.EXIT_OK, code)
+        self.assertEqual(1, len(writes))
+
+    def test_max_operations_refuses_with_zero_writes(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        snapshot = mutations.drop_dependency(snapshot, DOCS, CORE)
+        code, _, writes = self._run(snapshot, ["--execute", "--max-operations", "1"])
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+
+    def test_a_refused_plan_exits_three_with_zero_writes(self) -> None:
+        code, _, writes = self._run(
+            mutations.mark_missing(self.converged, API), ["--execute"]
+        )
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+
+    def test_a_failed_operation_exits_four(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        # The parent answers the re-read but refuses the write, so this is a
+        # failed write rather than a changed precondition.
+        original = github_apply.FakeMutator._observation
+
+        def _broken(mutator, key):
+            if key == ("mctlhq/.github", 42):
+                raise github_apply.MutationFailed("HTTP 500")
+            return original(mutator, key)
+
+        github_apply.FakeMutator._observation = _broken
+        try:
+            code, rendered, writes = self._run(snapshot, ["--execute"])
+        finally:
+            github_apply.FakeMutator._observation = original
+        self.assertEqual(apply_module.EXIT_FAILED, code)
+        self.assertEqual(1, len(writes))
+        document = json.loads(rendered)
+        self.assertEqual(1, document["summary"]["failed"])
+        self.assertEqual(
+            apply_module.WRITE_FAILED, document["operations"][0]["reason"]
+        )
+
+    def test_live_without_a_token_is_an_auth_error_not_a_refusal(self) -> None:
+        with mock.patch.dict(os.environ, {"GITHUB_TOKEN": "", "GH_TOKEN": ""}):
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                code = apply_module.main(
+                    [
+                        "--corpus",
+                        str(ROADMAP / "epics"),
+                        "--live",
+                        "--actor",
+                        "roadmap-tests",
+                    ]
+                )
+        self.assertEqual(apply_module.EXIT_ERROR, code)
+
+    def test_the_cli_requires_exactly_one_source(self) -> None:
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            code = apply_module.main(
+                ["--corpus", str(ROADMAP / "epics"), "--actor", "roadmap-tests"]
+            )
+        self.assertEqual(apply_module.EXIT_ERROR, code)
+
+
+if __name__ == "__main__":
+    unittest.main()

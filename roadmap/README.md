@@ -51,6 +51,9 @@ roadmap/
     epic-definition.schema.json
     github-graph-snapshot.schema.json
     roadmap-diff.schema.json
+    roadmap-health.schema.json
+    roadmap-apply-plan.schema.json
+    roadmap-apply-result.schema.json
   epics/
     human-input.yaml
   fixtures/
@@ -58,11 +61,20 @@ roadmap/
       converged-fixture.json
   scripts/
     validate.py
-    github_graph.py
-    reconcile.py
+    github_graph.py       read-only observation
+    reconcile.py          desired vs observed
+    health.py
+    completion.py
+    plan.py               diff -> the mutations a manifest authorizes
+    github_apply.py       the only module that may write
+    apply.py              execute a plan, emit an audited result
   tests/
     test_validate.py
     test_reconcile.py
+    test_health.py
+    test_completion.py
+    test_plan.py
+    test_apply.py
     mutations.py
 ```
 
@@ -385,43 +397,256 @@ open but does not hold completion back. The first live run against #66 reported 
 `DependencyMissing` entries: the dependencies existed only as prose in the issue bodies.
 Native `blocked_by` relations were then created on GitHub, and the graph converged.
 
-## Planned write boundary
+## Write boundary
 
-The target runtime split is:
+Writes are deterministic and no LLM is in the apply path. The full pipeline:
 
 ```text
-.github/roadmap/epics/*.yaml
+roadmap/epics/*.yaml  (merged, at git revision R)
           ↓
-    schema + semantic validation
+    schema + semantic + corpus validation
           ↓
- RoadmapReconcileWorkflow (mctl-agents)
+    reconcile.py (GET only)      → RoadmapDiff
           ↓
- live GitHub graph read
+    plan.py (pure)               → RoadmapApplyPlan
           ↓
- deterministic RoadmapDiff
+    apply.py: per operation, re-read exactly its endpoints, then at most one
+              allow-listed write through github_apply.py
           ↓
- mctl-api observed/read model
+    RoadmapApplyResult + audit   → mctl-api evidence
+          ↓
+    reconcile.py again           → expect zero drift
 ```
 
-Write reconciliation comes later and must be deterministic: no LLM is allowed in the
-apply path. The exact manifest revision/hash must be carried into audit/evidence.
+`plan.py` is a pure function of the manifest bytes and the snapshot bytes: no clock,
+no randomness, no absolute path, no network. Identical inputs produce byte-identical
+JSON, which is what makes reviewing a plan the same decision as reviewing what will
+be written.
+
+### Diff entry to operation
+
+One entry, one operation. Nothing else is actionable:
+
+| `RoadmapDiff` entry | plan outcome | GitHub call at apply time |
+| --- | --- | --- |
+| `HierarchyMissingParent` | `AddSubIssue` | `POST /repos/{o}/{r}/issues/{parent}/sub_issues` |
+| `HierarchyWrongParent` | `MoveSubIssue` | `DELETE .../issues/{observedParent}/sub_issue`, then `POST .../issues/{parent}/sub_issues` |
+| `DependencyMissing` | `AddDependency` | `POST /repos/{o}/{r}/issues/{blocked}/dependencies/blocked_by` |
+| `DependencyUnexpected` | `RemoveDependency` | `DELETE /repos/{o}/{r}/issues/{blocked}/dependencies/blocked_by/{id}` |
+| `HierarchyUnexpectedChild` | note | none |
+| `BindingUnbound` | note | none |
+| `BindingIssueNotFound` | **refusal** | none |
+| `BindingRedirected` | **refusal** | none |
+| `BindingAmbiguous` | **refusal** | none |
+
+Notes are recorded so the plan is a complete account of the diff, never actioned.
+Creating issues for unbound work and removing children this manifest does not own are
+both deliberately absent: the first would make the apply path author desired state,
+the second would delete state the manifest never described.
+
+### Refusal rules
+
+Any binding-family drift refuses the **whole** plan for that manifest: zero
+operations, not a partial apply. A redirect means somebody transferred the issue, a
+not-found means it was deleted, an ambiguity means two authored bindings collapsed
+onto one live object. Each is an externally changed binding, and the only correct
+response is a human editing the manifest in a pull request.
+
+Every operation endpoint must be an identity in `DesiredGraph.authored_keys()` — the
+manifest's own bindings plus the issues it names in `externalDependsOn`. An operation
+naming anything else raises `PlanRefused` rather than being emitted or quietly
+dropped, so an unexpected relation to an outside issue stops the run instead of
+reaching past what was reviewed. Targets are a subset of the authored identities by
+construction, not by review.
+
+### Preconditions and idempotency
+
+Each operation records the state it expects, in the vocabulary of `ObservedGraph`:
+
+| operation | precondition | already satisfied when |
+| --- | --- | --- |
+| `AddSubIssue` | `ParentAbsent` — the child has no parent | the child already sits under the authored parent |
+| `MoveSubIssue` | `ParentIs` — the child sits under the observed parent | the child already sits under the authored parent |
+| `AddDependency` | `DependencyAbsent` | the blocked-by edge already exists |
+| `RemoveDependency` | `DependencyPresent` | the edge is already gone |
+
+Before every operation, `apply.py` re-reads exactly that operation's endpoints. No
+write is ever issued without that re-read. Then:
+
+- the end state already holds → `alreadySatisfied`, zero writes. Retry and replay
+  converge to the same graph.
+- the precondition holds → one allow-listed write → `applied`.
+- anything else, including an endpoint that has since been deleted or transferred →
+  `skipped` with reason `PreconditionChanged`, zero writes. A graph that changed
+  after planning is never written over.
+- the write returns a non-success status → `failed`, the run continues with the
+  remaining independent operations and exits non-zero.
+
+`opId = sha256(manifest sha256 + type + canonical endpoints)`, truncated to 16 hex
+characters, and `planId = sha256(manifest sha256 + the ordered opIds)`. The same
+operation therefore has the same id on every run, which makes `opId` a usable
+idempotency key.
+
+GitHub has no single call that reparents an issue, so `MoveSubIssue` is a remove
+followed by an add. If the add half fails, the operation is `failed` with reason
+`MoveIncompleteChildOrphaned` and the orphaned child named in its targets; the next
+replay finishes the move, because its precondition is then "no parent".
+
+### Allowed writes
+
+`github_apply.py` is a separate module on purpose. `github_graph.py`'s safety
+property is that it contains **no** mutation primitive at all, which is checkable by
+reading one function; putting a writer beside it would replace that with a
+convention. The write client is its mirror image — a closed allow-list:
+
+```text
+POST   /repos/{owner}/{repo}/issues/{number}/sub_issues
+DELETE /repos/{owner}/{repo}/issues/{number}/sub_issue
+POST   /repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by
+DELETE /repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by/{dependency}
+```
+
+`MutationRefused` is raised **before transmission** for any (method, path template)
+pair outside that set, for any `GET` (reads belong to `github_graph`), and for any
+request touching an identity outside the owned set the caller supplied. HTTPS,
+userinfo, origin and redirect rules are inherited from
+`github_graph.OriginBoundClient`, so the credential rules of the read and write
+halves cannot drift apart. GraphQL is unused here for the same reason it is unused in
+the reader: an allow-list of four REST endpoints is checkable, an open-ended mutation
+document is not.
+
+`github_apply.FakeMutator` applies the same operations to an in-memory
+`GitHubGraphSnapshot` under the same guard — the write-side analogue of
+`FixtureGraphSource` — so the whole apply path is provable offline against the
+existing fixtures, and the mutated snapshot still validates against
+`github-graph-snapshot.schema.json`.
+
+GitHub's sub-issue and dependency endpoints identify the *related* issue by numeric
+id, which `github-graph-snapshot.schema.json` does not record. A live run therefore
+supplies that mapping from outside, with `--issue-ids` (a JSON object of
+`"owner/repo#number": id`); the write client will not read GitHub to find it, because
+a reader inside the write module would defeat the point of the split.
+
+### CLI
+
+```bash
+# what would be written, from a fixture; nothing is contacted
+python roadmap/scripts/plan.py roadmap/epics/human-input.yaml \
+  --corpus roadmap/epics \
+  --snapshot roadmap/fixtures/human-input/converged-fixture.json
+
+# re-read and report only: no --execute, so nothing is written
+python roadmap/scripts/apply.py roadmap/epics/human-input.yaml \
+  --corpus roadmap/epics --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+  --actor mctl-agents[bot]
+
+# the real thing: merged bytes, a clean checkout, an approval bound to those bytes
+python roadmap/scripts/apply.py roadmap/epics/human-input.yaml \
+  --corpus roadmap/epics --live --execute \
+  --actor mctl-agents[bot] \
+  --approved-sha256 "$APPROVED" --proposal-id "$PROPOSAL" \
+  --issue-ids issue-ids.json
+```
+
+`plan.py` takes `--corpus`, `--schema`, `--plan-schema`, `--snapshot`, `--live`,
+`--capture`, `--api-base`, `--output`, exactly mirroring `reconcile.py`, and
+`--snapshot` and `--live/--capture` stay mutually exclusive. Exit codes: `0` empty
+plan, `1` a non-empty plan, `2` usage/IO/validation error, `3` refused.
+
+`apply.py` takes the same corpus and source flags plus `--execute`, `--actor`
+(required), `--approved-sha256`, `--proposal-id`, `--proposal-url`,
+`--max-operations`, `--issue-ids`, `--capture` (offline: write the post-run snapshot
+so it can be reconciled) and `--output`. Exit codes: `0` everything applied or
+already satisfied, `1` something was skipped, `2` usage/IO/auth, `3` refused, `4` an
+operation failed.
+
+Guards, in order:
+
+1. `--execute` is required for any write. Without it the run plans, re-reads and
+   reports what would change.
+2. The manifest's git revision is resolved with `git rev-parse HEAD`. A dirty
+   checkout, or manifest bytes that differ from the bytes committed at that revision,
+   refuses the run — the audit record has to be able to say "these bytes, at this
+   revision".
+3. `--approved-sha256`, when given, must equal the digest of those bytes, otherwise
+   `ApprovalHashMismatch` and zero writes. Approval is bound to content, so a
+   force-push after approval invalidates it automatically.
+4. The owned-target assertion is re-run immediately before each write, against the
+   operation actually about to be transmitted.
+5. `--max-operations` (default 25) bounds the blast radius of one run, refusing
+   rather than truncating silently.
+
+There is no `--plan` flag and no free-form target argument: the plan is always
+recomputed from validated manifest bytes, so a hand-edited plan file is not an input
+that exists.
+
+### Audit and evidence
+
+Every run emits a `RoadmapApplyResult` — per operation `opId`, `type`, `targets`,
+`outcome` in `applied | alreadySatisfied | skipped | failed` and a `reason` code for
+the last two — plus one audit block:
+
+```jsonc
+"audit": {
+  "actor": "mctl-agents[bot]",
+  "proposal": {"id": "...", "url": "..."},   // or explicit null
+  "manifest": {
+    "path": "roadmap/epics/human-input.yaml",
+    "sha256": "<64 hex>",
+    "gitRevision": "<40 hex>"
+  },
+  "planId": "<64 hex>",
+  "targets": [{"repository": "mctlhq/mctl-agents", "number": 333}]
+}
+```
+
+`roadmap-apply-result.schema.json` is `additionalProperties: false` throughout, types
+every target as `issueRef`, and restricts `reason` to a closed vocabulary, so there is
+no field an issue title, body or comment could be written into. A
+`_forbidden_content_errors()` check runs before emission as an independent assertion
+that none got there anyway, and the document is validated against its schema before
+it is returned. `proposal` is an explicit `null` rather than an omitted key: absent
+and unattributed must not look alike in an audit record.
 
 Health is derived (see *Health* above) and must never author a second graph or a
-competing desired-state file.
+competing desired-state file. The apply engine authors nothing either: it never
+writes a manifest, never creates an issue, and never removes a child it does not own.
 
 ## RoadmapProposal integration
 
-The eventual authoring flow should produce a reviewable manifest rather than a
-sequence of generic GitHub mutations:
+The authoring flow ends in one reviewable artifact rather than a sequence of generic
+GitHub mutations:
 
 ```text
 intent
-  → RoadmapProposal
-  → roadmap-decompose
-  → EpicDefinition draft
-  → exact-hash approval
-  → PR in this directory
-  → deterministic reconciliation
+  → RoadmapProposal            (mctl-api: persistence + authorization; stores manifestSha256
+                                and an epicDefinitionPullRequest reference)
+  → roadmap-decompose          (mctl-agents: the model step; emits an EpicDefinition draft only)
+  → validate.py against the corpus   (schema + semantic + corpus, offline)
+  → pull request to mctlhq/.github roadmap/epics/<name>.yaml
+  → approval bound to the sha256 of the exact draft bytes
+  → human merge
+  → RoadmapApplyWorkflow       (mctl-agents: deterministic activity, no model invocation)
+       plan.py + apply.py --execute --approved-sha256 <hash>
 ```
 
-GitHub remains the planning UI. The manifest becomes the canonical desired graph.
+`roadmap-decompose` writes YAML and opens a pull request. It never touches a GitHub
+graph endpoint, and its output is judged by `validate.py` rather than trusted.
+`mctl-api` stays the `RoadmapProposal` persistence and authorization boundary and
+holds the approved hash; `mctl-agents` stays the deterministic mutation boundary.
+
+A model can influence the GitHub graph only by proposing *manifest text* that a human
+merges — the same review gate that already guards `roadmap/epics/`. There is no path
+from model output to a mutation target that does not pass through merged,
+hash-pinned, validated bytes.
+
+Apply is merge-triggered and manually re-runnable, never a cron: unattended
+continuous writes would let a bad merge converge the whole graph before anyone read
+the diff.
+
+GitHub remains the planning UI. The manifest remains the canonical desired graph.
+
+The Temporal workflow in `mctl-agents` and the `RoadmapProposal` field additions in
+`mctl-api` are follow-ups against these published contracts; Projects v2 mutation and
+issue creation for `BindingUnbound` work items are separately tracked, and both need
+the read side to grow first.

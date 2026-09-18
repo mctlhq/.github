@@ -1,0 +1,365 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/roadmap-apply-result-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapApplyResult or RoadmapApplyResultList",
+  "description": "Output of apply.py: what each planned operation did, plus the audit record that attributes it. Every field is identity, a code from a closed vocabulary, or a digest. There is deliberately no free-text field an issue title, body or comment could be written into.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/roadmapApplyResult"
+    },
+    {
+      "$ref": "#/$defs/roadmapApplyResultList"
+    }
+  ],
+  "$defs": {
+    "opId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "operationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opId",
+        "type",
+        "targets",
+        "outcome"
+      ],
+      "properties": {
+        "opId": {
+          "$ref": "#/$defs/opId"
+        },
+        "type": {
+          "enum": [
+            "AddSubIssue",
+            "MoveSubIssue",
+            "AddDependency",
+            "RemoveDependency"
+          ]
+        },
+        "targets": {
+          "description": "Every GitHub identity this operation touches, as refs only.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
+        },
+        "outcome": {
+          "enum": [
+            "applied",
+            "alreadySatisfied",
+            "skipped",
+            "failed"
+          ]
+        },
+        "reason": {
+          "description": "A code from a closed vocabulary, never provider text. MoveIncompleteChildOrphaned means the remove half of a move succeeded and the add half did not; the orphaned child is named in targets and the next replay finishes the move.",
+          "enum": [
+            "NotExecuted",
+            "PreconditionChanged",
+            "WriteFailed",
+            "MoveIncompleteChildOrphaned"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "description": "A skipped or failed operation must say why.",
+          "if": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "skipped",
+                  "failed"
+                ]
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "required": [
+              "reason"
+            ]
+          }
+        },
+        {
+          "description": "An operation that did what the plan asked carries no reason (false schema).",
+          "if": {
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "applied",
+                  "alreadySatisfied"
+                ]
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason": false
+            }
+          }
+        }
+      ]
+    },
+    "audit": {
+      "description": "Who wrote what, under which reviewed bytes. Targets are refs, so the record is attributable without copying any issue prose into it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor",
+        "proposal",
+        "manifest",
+        "planId",
+        "targets"
+      ],
+      "properties": {
+        "actor": {
+          "description": "The identity the writes were made as, e.g. a GitHub App slug. Constrained to a single token: an actor field is not a place for a sentence.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._@/+-]{0,62}(\\[bot\\])?$"
+        },
+        "proposal": {
+          "description": "The RoadmapProposal this apply was authorized by, or explicit null when the run was operator-initiated. Null is recorded rather than omitted: absent and unattributed must not look alike.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^https://[^\\s]{1,2048}$"
+                }
+              }
+            }
+          ]
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "gitRevision"
+          ],
+          "properties": {
+            "path": {
+              "description": "Repository-relative path of the manifest that authorized these writes.",
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "description": "SHA-256 of the exact manifest bytes that were read, validated and applied.",
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "gitRevision": {
+              "description": "Full 40-character commit the manifest bytes were read at. Abbreviated revisions are rejected: audit must name one commit unambiguously.",
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            }
+          }
+        },
+        "planId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "targets": {
+          "description": "Every GitHub identity the run touched, deduplicated and ordered.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
+        }
+      }
+    },
+    "roadmapApplyResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "epic",
+        "mode",
+        "summary",
+        "operations",
+        "audit"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapApplyResult"
+        },
+        "epic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "manifest"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issue": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "mode": {
+          "description": "plan-only is a run without --execute: every endpoint was re-read and nothing was written.",
+          "enum": [
+            "plan-only",
+            "execute"
+          ]
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "applied",
+            "alreadySatisfied",
+            "skipped",
+            "failed"
+          ],
+          "properties": {
+            "applied": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "alreadySatisfied": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "skipped": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operationResult"
+          }
+        },
+        "audit": {
+          "$ref": "#/$defs/audit"
+        }
+      },
+      "allOf": [
+        {
+          "description": "A plan-only run writes nothing, so it can report nothing applied and nothing failed.",
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "plan-only"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "summary": {
+                "properties": {
+                  "applied": {
+                    "maximum": 0
+                  },
+                  "failed": {
+                    "maximum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "roadmapApplyResultList": {
+      "description": "Emitted when more than one manifest is applied in one run. Items are ordered by manifest path.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapApplyResultList"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/roadmapApplyResult"
+          }
+        }
+      }
+    }
+  }
+}

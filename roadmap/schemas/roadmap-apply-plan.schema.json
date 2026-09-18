@@ -1,0 +1,564 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/roadmap-apply-plan-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapApplyPlan or RoadmapApplyPlanList",
+  "description": "Output of plan.py: the complete set of GitHub mutations a reviewed EpicDefinition authorizes. A plan is a pure function of the manifest bytes and the observed snapshot bytes; it carries identity and native relations only, never issue prose.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/roadmapApplyPlan"
+    },
+    {
+      "$ref": "#/$defs/roadmapApplyPlanList"
+    }
+  ],
+  "$defs": {
+    "owner": {
+      "description": "Local work-item id, or 'epic' for the manifest root binding.",
+      "type": "string",
+      "minLength": 1
+    },
+    "opId": {
+      "description": "sha256(manifest sha256 + operation type + canonical endpoints), truncated. Stable across runs, so it doubles as an idempotency key.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "operation": {
+      "description": "One GitHub mutation. Each type fixes its own endpoints and its own precondition, so an operation cannot claim evidence another type would need.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opId",
+            "type",
+            "owner",
+            "child",
+            "parent",
+            "precondition"
+          ],
+          "properties": {
+            "opId": {
+              "$ref": "#/$defs/opId"
+            },
+            "type": {
+              "const": "AddSubIssue"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "parent": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "precondition": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "child"
+              ],
+              "properties": {
+                "type": {
+                  "const": "ParentAbsent"
+                },
+                "child": {
+                  "$ref": "#/$defs/issueRef"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opId",
+            "type",
+            "owner",
+            "child",
+            "parent",
+            "observedParent",
+            "precondition"
+          ],
+          "properties": {
+            "opId": {
+              "$ref": "#/$defs/opId"
+            },
+            "type": {
+              "const": "MoveSubIssue"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "parent": {
+              "description": "The parent the manifest authors.",
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParent": {
+              "description": "The parent the child currently sits under; the remove half of the move targets it.",
+              "$ref": "#/$defs/issueRef"
+            },
+            "precondition": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "child",
+                "parent"
+              ],
+              "properties": {
+                "type": {
+                  "const": "ParentIs"
+                },
+                "child": {
+                  "$ref": "#/$defs/issueRef"
+                },
+                "parent": {
+                  "$ref": "#/$defs/issueRef"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opId",
+            "type",
+            "owner",
+            "blocked",
+            "blocker",
+            "precondition"
+          ],
+          "properties": {
+            "opId": {
+              "$ref": "#/$defs/opId"
+            },
+            "type": {
+              "const": "AddDependency"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "blocked": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "blocker": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "precondition": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "blocked",
+                "blocker"
+              ],
+              "properties": {
+                "type": {
+                  "const": "DependencyAbsent"
+                },
+                "blocked": {
+                  "$ref": "#/$defs/issueRef"
+                },
+                "blocker": {
+                  "$ref": "#/$defs/issueRef"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "opId",
+            "type",
+            "owner",
+            "blocked",
+            "blocker",
+            "precondition"
+          ],
+          "properties": {
+            "opId": {
+              "$ref": "#/$defs/opId"
+            },
+            "type": {
+              "const": "RemoveDependency"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "blocked": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "blocker": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "precondition": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "blocked",
+                "blocker"
+              ],
+              "properties": {
+                "type": {
+                  "const": "DependencyPresent"
+                },
+                "blocked": {
+                  "$ref": "#/$defs/issueRef"
+                },
+                "blocker": {
+                  "$ref": "#/$defs/issueRef"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "note": {
+      "description": "An informational diff entry. Recorded so the plan is a complete account of the diff, never actioned.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "owner"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingUnbound"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "owner",
+            "child",
+            "observedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyUnexpectedChild"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        }
+      ]
+    },
+    "refusal": {
+      "description": "A binding whose authored identity no longer names the object it is supposed to name. One refusal empties the whole plan: only a human editing the manifest can settle it.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "owner",
+            "requested"
+          ],
+          "properties": {
+            "reason": {
+              "const": "BindingIssueNotFound"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "owner",
+            "requested",
+            "resolved"
+          ],
+          "properties": {
+            "reason": {
+              "const": "BindingRedirected"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "resolved": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "owner",
+            "requested",
+            "resolved"
+          ],
+          "properties": {
+            "reason": {
+              "const": "BindingAmbiguous"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "resolved": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        }
+      ]
+    },
+    "roadmapApplyPlan": {
+      "description": "Every mutation one EpicDefinition authorizes against one observed snapshot, and nothing else.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "epic",
+        "source",
+        "planId",
+        "summary",
+        "operations",
+        "notes",
+        "refusals"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapApplyPlan"
+        },
+        "epic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "manifest"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issue": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "description": "Repository-relative path. Never absolute: an absolute path would make identical bytes plan differently on two machines.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "description": "SHA-256 of the exact manifest bytes that authorized these operations.",
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "planId": {
+          "description": "sha256(manifest sha256 + the ordered opIds). Identical manifest and snapshot bytes give an identical plan id.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "operations",
+            "notes",
+            "refusals"
+          ],
+          "properties": {
+            "operations": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "notes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "refusals": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operation"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/note"
+          }
+        },
+        "refusals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/refusal"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "description": "A refused plan is empty. Refusing some bindings and applying the rest would write against a graph whose identities are not settled.",
+          "if": {
+            "properties": {
+              "refusals": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "refusals"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operations": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "roadmapApplyPlanList": {
+      "description": "Emitted when more than one manifest is planned in one run. Items are ordered by manifest path, so the envelope is as deterministic as each plan inside it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapApplyPlanList"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/roadmapApplyPlan"
+          }
+        }
+      }
+    },
+    "source": {
+      "description": "Copied verbatim from the snapshot the plan was computed against, with the same provenance variants the snapshot schema enforces.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
+          "properties": {
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  }
+}

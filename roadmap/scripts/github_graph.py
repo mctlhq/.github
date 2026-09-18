@@ -305,41 +305,47 @@ class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
     origin rule as the original URL before the credential goes with it.
     """
 
-    def __init__(self, allowed: Any) -> None:
+    def __init__(self, allowed: Any, error: type[Exception] = ObservationError) -> None:
         super().__init__()
         self._allowed = allowed
+        # The refusal type belongs to the client that built the handler: a read
+        # refuses with ObservationError, a write with MutationRefused. The rule
+        # is shared; how a caller is told about it is not.
+        self._error = error
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if not self._allowed(newurl):
-            raise ObservationError(
+            raise self._error(
                 f"refusing to follow a redirect off the API origin: {newurl}"
             )
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-class LiveGraphSource:
-    """GET-only GitHub REST reader.
+class OriginBoundClient:
+    """Where a bearer token may travel, for any client that carries one.
 
-    GraphQL is deliberately unused: the safety contract of this slice is that
-    every call is a GET with no body, which is checkable by construction.
+    The rules are the same whether the request reads or writes -- HTTPS only, no
+    userinfo/query/fragment in the base, every URL and every redirect Location
+    held to the configured origin -- so they live in one place and
+    `github_apply.py` inherits them rather than re-deriving them. Deriving them
+    twice is how the two halves drift apart, and the half that drifts is the one
+    that leaks the credential.
+
+    This base deliberately contains no request primitive at all. `github_graph`
+    keeps its own GET-only funnel and `github_apply` its own allow-listed write
+    funnel; sharing the origin policy does not put a mutation into this module.
     """
 
-    def __init__(
-        self,
-        token: str,
-        api_base: str = DEFAULT_API_BASE,
-        opener: Any | None = None,
-        timeout: float = REQUEST_TIMEOUT_SECONDS,
-    ) -> None:
-        if not token:
-            raise ObservationError("live mode requires a GitHub token")
-        self._token = token
+    # Overridden by the write client. Subclasses raise their own refusal type.
+    origin_error: type[Exception] = ObservationError
+
+    def _bind_origin(self, api_base: str) -> None:
         self._api_base = api_base.rstrip("/")
         self._origin = urllib.parse.urlsplit(self._api_base)
         # The token is sent with every request, so the base must be HTTPS. There
         # is deliberately no insecure opt-in: nothing this tool does needs one.
         if self._origin.scheme != "https" or not self._origin.hostname:
-            raise ObservationError(
+            raise self.origin_error(
                 f"api_base must be an https URL, got {api_base!r}: "
                 "the token is sent with every request"
             )
@@ -353,13 +359,45 @@ class LiveGraphSource:
             or self._origin.query
             or self._origin.fragment
         ):
-            raise ObservationError(
+            raise self.origin_error(
                 "api_base must not contain userinfo, a query or a fragment: "
                 f"{api_base!r}"
             )
-        self._opener = opener or urllib.request.build_opener(
-            _SameOriginRedirectHandler(self._is_allowed)
+
+    def _is_allowed(self, url: str) -> bool:
+        target = urllib.parse.urlsplit(url)
+        if (target.scheme, target.netloc) != (self._origin.scheme, self._origin.netloc):
+            return False
+        prefix = self._origin.path.rstrip("/")
+        return not prefix or target.path == prefix or target.path.startswith(prefix + "/")
+
+    def _build_opener(self, opener: Any | None) -> Any:
+        return opener or urllib.request.build_opener(
+            _SameOriginRedirectHandler(self._is_allowed, self.origin_error)
         )
+
+
+class LiveGraphSource(OriginBoundClient):
+    """GET-only GitHub REST reader.
+
+    GraphQL is deliberately unused: the safety contract of this slice is that
+    every call is a GET with no body, which is checkable by construction.
+    """
+
+    origin_error = ObservationError
+
+    def __init__(
+        self,
+        token: str,
+        api_base: str = DEFAULT_API_BASE,
+        opener: Any | None = None,
+        timeout: float = REQUEST_TIMEOUT_SECONDS,
+    ) -> None:
+        if not token:
+            raise ObservationError("live mode requires a GitHub token")
+        self._token = token
+        self._bind_origin(api_base)
+        self._opener = self._build_opener(opener)
         self._timeout = timeout
         # One issue is observed once per process, however many manifests or
         # capture passes ask for it. Re-reading would also let a graph change
@@ -400,13 +438,6 @@ class LiveGraphSource:
         request.add_header("X-GitHub-Api-Version", GITHUB_API_VERSION)
         request.add_header("Authorization", f"Bearer {self._token}")
         return self._opener.open(request, timeout=self._timeout)
-
-    def _is_allowed(self, url: str) -> bool:
-        target = urllib.parse.urlsplit(url)
-        if (target.scheme, target.netloc) != (self._origin.scheme, self._origin.netloc):
-            return False
-        prefix = self._origin.path.rstrip("/")
-        return not prefix or target.path == prefix or target.path.startswith(prefix + "/")
 
     def _get(self, url: str) -> tuple[int, Any, dict[str, str]]:
         try:
