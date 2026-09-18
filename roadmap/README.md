@@ -622,9 +622,16 @@ the last two — plus one audit block:
     "gitRevision": "<40 hex>"
   },
   "planId": "<64 hex>",
-  "targets": [{"repository": "mctlhq/mctl-agents", "number": 333}]
+  "targets": [{"repository": "mctlhq/mctl-agents", "number": 333}],
+  "manifestsSelected": 1                     // how many the run selected
 }
 ```
+
+`manifestsSelected` is what makes a truncated run legible from the artifact alone: a
+whole-corpus run that applies the first manifest and then stops emits exactly one bare
+`RoadmapApplyResult`, otherwise indistinguishable from a clean single-manifest run,
+and the exit code that would have said otherwise is not archived beside the file.
+Comparing it against the number of results present answers the question directly.
 
 `roadmap-apply-result.schema.json` is `additionalProperties: false` throughout, types
 every target as `issueRef`, and restricts `reason` to a closed vocabulary, so there is
