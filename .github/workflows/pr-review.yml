@@ -33,6 +33,12 @@ jobs:
       # Workflow definitions are the sensitive surface here: this file and the
       # reusable it calls gate merges in every other repository.
       sensitive-paths: '^\.github/workflows/'
+      # The reusable's default list omits `mctl-agents`, so a DevLoop
+      # implementer PR here hard-fails with "Workflow initiated by non-human
+      # actor" before the model is ever reached — the bot then reports it as
+      # "failed on both tokens", which reads like exhausted quota. Every other
+      # repository passes this input explicitly; this caller was the outlier.
+      allowed-bots: "mctl-claude-remote,github-actions,dependabot,mctl-agents"
       conventions: |
         This repository holds org-wide GitHub configuration: the shared
         reusable review workflow and the organisation profile. There is no
