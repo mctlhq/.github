@@ -164,14 +164,35 @@ def build_request(
     raise MutationRefused(f"unknown mutation: {kind!r}")
 
 
-def check_request(request: MutationRequest, owned: frozenset[IssueKey]) -> None:
+def check_request(
+    request: MutationRequest,
+    owned: frozenset[IssueKey],
+    authored: frozenset[IssueKey] | None = None,
+) -> None:
     """The guard. Every funnel calls it, and it raises before transmission.
 
     Deliberately re-checked at the point of transmission rather than trusted
     from the point of construction: a caller that assembled a `MutationRequest`
     by hand is exactly the caller this has to stop.
+
+    The two ends of a request are held to different standards, because they are
+    different claims. `request.target` is the issue whose relations are being
+    edited -- the repository the call is made against -- so it must be an
+    identity the manifest itself owns. `request.related` is only named in the
+    body (or, for one endpoint, the trailing id) of a call made elsewhere, so it
+    may come from the wider authored set, which includes `externalDependsOn`
+    targets. "We depend on their issue" is a statement the manifest is allowed
+    to make; "we may edit their issue's children" is not, and collapsing both
+    into one set turned the former into the latter for `MoveSubIssue`, whose
+    `observedParent` comes off the observed graph rather than the manifest.
+
+    `authored` defaults to `owned`, i.e. to the strictest reading, so a caller
+    that knows nothing of the split gets the narrow boundary rather than the
+    wide one.
     """
 
+    if authored is None:
+        authored = owned
     if request.method == "GET":
         raise MutationRefused(
             f"GET {request.path}: reads belong to github_graph, not to this client"
@@ -180,11 +201,15 @@ def check_request(request: MutationRequest, owned: frozenset[IssueKey]) -> None:
         raise MutationRefused(
             f"{request.method} {request.template}: outside the write allow-list"
         )
-    foreign = [key for key in (request.target, request.related) if key not in owned]
-    if foreign:
-        rendered = ", ".join(_label(key) for key in foreign)
+    if request.target not in owned:
         raise MutationRefused(
-            f"{request.kind} touches an identity outside the owned set: {rendered}"
+            f"{request.kind} writes against an identity outside the owned set: "
+            f"{_label(request.target)}"
+        )
+    if request.related not in authored:
+        raise MutationRefused(
+            f"{request.kind} names an identity outside the authored set: "
+            f"{_label(request.related)}"
         )
 
 
@@ -195,8 +220,18 @@ class Mutator:
     (`_issue_id`). They do not get to provide the guard.
     """
 
-    def __init__(self, owned: Iterable[IssueKey]) -> None:
+    def __init__(
+        self,
+        owned: Iterable[IssueKey],
+        authored: Iterable[IssueKey] | None = None,
+    ) -> None:
         self._owned = frozenset(owned)
+        # See `check_request`: the target of a write must be owned, the related
+        # end need only be authored. Defaulting to `owned` keeps the narrow
+        # boundary for any caller that does not know about the split.
+        self._authored = self._owned if authored is None else frozenset(authored)
+        if not self._owned <= self._authored:
+            raise MutationRefused("the owned set must be part of the authored set")
         # Every request that passed the guard, in order. Tests assert on this to
         # prove a refused or skipped operation opened no socket at all.
         self.writes: list[MutationRequest] = []
@@ -204,6 +239,10 @@ class Mutator:
     @property
     def owned(self) -> frozenset[IssueKey]:
         return self._owned
+
+    @property
+    def authored(self) -> frozenset[IssueKey]:
+        return self._authored
 
     # -- vocabulary ------------------------------------------------------
 
@@ -225,14 +264,17 @@ class Mutator:
         # Ownership is checked before the id is resolved: resolving an id for a
         # foreign issue would already be a lookup this client has no business
         # making.
-        foreign = [key for key in (target, related) if key not in self._owned]
-        if foreign:
+        if target not in self._owned:
             raise MutationRefused(
-                f"{kind} touches an identity outside the owned set: "
-                + ", ".join(_label(key) for key in foreign)
+                f"{kind} writes against an identity outside the owned set: "
+                f"{_label(target)}"
+            )
+        if related not in self._authored:
+            raise MutationRefused(
+                f"{kind} names an identity outside the authored set: {_label(related)}"
             )
         request = build_request(kind, target, related, self._issue_id(related))
-        check_request(request, self._owned)
+        check_request(request, self._owned, self._authored)
         self._perform(request)
 
     def _issue_id(self, key: IssueKey) -> int:
@@ -260,8 +302,9 @@ class LiveMutator(Mutator, github_graph.OriginBoundClient):
         opener: Any | None = None,
         timeout: float = REQUEST_TIMEOUT_SECONDS,
         resolve_id: Callable[[IssueKey], int] | None = None,
+        authored: Iterable[IssueKey] | None = None,
     ) -> None:
-        super().__init__(owned)
+        super().__init__(owned, authored)
         if not token:
             raise MutationRefused("live apply requires a GitHub token")
         self._token = token
@@ -296,7 +339,7 @@ class LiveMutator(Mutator, github_graph.OriginBoundClient):
         return f"{self._api_base}{path}"
 
     def _perform(self, request: MutationRequest) -> None:
-        check_request(request, self._owned)
+        check_request(request, self._owned, self._authored)
         url = self._url(request.path)
         if not self._is_allowed(url):
             raise MutationRefused(
@@ -342,8 +385,13 @@ class FakeMutator(Mutator):
     so a run can be reconciled again afterwards and proved to have converged.
     """
 
-    def __init__(self, snapshot: dict[str, Any], owned: Iterable[IssueKey]) -> None:
-        super().__init__(owned)
+    def __init__(
+        self,
+        snapshot: dict[str, Any],
+        owned: Iterable[IssueKey],
+        authored: Iterable[IssueKey] | None = None,
+    ) -> None:
+        super().__init__(owned, authored)
         self._snapshot = snapshot
 
     @property
@@ -379,7 +427,7 @@ class FakeMutator(Mutator):
         return [ref for ref in refs if github_graph._ref_key(ref) != key]
 
     def _perform(self, request: MutationRequest) -> None:
-        check_request(request, self._owned)
+        check_request(request, self._owned, self._authored)
         # Recorded before the graph is touched, exactly like the live client
         # records before it opens the socket: a write that was attempted and
         # failed is still a write that was attempted.

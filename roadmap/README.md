@@ -459,6 +459,17 @@ dropped, so an unexpected relation to an outside issue stops the run instead of
 reaching past what was reviewed. Targets are a subset of the authored identities by
 construction, not by review.
 
+The write client then holds a *narrower* boundary than the plan, because the two ends
+of a write are two different claims. The issue a call is made **against** — the
+repository in its path — must be in `DesiredGraph.owned_keys()`; only the issue named
+in the call's body may come from the wider authored set. "We depend on their issue" is
+something a manifest may say; "we may edit their issue's children" is not. The
+distinction is load-bearing for `MoveSubIssue`, whose `observedParent` comes off the
+observed graph rather than the manifest: an owned child observed under an
+`externalDependsOn` issue plans a legitimate move back under the epic root, and the
+remove half of that move would otherwise be a `DELETE` against a third party's
+repository. It is refused at the mutator instead.
+
 ### Preconditions and idempotency
 
 Each operation records the state it expects, in the vocabulary of `ObservedGraph`:
@@ -573,8 +584,17 @@ Guards, in order:
    force-push after approval invalidates it automatically.
 4. The owned-target assertion is re-run immediately before each write, against the
    operation actually about to be transmitted.
-5. `--max-operations` (default 25) bounds the blast radius of one run, refusing
+5. `--max-operations` (default 25) bounds the blast radius of the **run**, not of each
+   manifest: every selected manifest is planned first and the operation counts are
+   summed, so the whole-corpus invocation is capped at 25 writes in total. It refuses
    rather than truncating silently.
+6. In live mode, `--issue-ids` must resolve an id for every operation before the first
+   write. An incomplete map is a guard that fires at the start, not a `MutationRefused`
+   that unwinds the run from operation five of nine.
+
+Guards 1–6 are all evaluated for *every* selected manifest before the first mutation
+is transmitted, so a guard firing on the last manifest of a whole-corpus run cannot
+fire after the first one was already applied.
 
 There is no `--plan` flag and no free-form target argument: the plan is always
 recomputed from validated manifest bytes, so a hand-edited plan file is not an input
@@ -582,8 +602,11 @@ that exists.
 
 ### Audit and evidence
 
-Every run emits a `RoadmapApplyResult` — per operation `opId`, `type`, `targets`,
-`outcome` in `applied | alreadySatisfied | skipped | failed` and a `reason` code for
+Every run emits a `RoadmapApplyResult`, including a run that stops early: if a write
+lands and a later operation then fails or is refused, the accumulated result is still
+serialized before the non-zero exit code is returned. An unrecorded write is the one
+outcome this tool may not produce. Per operation the record carries `opId`, `type`,
+`targets`, `outcome` in `applied | alreadySatisfied | skipped | failed` and a `reason` code for
 the last two — plus one audit block:
 
 ```jsonc

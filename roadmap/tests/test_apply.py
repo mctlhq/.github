@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import shutil
@@ -36,6 +37,7 @@ TELEGRAM = "mctlhq/mctl-telegram#571"
 PORTAL = "mctlhq/mctl-portal#124"
 DOCS = "mctlhq/mctl-docs#106"
 FOREIGN = "mctlhq/mctl-web#5"
+EXTERNAL = "mctlhq/mctl-telegram#443"
 
 REVISION = "0123456789abcdef0123456789abcdef01234567"
 
@@ -56,9 +58,13 @@ class ApplyTestBase(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.document = yaml.safe_load(PILOT.read_text(encoding="utf-8"))
         cls.converged = json.loads(CONVERGED.read_text(encoding="utf-8"))
-        cls.authored = frozenset(
-            reconcile.desired_graph(cls.document).authored_keys()
-        )
+        desired = reconcile.desired_graph(cls.document)
+        # Two sets, deliberately. `owned` is what the manifest may be written
+        # against; `authored` additionally holds the `externalDependsOn` ref,
+        # which may be the related end of a write but never its target.
+        cls.owned = frozenset(desired.owned_keys())
+        cls.authored = frozenset(desired.authored_keys())
+        assert cls.owned < cls.authored, "the pilot must name an external ref"
         cls.result_schema = apply_module.load_schema()
 
     def _plan(self, snapshot: dict) -> dict:
@@ -75,7 +81,7 @@ class ApplyTestBase(unittest.TestCase):
         plan_document: dict | None = None,
         max_operations: int = apply_module.DEFAULT_MAX_OPERATIONS,
     ) -> tuple[list[dict], github_apply.FakeMutator]:
-        mutator = github_apply.FakeMutator(snapshot, self.authored)
+        mutator = github_apply.FakeMutator(snapshot, self.owned, self.authored)
         operations = apply_module.apply_plan(
             plan_document if plan_document is not None else self._plan(snapshot),
             source_factory=lambda: github_graph.FixtureGraphSource(snapshot),
@@ -289,6 +295,77 @@ class ApplyTest(ApplyTestBase):
         with self.assertRaises(plan_module.PlanRefused):
             self._apply(snapshot, plan_document=document)
         self.assertEqual(before, snapshot)
+
+    def test_a_move_out_of_an_external_parent_is_refused(self) -> None:
+        """`externalDependsOn` is not write authority over that issue.
+
+        An owned child observed under an issue the manifest only *depends on*
+        plans a legitimate `MoveSubIssue` back under the epic root -- and the
+        remove half of that move is a DELETE against the foreign repository.
+        The plan is authored (the external ref is in `authored_keys()`), so the
+        only thing standing between it and the wire is the mutator's narrower
+        target boundary.
+        """
+
+        snapshot = mutations.repoint_parent(self.converged, TELEGRAM, EXTERNAL)
+        document = self._plan(snapshot)
+        self.assertEqual(["MoveSubIssue"], [op["type"] for op in document["operations"]])
+        self.assertEqual(
+            mutations.ref(EXTERNAL), document["operations"][0]["observedParent"]
+        )
+
+        before = copy.deepcopy(snapshot)
+        with self.assertRaises(github_apply.MutationRefused) as refused:
+            self._apply(snapshot, plan_document=document)
+        self.assertIn("outside the owned set", str(refused.exception))
+        self.assertIn("mctl-telegram#443", str(refused.exception))
+        self.assertEqual(before, snapshot)
+
+    def test_an_external_blocker_is_still_a_legitimate_related_end(self) -> None:
+        """The other half of the split: the wide set still buys what it should."""
+
+        snapshot = mutations.drop_dependency(self.converged, TELEGRAM, EXTERNAL)
+        operations, mutator = self._apply(snapshot)
+        self.assertEqual(["AddDependency"], [op["type"] for op in operations])
+        self.assertEqual([apply_module.APPLIED], [op["outcome"] for op in operations])
+        self.assertEqual(1, len(mutator.writes))
+        self.assertEqual(("mctlhq/mctl-telegram", 443), mutator.writes[0].related)
+
+    def test_missing_issue_ids_are_refused_before_the_first_write(self) -> None:
+        """The id map is a guard, not a mid-run surprise.
+
+        `_issue_id_resolver` raises `MutationRefused` when an id is absent, and
+        `_write` only catches `MutationFailed`, so an incomplete map used to
+        unwind the run from whichever operation first needed a missing id --
+        after the earlier ones had already been transmitted.
+        """
+
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        snapshot = mutations.drop_dependency(snapshot, DOCS, CORE)
+        document = self._plan(snapshot)
+        self.assertEqual(2, len(document["operations"]))
+        prepared = [
+            apply_module._Prepared(
+                path=PILOT,
+                document=document,
+                mutator=github_apply.FakeMutator(snapshot, self.owned, self.authored),
+                source_factory=lambda: github_graph.FixtureGraphSource(snapshot),
+                owned=self.owned,
+                authored=self.authored,
+                git_revision=REVISION,
+            )
+        ]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "ids.json"
+            # The API issue has an id; the core issue, which the AddDependency
+            # names as its blocker, does not.
+            path.write_text(json.dumps({API: 11}), encoding="utf-8")
+            resolve = apply_module._issue_id_resolver(str(path))
+
+        with self.assertRaises(apply_module.ApplyRefused) as refused:
+            apply_module._check_issue_ids(prepared, resolve)
+        self.assertIn("--issue-ids is missing an id for", str(refused.exception))
+        self.assertIn(CORE, str(refused.exception))
 
     # -- T10 -------------------------------------------------------------
 
@@ -555,8 +632,8 @@ class ApplyCliTest(ApplyTestBase):
         created: list[github_apply.FakeMutator] = []
         original = github_apply.FakeMutator.__init__
 
-        def _init(mutator, snapshot, owned):
-            original(mutator, snapshot, owned)
+        def _init(mutator, snapshot, owned, authored=None):
+            original(mutator, snapshot, owned, authored)
             created.append(mutator)
 
         github_apply.FakeMutator.__init__ = _init
@@ -708,6 +785,226 @@ class ApplyCliTest(ApplyTestBase):
                 ["--corpus", str(ROADMAP / "epics"), "--actor", "roadmap-tests"]
             )
         self.assertEqual(apply_module.EXIT_ERROR, code)
+
+
+class ApplyMultiManifestTest(ApplyTestBase):
+    """A run over more than one manifest is one run, not N runs in a trench coat.
+
+    The whole-corpus invocation -- `apply.py --corpus roadmap/epics` with no
+    positional argument -- is the default shape, so every guard has to mean the
+    same thing there as it does for a single manifest: refuse the *run*, and
+    refuse it before the first write.
+    """
+
+    OFFSET = 1000
+
+    def _sibling_document(self) -> dict:
+        """The pilot manifest again, on a disjoint set of issue numbers."""
+
+        document = copy.deepcopy(self.document)
+        # Named to sort *after* the pilot: the corpus is processed in path
+        # order, and the test that asserts a partial audit record needs the
+        # failing manifest to be the second one.
+        document["metadata"]["name"] = "zz-sibling"
+        document["spec"]["github"]["issue"]["number"] += self.OFFSET
+        for item in document["spec"]["workItems"]:
+            if "issue" in item:
+                item["issue"]["number"] += self.OFFSET
+            for external in item.get("externalDependsOn", []):
+                external["number"] += self.OFFSET
+        return document
+
+    def _shift(self, snapshot: dict) -> dict:
+        """The same graph, renumbered to match the sibling manifest."""
+
+        result = copy.deepcopy(snapshot)
+        for observation in result["issues"]:
+            for ref in (
+                observation.get("requested"),
+                observation.get("resolved"),
+                observation.get("parent"),
+            ):
+                if ref:
+                    ref["number"] += self.OFFSET
+            for ref in observation.get("subIssues", []) + observation.get(
+                "blockedBy", []
+            ):
+                ref["number"] += self.OFFSET
+        return result
+
+    def _snapshot(self, first: dict, second: dict) -> dict:
+        """One snapshot covering both manifests, as a live read would be."""
+
+        merged = copy.deepcopy(first)
+        merged["issues"] = first["issues"] + self._shift(second)["issues"]
+        self.assertEqual([], github_graph.snapshot_errors(merged))
+        return merged
+
+    def _checkout(self, directory: Path) -> Path:
+        epics = directory / "roadmap" / "epics"
+        epics.mkdir(parents=True)
+        (epics / "human-input.yaml").write_text(
+            PILOT.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        (epics / "zz-sibling.yaml").write_text(
+            yaml.safe_dump(self._sibling_document(), sort_keys=False),
+            encoding="utf-8",
+        )
+        for args in (
+            ["init", "-q", "-b", "main"],
+            ["add", "-A"],
+            [
+                "-c",
+                "user.email=roadmap@example.invalid",
+                "-c",
+                "user.name=roadmap",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-qm",
+                "seed",
+            ],
+        ):
+            subprocess.run(
+                ["git", "-C", str(directory), *args], check=True, capture_output=True
+            )
+        return epics
+
+    @contextmanager
+    def _recorded(self, fail_above: int | None = None):
+        """Capture the CLI's mutators, optionally breaking the sibling's writes.
+
+        `fail_above` makes any write whose target issue number is above the
+        threshold raise `MutationRefused` -- i.e. the sibling manifest fails
+        while the pilot has already been applied, which is the shape that used
+        to exit 3 with no audit record at all.
+        """
+
+        created: list[github_apply.FakeMutator] = []
+        original_init = github_apply.FakeMutator.__init__
+        original_perform = github_apply.FakeMutator._perform
+
+        def _init(mutator, snapshot, owned, authored=None):
+            original_init(mutator, snapshot, owned, authored)
+            created.append(mutator)
+
+        def _perform(mutator, request):
+            if fail_above is not None and request.target[1] > fail_above:
+                raise github_apply.MutationRefused("the sibling manifest is cursed")
+            original_perform(mutator, request)
+
+        github_apply.FakeMutator.__init__ = _init
+        github_apply.FakeMutator._perform = _perform
+        try:
+            yield created
+        finally:
+            github_apply.FakeMutator.__init__ = original_init
+            github_apply.FakeMutator._perform = original_perform
+
+    def _run(
+        self,
+        first: dict,
+        second: dict,
+        extra: list[str],
+        *,
+        fail_above: int | None = None,
+    ) -> tuple[int, str, list]:
+        with tempfile.TemporaryDirectory() as raw_repo, tempfile.TemporaryDirectory() as raw_work:
+            epics = self._checkout(Path(raw_repo))
+            path = Path(raw_work) / "snapshot.json"
+            path.write_text(json.dumps(self._snapshot(first, second)), encoding="utf-8")
+
+            out, err = StringIO(), StringIO()
+            with self._recorded(fail_above) as mutators:
+                with redirect_stdout(out), redirect_stderr(err):
+                    code = apply_module.main(
+                        [
+                            "--corpus",
+                            str(epics),
+                            "--snapshot",
+                            str(path),
+                            "--actor",
+                            "roadmap-tests",
+                        ]
+                        + extra
+                    )
+            writes = [write for mutator in mutators for write in mutator.writes]
+            return code, out.getvalue(), writes
+
+    def test_both_manifests_converge_in_one_run(self) -> None:
+        code, rendered, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            mutations.drop_parent_edge(self.converged, DOCS),
+            ["--execute"],
+        )
+        self.assertEqual(apply_module.EXIT_OK, code)
+        self.assertEqual(2, len(writes))
+        document = json.loads(rendered)
+        self.assertEqual("RoadmapApplyResultList", document["kind"])
+        self.assertEqual(
+            [1, 1], [item["summary"]["applied"] for item in document["items"]]
+        )
+
+    def test_the_operation_cap_is_summed_across_the_run(self) -> None:
+        """One operation each, two manifests, a cap of one: the run is refused.
+
+        Per manifest both plans fit, which is exactly why this used to pass a
+        cap of 25 while transmitting up to 25 x N writes.
+        """
+
+        code, rendered, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            mutations.drop_parent_edge(self.converged, DOCS),
+            ["--execute", "--max-operations", "1"],
+        )
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+        self.assertEqual("", rendered)
+
+    def test_a_guard_on_the_second_manifest_fires_before_the_first_writes(self) -> None:
+        """Approval is per manifest digest; the refusal is per run.
+
+        `--approved-sha256` can only ever match one of the two manifests, so the
+        other refuses. The point of the test is the write count: the guard is
+        evaluated for every selected manifest before the first mutation, so the
+        manifest that *was* approved is not applied on the way to the refusal.
+        """
+
+        digest = hashlib.sha256(PILOT.read_bytes()).hexdigest()
+        code, rendered, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            mutations.drop_parent_edge(self.converged, DOCS),
+            ["--execute", "--approved-sha256", digest],
+        )
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        self.assertEqual([], writes)
+        self.assertEqual("", rendered)
+
+    def test_a_failure_after_a_write_still_emits_the_audit_record(self) -> None:
+        """The one outcome this tool may not produce: an unrecorded write.
+
+        Guards are hoisted, but transmission itself can still fail from the
+        second manifest onwards. What must not happen is exit 3 with no output
+        while a real mutation is sitting on GitHub -- the operator's only
+        evidence is the `RoadmapApplyResult`.
+        """
+
+        code, rendered, writes = self._run(
+            mutations.drop_parent_edge(self.converged, API),
+            mutations.drop_parent_edge(self.converged, DOCS),
+            ["--execute"],
+            fail_above=self.OFFSET,
+        )
+        self.assertEqual(apply_module.EXIT_REFUSED, code)
+        # The pilot's write landed; the sibling's was refused mid-flight.
+        self.assertEqual(1, len(writes))
+
+        document = json.loads(rendered)
+        self.assertEqual([], apply_module.schema_errors(document, self.result_schema))
+        self.assertEqual("human-input", document["epic"]["name"])
+        self.assertEqual(1, document["summary"]["applied"])
+        self.assertEqual(40, len(document["audit"]["manifest"]["gitRevision"]))
+
 
 
 if __name__ == "__main__":

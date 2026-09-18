@@ -22,7 +22,15 @@ Guards, in order: `--execute` is required for any write; the manifest's git
 revision must be resolvable, its checkout clean, and its bytes identical to the
 bytes committed at that revision; `--approved-sha256`, when given, must equal
 the digest of those bytes; every operation endpoint must be an authored identity
-of the manifest; and the run must fit inside `--max-operations`.
+of the manifest, and every write target an owned one; the run -- all selected
+manifests together, not each one -- must fit inside `--max-operations`; and a
+live run must already hold an issue id for every operation it plans.
+
+All of that is phase one, and it happens for every selected manifest before the
+first mutation is transmitted. Phase two writes, and appends each manifest's
+`RoadmapApplyResult` as it completes, so a failure part-way through still emits
+a record of what preceded it: a write that landed and was never recorded is the
+one outcome this tool may not produce.
 """
 
 from __future__ import annotations
@@ -323,9 +331,15 @@ def apply_plan(
     mutator: github_apply.Mutator,
     authored: frozenset[IssueKey],
     execute: bool = False,
-    max_operations: int = DEFAULT_MAX_OPERATIONS,
+    max_operations: int | None = DEFAULT_MAX_OPERATIONS,
 ) -> list[dict[str, Any]]:
-    """Run every operation in a plan, in plan order."""
+    """Run every operation in a plan, in plan order.
+
+    `max_operations=None` means the cap was already enforced by the caller. A
+    multi-manifest run has to sum plan sizes before the first write to cap the
+    run rather than each manifest, so `_run` checks it there and passes None
+    here; a direct caller of this function still gets the default cap.
+    """
 
     if document["refusals"]:
         rendered = ", ".join(
@@ -335,7 +349,7 @@ def apply_plan(
         raise ApplyRefused(f"the plan refuses this manifest: {rendered}")
 
     operations = document["operations"]
-    if len(operations) > max_operations:
+    if max_operations is not None and len(operations) > max_operations:
         raise ApplyRefused(
             f"{len(operations)} operations exceeds --max-operations "
             f"({max_operations}); refusing rather than applying part of a plan"
@@ -588,16 +602,17 @@ def main(argv: list[str] | None = None) -> int:
         print("--max-operations may not be negative", file=sys.stderr)
         return EXIT_ERROR
 
+    # `_run` appends into this list as it goes, rather than returning it at the
+    # end, so that a run which raises part-way through still hands back what it
+    # already did. A write that landed on GitHub and was never recorded is the
+    # one outcome this tool may not produce: the audit record is the only
+    # evidence the operator has, and "REFUSED, no output" reads as zero writes.
+    documents: list[tuple[Path, dict[str, Any]]] = []
     try:
-        documents = _run(args)
-    except ApplyRefused as exc:
+        _run(args, documents)
+    except (ApplyRefused, plan_module.PlanRefused, MutationRefused) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
-        return EXIT_REFUSED
-    except plan_module.PlanRefused as exc:
-        print(f"REFUSED: {exc}", file=sys.stderr)
-        return EXIT_REFUSED
-    except MutationRefused as exc:
-        print(f"REFUSED: {exc}", file=sys.stderr)
+        _emit(documents, args)
         return EXIT_REFUSED
     except (
         ApplyError,
@@ -610,8 +625,27 @@ def main(argv: list[str] | None = None) -> int:
         SchemaError,
     ) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        _emit(documents, args)
         return EXIT_ERROR
 
+    if not _emit(documents, args):
+        return EXIT_ERROR
+    return exit_code([document for _, document in documents])
+
+
+def _emit(
+    documents: list[tuple[Path, dict[str, Any]]], args: argparse.Namespace
+) -> bool:
+    """Serialize the result, if there is one. Returns False on an IO failure.
+
+    Called on every path out of `main`, including the refusal and error paths,
+    where it may be emitting a partial record of a run that stopped early. An
+    empty document list is not an error -- a guard that fired before the first
+    manifest was planned genuinely has nothing to report -- so it is silent.
+    """
+
+    if not documents:
+        return True
     rendered = json.dumps(render(documents), indent=2, sort_keys=True)
     try:
         if args.output:
@@ -620,12 +654,155 @@ def main(argv: list[str] | None = None) -> int:
             print(rendered)
     except OSError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
-        return EXIT_ERROR
+        return False
+    return True
 
-    return exit_code([document for _, document in documents])
+
+@dataclass(frozen=True)
+class _Prepared:
+    """One manifest, planned and guarded, with nothing written yet."""
+
+    path: Path
+    document: dict[str, Any]
+    mutator: github_apply.Mutator
+    source_factory: Any
+    owned: frozenset[IssueKey]
+    authored: frozenset[IssueKey]
+    git_revision: str
 
 
-def _run(args: argparse.Namespace) -> list[tuple[Path, dict[str, Any]]]:
+def _related_endpoint(operation: dict[str, Any]) -> IssueKey:
+    """The identity a write names by numeric id, rather than in its path.
+
+    Every one of the four permitted writes carries exactly one such end, and it
+    is the only end a live run needs an id for. `MoveSubIssue` decomposes into
+    two writes that both name the child, so one key covers it.
+    """
+
+    if operation["type"] in (plan_module.ADD_SUB_ISSUE, plan_module.MOVE_SUB_ISSUE):
+        return _key(operation["child"])
+    return _key(operation["blocker"])
+
+
+def _prepare(
+    args: argparse.Namespace,
+    path: Path,
+    loaded: Any,
+    plan_schema: dict[str, Any],
+    snapshot: dict[str, Any] | None,
+    token: str,
+    resolve_id: Any,
+) -> _Prepared:
+    """Guard and plan one manifest. Performs no write and opens no write path."""
+
+    # Guard 2: these bytes, at this revision.
+    git = resolve_git_context(path, loaded.sha256)
+    # Guard 3: approval is bound to content, so a force-push after approval
+    # invalidates it automatically.
+    if args.approved_sha256 and args.approved_sha256 != loaded.sha256:
+        raise ApplyRefused(
+            "ApprovalHashMismatch: the approved digest "
+            f"{args.approved_sha256} is not the manifest digest {loaded.sha256}"
+        )
+
+    desired = reconcile.desired_graph(loaded.document)
+    # Two boundaries, not one. `owned` is what may be written *against*;
+    # `authored` additionally holds the issues the manifest only names in
+    # `externalDependsOn`, which may be the related end of a write but never
+    # its target. See `github_apply.check_request`.
+    owned = frozenset(desired.owned_keys())
+    authored = frozenset(desired.authored_keys())
+    if snapshot is not None:
+        mutator: github_apply.Mutator = github_apply.FakeMutator(
+            snapshot, owned, authored
+        )
+
+        # One dict, read and written by the same run, so a re-read after a
+        # write observes the write -- the offline mirror of live behaviour.
+        def source_factory(_snapshot=snapshot) -> Any:
+            return github_graph.FixtureGraphSource(_snapshot)
+    else:
+        mutator = github_apply.LiveMutator(
+            token,
+            owned,
+            api_base=args.api_base,
+            resolve_id=resolve_id,
+            authored=authored,
+        )
+
+        def source_factory(_token=token, _base=args.api_base) -> Any:
+            return github_graph.LiveGraphSource(_token, api_base=_base)
+
+    document = plan_module.plan_manifest(
+        path, loaded, source_factory(), corpus=Path(args.corpus)
+    )
+    errors = plan_module.schema_errors(document, plan_schema)
+    if errors:
+        raise ApplyError(
+            "plan violates roadmap-apply-plan.schema.json: " + "; ".join(errors)
+        )
+    if document["refusals"]:
+        rendered = ", ".join(
+            f"{refusal['reason']} ({refusal['owner']})"
+            for refusal in document["refusals"]
+        )
+        raise ApplyRefused(f"the plan refuses this manifest: {rendered}")
+    for operation in document["operations"]:
+        plan_module.assert_authored(operation, authored)
+
+    return _Prepared(
+        path=path,
+        document=document,
+        mutator=mutator,
+        source_factory=source_factory,
+        owned=owned,
+        authored=authored,
+        git_revision=git.revision,
+    )
+
+
+def _check_issue_ids(prepared: list[_Prepared], resolve_id: Any) -> None:
+    """Every id a live run will need, resolved before the first write.
+
+    The resolver raises mid-write otherwise, and a `MutationRefused` escaping
+    from operation 5 of 9 is precisely the shape that used to leave four real
+    mutations on GitHub with no audit record. Asking for the ids up front turns
+    an incomplete `--issue-ids` file back into a guard.
+    """
+
+    if resolve_id is None:
+        return
+    missing: list[str] = []
+    for item in prepared:
+        for operation in item.document["operations"]:
+            key = _related_endpoint(operation)
+            try:
+                resolve_id(key)
+            except MutationRefused:
+                label = f"{key[0]}#{key[1]}"
+                if label not in missing:
+                    missing.append(label)
+    if missing:
+        raise ApplyRefused(
+            "--issue-ids is missing an id for " + ", ".join(sorted(missing))
+        )
+
+
+def _run(
+    args: argparse.Namespace,
+    documents: list[tuple[Path, dict[str, Any]]],
+) -> None:
+    """Plan everything, guard everything, and only then write anything.
+
+    The two phases are the point. Every guard -- corpus validation, git context,
+    approval digest, plan schema, plan refusals, the authored assertion, the
+    run-wide operation cap and the live id map -- is evaluated for *all*
+    selected manifests before the first mutation is transmitted, so a guard that
+    fires cannot fire after a sibling manifest has already been applied. Results
+    are appended to `documents` as each manifest completes, so a failure inside
+    the write phase still leaves an audit record of what preceded it.
+    """
+
     schema = validate._load_schema(Path(args.schema))
     plan_schema = validate._load_schema(Path(args.plan_schema))
     result_schema = validate._load_schema(Path(args.result_schema))
@@ -650,6 +827,7 @@ def _run(args: argparse.Namespace) -> list[tuple[Path, dict[str, Any]]]:
 
     snapshot: dict[str, Any] | None = None
     token = ""
+    resolve_id = None
     if args.snapshot:
         snapshot = github_graph.load_snapshot(Path(args.snapshot))
     else:
@@ -658,76 +836,61 @@ def _run(args: argparse.Namespace) -> list[tuple[Path, dict[str, Any]]]:
             # Auth, not refusal: nothing about the manifest or the graph was
             # judged here, so this is the same exit 2 the reader gives.
             raise ApplyError("live mode requires a GitHub token")
+        resolve_id = _issue_id_resolver(args.issue_ids)
 
-    documents: list[tuple[Path, dict[str, Any]]] = []
-    for path in selected:
-        loaded = corpus[path]
-        # Guard 2: these bytes, at this revision.
-        git = resolve_git_context(path, loaded.sha256)
-        # Guard 3: approval is bound to content, so a force-push after approval
-        # invalidates it automatically.
-        if args.approved_sha256 and args.approved_sha256 != loaded.sha256:
-            raise ApplyRefused(
-                "ApprovalHashMismatch: the approved digest "
-                f"{args.approved_sha256} is not the manifest digest {loaded.sha256}"
-            )
+    # -- phase 1: plan and guard, no writes ------------------------------
+    prepared = [
+        _prepare(args, path, corpus[path], plan_schema, snapshot, token, resolve_id)
+        for path in selected
+    ]
 
-        authored = frozenset(reconcile.desired_graph(loaded.document).authored_keys())
-        if snapshot is not None:
-            mutator: github_apply.Mutator = github_apply.FakeMutator(snapshot, authored)
-            # One dict, read and written by the same run, so a re-read after a
-            # write observes the write -- the offline mirror of live behaviour.
-            def source_factory(_snapshot=snapshot) -> Any:
-                return github_graph.FixtureGraphSource(_snapshot)
-        else:
-            mutator = github_apply.LiveMutator(
-                token,
-                authored,
-                api_base=args.api_base,
-                resolve_id=_issue_id_resolver(args.issue_ids),
-            )
-
-            def source_factory(_token=token, _base=args.api_base) -> Any:
-                return github_graph.LiveGraphSource(_token, api_base=_base)
-
-        source_adapter = source_factory()
-        document = plan_module.plan_manifest(
-            path, loaded, source_adapter, corpus=Path(args.corpus)
+    # The cap is on the run, not on each manifest: with the whole corpus
+    # selected, a per-manifest cap of 25 is a real ceiling of 25 x N.
+    planned = sum(len(item.document["operations"]) for item in prepared)
+    if planned > args.max_operations:
+        raise ApplyRefused(
+            f"{planned} operations across {len(prepared)} manifest(s) exceeds "
+            f"--max-operations ({args.max_operations}); refusing rather than "
+            "applying part of a run"
         )
-        errors = plan_module.schema_errors(document, plan_schema)
-        if errors:
-            raise ApplyError(
-                "plan violates roadmap-apply-plan.schema.json: " + "; ".join(errors)
-            )
+    if args.execute:
+        _check_issue_ids(prepared, resolve_id)
 
-        operations = apply_plan(
-            document,
-            source_factory=source_factory,
-            mutator=mutator,
-            authored=authored,
-            execute=args.execute,
-            max_operations=args.max_operations,
-        )
-        documents.append(
-            (
-                path,
-                result(
-                    document,
-                    operations,
-                    mode=mode,
-                    actor=args.actor,
-                    git_revision=git.revision,
-                    proposal=proposal,
-                    schema=result_schema,
-                ),
+    # -- phase 2: write --------------------------------------------------
+    try:
+        for item in prepared:
+            operations = apply_plan(
+                item.document,
+                source_factory=item.source_factory,
+                mutator=item.mutator,
+                authored=item.authored,
+                execute=args.execute,
+                # Already enforced run-wide above.
+                max_operations=None,
             )
-        )
-
-    if args.capture and snapshot is not None:
-        Path(args.capture).write_text(
-            json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
-    return documents
+            documents.append(
+                (
+                    item.path,
+                    result(
+                        item.document,
+                        operations,
+                        mode=mode,
+                        actor=args.actor,
+                        git_revision=item.git_revision,
+                        proposal=proposal,
+                        schema=result_schema,
+                    ),
+                )
+            )
+    finally:
+        # The snapshot is mutated in place by every applied write, so it is
+        # worth capturing even from a run that stopped early -- that is when
+        # knowing the post-run state matters most.
+        if args.capture and snapshot is not None:
+            Path(args.capture).write_text(
+                json.dumps(snapshot, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
 
 
 if __name__ == "__main__":
