@@ -321,6 +321,34 @@ class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+class _RefusedRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Refuse every redirect, for a client that writes.
+
+    Following one is safe for a read and unsafe for a write, so the two clients
+    cannot share a handler. urllib rewrites a redirected POST into a GET and
+    drops the body -- RFC 9110 allows exactly that for 301/302/303, and every
+    client does it -- so a 3xx answer to a mutation turns it into a read that
+    comes back 200. `SUCCESS_STATUSES` accepts the 200 and the operation is
+    recorded `applied` although GitHub changed nothing: a false record, which is
+    the one outcome this tool may not produce. It would also be a read issued by
+    the module whose contract is that it holds no read primitives.
+
+    A 3xx on a mutation means the target moved -- a transferred or renamed
+    repository. The plan was computed against the old identity, so the run has
+    to stop and be replanned, not be quietly re-aimed at the new one.
+    """
+
+    def __init__(self, error: type[Exception] = ObservationError) -> None:
+        super().__init__()
+        self._error = error
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise self._error(
+            f"refusing to follow a {code} redirect on a write to {req.full_url}: "
+            f"the target has moved to {newurl} and the plan has to be recomputed"
+        )
+
+
 class OriginBoundClient:
     """Where a bearer token may travel, for any client that carries one.
 
@@ -371,10 +399,15 @@ class OriginBoundClient:
         prefix = self._origin.path.rstrip("/")
         return not prefix or target.path == prefix or target.path.startswith(prefix + "/")
 
-    def _build_opener(self, opener: Any | None) -> Any:
-        return opener or urllib.request.build_opener(
-            _SameOriginRedirectHandler(self._is_allowed, self.origin_error)
-        )
+    def _build_opener(self, opener: Any | None, *, follow_redirects: bool = True) -> Any:
+        if opener:
+            return opener
+        handler: urllib.request.HTTPRedirectHandler
+        if follow_redirects:
+            handler = _SameOriginRedirectHandler(self._is_allowed, self.origin_error)
+        else:
+            handler = _RefusedRedirectHandler(self.origin_error)
+        return urllib.request.build_opener(handler)
 
 
 class LiveGraphSource(OriginBoundClient):

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.request
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -363,9 +364,59 @@ class ApplyTest(ApplyTestBase):
             resolve = apply_module._issue_id_resolver(str(path))
 
         with self.assertRaises(apply_module.ApplyRefused) as refused:
-            apply_module._check_issue_ids(prepared, resolve)
+            apply_module._check_issue_ids(prepared, resolve, live=True)
         self.assertIn("--issue-ids is missing an id for", str(refused.exception))
         self.assertIn(CORE, str(refused.exception))
+
+    def test_a_live_run_with_no_issue_ids_at_all_is_refused_up_front(self) -> None:
+        """An absent map is the same guard failure as an incomplete one.
+
+        `--issue-ids` omitted leaves every operation unresolvable, so the run
+        aborted on the first one with `MutationRefused` out of
+        `LiveMutator._issue_id` -- the mid-run shape the guard exists to
+        prevent, reached by the widest possible input. An offline run is a
+        different case: `FakeMutator` needs no ids and must stay runnable.
+        """
+
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        document = self._plan(snapshot)
+        self.assertEqual(1, len(document["operations"]))
+        prepared = [
+            apply_module._Prepared(
+                path=PILOT,
+                document=document,
+                mutator=github_apply.FakeMutator(snapshot, self.owned, self.authored),
+                source_factory=lambda: github_graph.FixtureGraphSource(snapshot),
+                owned=self.owned,
+                authored=self.authored,
+                git_revision=REVISION,
+            )
+        ]
+        with self.assertRaises(apply_module.ApplyRefused) as refused:
+            apply_module._check_issue_ids(prepared, None, live=True)
+        self.assertIn("--issue-ids", str(refused.exception))
+
+        apply_module._check_issue_ids(prepared, None, live=False)
+
+    def test_a_live_run_with_nothing_to_write_needs_no_issue_ids(self) -> None:
+        """The guard is about operations, not about the flag being present."""
+
+        document = self._plan(self.converged)
+        self.assertEqual([], document["operations"])
+        prepared = [
+            apply_module._Prepared(
+                path=PILOT,
+                document=document,
+                mutator=github_apply.FakeMutator(
+                    self.converged, self.owned, self.authored
+                ),
+                source_factory=lambda: github_graph.FixtureGraphSource(self.converged),
+                owned=self.owned,
+                authored=self.authored,
+                git_revision=REVISION,
+            )
+        ]
+        apply_module._check_issue_ids(prepared, None, live=True)
 
     # -- T10 -------------------------------------------------------------
 
@@ -456,6 +507,48 @@ class ApplyTest(ApplyTestBase):
                     github_apply.LiveMutator(
                         "token", set(), api_base=base, opener=_RecordingOpener()
                     )
+
+    def test_a_write_refuses_to_follow_a_redirect(self) -> None:
+        """urllib would turn a redirected POST into a GET that answers 200."""
+
+        mutator = github_apply.LiveMutator("token", set(), resolve_id=lambda key: 7)
+        handlers = [
+            h for h in mutator._opener.handlers
+            if isinstance(h, urllib.request.HTTPRedirectHandler)
+        ]
+        self.assertEqual(1, len(handlers))
+        self.assertIsInstance(handlers[0], github_graph._RefusedRedirectHandler)
+        self.assertNotIsInstance(handlers[0], github_graph._SameOriginRedirectHandler)
+
+        request = urllib.request.Request(
+            "https://api.github.com/repos/mctlhq/.github/issues/42/sub_issues",
+            data=b'{"sub_issue_id": 7}',
+            method="POST",
+        )
+        # Same origin, and still refused: the read client follows this one, and
+        # following it is what silently downgrades the write to a read.
+        moved = "https://api.github.com/repositories/42/issues/1/sub_issues"
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                with self.assertRaises(github_apply.MutationRefused):
+                    handlers[0].redirect_request(
+                        request, None, code, "Moved", {}, moved
+                    )
+
+    def test_the_read_client_still_follows_a_same_origin_redirect(self) -> None:
+        """The write rule must not be pushed onto the reader: it needs them."""
+
+        source = github_graph.LiveGraphSource("token")
+        handler = next(
+            h for h in source._opener.handlers
+            if isinstance(h, urllib.request.HTTPRedirectHandler)
+        )
+        self.assertIsInstance(handler, github_graph._SameOriginRedirectHandler)
+        same = "https://api.github.com/repositories/42/issues/1"
+        request = urllib.request.Request("https://api.github.com/repos/o/r/issues/1")
+        self.assertEqual(
+            same, handler.redirect_request(request, None, 301, "Moved", {}, same).full_url
+        )
 
     def test_the_allow_list_is_four_relation_endpoints(self) -> None:
         self.assertEqual(4, len(github_apply.ALLOWED))

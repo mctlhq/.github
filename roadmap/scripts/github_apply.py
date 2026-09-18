@@ -309,7 +309,11 @@ class LiveMutator(Mutator, github_graph.OriginBoundClient):
             raise MutationRefused("live apply requires a GitHub token")
         self._token = token
         self._bind_origin(api_base)
-        self._opener = self._build_opener(opener)
+        # Writes refuse redirects outright; see `_RefusedRedirectHandler`. The
+        # read client's same-origin handler is not enough here: it follows a
+        # same-origin 301 from a transferred repository, and urllib turns the
+        # POST into a GET on the way.
+        self._opener = self._build_opener(opener, follow_redirects=False)
         self._timeout = timeout
         self._resolve_id = resolve_id
 

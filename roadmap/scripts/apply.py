@@ -837,16 +837,31 @@ def _prepare(
     )
 
 
-def _check_issue_ids(prepared: list[_Prepared], resolve_id: Any) -> None:
+def _check_issue_ids(prepared: list[_Prepared], resolve_id: Any, live: bool) -> None:
     """Every id a live run will need, resolved before the first write.
 
     The resolver raises mid-write otherwise, and a `MutationRefused` escaping
     from operation 5 of 9 is precisely the shape that used to leave four real
     mutations on GitHub with no audit record. Asking for the ids up front turns
     an incomplete `--issue-ids` file back into a guard.
+
+    No resolver at all is that same failure, only worse: a live `--execute` run
+    with `--issue-ids` omitted has no id for *any* operation, so it aborts on
+    the first one rather than the fifth. The guard is "every id resolves before
+    the first write", and an absent mapping does not satisfy it -- returning
+    early on `resolve_id is None` exempted exactly the run that fails hardest.
+    An offline run is a different case and is not held to it: `FakeMutator`
+    writes to the snapshot in memory and needs no ids.
     """
 
     if resolve_id is None:
+        if live and any(item.document["operations"] for item in prepared):
+            raise ApplyRefused(
+                "a live --execute run needs --issue-ids: the sub-issue and "
+                "dependency endpoints identify the related issue by id, and "
+                "refusing now is the only way to avoid stopping part-way "
+                "through the run"
+            )
         return
     missing: list[str] = []
     for item in prepared:
@@ -930,7 +945,7 @@ def _run(
             "applying part of a run"
         )
     if args.execute:
-        _check_issue_ids(prepared, resolve_id)
+        _check_issue_ids(prepared, resolve_id, live=bool(args.live))
 
     # -- phase 2: write --------------------------------------------------
     # Whether phase 2 came back normally, read by the capture `finally` below

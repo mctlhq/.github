@@ -520,9 +520,16 @@ DELETE /repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by/{dependency
 `MutationRefused` is raised **before transmission** for any (method, path template)
 pair outside that set, for any `GET` (reads belong to `github_graph`), and for any
 request touching an identity outside the owned set the caller supplied. HTTPS,
-userinfo, origin and redirect rules are inherited from
-`github_graph.OriginBoundClient`, so the credential rules of the read and write
-halves cannot drift apart. GraphQL is unused here for the same reason it is unused in
+userinfo and origin rules are inherited from `github_graph.OriginBoundClient`, so the
+credential rules of the read and write halves cannot drift apart. Redirects are the
+one rule the two halves do *not* share: a read follows a same-origin `Location` (a
+transferred issue answers with one), while a write refuses every `3xx` outright.
+Following one would be worse than useless — urllib rewrites a redirected `POST` into
+a `GET` and drops the body, so GitHub answers `200`, the operation is recorded
+`applied` although nothing was mutated, and the module whose contract is that it
+holds no read primitives has just issued a read. A redirect on a write means the
+target moved, so the plan was computed against an identity that no longer holds and
+has to be recomputed. GraphQL is unused here for the same reason it is unused in
 the reader: an allow-list of four REST endpoints is checkable, an open-ended mutation
 document is not.
 
@@ -593,7 +600,10 @@ Guards, in order:
    rather than truncating silently.
 6. In live mode, `--issue-ids` must resolve an id for every operation before the first
    write. An incomplete map is a guard that fires at the start, not a `MutationRefused`
-   that unwinds the run from operation five of nine.
+   that unwinds the run from operation five of nine — and an *absent* map (the flag
+   omitted on a live `--execute` run that has operations to write) is the same guard
+   failure at its widest, so it is refused up front too rather than aborting on the
+   first operation. An offline run is not held to this: `FakeMutator` needs no ids.
 
 Guards 1–6 are all evaluated for *every* selected manifest before the first mutation
 is transmitted, so a guard firing on the last manifest of a whole-corpus run cannot
