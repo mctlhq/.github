@@ -338,8 +338,12 @@ class _RefusedRedirectHandler(urllib.request.HTTPRedirectHandler):
     to stop and be replanned, not be quietly re-aimed at the new one.
     """
 
-    def __init__(self, error: type[Exception] = ObservationError) -> None:
+    def __init__(self, error: type[Exception]) -> None:
         super().__init__()
+        # Required, with no default: a redirect on a write is a refusal by this
+        # class's own argument, and defaulting to `ObservationError` would map
+        # it through `main`'s error tuple to exit 2 rather than the refusal
+        # tuple's exit 3. The one construction site always has `origin_error`.
         self._error = error
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):

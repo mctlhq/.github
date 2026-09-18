@@ -540,8 +540,16 @@ def _issue_id_resolver(path: str | None):
     mapping: dict[IssueKey, int] = {}
     for label, value in raw.items():
         repository, _, number = str(label).partition("#")
-        if not number.isdigit() or not isinstance(value, int):
-            raise ApplyError(f"{path}: {label!r} is not 'owner/repo#number': <id>")
+        # `type(value) is not int`, not `isinstance`: `json.loads` maps `true`
+        # to `True`, `isinstance(True, int)` holds, and `_issue_id`'s own check
+        # holds too -- so a boolean used to be transmitted as if it were an id.
+        # `<= 0` is the same rule `github_apply._issue_id` applies at
+        # transmission; applying it here is what keeps guard 6 a preflight
+        # rather than a `MutationRefused` from the middle of a run.
+        if not number.isdigit() or type(value) is not int or value <= 0:
+            raise ApplyError(
+                f"{path}: {label!r} is not 'owner/repo#number': <positive id>"
+            )
         mapping[(validate.canonical_repository(repository), int(number))] = value
 
     def resolve(key: IssueKey) -> int:

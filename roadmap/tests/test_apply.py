@@ -368,6 +368,33 @@ class ApplyTest(ApplyTestBase):
         self.assertIn("--issue-ids is missing an id for", str(refused.exception))
         self.assertIn(CORE, str(refused.exception))
 
+    def test_the_id_map_rejects_a_value_that_is_not_a_positive_int(self) -> None:
+        """The loader holds the same rule the write client holds at transmission.
+
+        `isinstance(value, int)` admitted `0` and negatives -- which
+        `github_apply._issue_id` refuses, i.e. exactly the mid-run
+        `MutationRefused` guard 6 is a preflight against -- and admitted `True`,
+        which `_issue_id` accepts too, so a boolean was transmitted as an id.
+        """
+
+        with tempfile.TemporaryDirectory() as raw:
+            for value in (0, -1, True, "11", 1.0):
+                path = Path(raw) / "ids.json"
+                path.write_text(json.dumps({API: value}), encoding="utf-8")
+                with self.subTest(value=value):
+                    with self.assertRaises(apply_module.ApplyError):
+                        apply_module._issue_id_resolver(str(path))
+            path.write_text(json.dumps({API: 11}), encoding="utf-8")
+            self.assertEqual(
+                11, apply_module._issue_id_resolver(str(path))(("mctlhq/mctl-api", 261))
+            )
+
+    def test_the_write_side_redirect_handler_has_no_default_refusal_type(self) -> None:
+        """A write refusal must not be able to surface as a read error."""
+
+        with self.assertRaises(TypeError):
+            github_graph._RefusedRedirectHandler()
+
     def test_a_live_run_with_no_issue_ids_at_all_is_refused_up_front(self) -> None:
         """An absent map is the same guard failure as an incomplete one.
 
