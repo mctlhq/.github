@@ -1,0 +1,145 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: agent-platform
+  owner: mctl-agents
+  labels:
+    - roadmap
+spec:
+  title: Agent definitions, execution profiles and governed agent creation
+  goal: >-
+    Make agents first-class declarative platform resources whose immutable
+    definitions and execution profiles determine model, skills, capabilities,
+    policy, runtime, budget and evidence, with governed publication and creation.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 18
+  phases:
+    - id: contract
+      title: AgentDefinition and ExecutionProfile contract
+    - id: runtime
+      title: Runtime resolution
+    - id: capabilities
+      title: Capability discovery and service skills
+    - id: catalog
+      title: GitOps catalog and registry binding
+    - id: governance
+      title: Execution governance
+    - id: authoring
+      title: Governed agent authoring
+  workItems:
+    - id: agent-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 226
+
+    - id: runtime-resolver
+      phase: runtime
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 227
+      dependsOn:
+        - agent-contract
+
+    - id: gitops-catalog
+      phase: catalog
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 950
+      dependsOn:
+        - agent-contract
+
+    - id: capability-discovery
+      phase: capabilities
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 242
+      dependsOn:
+        - agent-contract
+        - runtime-resolver
+
+    - id: service-skills
+      phase: capabilities
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 305
+      dependsOn:
+        - agent-contract
+        - runtime-resolver
+
+    - id: execution-identity
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 196
+      dependsOn:
+        - agent-contract
+
+    - id: runtime-policy
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 197
+      dependsOn:
+        - execution-identity
+
+    - id: human-approval
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 198
+      dependsOn:
+        - execution-identity
+        - runtime-policy
+
+    - id: execution-evidence
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 199
+      dependsOn:
+        - execution-identity
+
+    - id: release-binding
+      phase: catalog
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 283
+      dependsOn:
+        - runtime-resolver
+        - gitops-catalog
+
+    - id: governed-agent-authoring
+      title: Propose, validate and publish a new agent through reviewed GitOps changes
+      owner: mctl-agents
+      phase: authoring
+      required: true
+      dependsOn:
+        - capability-discovery
+        - release-binding
+        - runtime-policy
+        - human-approval
+        - execution-evidence
+  completion:
+    mode: allRequired
+  successCriteria:
+    - AgentDefinition and ExecutionProfile are canonical versioned contracts.
+    - One existing agent executes through the declarative resolver without behavior drift.
+    - Capability discovery cannot expand permissions beyond the resolved profile and policy boundary.
+    - Approved definitions and profiles are published and resolved through an immutable registry binding.
+    - Execution identity, policy, approval and evidence are pinned to exact resource versions.
+    - Existing agents can propose a new agent through a reviewable GitOps change but cannot activate it directly.
+    - Temporal and Argo remain the execution and orchestration stack.
