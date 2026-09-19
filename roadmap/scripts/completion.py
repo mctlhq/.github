@@ -78,7 +78,7 @@ def item_status(
     return UNKNOWN, "closed_reason_unrecognized"
 
 
-def _colliding_bindings(
+def colliding_bindings(
     work_items: list[dict[str, Any]],
     observed: ObservedGraph,
     unobserved: frozenset[IssueKey],
@@ -103,6 +103,11 @@ def _colliding_bindings(
             ambiguous.add(key)
     ambiguous.update(key for keys in by_target.values() if len(keys) > 1 for key in keys)
     return frozenset(ambiguous)
+
+
+# Public alias. `ready.py` (#99) calls this by its public name; the leading-
+# underscore name is kept so no existing caller or test has to change.
+_colliding_bindings = colliding_bindings
 
 
 def consistency_errors(block: dict[str, Any]) -> list[str]:
