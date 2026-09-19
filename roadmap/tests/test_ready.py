@@ -101,6 +101,66 @@ class ReadyTest(unittest.TestCase):
             item["blockers"],
         )
 
+    def test_blocked_predecessor_outranks_unknown_predecessor(self) -> None:
+        # `dependsOn` a `_BLOCKING` predecessor (open) and an `_INDETERMINATE`
+        # one (unbound) at once: non-readiness is already proven, so the item
+        # must be `blocked`, not `unknown`, even though an indeterminate
+        # predecessor is also present. See ready.py:191-194.
+        document = {
+            "spec": {
+                "workItems": [
+                    {
+                        "id": "blocked-pred",
+                        "phase": "p",
+                        "required": True,
+                        "issue": {"repository": "mctlhq/x", "number": 1},
+                    },
+                    {
+                        "id": "unbound-pred",
+                        "phase": "p",
+                        "required": True,
+                    },
+                    {
+                        "id": "req",
+                        "phase": "p",
+                        "required": True,
+                        "issue": {"repository": "mctlhq/x", "number": 2},
+                        "dependsOn": ["blocked-pred", "unbound-pred"],
+                    },
+                ]
+            }
+        }
+
+        def _observation(number: int) -> dict:
+            key = {"repository": "mctlhq/x", "number": number}
+            return {
+                "requested": key,
+                "resolved": key,
+                "found": True,
+                "state": "open",
+                "parent": None,
+                "subIssues": [],
+                "blockedBy": [],
+            }
+
+        snapshot = {
+            "apiVersion": "roadmap.mctl.ai/v1alpha1",
+            "kind": "GitHubGraphSnapshot",
+            "source": {"mode": "synthetic-fixture"},
+            "issues": [_observation(1), _observation(2)],
+        }
+        graph = github_graph.observed_graph(snapshot)
+        result = ready.compute(document, graph)
+        item = next(entry for entry in result["items"] if entry["id"] == "req")
+        self.assertEqual("blocked", item["state"])
+        self.assertEqual(
+            [
+                {"kind": "workItem", "id": "blocked-pred", "status": "incomplete", "reason": "open"},
+                {"kind": "workItem", "id": "unbound-pred", "status": "incomplete", "reason": "unbound"},
+            ],
+            item["blockers"],
+        )
+
     def test_guarded_recovery_ready_once_every_predecessor_is_delivered(self) -> None:
         graph = mutations.synthetic_snapshot(self.lifecycle)
         for issue in ("mctlhq/mctl-api#293", "mctlhq/mctl-agents#352", "mctlhq/mctl-agents#353"):
