@@ -1,0 +1,484 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/roadmap-diff-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapDiff or RoadmapDiffList",
+  "description": "Output of reconcile.py: one RoadmapDiff for a single manifest, a RoadmapDiffList envelope for several.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/roadmapDiff"
+    },
+    {
+      "$ref": "#/$defs/roadmapDiffList"
+    }
+  ],
+  "$defs": {
+    "owner": {
+      "description": "Local work-item id, or 'epic' for the manifest root binding.",
+      "type": "string",
+      "minLength": 1
+    },
+    "bindingEntry": {
+      "description": "One binding result. Each type fixes its own severity and its own required evidence.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "requested"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingIssueNotFound"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "requested",
+            "resolved"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingRedirected"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "resolved": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "requested",
+            "resolved"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingAmbiguous"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "requested": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "resolved": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParents": {
+              "description": "Present when the ambiguity is more than one observed parent; absent when two authored bindings collapsed onto one issue.",
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/issueRef"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner"
+          ],
+          "properties": {
+            "type": {
+              "const": "BindingUnbound"
+            },
+            "severity": {
+              "const": "informational"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            }
+          }
+        }
+      ]
+    },
+    "hierarchyEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "child",
+            "expectedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyMissingParent"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "expectedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "child",
+            "expectedParent",
+            "observedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyWrongParent"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "expectedParent": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "child",
+            "observedParent"
+          ],
+          "properties": {
+            "type": {
+              "const": "HierarchyUnexpectedChild"
+            },
+            "severity": {
+              "const": "informational"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "child": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "observedParent": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        }
+      ]
+    },
+    "dependencyEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "blocked",
+            "blocker"
+          ],
+          "properties": {
+            "type": {
+              "const": "DependencyMissing"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "blocked": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "blocker": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "severity",
+            "owner",
+            "blocked",
+            "blocker"
+          ],
+          "properties": {
+            "type": {
+              "const": "DependencyUnexpected"
+            },
+            "severity": {
+              "const": "drift"
+            },
+            "owner": {
+              "$ref": "#/$defs/owner"
+            },
+            "blocked": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "blocker": {
+              "$ref": "#/$defs/issueRef"
+            }
+          }
+        }
+      ]
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "roadmapDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "epic",
+        "source",
+        "summary",
+        "binding",
+        "hierarchy",
+        "dependency"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapDiff"
+        },
+        "epic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "manifest"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issue": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "manifest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "description": "SHA-256 of the exact manifest bytes that produced this diff.",
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "binding",
+            "hierarchy",
+            "dependency",
+            "drift",
+            "informational"
+          ],
+          "properties": {
+            "binding": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hierarchy": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "dependency": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "drift": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "informational": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "binding": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bindingEntry"
+          }
+        },
+        "hierarchy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hierarchyEntry"
+          }
+        },
+        "dependency": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependencyEntry"
+          }
+        }
+      },
+      "description": "Deterministic comparison of one EpicDefinition against an observed GitHub graph. Binding, hierarchy and dependency drift are separate families and are never conflated."
+    },
+    "roadmapDiffList": {
+      "description": "Emitted when more than one manifest is reconciled in one run. Items are ordered by manifest path so the envelope is as deterministic as each diff inside it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapDiffList"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/roadmapDiff"
+          }
+        }
+      }
+    },
+    "source": {
+      "description": "Copied verbatim from the snapshot, with the same provenance variants the snapshot schema enforces. A live capture's `capturedAt` is the only time a diff carries.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
+          "properties": {
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    }
+  }
+}

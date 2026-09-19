@@ -1,0 +1,182 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "issues": [
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [
+        {
+          "number": 333,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 261,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 106,
+          "repository": "mctlhq/mctl-docs"
+        },
+        {
+          "number": 124,
+          "repository": "mctlhq/mctl-portal"
+        },
+        {
+          "number": 571,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ]
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 333,
+        "repository": "mctlhq/mctl-agents"
+      },
+      "resolved": {
+        "number": 333,
+        "repository": "mctlhq/mctl-agents"
+      },
+      "state": "open",
+      "subIssues": []
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 333,
+          "repository": "mctlhq/mctl-agents"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 261,
+        "repository": "mctlhq/mctl-api"
+      },
+      "resolved": {
+        "number": 261,
+        "repository": "mctlhq/mctl-api"
+      },
+      "state": "open",
+      "subIssues": []
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 333,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 261,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 106,
+        "repository": "mctlhq/mctl-docs"
+      },
+      "resolved": {
+        "number": 106,
+        "repository": "mctlhq/mctl-docs"
+      },
+      "state": "open",
+      "subIssues": []
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 261,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 124,
+        "repository": "mctlhq/mctl-portal"
+      },
+      "resolved": {
+        "number": 124,
+        "repository": "mctlhq/mctl-portal"
+      },
+      "state": "open",
+      "subIssues": []
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 443,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 443,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": []
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 333,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 261,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 443,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 571,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 571,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": []
+    }
+  ],
+  "kind": "GitHubGraphSnapshot",
+  "source": {
+    "mode": "synthetic-fixture"
+  }
+}

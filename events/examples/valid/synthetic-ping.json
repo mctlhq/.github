@@ -1,0 +1,9 @@
+{
+  "specversion": "mctl.events/v1",
+  "id": "synthetic:skeleton:1",
+  "type": "synthetic.ping.created",
+  "source": "mctl-synthetic",
+  "occurred_at": "2026-09-17T09:00:00Z",
+  "correlation_id": "corr-skeleton-1",
+  "subject": {"kind": "synthetic.ping", "token": "SKELETON-7"}
+}

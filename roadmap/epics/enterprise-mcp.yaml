@@ -1,0 +1,133 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: enterprise-mcp
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: Cloudflare MCP Portal and enterprise MCP boundary
+  goal: >-
+    Provide an enterprise MCP entry point where Cloudflare supplies the outer
+    access and portal layer while mctl remains authoritative for identity,
+    authorization, consent, durable execution and audit evidence.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 35
+  phases:
+    - id: compatibility
+      title: Modern MCP and OAuth compatibility
+    - id: portal
+      title: Baseline enterprise portal verification
+    - id: extensions
+      title: MCP Tasks and Apps
+    - id: gateway
+      title: Gateway and DLP capability result
+    - id: correlation
+      title: mctl-native correlation and evidence
+    - id: enterprise-identity
+      title: Tenant-specific enterprise identity boundary
+  workItems:
+    - id: compatibility-spike
+      phase: compatibility
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 44
+
+    - id: telegram-compatibility
+      phase: compatibility
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 585
+
+    - id: local-bridge-proof
+      phase: portal
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 615
+      dependsOn:
+        - telegram-compatibility
+
+    - id: denied-user-and-bypass
+      phase: portal
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 616
+      dependsOn:
+        - telegram-compatibility
+
+    - id: gateway-dlp-result
+      phase: gateway
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1181
+      dependsOn:
+        - telegram-compatibility
+
+    - id: gateway-hardening
+      phase: gateway
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1193
+      dependsOn:
+        - gateway-dlp-result
+
+    - id: correlation-contract
+      phase: correlation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 617
+      dependsOn:
+        - gateway-dlp-result
+
+    - id: mcp-tasks
+      phase: extensions
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 284
+      dependsOn:
+        - correlation-contract
+
+    - id: mcp-apps
+      phase: extensions
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 569
+      dependsOn:
+        - correlation-contract
+
+    - id: enterprise-endpoint-decision
+      title: Document the tenant-specific enterprise endpoint and identity-boundary decision
+      owner: mctlhq/.github
+      phase: enterprise-identity
+      required: true
+      dependsOn:
+        - denied-user-and-bypass
+        - correlation-contract
+        - mcp-tasks
+        - mcp-apps
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 91
+  completion:
+    mode: allRequired
+  successCriteria:
+    - The private aggregate uses modern stateless Streamable HTTP and explicit fail-closed tool exposure.
+    - Distinct users preserve distinct upstream mctl principals through the Portal.
+    - Local Bridge session custody never moves to Cloudflare.
+    - MCP Tasks and Apps are accepted only after end-to-end Portal compatibility is measured.
+    - Gateway and DLP limitations are recorded as measured capability results rather than assumed controls.
+    - Tool and execution correlation is mctl-native when the edge cannot provide stable tool-level evidence.
+    - The direct-upstream bypass is demonstrated and documented.
+    - The initiative ends with a written decision for tenant-specific enterprise identity endpoints.

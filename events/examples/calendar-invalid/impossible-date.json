@@ -1,0 +1,1 @@
+{"specversion":"mctl.events/v1","id":"t:1","type":"telegram.message.created","source":"mctl-telegram","occurred_at":"2026-02-30T08:00:00Z","correlation_id":"t:1","subject":{"kind":"telegram.message"}}

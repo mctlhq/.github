@@ -62,32 +62,67 @@ on:
       code-paths:
         description: >
           Extended regex matching non-test source files that warrant at least
-          the middle tier. Defaults to common compiled/scripting extensions.
+          the middle tier. Defaults to the extensions actually present in
+          mctlhq repositories. `.vue` and `.mjs` were missing until 2026-09-05,
+          which silently scored every single-file SFC change in mctl-web (36
+          .vue), mctl-design (29), mctl-academy (20 .vue, 53 .mjs) and
+          mctl-docs (7) at the docs tier.
         type: string
-        default: '\.(go|ts|tsx|js|jsx|py|rs|java|rb)$'
+        default: '\.(go|ts|tsx|mts|cts|js|jsx|mjs|cjs|vue|svelte|py|rs|java|rb|sh)$'
       test-paths:
-        description: Extended regex matching test files, excluded from code-paths.
+        description: >
+          Extended regex matching test files, excluded from code-paths. Keep
+          this in step with code-paths: an extension present in one and absent
+          from the other makes a test file score as production source, and
+          that composes with the size bump into a top-tier promotion.
         type: string
-        default: '(_test\.(go|py|rb)|\.(test|spec)\.(ts|tsx|js|jsx))$'
+        default: '((^|/)__tests__/.+|(^|/)(test_[^/]+\.(py|sh)|[^/]+_spec\.rb|conftest\.py)|_test\.(go|py|rb|sh)|\.(test|spec)\.(ts|tsx|mts|cts|js|jsx|mjs|cjs|sh))$'
+      size-exempt-paths:
+        description: >
+          Extended regex matching paths whose churn should not feed the
+          >400-line size bump. Generated lockfiles routinely move thousands of
+          lines for a one-line dependency change; counting them promoted such
+          diffs a tier on size alone. Harmless while model-high equalled
+          model-mid, but it bites now that the top tier is a costlier model.
+          Only the size signal is affected — a lockfile still reaches the
+          reviewer, and sensitive-paths and code-paths still see it.
+          Unlike the other path inputs, which are used with `grep -qE` (an
+          invalid pattern exits 2, reads as false, and the classifier carries
+          on), this one is evaluated by awk, where an invalid ERE is fatal and
+          fails the whole classify step. That is deliberate: silently counting
+          every lockfile would undo the input's only purpose.
+        type: string
+        default: '(^|/)(pnpm-lock\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|bun\.lock|go\.sum|go\.work\.sum|Cargo\.lock|uv\.lock|poetry\.lock|Pipfile\.lock|pdm\.lock|composer\.lock|Gemfile\.lock|gradle\.lockfile|flake\.lock|pubspec\.lock|\.terraform\.lock\.hcl)$|(^|/)__snapshots__/.*\.snap$'
       model-high:
-        description: Model for security-sensitive or large diffs.
+        description: >
+          Model for security-sensitive or large diffs. Must be more capable
+          than model-mid or sensitive-paths buys nothing: until 2026-09-05
+          both defaulted to claude-sonnet-5, so the eight repositories that
+          carefully enumerate their auth/crypto/db paths were getting the
+          middle tier's model on them.
         type: string
-        default: claude-sonnet-5
+        default: claude-opus-5
       model-mid:
         description: Model for ordinary source changes.
         type: string
         default: claude-sonnet-5
       model-low:
-        description: Model for docs/config-only diffs.
+        description: >
+          Model for docs/config-only diffs. Not a cheaper reviewer any more:
+          on 2026-09-05 mctl-gitops#1058 classified score=1 and APPROVED the
+          same docs-only diff twice on claude-haiku-4-5-20251001, while the
+          Gemini reviewer found a real P2 on both passes. The tier still
+          exists because the classifier's `skip` output is what `skip-paths`
+          rides on, but the model no longer drops below model-mid.
         type: string
-        default: claude-haiku-4-5-20251001
+        default: claude-sonnet-5
       allowed-bots:
         description: >
           Comma-separated bot actors whose pushes may still be reviewed.
           Without an entry the action hard-fails with "Workflow initiated by
           non-human actor" on synchronize events from the mctl-agents pipeline.
         type: string
-        default: mctl-claude-remote,github-actions
+        default: mctl-claude-remote,github-actions,dependabot
       conventions:
         description: >
           Extra repository-specific guidance appended to the review prompt
@@ -260,6 +295,15 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
+      # claude-code-action installs a github_ci MCP server so the reviewer can
+      # see whether the PR's checks pass; that server calls GET actions/runs
+      # and needs this. A called workflow's own permissions block is what the
+      # job runs with — the caller's block only caps it — so granting
+      # `actions: read` in a caller has no effect at all unless it is also
+      # here. It was granted in mctlhq/projects-mcp and changed nothing,
+      # which is how this was found: the job kept answering 403 and logging
+      # "Skipping CI server installation".
+      actions: read
     env:
       REPO: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
@@ -425,15 +469,55 @@ jobs:
           SKIP_PATHS: ${{ inputs.skip-paths }}
           CODE_PATHS: ${{ inputs.code-paths }}
           TEST_PATHS: ${{ inputs.test-paths }}
+          SIZE_EXEMPT_PATHS: ${{ inputs.size-exempt-paths }}
           MODEL_HIGH: ${{ inputs.model-high }}
           MODEL_MID: ${{ inputs.model-mid }}
           MODEL_LOW: ${{ inputs.model-low }}
         run: |
           # Read only the immutable commit pair captured by gate. Never query
           # the live PR here: its head may move while this run is active.
-          files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA")
-          lines=$(git diff --numstat "$BASE_SHA...$HEAD_SHA" |
-            awk '{ if ($1 ~ /^[0-9]+$/) added += $1; if ($2 ~ /^[0-9]+$/) removed += $2 } END { print added + removed + 0 }')
+          #
+          # core.quotePath defaults to true for every path-printing command,
+          # C-quoting any path that holds a non-ASCII byte and wrapping it in
+          # literal double quotes. Both git calls below disable it, because a
+          # quoted path breaks the anchors in each one differently.
+          #
+          # Here the leading `"` defeats the `^` in every caller's
+          # sensitive-paths, so a declared-sensitive file with one such byte
+          # silently drops out of the top tier.
+          files=$(git -c core.quotePath=false diff --name-only "$BASE_SHA...$HEAD_SHA")
+          # Binary files report "-" for both counts, hence the numeric guards.
+          #
+          # ENVIRON, not -v: POSIX processes a -v value as a string literal,
+          # so `\.` would be consumed before the regex engine sees it — gawk
+          # turns each one into an any-char `.` (with a warning per escape),
+          # mawk leaves it, and the pattern that runs depends on which awk the
+          # runner ships. ENVIRON skips that step and matches this job's
+          # convention of passing regexes as environment values.
+          #
+          # -F '\t', not the default FS: awk's default splits on runs of
+          # spaces AND tabs, so `$3` would be the first word of a path
+          # containing a space. Note this is a two-character string, not a
+          # literal tab — POSIX handles the -F operand as if it were
+          # `-v FS=value`, so the very escape processing the paragraph above
+          # avoids for the pattern is what turns `\t` into TAB here. gawk,
+          # mawk and busybox awk all agree on `\t`, so it is portable.
+          #
+          # Renames arrive compacted as `old/{a => b}/pnpm-lock.yaml` in a
+          # single field; the anchors in size-exempt-paths are `(^|/)name$`,
+          # so the tail still matches.
+          #
+          # The quoting disabled above matters here too, in the other
+          # direction: a C-quoted `$3` ends in `"`, so every $-anchored
+          # alternative in size-exempt-paths would miss and the churn would be
+          # counted.
+          lines=$(git -c core.quotePath=false diff --numstat "$BASE_SHA...$HEAD_SHA" |
+            awk -F '\t' '
+              BEGIN { exempt = ENVIRON["SIZE_EXEMPT_PATHS"] }
+              exempt != "" && $3 ~ exempt { next }
+              { if ($1 ~ /^[0-9]+$/) added += $1
+                if ($2 ~ /^[0-9]+$/) removed += $2 }
+              END { print added + removed + 0 }')
 
           # A diff entirely inside skip-paths never reaches the model at all —
           # not even at the low tier. A single file outside the pattern is
@@ -511,9 +595,307 @@ jobs:
             echo "has_fallback=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # claude-code-action refuses to run when the workflow file that invoked
+      # it differs from the copy on the default branch: "Workflow validation
+      # failed. The workflow file must exist and have identical content to the
+      # version on the repository's default branch." That is a deliberate
+      # security property — otherwise a pull request could rewrite its own
+      # reviewer — and it fires on any edit to the CALLER, including a
+      # one-line bump of the `uses:` pin below.
+      #
+      # Left alone, the refusal is invisible in exactly the way that matters.
+      # The action emits a ::warning:: and exits with outcome=success, the
+      # steps downstream see no error to read, and the job goes green having
+      # reviewed nothing and approved nothing. On a repository whose merge gate
+      # is an approving review rather than a status check, that leaves an
+      # unmergeable pull request with a fully green board and no stated reason
+      # (mctlhq/mctl-gitops#1060).
+      #
+      # So predict the refusal instead of discovering it: compare the blob the
+      # action will compare. This is deterministic, costs two API reads, and
+      # needs no log scraping.
+      - name: Detect entry-workflow self-edit
+        id: selfedit
+        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Inside a reusable workflow this names the ENTRY workflow — the
+          # caller's file, which is the one the action validates — not this
+          # file. Shape: owner/repo/.github/workflows/name.yml@refs/heads/main
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+
+          # Split on the first `@refs/` rather than the last `@`:
+          # `github.workflow_ref` always fully qualifies the ref half, and git
+          # permits `@` inside a branch name, so `refs/heads/feat@2` would
+          # otherwise leave the ref's prefix stuck on the path.
+          path=${WORKFLOW_REF%%@refs/*}
+          path=${path#"$REPO/"}
+          wf_ref=refs/${WORKFLOW_REF#*@refs/}
+          case "$path" in
+            .github/workflows/*) ;;
+            *)
+              echo "::warning::unrecognised workflow_ref '$WORKFLOW_REF' — skipping the self-edit check"
+              echo "blocked=false" >> "$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
+
+          # Compare the file at the ref the run actually loaded it from, not
+          # at the PR head. On `issue_comment` GitHub runs the DEFAULT-branch
+          # copy of the workflow, so a self-edit PR re-triggered with
+          # `@claude review` is reviewed normally — comparing the head there
+          # would refuse a run the action is perfectly happy to perform. That
+          # is also why the comment below offers `@claude review`: it is the
+          # one trigger whose entry file passes validation. Whether it also
+          # produces a verdict depends on the default-branch copy — on an
+          # edit, the one at this same path, which the `retriggerable` probe
+          # below reads; on an absence, whatever copy sits at some other
+          # path, which nothing here can find. Hence the probe on one arm
+          # and a stated condition on the other.
+          #
+          # Every read below fails OPEN, and says so at warning level. An
+          # unreachable API means "cannot predict", not "refuse" — a red
+          # check with nothing on the board is the same unexplained state
+          # this step exists to remove, only inverted. Warning rather than
+          # notice because `blocked=true` is reachable only through these
+          # calls: if they start failing, a permanently no-op check would
+          # otherwise be indistinguishable from a healthy one.
+          # `-q` on a missing key yields the string "null" with a zero exit,
+          # so an exit-status guard alone is not total: `?ref=null` would 404,
+          # read as "absent from the default branch", and produce a false red
+          # on a PR that touches no workflow.
+          default_branch=$(gh api "repos/$REPO" -q .default_branch 2>/dev/null || echo "")
+          if [ -z "$default_branch" ] || [ "$default_branch" = "null" ]; then
+            echo "::warning::could not read the default branch — skipping the self-edit check"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A blob SHA is content-addressed, so comparing the two is exactly
+          # the "identical content" test the action performs, without pulling
+          # either file down. `?ref=refs/pull/<n>/merge` resolves — verified
+          # against this PR's own merge ref before merge.
+          head_blob=$(gh api "repos/$REPO/contents/$path?ref=$wf_ref" -q .sha 2>/dev/null || echo "")
+          if [ -z "$head_blob" ] || [ "$head_blob" = "null" ]; then
+            echo "::warning::could not read $path at $wf_ref — skipping the self-edit check"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 404 is meaningful here and must not be lumped in with a blip: a
+          # workflow file absent from the default branch is refused by the
+          # action for the same reason an edited one is. Any other error is a
+          # transient read, and treating it as absence would post the notice
+          # below on a PR that touches no workflow at all.
+          # Written under RUNNER_TEMP: the workspace is the tree the reviewer
+          # reads, and a stray file there would show up in its `git status`.
+          #
+          # Matching on gh's stderr wording couples this to the CLI's
+          # phrasing. It fails in the safe direction — a reworded 404 reads
+          # as transient and skips the check — but it is worth knowing about.
+          err="$RUNNER_TEMP/base.err"
+          if ! base_blob=$(gh api "repos/$REPO/contents/$path?ref=$default_branch" -q .sha 2>"$err"); then
+            if grep -q "HTTP 404" "$err"; then
+              base_blob=""
+            else
+              echo "::warning::could not read $path at $default_branch — skipping the self-edit check"
+              echo "blocked=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          elif [ "$base_blob" = "null" ]; then
+            # Same "null" hazard as the two reads above, and the loudest of
+            # the three: a literal "null" here compares unequal to a real
+            # head blob and would report a self-edit on a PR that has none.
+            echo "::warning::unusable response for $path at $default_branch — skipping the self-edit check"
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Absent and differing both make the action refuse, but they are not
+          # the same situation for the person reading the result, and only one
+          # of them has a way out. Carry the distinction into the output.
+          if [ "$head_blob" = "$base_blob" ]; then
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+            echo "path=$path" >> "$GITHUB_OUTPUT"
+            if [ -z "$base_blob" ]; then
+              echo "::warning::$path does not exist on $default_branch — claude-code-action will refuse to run on this PR."
+              echo "reason=absent" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::$path differs from $default_branch — claude-code-action will refuse to run on this PR."
+              echo "reason=differs" >> "$GITHUB_OUTPUT"
+              # `@claude review` is only an escape if the DEFAULT-BRANCH copy
+              # of this caller listens for it — callers own their triggers,
+              # and a PR that adds `issue_comment` to one that had only
+              # `pull_request` would otherwise be handed an instruction that
+              # fires nothing. Read the copy that would actually run, rather
+              # than assume the trigger is there.
+              # Raw media type, so there is no base64 hop; written to a
+              # file so the `awk` has nothing to SIGPIPE.
+              base_wf="$RUNNER_TEMP/base-workflow.yml"
+              if ! gh api -H "Accept: application/vnd.github.raw" \
+                   "repos/$REPO/contents/$path?ref=$default_branch" \
+                   > "$base_wf" 2>"$err"; then
+                echo "::warning::could not read $path at $default_branch to check its triggers"
+                cat "$err" || true
+              fi
+
+              # Positive detection only, and deliberately so. This is a shape
+              # match in awk, not a YAML parser, and `on:` has more legal
+              # spellings than it can cover — a flow sequence, an inline
+              # mapping, a trailing comment after the key, `jobs:` declared
+              # before `on:`. Reporting a definite "no trigger" from a failed
+              # match would tell the author the escape does not exist for
+              # callers where it plainly does, which is worse than the
+              # uncertainty it replaces. So: `true` when the trigger is
+              # actually seen, `unknown` otherwise, including on a failed
+              # read — and the notice says which of the two it knows.
+              #
+              # The key must OPEN a line to be counted — that alone is what
+              # keeps a leftover `if: github.event_name == 'issue_comment'`
+              # guard and this file's own commented-out usage example from
+              # passing. No interval expressions: `awk` is mawk on the
+              # runners, and `{0,4}` is not portable there.
+              if awk '/^[[:space:]]*#/ { next }
+                      /^[[:space:]]*issue_comment:/ { found = 1 }
+                      /^on:[[:space:]]*\[.*issue_comment.*\]/ { found = 1 }
+                      END { exit !found }' "$base_wf"; then
+                echo "retriggerable=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "retriggerable=unknown" >> "$GITHUB_OUTPUT"
+              fi
+            fi
+          fi
+
+      # Say it once per commit, on the pull request, where the person waiting
+      # for a verdict is looking. The marker carries the head SHA so a later
+      # push gets a fresh notice instead of being silently covered by an old
+      # one, and so tooling can recognise this state without parsing prose.
+      - name: Explain the self-edit refusal
+        if: steps.selfedit.outputs.blocked == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WF_PATH: ${{ steps.selfedit.outputs.path }}
+          REASON: ${{ steps.selfedit.outputs.reason }}
+          RETRIGGERABLE: ${{ steps.selfedit.outputs.retriggerable }}
+        run: |
+          set -euo pipefail
+
+          marker="<!-- claude-review:self-edit:$HEAD_SHA -->"
+
+          # Silence after the comment has more than one cause, and only one
+          # of them is about this pull request. The gate also drops the run
+          # when the body does not contain the phrase, or when the commenter
+          # lacks write access — so "nothing happened" is not by itself
+          # evidence that no verdict is available. This paragraph carries
+          # only the two causes that hold on BOTH branches; the third is
+          # about the default-branch copy and differs between them, so each
+          # branch states its own immediately above this.
+          silence=$(printf '%s\n' \
+            "Silence can also mean the phrase was not \`@claude review\`, or that the" \
+            "commenter has no write access. Where none of the causes above can be fixed," \
+            "there is no verdict to be had on this pull request: the check stays red on" \
+            "every commit, and the thing to do is merge past it.")
+
+          # `@claude review` works because `issue_comment` runs the
+          # DEFAULT-BRANCH copy of the workflow, so what matters is that
+          # branch's file and never this one. Two things have to hold there:
+          # a copy has to exist, and it has to listen for `issue_comment`.
+          # On an edit the first is given and the second is exactly what the
+          # `retriggerable` probe reads, which is why the `differs` body
+          # branches on the probe rather than offering the escape flatly. On
+          # an absence there is no single file to probe — a rename may leave
+          # a reviewer at the old path, while the PR that first ADDS one
+          # leaves the default branch with nothing to run — so that body
+          # offers the attempt and names the condition instead. An
+          # instruction that silently does nothing is worse than saying
+          # plainly that there may be no verdict to be had.
+          if [ "$REASON" = "absent" ]; then
+            body=$(printf '%s\n' \
+              "$marker" \
+              "\`$WF_PATH\` is the workflow file that invoked the reviewer on this pull" \
+              "request, and it does not exist on the default branch." \
+              "\`claude-code-action\` runs only when that file is already there and" \
+              "matches, so it will not review this commit. Nothing is wrong with the" \
+              "change itself." \
+              "" \
+              "Try commenting \`@claude review\` here — it is worth it if this pull" \
+              "request renames an existing reviewer, because that run loads the" \
+              "default-branch copy, which still carries the old path; that only fires" \
+              "if the copy there listens for the comment. If this adds the reviewer" \
+              "for the first time, the default branch has nothing to run." \
+              "" \
+              "$silence")
+          else
+            if [ "$RETRIGGERABLE" = "true" ]; then
+              way_out=$(printf '%s\n' \
+                "To get a verdict on this commit, comment \`@claude review\` here. That" \
+                "run loads the workflow from the default branch instead of from this" \
+                "branch, so the action accepts it and reviews normally.")
+            else
+              # Not "there is no trigger" — the probe did not establish
+              # that. What it can offer is the attempt plus what silence
+              # would mean, which is the same action either way.
+              way_out=$(printf '%s\n' \
+                "Try commenting \`@claude review\` here: that run loads the workflow" \
+                "from the default branch rather than from this branch, so the action" \
+                "accepts it whenever that copy listens for the comment." \
+                "" \
+                "If nothing happens after the comment, one cause is that the copy there" \
+                "does not listen for it." \
+                "$silence")
+            fi
+            body=$(printf '%s\n' \
+              "$marker" \
+              "This pull request edits \`$WF_PATH\`, the workflow file that invokes the" \
+              "reviewer. \`claude-code-action\` runs only when that file is identical to" \
+              "the copy on the default branch, so it will not review this commit and" \
+              "\`claude[bot]\` will not leave an approving review. Nothing is wrong with" \
+              "the change itself." \
+              "" \
+              "$way_out")
+          fi
+
+          # Annotate BEFORE reaching for the API. Under `set -e` a failing
+          # `gh pr comment` aborts the step, and if the annotation came after
+          # it, that one failure would cost both — leaving the red check with
+          # nothing on it, which is the state this whole step exists to
+          # prevent. The annotation is the half that cannot fail.
+          if [ "$REASON" = "absent" ]; then
+            why="is not on the default branch yet"
+          else
+            why="differs from the copy on the default branch"
+          fi
+          echo "::error::No review ran — $WF_PATH $why, so the reviewer refused to start."
+
+          # `--paginate` writes each page as it arrives, so a mid-listing
+          # failure leaves a PREFIX on stdout with a non-zero exit. Treating
+          # that as the full list would read a marker in a dropped page as
+          # absent. Fall back to the empty string instead: a duplicate notice
+          # is a nuisance, a missing one is the silence this step removes.
+          if ! existing=$(gh api --paginate "repos/$REPO/issues/$PR_NUMBER/comments" --jq '.[].body'); then
+            echo "::warning::could not read the comment list in full — posting, at the risk of a duplicate"
+            existing=""
+          fi
+
+          # Matched with a case glob rather than `grep -qF`: under pipefail a
+          # `grep -q` that exits on its first match can SIGPIPE the producer
+          # and turn a HIT into a non-zero pipeline, which would read here as
+          # "not announced yet" and comment again on every re-run.
+          case "$existing" in
+            *"$marker"*) echo "already announced for $HEAD_SHA" ;;
+            *) gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
+          esac
+
+          # Fail closed. Green here would read as "reviewed, found nothing",
+          # which is the one thing that did not happen.
+          exit 1
+
       - name: Claude review
         id: review
-        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true'
+        if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true' && steps.selfedit.outputs.blocked != 'true'
         continue-on-error: true
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1.0.189 (CLI 2.1.226)
         with:
@@ -634,7 +1016,39 @@ jobs:
               "⏳ The Claude reviewer hit the shared usage limit and could not finish. This is **transient** and is *not* a code issue. Re-run with \`@claude review\` once the window resets." || true
             exit 0
           fi
+          # The line below used to say "see the step logs" and send whoever
+          # read it nowhere: claude-code-action prints "full output hidden for
+          # security" and the only trace of why a run died is this file, which
+          # nothing ever opened. A reviewer that fails without saying why is a
+          # reviewer nobody can fix — mctlhq/projects-mcp#1 sat on the same
+          # 2-second, 1-turn, $0 failure through nine runs and two tokens with
+          # no error text anywhere.
+          #
+          # So print the diagnosis, and only that: the result entry's scalar
+          # fields and the first 800 characters of its message. Not the whole
+          # file — that holds the model's entire pass over the diff, which is
+          # what the action hides on purpose.
+          if [ -f "$OUT" ]; then
+            echo "::group::Reviewer failure diagnostics"
+            jq -r '
+              (if type == "array" then [.[] | select(.type == "result")] else [] end)
+              | if length == 0 then
+                  "no result entry in the execution output"
+                else
+                  .[-1] as $r
+                  | "subtype: \($r.subtype // "?")",
+                    "is_error: \($r.is_error // "?")",
+                    "num_turns: \($r.num_turns // "?")",
+                    "duration_ms: \($r.duration_ms // "?")",
+                    "total_cost_usd: \($r.total_cost_usd // "?")",
+                    "permission_denials: \($r.permission_denials_count // "?")",
+                    "message: \(($r.result // $r.error // "<none>") | tostring | .[0:800])"
+                end' "$OUT" 2>/dev/null || echo "execution output was not valid JSON"
+            echo "::endgroup::"
+          else
+            echo "no execution output was written at all — the action failed before it ran"
+          fi
           gh pr comment "$PR_NUMBER" --repo "$REPO" \
-            --body "Claude review failed to complete on both tokens (see the [run log]($RUN_URL)). Re-trigger with \`@claude review\` once the underlying issue is resolved."
-          echo "::error::Claude reviewer failed for a non-quota reason — see the 'Claude review' step logs."
+            --body "Claude review failed to complete on both tokens (see the [run log]($RUN_URL); the 'Reviewer failure diagnostics' group in the review job says why). Re-trigger with \`@claude review\` once the underlying issue is resolved."
+          echo "::error::Claude reviewer failed for a non-quota reason — see the 'Reviewer failure diagnostics' group in this job."
           exit 1

@@ -1,0 +1,98 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: lifecycle-ownership
+  owner: mctl-agents
+  labels:
+    - roadmap
+spec:
+  title: First-class entity owner/executor contract and reconciliation
+  goal: >-
+    Make lifecycle responsibility explicit, durable and queryable by separating
+    entity ownership from executor claims, authorization and approval, then prove
+    safe handoff, fencing and reconciliation on the DevLoop proposal/PR lifecycle.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 57
+  phases:
+    - id: contract
+      title: Canonical ownership contract
+    - id: pilot
+      title: DevLoop ownership pilot
+    - id: fencing
+      title: Executor claims and explicit handoff
+    - id: reconcile
+      title: Ownership reconciliation
+    - id: operations
+      title: Inspection and guarded recovery
+  workItems:
+    - id: ownership-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 350
+
+    - id: devloop-ownership
+      phase: pilot
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 351
+      dependsOn:
+        - ownership-contract
+
+    - id: ownership-inspection
+      phase: operations
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 293
+      dependsOn:
+        - ownership-contract
+        - devloop-ownership
+
+    - id: executor-fencing
+      phase: fencing
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 352
+      dependsOn:
+        - ownership-contract
+        - devloop-ownership
+
+    - id: ownership-reconciler
+      phase: reconcile
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 353
+      dependsOn:
+        - ownership-contract
+        - devloop-ownership
+        - executor-fencing
+
+    - id: guarded-recovery
+      phase: operations
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 294
+      dependsOn:
+        - ownership-inspection
+        - executor-fencing
+        - ownership-reconciler
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Owner, executor, authorization and approval remain distinct concepts.
+    - Every managed DevLoop proposal or PR phase has at most one durable owner.
+    - Mutating attempts are fenced by owner epoch and entity version or PR head.
+    - Owner handoff is explicit, durable, auditable and retry-safe.
+    - Orphaned, stale and conflicting ownership is detected without racing a healthy owner.
+    - Ownership is inspectable through mctl API or MCP without inferring state from workflow internals.
+    - Recovery operations fail closed on stale optimistic preconditions.
+    - Temporal and Argo remain the orchestration authority; no parallel scheduler is introduced.

@@ -1,0 +1,151 @@
+name: Roadmap validation
+
+on:
+  pull_request:
+    paths:
+      - 'roadmap/**'
+      - '.github/workflows/roadmap-validate.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'roadmap/**'
+      - '.github/workflows/roadmap-validate.yml'
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install roadmap validator dependencies
+        run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
+
+      - name: Validate EpicDefinition manifests
+        run: python3 roadmap/scripts/validate.py roadmap/epics
+
+      # Offline fixture replay only. Live mode needs a token and external
+      # state, so it stays a deliberate manual step and never runs here.
+      - name: Reconcile against the synthetic converged fixture
+        run: |
+          python3 roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+            --output /dev/null
+
+      - name: Assess health against the synthetic converged fixture
+        run: |
+          python3 roadmap/scripts/health.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+            --output /dev/null
+
+      - name: Dogfood epic #66 against its immutable live capture
+        run: |
+          python3 roadmap/scripts/health.py roadmap/epics/roadmap-control-plane.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/roadmap-control-plane/live-capture.json \
+            --output /dev/null
+
+      - name: Dogfood epic #87 against its immutable live capture
+        run: |
+          python3 roadmap/scripts/health.py roadmap/epics/claude-remote-inbound-channels.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/claude-remote-inbound-channels/live-capture.json \
+            --output /dev/null
+
+      # The write boundary, exercised offline end to end: plan the converged
+      # fixture, plan a drifted copy, apply it through the in-memory mutator and
+      # reconcile the result. No token is used and --live is never invoked, so
+      # nothing here can reach GitHub even if it wanted to.
+      - name: Plan the synthetic converged fixture (expect an empty plan)
+        run: |
+          python3 roadmap/scripts/plan.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+            --output "${RUNNER_TEMP}/converged-plan.json"
+          python3 - "${RUNNER_TEMP}/converged-plan.json" <<'PY'
+          import json, sys
+          plan = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert plan["kind"] == "RoadmapApplyPlan", plan["kind"]
+          assert plan["operations"] == [], plan["operations"]
+          assert plan["refusals"] == [], plan["refusals"]
+          PY
+
+      - name: Plan, apply and re-reconcile a drifted fixture offline
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, "roadmap/tests")
+          import mutations
+          converged = json.load(
+              open("roadmap/fixtures/human-input/converged-fixture.json", encoding="utf-8")
+          )
+          drifted = mutations.drop_parent_edge(converged, "mctlhq/mctl-api#261")
+          with open(os.environ["RUNNER_TEMP"] + "/drifted.json", "w", encoding="utf-8") as handle:
+              json.dump(drifted, handle)
+          PY
+
+          set +e
+          python3 roadmap/scripts/plan.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot "${RUNNER_TEMP}/drifted.json" \
+            --output "${RUNNER_TEMP}/drifted-plan.json"
+          planned=$?
+          set -e
+          test "${planned}" -eq 1
+
+          python3 - "${RUNNER_TEMP}/drifted-plan.json" <<'PY'
+          import json, sys
+          plan = json.load(open(sys.argv[1], encoding="utf-8"))
+          types = [operation["type"] for operation in plan["operations"]]
+          assert types == ["AddSubIssue"], types
+          assert plan["refusals"] == [], plan["refusals"]
+          PY
+
+          set +e
+          python3 roadmap/scripts/apply.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot "${RUNNER_TEMP}/drifted.json" \
+            --actor roadmap-validate-ci \
+            --output "${RUNNER_TEMP}/dry-run.json"
+          planned_only=$?
+          set -e
+          test "${planned_only}" -eq 1
+
+          python3 - "${RUNNER_TEMP}/dry-run.json" <<'PY'
+          import json, sys
+          result = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert result["mode"] == "plan-only", result["mode"]
+          assert result["summary"]["applied"] == 0, result["summary"]
+          assert result["audit"]["targets"] == [], result["audit"]
+          PY
+
+          python3 roadmap/scripts/apply.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot "${RUNNER_TEMP}/drifted.json" \
+            --execute \
+            --actor roadmap-validate-ci \
+            --capture "${RUNNER_TEMP}/applied.json" \
+            --output "${RUNNER_TEMP}/apply-result.json"
+
+          python3 - "${RUNNER_TEMP}/apply-result.json" <<'PY'
+          import json, sys
+          result = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert result["mode"] == "execute", result["mode"]
+          assert result["summary"] == {
+              "applied": 1, "alreadySatisfied": 0, "skipped": 0, "failed": 0
+          }, result["summary"]
+          assert len(result["audit"]["manifest"]["gitRevision"]) == 40
+          PY
+
+          python3 roadmap/scripts/reconcile.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot "${RUNNER_TEMP}/applied.json" \
+            --output /dev/null
+
+      - name: Run roadmap validator and reconciler tests
+        run: python3 -m unittest discover -s roadmap/tests -p 'test_*.py'

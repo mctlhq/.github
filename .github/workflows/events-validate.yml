@@ -1,0 +1,28 @@
+name: Events contract validation
+
+on:
+  pull_request:
+    paths:
+      - 'events/**'
+      - '.github/workflows/events-validate.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'events/**'
+      - '.github/workflows/events-validate.yml'
+
+permissions: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install dependencies
+        run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
+
+      - name: Envelope schema accepts valid and rejects invalid examples
+        run: python3 -m unittest discover -s events/tests -p 'test_*.py' -v

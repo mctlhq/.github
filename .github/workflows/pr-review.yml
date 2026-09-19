@@ -29,10 +29,26 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
+      # Must be listed here as well as in the reusable workflow. A caller's
+      # permissions block is a CAP on what the called workflow may hold, not a
+      # separate grant: the called job gets the intersection. #97 added
+      # `actions: read` to claude-review.yml so the reviewer can see the PR's
+      # checks, and every run of this caller has since died at startup --
+      # requesting a scope the caller caps at `none` is refused before the job
+      # is created, which is why it produces a `startup_failure` with no logs
+      # and no check run to notice. It took out the review on #97's own branch
+      # and on #94.
+      actions: read
     with:
       # Workflow definitions are the sensitive surface here: this file and the
       # reusable it calls gate merges in every other repository.
       sensitive-paths: '^\.github/workflows/'
+      # The reusable's default list omits `mctl-agents`, so a DevLoop
+      # implementer PR here hard-fails with "Workflow initiated by non-human
+      # actor" before the model is ever reached — the bot then reports it as
+      # "failed on both tokens", which reads like exhausted quota. Every other
+      # repository passes this input explicitly; this caller was the outlier.
+      allowed-bots: "mctl-claude-remote,github-actions,dependabot,mctl-agents"
       conventions: |
         This repository holds org-wide GitHub configuration: the shared
         reusable review workflow and the organisation profile. There is no

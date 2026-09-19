@@ -1,0 +1,234 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "issues": [
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [
+        {
+          "number": 88,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 1260,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 646,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 323,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 54,
+          "repository": "mctlhq/mctl-claude-remote"
+        },
+        {
+          "number": 55,
+          "repository": "mctlhq/mctl-claude-remote"
+        },
+        {
+          "number": 89,
+          "repository": "mctlhq/.github"
+        }
+      ],
+      "updatedAt": "2026-09-17T06:23:42Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 88,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 88,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:22:16Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 646,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 323,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 55,
+          "repository": "mctlhq/mctl-claude-remote"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 89,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 89,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:22:23Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 88,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 646,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 323,
+        "repository": "mctlhq/mctl-api"
+      },
+      "resolved": {
+        "number": 323,
+        "repository": "mctlhq/mctl-api"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:22:20Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 1260,
+          "repository": "mctlhq/mctl-gitops"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 54,
+        "repository": "mctlhq/mctl-claude-remote"
+      },
+      "resolved": {
+        "number": 54,
+        "repository": "mctlhq/mctl-claude-remote"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:23:40Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 646,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 323,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 55,
+        "repository": "mctlhq/mctl-claude-remote"
+      },
+      "resolved": {
+        "number": 55,
+        "repository": "mctlhq/mctl-claude-remote"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:22:22Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 1260,
+        "repository": "mctlhq/mctl-gitops"
+      },
+      "resolved": {
+        "number": 1260,
+        "repository": "mctlhq/mctl-gitops"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:22:18Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 88,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 54,
+          "repository": "mctlhq/mctl-claude-remote"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 87,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 646,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 646,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-17T06:22:19Z"
+    }
+  ],
+  "kind": "GitHubGraphSnapshot",
+  "source": {
+    "apiBase": "https://api.github.com",
+    "capturedAt": "2026-09-17T06:52:29Z",
+    "mode": "live-capture"
+  }
+}

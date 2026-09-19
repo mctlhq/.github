@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/github-graph-snapshot-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 GitHubGraphSnapshot",
+  "description": "Provider-neutral observed issue graph. Carries identity and native relations only; issue prose is never captured.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "kind",
+    "source",
+    "issues"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "roadmap.mctl.ai/v1alpha1"
+    },
+    "kind": {
+      "const": "GitHubGraphSnapshot"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issueObservation"
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "description": "Provenance. A synthetic fixture may never claim a live capture timestamp.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
+          "properties": {
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "issueObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested",
+        "found"
+      ],
+      "properties": {
+        "requested": {
+          "$ref": "#/$defs/issueRef",
+          "description": "Identity as asked for, recorded before transmission."
+        },
+        "resolved": {
+          "$ref": "#/$defs/issueRef",
+          "description": "Canonical identity from the response body. Differs from requested for a transferred issue."
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "open",
+            "closed"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "parent": {
+          "description": "Observed parent, or null when the issue is known to have none.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/issueRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subIssues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
+        },
+        "blockedBy": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
+        },
+        "stateReason": {
+          "description": "GitHub's state_reason, verbatim. Known values include completed, not_planned, duplicate and reopened; unrecognised values are kept so completion can treat them as unknown instead of delivered.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "dependentRequired": {
+        "stateReason": [
+          "state"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "found": {
+                "const": true
+              }
+            },
+            "required": [
+              "found"
+            ]
+          },
+          "then": {
+            "required": [
+              "resolved",
+              "parent",
+              "subIssues",
+              "blockedBy"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "found": {
+                "const": false
+              }
+            },
+            "required": [
+              "found"
+            ]
+          },
+          "then": {
+            "description": "A not-found observation carries no evidence about the issue: every one of these fields is forbidden (false schema).",
+            "properties": {
+              "resolved": false,
+              "parent": false,
+              "subIssues": false,
+              "blockedBy": false,
+              "state": false,
+              "updatedAt": false,
+              "stateReason": false
+            }
+          }
+        }
+      ]
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

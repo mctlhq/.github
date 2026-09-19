@@ -1,0 +1,92 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: surfaces
+  owner: mctl-api
+  labels:
+    - roadmap
+spec:
+  title: Cross-surface working context and agentic UX
+  goal: >-
+    Keep durable work state in the platform so a WorkItem can be inspected and
+    resumed across Telegram, MCP, CLI and web surfaces without replaying raw
+    conversation history or inheriting privileges across surfaces.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 21
+  phases:
+    - id: contract
+      title: Canonical WorkItem and surface contract
+    - id: resume
+      title: Resume across surfaces
+    - id: continuity
+      title: Context continuity
+    - id: ux
+      title: Agentic work-item UX
+  workItems:
+    - id: work-item-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 227
+
+    - id: investigator-resume
+      phase: resume
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 267
+      dependsOn:
+        - work-item-contract
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 264
+
+    - id: telegram-work-item-adapter
+      phase: resume
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 443
+      dependsOn:
+        - work-item-contract
+
+    - id: second-surface-pilot
+      title: Resume the same WorkItem from a second non-Telegram surface
+      owner: mctl-api
+      phase: resume
+      required: true
+      dependsOn:
+        - investigator-resume
+        - telegram-work-item-adapter
+
+    - id: working-memory-continuity
+      title: Derive new immutable ContextSnapshots when a WorkItem resumes
+      owner: mctl-agents
+      phase: continuity
+      required: true
+      dependsOn:
+        - investigator-resume
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 265
+
+    - id: agentic-work-item-ux
+      title: Present durable work state, blockers, evidence and next actions as a first-class UX
+      owner: mctl-portal
+      phase: ux
+      required: true
+      dependsOn:
+        - second-surface-pilot
+        - working-memory-continuity
+  completion:
+    mode: allRequired
+  successCriteria:
+    - WorkItem is the canonical durable work object rather than a surface conversation.
+    - Stable identifiers correlate surface interactions, executions and ContextSnapshots.
+    - One investigation is resumed across two surfaces without replaying raw chat history.
+    - Every surface transition re-evaluates actor identity and policy.
+    - Historical execution context stays immutable across resume.
