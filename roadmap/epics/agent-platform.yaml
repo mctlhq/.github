@@ -29,6 +29,8 @@ spec:
       title: Execution governance
     - id: authoring
       title: Governed agent authoring
+    - id: admission
+      title: Execution admission and capacity
   workItems:
     - id: agent-contract
       phase: contract
@@ -122,6 +124,13 @@ spec:
         - runtime-resolver
         - gitops-catalog
 
+    - id: execution-admission
+      phase: admission
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 395
+
     - id: governed-agent-authoring
       title: Propose, validate and publish a new agent through reviewed GitOps changes
       owner: mctl-agents
@@ -142,4 +151,8 @@ spec:
     - Approved definitions and profiles are published and resolved through an immutable registry binding.
     - Execution identity, policy, approval and evidence are pinned to exact resource versions.
     - Existing agents can propose a new agent through a reviewable GitOps change but cannot activate it directly.
-    - Temporal and Argo remain the execution and orchestration stack.
+    - Implementation capacity is bounded by policy, and waiting for capacity never consumes an execution budget.
+    - An implementation attempt begins when the implementer actually starts, not when work is approved, admitted or submitted.
+    - Temporal remains the orchestration authority and Argo the execution authority;
+      admission and capacity decisions happen before Argo submission and do not
+      introduce a second scheduler or executor.

@@ -95,4 +95,6 @@ spec:
     - Orphaned, stale and conflicting ownership is detected without racing a healthy owner.
     - Ownership is inspectable through mctl API or MCP without inferring state from workflow internals.
     - Recovery operations fail closed on stale optimistic preconditions.
-    - Temporal and Argo remain the orchestration authority; no parallel scheduler is introduced.
+    - Temporal remains the orchestration authority and Argo the execution authority;
+      admission and capacity decisions happen before Argo submission and do not
+      introduce a second scheduler or executor.
