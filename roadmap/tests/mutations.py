@@ -154,3 +154,102 @@ def add_unexpected_child(
     _find(result, ref(parent)).setdefault("subIssues", []).append(ref(child))
     return result
 
+
+def set_state(
+    snapshot: dict[str, Any], issue: str, state: str, reason: str | None
+) -> dict[str, Any]:
+    """Set one observed issue's state and stateReason. Pure, deep-copying.
+
+    The deep-copy twin of `test_completion._set_state`, kept here so
+    `test_ready.py` (and any future suite) does not have to copy it again.
+    """
+
+    result = copy.deepcopy(snapshot)
+    target = ref(issue)
+    for observation in result["issues"]:
+        if _same(observation["requested"], target):
+            observation["state"] = state
+            observation.pop("stateReason", None)
+            if reason is not None:
+                observation["stateReason"] = reason
+    return result
+
+
+def synthetic_snapshot(
+    document: dict[str, Any],
+    states: dict[str, tuple[str, str | None]] | None = None,
+) -> dict[str, Any]:
+    """Build a converged GitHubGraphSnapshot for any EpicDefinition document.
+
+    Every authored identity -- owned bindings plus `externalDependsOn`
+    targets -- is observed exactly as `reconcile.desired_graph()` derived it:
+    parent edges and dependency edges converged, so `reconcile.py` reports
+    zero drift against the manifest this was built from. `states` maps an
+    "owner/repo#n" string to `(state, reason)`; a key not given defaults to
+    `("open", None)`.
+
+    This is how a manifest with no committed capture -- `lifecycle-ownership`,
+    `unified-identity`, or any future epic -- gets a graph to test readiness
+    against, without hand-editing a capture. `source.mode` is always
+    `synthetic-fixture`, so a test graph can never masquerade as live
+    evidence; a real live capture can replace it later without changing the
+    contract this snapshot satisfies.
+    """
+
+    # Deferred: keeps this module importable with only `roadmap/tests` on
+    # sys.path (as `.github/workflows/roadmap-validate.yml` does today for the
+    # other mutators), and only requires `roadmap/scripts` on sys.path for
+    # callers that actually use this function.
+    import reconcile
+
+    desired = reconcile.desired_graph(document)
+    states = states or {}
+
+    def _state_for(key: tuple[str, int]) -> tuple[str, str | None]:
+        return states.get(f"{key[0]}#{key[1]}", ("open", None))
+
+    parent_of: dict[tuple[str, int], tuple[str, int]] = {
+        child: parent for _, child, parent in desired.hierarchy
+    }
+    children_of: dict[tuple[str, int], list[tuple[str, int]]] = {}
+    for child, parent in parent_of.items():
+        children_of.setdefault(parent, []).append(child)
+
+    blocked_by_of: dict[tuple[str, int], list[tuple[str, int]]] = {}
+    for _, blocked, blocker in desired.dependencies:
+        blocked_by_of.setdefault(blocked, []).append(blocker)
+
+    issues: list[dict[str, Any]] = []
+    for key in desired.authored_keys():
+        state, reason = _state_for(key)
+        identity = {"repository": key[0], "number": key[1]}
+        observation: dict[str, Any] = {
+            "requested": dict(identity),
+            "resolved": dict(identity),
+            "found": True,
+            "state": state,
+            "parent": (
+                {"repository": parent_of[key][0], "number": parent_of[key][1]}
+                if key in parent_of
+                else None
+            ),
+            "subIssues": [
+                {"repository": child[0], "number": child[1]}
+                for child in sorted(children_of.get(key, []))
+            ],
+            "blockedBy": [
+                {"repository": blocker[0], "number": blocker[1]}
+                for blocker in sorted(blocked_by_of.get(key, []))
+            ],
+        }
+        if reason is not None:
+            observation["stateReason"] = reason
+        issues.append(observation)
+
+    return {
+        "apiVersion": "roadmap.mctl.ai/v1alpha1",
+        "kind": "GitHubGraphSnapshot",
+        "source": {"mode": "synthetic-fixture"},
+        "issues": issues,
+    }
+

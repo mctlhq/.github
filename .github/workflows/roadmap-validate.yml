@@ -57,6 +57,65 @@ jobs:
             --snapshot roadmap/fixtures/claude-remote-inbound-channels/live-capture.json \
             --output /dev/null
 
+      # Offline fixture replay only, same as the reconcile/health steps above.
+      # ready.py never runs --live here either.
+      - name: Assess readiness against the human-input converged fixture
+        run: |
+          python3 roadmap/scripts/ready.py roadmap/epics/human-input.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/human-input/converged-fixture.json \
+            --output "${RUNNER_TEMP}/human-input-ready.json"
+          python3 - "${RUNNER_TEMP}/human-input-ready.json" <<'PY'
+          import json, sys
+          document = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert document["kind"] == "RoadmapReadySet", document["kind"]
+          expected_ready = sorted(
+              item["id"] for item in document["items"] if item["state"] == "ready"
+          )
+          assert document["ready"] == expected_ready, (document["ready"], expected_ready)
+          assert not any(
+              item["state"] == "ready" and "issue" not in item for item in document["items"]
+          ), "an unbound item must never be ready"
+          PY
+
+      - name: Assess readiness for epic #66 against its immutable live capture
+        run: |
+          python3 roadmap/scripts/ready.py roadmap/epics/roadmap-control-plane.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/roadmap-control-plane/live-capture.json \
+            --output "${RUNNER_TEMP}/roadmap-control-plane-ready.json"
+          python3 - "${RUNNER_TEMP}/roadmap-control-plane-ready.json" <<'PY'
+          import json, sys
+          document = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert document["kind"] == "RoadmapReadySet", document["kind"]
+          expected_ready = sorted(
+              item["id"] for item in document["items"] if item["state"] == "ready"
+          )
+          assert document["ready"] == expected_ready, (document["ready"], expected_ready)
+          assert not any(
+              item["state"] == "ready" and "issue" not in item for item in document["items"]
+          ), "an unbound item must never be ready"
+          PY
+
+      - name: Assess readiness for epic #87 against its immutable live capture
+        run: |
+          python3 roadmap/scripts/ready.py roadmap/epics/claude-remote-inbound-channels.yaml \
+            --corpus roadmap/epics \
+            --snapshot roadmap/fixtures/claude-remote-inbound-channels/live-capture.json \
+            --output "${RUNNER_TEMP}/claude-remote-inbound-channels-ready.json"
+          python3 - "${RUNNER_TEMP}/claude-remote-inbound-channels-ready.json" <<'PY'
+          import json, sys
+          document = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert document["kind"] == "RoadmapReadySet", document["kind"]
+          expected_ready = sorted(
+              item["id"] for item in document["items"] if item["state"] == "ready"
+          )
+          assert document["ready"] == expected_ready, (document["ready"], expected_ready)
+          assert not any(
+              item["state"] == "ready" and "issue" not in item for item in document["items"]
+          ), "an unbound item must never be ready"
+          PY
+
       # The write boundary, exercised offline end to end: plan the converged
       # fixture, plan a drifted copy, apply it through the in-memory mutator and
       # reconcile the result. No token is used and --live is never invoked, so

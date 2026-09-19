@@ -1,0 +1,444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/roadmap-ready-set-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 RoadmapReadySet or RoadmapReadySetList",
+  "description": "Dependency-aware readiness derived from one EpicDefinition's workItems and one observed GitHubGraphSnapshot. A pure projection: no clock, no workflow runtime state, no model. See roadmap/README.md#readiness.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/roadmapReadySet"
+    },
+    {
+      "$ref": "#/$defs/roadmapReadySetList"
+    }
+  ],
+  "$defs": {
+    "roadmapReadySet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "epic",
+        "source",
+        "ready",
+        "summary",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapReadySet"
+        },
+        "epic": {
+          "$ref": "#/$defs/epic"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "ready": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        }
+      }
+    },
+    "roadmapReadySetList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "apiVersion",
+        "kind",
+        "items"
+      ],
+      "properties": {
+        "apiVersion": {
+          "const": "roadmap.mctl.ai/v1alpha1"
+        },
+        "kind": {
+          "const": "RoadmapReadySetList"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/roadmapReadySet"
+          }
+        }
+      }
+    },
+    "epic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "manifest"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue": {
+          "$ref": "#/$defs/issueRef"
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "description": "Provenance. A synthetic fixture may never claim a live capture timestamp. Required: a ready set with no source would be a claim about a graph nobody looked at.",
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "capturedAt",
+            "apiBase"
+          ],
+          "properties": {
+            "mode": {
+              "const": "live-capture"
+            },
+            "capturedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "apiBase": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "const": "synthetic-fixture"
+            },
+            "derivedFrom": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "completion": {
+      "description": "The item's own completion axis, byte-identical in vocabulary to roadmap-health.schema.json $defs.completion so the two documents cannot drift apart.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete",
+            "incomplete",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "enum": [
+            "closed",
+            "open",
+            "closed_not_planned",
+            "closed_duplicate",
+            "unbound",
+            "issue_not_found",
+            "unobserved",
+            "state_not_observed",
+            "closed_reason_unrecognized",
+            "binding_ambiguous"
+          ]
+        }
+      }
+    },
+    "blocker": {
+      "description": "One non-satisfied predecessor. Discriminated by kind: workItem names a local id, external names an issueRef. No synthetic id is invented for an external issue.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id",
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "const": "workItem"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "enum": [
+                "incomplete",
+                "unknown"
+              ]
+            },
+            "reason": {
+              "enum": [
+                "open",
+                "closed_not_planned",
+                "closed_duplicate",
+                "unbound",
+                "issue_not_found",
+                "unobserved",
+                "state_not_observed",
+                "closed_reason_unrecognized",
+                "binding_ambiguous"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "issue",
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "const": "external"
+            },
+            "issue": {
+              "$ref": "#/$defs/issueRef"
+            },
+            "status": {
+              "enum": [
+                "incomplete",
+                "unknown"
+              ]
+            },
+            "reason": {
+              "enum": [
+                "open",
+                "closed_not_planned",
+                "closed_duplicate",
+                "unbound",
+                "issue_not_found",
+                "unobserved",
+                "state_not_observed",
+                "closed_reason_unrecognized",
+                "binding_ambiguous"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "phase",
+        "required",
+        "state",
+        "completion",
+        "dependsOn",
+        "externalDependsOn",
+        "blockers"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "ready",
+            "blocked",
+            "complete",
+            "unknown"
+          ]
+        },
+        "completion": {
+          "$ref": "#/$defs/completion"
+        },
+        "issue": {
+          "$ref": "#/$defs/issueRef"
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "externalDependsOn": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issueRef"
+          }
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blocker"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "ready"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blockers": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blockers": {
+                "maxItems": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "blocked"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blockers": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "required"
+      ],
+      "properties": {
+        "items": {
+          "$ref": "#/$defs/summaryCounts"
+        },
+        "required": {
+          "$ref": "#/$defs/summaryCounts"
+        }
+      }
+    },
+    "summaryCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ready",
+        "blocked",
+        "complete",
+        "unknown"
+      ],
+      "properties": {
+        "ready": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complete": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unknown": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
