@@ -30,9 +30,21 @@
         {
           "number": 68,
           "repository": "mctlhq/.github"
+        },
+        {
+          "number": 333,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 334,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 99,
+          "repository": "mctlhq/.github"
         }
       ],
-      "updatedAt": "2026-09-13T11:48:10Z"
+      "updatedAt": "2026-09-18T14:52:01Z"
     },
     {
       "blockedBy": [],
@@ -74,9 +86,10 @@
         "number": 68,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-13T11:53:56Z"
+      "updatedAt": "2026-09-19T00:00:13Z"
     },
     {
       "blockedBy": [
@@ -125,13 +138,93 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-16T22:57:56Z"
+      "updatedAt": "2026-09-18T14:52:08Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 67,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 83,
+          "repository": "mctlhq/.github"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 66,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 99,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 99,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-18T23:36:56Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 99,
+          "repository": "mctlhq/.github"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 66,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 333,
+        "repository": "mctlhq/mctl-api"
+      },
+      "resolved": {
+        "number": 333,
+        "repository": "mctlhq/mctl-api"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-18T23:36:58Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 333,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 99,
+          "repository": "mctlhq/.github"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 66,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 334,
+        "repository": "mctlhq/mctl-api"
+      },
+      "resolved": {
+        "number": 334,
+        "repository": "mctlhq/mctl-api"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-18T23:37:01Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-16T23:09:13Z",
+    "capturedAt": "2026-09-19T00:03:42Z",
     "mode": "live-capture"
   }
 }
