@@ -1,0 +1,104 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: observability
+  owner: mctl-gitops
+  labels:
+    - roadmap
+spec:
+  title: Vendor-neutral execution tracing for agents and DevLoop
+  goal: >-
+    Make mctl executions observable as correlated OpenTelemetry traces through a
+    vendor-neutral OTLP boundary, with canonical execution identity, backend
+    portability and no private payload recording by default.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 55
+  phases:
+    - id: gateway
+      title: Telemetry gateway
+    - id: backend
+      title: Backend bake-off
+    - id: tracing
+      title: End-to-end execution tracing
+    - id: correlation
+      title: Cross-system correlation
+  workItems:
+    - id: telemetry-gateway
+      phase: gateway
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 902
+
+    - id: attribute-catalog
+      title: Define the mctl telemetry attribute catalog and OTel mapping
+      owner: mctl-docs
+      phase: gateway
+      required: true
+      dependsOn:
+        - telemetry-gateway
+
+    - id: backend-bakeoff
+      phase: backend
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 903
+      dependsOn:
+        - telemetry-gateway
+
+    - id: devloop-traces
+      phase: tracing
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 195
+      dependsOn:
+        - telemetry-gateway
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 196
+
+    - id: agent-traces
+      phase: tracing
+      required: true
+      issue:
+        repository: mctlhq/mctl-agent
+        number: 38
+      dependsOn:
+        - telemetry-gateway
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 196
+
+    - id: mcp-span-context
+      title: Propagate canonical execution and span context through mctl-api MCP operations
+      owner: mctl-api
+      phase: correlation
+      required: true
+      dependsOn:
+        - devloop-traces
+
+    - id: cross-system-correlation
+      phase: correlation
+      required: true
+      issue:
+        repository: mctlhq/mctl-agent
+        number: 97
+      dependsOn:
+        - devloop-traces
+        - agent-traces
+        - mcp-span-context
+  completion:
+    mode: allRequired
+  successCriteria:
+    - OTel Collector is the only application-side telemetry boundary.
+    - One complete DevLoop is visible as a single correlated trace.
+    - One mctl-agent diagnosis links alert, Loki evidence and execution trace.
+    - Span attributes reuse canonical execution identity and documented mctl conventions.
+    - Backend selection is recorded in an ADR backed by live comparison evidence.
+    - Private prompts, completions and Telegram message bodies remain out of traces by default.
+    - Replacing the backend requires Collector configuration rather than producer code changes.

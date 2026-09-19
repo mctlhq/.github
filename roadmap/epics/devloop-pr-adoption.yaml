@@ -1,0 +1,56 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: devloop-pr-adoption
+  owner: mctl-agents
+  labels:
+    - roadmap
+spec:
+  title: Adopt PRs that fall outside normal proposal ownership
+  goal: >-
+    Ensure same-repository implementation PRs never become silently ownerless:
+    direct implementer PRs retain lifecycle ownership, and proposal-less PRs can
+    be safely adopted into the existing bounded review/remediation lifecycle.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 38
+  phases:
+    - id: direct
+      title: Direct implementer ownership
+    - id: steward
+      title: Steward-owned review remediation
+    - id: adoption
+      title: Proposal-less PR adoption
+  workItems:
+    - id: direct-implementer-ownership
+      phase: direct
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 239
+
+    - id: steward-review-fix
+      phase: steward
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 292
+
+    - id: proposal-less-pr-adoption
+      phase: adoption
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 334
+      dependsOn:
+        - steward-review-fix
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Direct implementer PRs retain a durable lifecycle owner.
+    - Proposal-less same-repo PRs with blocking reviews can be adopted safely.
+    - Existing live DevLoop, proposal or steward ownership always wins over adoption.
+    - Adoption is pinned to current PR head and grants remediation, not implicit merge authority.
+    - Ownerless merge-ready PRs are observable rather than silently absent from shepherd discovery.
