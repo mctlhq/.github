@@ -44,6 +44,11 @@ spec:
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 264
+        # The submission path needs both before it can carry the identifiers.
+        - repository: mctlhq/mctl-gitops
+          number: 1279
+        - repository: mctlhq/mctl-api
+          number: 335
 
     # mctl-telegram#443 states its own prerequisites as #227 AND mctl-agents#267:
     # the adapter binds Telegram threads to the WorkItem that the investigator

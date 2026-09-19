@@ -34,6 +34,18 @@ spec:
         repository: mctlhq/mctl-agents
         number: 333
 
+    # The core is inert until the catalog profile declares the tool, and the
+    # profile bump is a reviewed gitops change rather than a task inside the
+    # implementer PR. It is a required rollout that follows the core.
+    - id: catalog-profile-rollout
+      phase: core
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1277
+      dependsOn:
+        - human-input-core
+
     - id: human-input-api
       phase: api
       required: true

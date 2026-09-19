@@ -98,6 +98,17 @@ spec:
       dependsOn:
         - apply-identity
 
+    # The migration PR is code; the environment approval, the import-only
+    # apply and the scheduled drift and backup evidence are operator workflow.
+    - id: zone-apply-evidence
+      phase: cutover
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1281
+      dependsOn:
+        - zone-state-migration
+
     - id: git-only-operations-proof
       title: Exercise reviewed apply, scheduled drift and rollback on cut-over resources
       owner: mctl-gitops

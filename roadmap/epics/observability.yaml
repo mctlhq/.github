@@ -92,6 +92,18 @@ spec:
         - devloop-traces
         - agent-traces
         - mcp-span-context
+
+    # Everything that needs candidates actually running: the sandbox, the
+    # deployments, the soak, the measured rubric, the verdict and the teardown.
+    - id: live-bakeoff
+      phase: backend
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1280
+      dependsOn:
+        - backend-bakeoff
+
   completion:
     mode: allRequired
   successCriteria:
