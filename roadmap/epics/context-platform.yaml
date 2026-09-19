@@ -1,0 +1,80 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: context-platform
+  owner: mctl-agents
+  labels:
+    - roadmap
+spec:
+  title: Context engineering and retrieval control plane
+  goal: >-
+    Make execution context a first-class, immutable and evaluable platform
+    resource with provenance, deterministic assembly, retrieval quality signals
+    and versioned context-development lifecycle.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 20
+  phases:
+    - id: contract
+      title: ContextSnapshot contract and ownership
+    - id: assembly
+      title: Deterministic investigator context assembly
+    - id: ranking
+      title: Retrieval ranking, freshness and trust
+    - id: evaluation
+      title: Retrieval and context evaluation
+    - id: lifecycle
+      title: Context development lifecycle
+  workItems:
+    - id: context-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 264
+
+    - id: context-assembly
+      phase: assembly
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 265
+      dependsOn:
+        - context-contract
+
+    - id: retrieval-ranking-trust
+      title: Add retrieval ranking, freshness, trust and conflicting-evidence handling
+      owner: mctl-agents
+      phase: ranking
+      required: true
+      dependsOn:
+        - context-assembly
+
+    - id: context-evals
+      phase: evaluation
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 266
+      dependsOn:
+        - context-assembly
+
+    - id: context-development-lifecycle
+      title: Version, promote, observe and roll back context strategies
+      owner: mctl-agents
+      phase: lifecycle
+      required: true
+      dependsOn:
+        - retrieval-ranking-trust
+        - context-evals
+  completion:
+    mode: allRequired
+  successCriteria:
+    - ContextSnapshot is a canonical immutable contract correlated to execution identity.
+    - Investigator execution consumes a deterministic bounded ContextSnapshot.
+    - Retrieval ranking, freshness and trust are explicit rather than prompt-only behavior.
+    - Context quality is evaluated separately from final model output quality.
+    - Context strategies are versioned and rollback-capable.
+    - Sensitive retrieved content is not copied into telemetry by default.

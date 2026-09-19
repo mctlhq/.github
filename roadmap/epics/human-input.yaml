@@ -17,8 +17,6 @@ spec:
       repository: mctlhq/.github
       number: 42
     issueType: Epic
-    project:
-      priority: P1
   phases:
     - id: core
       title: Core durable contract

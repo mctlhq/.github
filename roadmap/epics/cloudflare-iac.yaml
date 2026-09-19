@@ -1,0 +1,136 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: cloudflare-iac
+  owner: mctl-gitops
+  labels:
+    - roadmap
+spec:
+  title: Declarative Cloudflare control plane with self-hosted state
+  goal: >-
+    Move durable Cloudflare configuration to reviewed OpenTofu GitOps with
+    mctl-owned remote state, controlled apply, drift detection and an explicit
+    boundary around interactive and runtime state.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 47
+  phases:
+    - id: inventory
+      title: Inventory and reversibility
+    - id: bootstrap
+      title: IaC layout and remote state
+    - id: cutover
+      title: Controlled import and ownership transfer
+    - id: operations
+      title: Git-only operations and drift
+    - id: enterprise
+      title: Declarative MCP and enterprise edge
+  workItems:
+    - id: inventory
+      phase: inventory
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1083
+
+    - id: iac-bootstrap
+      phase: bootstrap
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1093
+      dependsOn:
+        - inventory
+
+    - id: apply-identity
+      phase: bootstrap
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1111
+      dependsOn:
+        - iac-bootstrap
+
+    - id: state-credential-hardening
+      phase: bootstrap
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1118
+      dependsOn:
+        - iac-bootstrap
+
+    - id: zone-state-migration
+      phase: cutover
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1178
+      dependsOn:
+        - apply-identity
+
+    - id: worker-routes
+      phase: cutover
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1179
+      dependsOn:
+        - apply-identity
+
+    - id: account-access
+      phase: cutover
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1088
+      dependsOn:
+        - apply-identity
+
+    - id: tunnel-handoff
+      phase: cutover
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1090
+      dependsOn:
+        - apply-identity
+
+    - id: git-only-operations-proof
+      title: Exercise reviewed apply, scheduled drift and rollback on cut-over resources
+      owner: mctl-gitops
+      phase: operations
+      required: true
+      dependsOn:
+        - zone-state-migration
+        - worker-routes
+
+    - id: operator-runbook
+      phase: operations
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1180
+      dependsOn:
+        - zone-state-migration
+
+    - id: mcp-portal-iac
+      phase: enterprise
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1092
+      dependsOn:
+        - git-only-operations-proof
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Durable Cloudflare configuration is reviewed and reproducible from Git.
+    - State is mctl-owned, encrypted, locked, backed up and restorable.
+    - Imported resources prove zero unexpected diff before ownership transfer.
+    - Managed resources use reviewed plan and controlled apply with drift detection.
+    - Break-glass mutations have a documented reconciliation path.
+    - MCP Portal, server, DNS and Access durable configuration is declarative where provider support exists.
+    - Runtime OAuth grants, sessions and other user state remain outside GitOps.

@@ -39,6 +39,42 @@ def _set_state(snapshot: dict, issue: str, state: str, reason: str | None) -> di
     return result
 
 
+def _required_bound(document) -> list[tuple[str, str]]:
+    """Every required work item that names an issue, as (item id, 'owner/repo#n')."""
+
+    items = []
+    for item in document["spec"]["workItems"]:
+        if not item.get("required") or "issue" not in item:
+            continue
+        issue = item["issue"]
+        items.append((item["id"], f"{issue['repository']}#{issue['number']}"))
+    return items
+
+
+def _observed_state(snapshot: dict, issue: str) -> str | None:
+    for observation in snapshot["issues"]:
+        if observation["requested"] == mutations.ref(issue):
+            return observation.get("state")
+    return None
+
+
+def _close_required_except(document, snapshot: dict, keep: str | None) -> dict:
+    """Close every bound required item but `keep`, to isolate one blocker.
+
+    The epic grows work items over time, so a literal blocker list turns every
+    new item into a test failure -- which is exactly what the wave items did.
+    These tests are about what the required flag and the observed state mean,
+    not about how many items epic #66 happens to have today, so the graph they
+    reason over is derived from the manifest they are handed.
+    """
+
+    result = snapshot
+    for _, issue in _required_bound(document):
+        if issue != keep:
+            result = _set_state(result, issue, "closed", "completed")
+    return result
+
+
 class CompletionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -103,21 +139,36 @@ class CompletionTest(unittest.TestCase):
         item = self._item(self._compute(forged), "governed-apply")
         self.assertEqual(("unknown", "state_not_observed"), (item["status"], item["reason"]))
 
-    def test_epic_66_is_healthy_and_blocked_only_by_governed_apply(self) -> None:
+    def test_epic_66_is_healthy_and_blocked_by_exactly_its_open_required_items(self) -> None:
         result = self._assess(self.capture)
         self.assertEqual("healthy", result["state"])
         self.assertEqual([], result["diagnostics"])
 
+        required = _required_bound(self.document)
+        open_ids = sorted(
+            item_id for item_id, issue in required
+            if _observed_state(self.capture, issue) == "open"
+        )
+        self.assertTrue(open_ids, "the capture shows no open required item to block on")
+
         block = result["completion"]
         self.assertEqual("incomplete", block["status"])
-        self.assertEqual(["governed-apply"], block["blocking"])
-        self.assertEqual({"total": 3, "complete": 2, "incomplete": 1, "unknown": 0}, block["required"])
+        self.assertEqual(open_ids, block["blocking"])
+        self.assertEqual(
+            {
+                "total": len(required),
+                "complete": len(required) - len(open_ids),
+                "incomplete": len(open_ids),
+                "unknown": 0,
+            },
+            block["required"],
+        )
         self.assertEqual([], [e.message for e in self.validator.iter_errors(result)])
 
     def test_open_optional_item_does_not_hold_completion_back(self) -> None:
         """#85 is open and required: false. Close only the required blocker."""
 
-        snapshot = _set_state(self.capture, APPLY, "closed", "completed")
+        snapshot = _close_required_except(self.document, self.capture, None)
         block = self._compute(snapshot)
         temporal = self._item(block, "temporal-health")
         self.assertFalse(temporal["required"])
@@ -132,7 +183,7 @@ class CompletionTest(unittest.TestCase):
         for item in document["spec"]["workItems"]:
             if item["id"] == "temporal-health":
                 item["required"] = True
-        snapshot = _set_state(self.capture, APPLY, "closed", "completed")
+        snapshot = _close_required_except(self.document, self.capture, None)
         block = self._compute(snapshot, document)
         self.assertEqual("incomplete", block["status"])
         self.assertEqual(["temporal-health"], block["blocking"])
@@ -157,14 +208,15 @@ class CompletionTest(unittest.TestCase):
 
         for reason in ("reopened", "some_future_reason"):
             with self.subTest(reason=reason):
-                block = self._compute(_set_state(self.capture, APPLY, "closed", reason))
+                isolated = _close_required_except(self.document, self.capture, APPLY)
+                snapshot = _set_state(isolated, APPLY, "closed", reason)
+                block = self._compute(snapshot)
                 item = self._item(block, "governed-apply")
                 self.assertEqual(("unknown", "closed_reason_unrecognized"), (item["status"], item["reason"]))
                 self.assertEqual("unknown", block["status"])
                 self.assertIn("governed-apply", block["blocking"])
                 result = health.assess(
-                    EPIC_66, self.loaded,
-                    github_graph.FixtureGraphSource(_set_state(self.capture, APPLY, "closed", reason)),
+                    EPIC_66, self.loaded, github_graph.FixtureGraphSource(snapshot),
                 )
                 self.assertEqual([], [e.message for e in self.validator.iter_errors(result)])
 
@@ -189,7 +241,7 @@ class CompletionTest(unittest.TestCase):
     # -- the invariant -------------------------------------------------------
 
     def test_unobserved_required_item_is_unknown_never_incomplete(self) -> None:
-        snapshot = _set_state(self.capture, APPLY, "closed", "completed")
+        snapshot = _close_required_except(self.document, self.capture, None)
         key = ("mctlhq/.github", 68)
         block = self._compute(snapshot, unobserved=frozenset({key}))
         item = self._item(block, "governed-apply")
@@ -198,7 +250,7 @@ class CompletionTest(unittest.TestCase):
         self.assertEqual(["governed-apply"], block["blocking"])
 
     def test_state_that_was_not_captured_is_unknown(self) -> None:
-        snapshot = copy.deepcopy(_set_state(self.capture, APPLY, "closed", "completed"))
+        snapshot = copy.deepcopy(_close_required_except(self.document, self.capture, None))
         for observation in snapshot["issues"]:
             if observation["requested"] == mutations.ref(APPLY):
                 observation.pop("state")
@@ -213,9 +265,13 @@ class CompletionTest(unittest.TestCase):
     def test_an_observed_incomplete_item_outranks_unknown(self) -> None:
         """Incomplete is an observed fact; it holds even when another item is unknown."""
 
+        open_id = next(
+            item_id for item_id, issue in _required_bound(self.document)
+            if _observed_state(self.capture, issue) == "open"
+        )
         block = self._compute(self.capture, unobserved=frozenset({("mctlhq/.github", 83)}))
         self.assertEqual("unknown", self._item(block, "roadmap-health")["status"])
-        self.assertEqual("incomplete", self._item(block, "governed-apply")["status"])
+        self.assertEqual("incomplete", self._item(block, open_id)["status"])
         self.assertEqual("incomplete", block["status"])
 
     def test_partial_observation_reports_completion_through_health(self) -> None:
@@ -247,7 +303,9 @@ class CompletionTest(unittest.TestCase):
         forged = {
             "optional item listed as blocking": lambda b: b["blocking"].append("temporal-health"),
             "complete item listed as blocking": lambda b: b["blocking"].append("reconciler"),
-            "counts disagree with items": lambda b: b["required"].__setitem__("complete", 3),
+            "counts disagree with items": lambda b: b["required"].__setitem__(
+                "complete", b["required"]["complete"] + 1
+            ),
             "status disagrees with items": lambda b: b.__setitem__("status", "unknown"),
         }
         for name, mutate in forged.items():
