@@ -87,6 +87,10 @@ spec:
         - human-input-core
         - human-input-api
 
+    # The round trip cannot be proven while the tool is ineligible, so the
+    # catalog rollout is a prerequisite of the proof even though it is not one
+    # of the adapter. Without this edge the proof reads startable before an
+    # investigator could invoke the tool at all.
     - id: devloop-e2e
       title: Prove investigator to human to automatic continuation
       owner: mctl-agents
@@ -94,6 +98,7 @@ spec:
       required: true
       dependsOn:
         - telegram-adapter
+        - catalog-profile-rollout
   completion:
     mode: allRequired
   successCriteria:
