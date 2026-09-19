@@ -28,12 +28,26 @@ spec:
     - id: onboarding
       title: Integrated onboarding and communication lifecycle
   workItems:
+    # The mctl-telegram half of #400 is delivered (#511 added the admin:users
+    # lookup tier, #575 documented it). What remains is the deployment half in
+    # mctl-gitops#1182, so that is the work item, and #400 is the parent bug
+    # that closes behind it. Modelling #400 as the open implementation item made
+    # it look startable when there is no code left to write in that repository.
+    - id: lookup-deployment
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1182
+
     - id: operator-identity-lookup
       phase: identity
       required: true
       issue:
         repository: mctlhq/mctl-telegram
         number: 400
+      dependsOn:
+        - lookup-deployment
 
     - id: client-reachability-preferences
       phase: lifecycle
