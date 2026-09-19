@@ -1,0 +1,62 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: agent-finops
+  owner: mctl-api
+  labels:
+    - roadmap
+    - finops
+    - agents
+spec:
+  title: Agent FinOps and model usage attribution
+  goal: >-
+    Make model usage and cost attributable to exact mctl executions and DevLoop stages
+    through a backend-neutral, durable and replay-safe usage ledger.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 48
+    issueType: Epic
+    project:
+      priority: P2
+  phases:
+    - id: contract
+      title: Canonical usage and cost contract
+    - id: ledger
+      title: Durable usage ledger and queries
+    - id: instrumentation
+      title: End-to-end DevLoop instrumentation
+  workItems:
+    - id: usage-contract
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 49
+    - id: usage-ledger
+      phase: ledger
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 266
+      dependsOn:
+        - usage-contract
+    - id: devloop-instrumentation
+      phase: instrumentation
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 50
+      dependsOn:
+        - usage-ledger
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Every paid model invocation maps to one canonical ModelUsageRecord.
+    - Provider-reported, calculated and future invoice-reconciled costs remain distinct.
+    - Pricing versions make historical calculated cost reproducible.
+    - Retry, replay and exporter redelivery cannot double-count one paid invocation.
+    - Usage remains queryable after observability backend retention expires.
+    - One complete DevLoop can be broken down by investigator, implementer, reviewer and remediation stage.
+    - FinOps does not require prompt or completion payload storage.
