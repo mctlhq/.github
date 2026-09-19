@@ -130,11 +130,6 @@ spec:
       issue:
         repository: mctlhq/mctl-agents
         number: 395
-      externalDependsOn:
-        - repository: mctlhq/mctl-agents
-          number: 352
-        - repository: mctlhq/mctl-agents
-          number: 353
 
     - id: governed-agent-authoring
       title: Propose, validate and publish a new agent through reviewed GitOps changes
