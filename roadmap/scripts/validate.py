@@ -131,34 +131,73 @@ def _cycle(nodes: Iterable[str], edges: dict[str, list[str]]) -> list[str] | Non
     return None
 
 
-def _issue_key(ref: Any) -> tuple[str, int] | None:
+def canonical_repository(repository: str) -> str:
+    """Return the case-insensitive canonical form of a repository identity.
+
+    GitHub repository names are case-insensitive, so two authored spellings that
+    differ only in case name the same issue. Every ownership or equality decision
+    must go through this, or a single issue can acquire two owners during
+    validation and then collapse onto one object on the live graph.
+    """
+
+    return repository.lower()
+
+
+def issue_key(ref: Any) -> tuple[str, int] | None:
+    """Return the canonical identity of an issue ref, or None if it is not one.
+
+    This is the single identity boundary shared by the validator and the
+    reconciler. Authored spelling is preserved only for diagnostics; see
+    issue_label.
+    """
+
     if (
         isinstance(ref, dict)
         and isinstance(ref.get("repository"), str)
         and isinstance(ref.get("number"), int)
     ):
-        return (ref["repository"], ref["number"])
+        return (canonical_repository(ref["repository"]), ref["number"])
     return None
 
 
-def _document_bindings(document: dict[str, Any]) -> list[tuple[tuple[str, int], str]]:
-    """Return every authored GitHub issue binding in one manifest."""
+def issue_label(ref: Any) -> str:
+    """Render an issue ref the way its author spelled it, for messages only."""
 
-    bindings: list[tuple[tuple[str, int], str]] = []
+    return f"{ref['repository']}#{ref['number']}"
+
+
+def _document_bindings(
+    document: dict[str, Any],
+) -> list[tuple[tuple[str, int], str, str]]:
+    """Return every authored GitHub issue binding in one manifest.
+
+    Each entry is (canonical key, local owner id, authored label).
+    """
+
+    bindings: list[tuple[tuple[str, int], str, str]] = []
     spec = document.get("spec", {})
 
-    root_key = _issue_key(spec.get("github", {}).get("issue"))
+    root_issue = spec.get("github", {}).get("issue")
+    root_key = issue_key(root_issue)
     if root_key is not None:
-        bindings.append((root_key, "epic"))
+        bindings.append((root_key, "epic", issue_label(root_issue)))
 
     for item in spec.get("workItems", []):
         if not isinstance(item, dict):
             continue
-        key = _issue_key(item.get("issue"))
+        issue = item.get("issue")
+        key = issue_key(issue)
         if key is not None:
-            bindings.append((key, item.get("id", "<unknown>")))
+            bindings.append((key, item.get("id", "<unknown>"), issue_label(issue)))
 
     return bindings
+
+
+# "epic" names the root binding wherever an owner is reported -- validator
+# diagnostics, and the reconciler's RoadmapDiff entries. A work item allowed to
+# take the same name would make those messages ambiguous about which binding
+# they are talking about.
+RESERVED_WORK_ITEM_IDS = frozenset({"epic"})
 
 
 def semantic_errors(document: dict[str, Any]) -> list[str]:
@@ -187,16 +226,21 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
     dependency_edges: dict[str, list[str]] = {item_id: [] for item_id in item_ids}
 
     issue_bindings: dict[tuple[str, int], str] = {}
-    root_key = _issue_key(spec.get("github", {}).get("issue"))
+    root_key = issue_key(spec.get("github", {}).get("issue"))
     if root_key is not None:
         issue_bindings[root_key] = "epic"
 
-    external_refs: list[tuple[str, tuple[str, int]]] = []
+    external_refs: list[tuple[str, tuple[str, int], str]] = []
 
     for item in work_items:
         if not isinstance(item, dict) or "id" not in item:
             continue
         item_id = item["id"]
+
+        if item_id in RESERVED_WORK_ITEM_IDS:
+            errors.append(
+                f"work item {item_id}: id is reserved for the epic root binding"
+            )
 
         phase_id = item.get("phase")
         if phase_id not in phase_set:
@@ -224,7 +268,7 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
                 dependency_edges[item_id].append(dependency)
 
         issue = item.get("issue")
-        key = _issue_key(issue)
+        key = issue_key(issue)
         if issue is None:
             if not item.get("title"):
                 errors.append(f"work item {item_id}: unbound item requires title")
@@ -234,23 +278,35 @@ def semantic_errors(document: dict[str, Any]) -> list[str]:
             existing = issue_bindings.get(key)
             if existing is not None:
                 errors.append(
-                    f"GitHub issue {key[0]}#{key[1]} is bound more than once: "
+                    f"GitHub issue {issue_label(issue)} is bound more than once: "
                     f"{existing}, {item_id}"
                 )
             else:
                 issue_bindings[key] = item_id
 
+        # JSON Schema's uniqueItems compares authored objects, so two spellings
+        # of one issue that differ only in case both pass it. Deduplicate on the
+        # canonical key, the same identity every other binding check uses.
+        seen_external: set[tuple[str, int]] = set()
         for external in item.get("externalDependsOn", []):
-            external_key = _issue_key(external)
-            if external_key is not None:
-                external_refs.append((item_id, external_key))
+            external_key = issue_key(external)
+            if external_key is None:
+                continue
+            if external_key in seen_external:
+                errors.append(
+                    f"work item {item_id}: externalDependsOn lists "
+                    f"{issue_label(external)} more than once"
+                )
+                continue
+            seen_external.add(external_key)
+            external_refs.append((item_id, external_key, issue_label(external)))
 
-    for item_id, external_key in external_refs:
+    for item_id, external_key, external_label in external_refs:
         local_owner = issue_bindings.get(external_key)
         if local_owner is not None:
             errors.append(
                 f"work item {item_id}: externalDependsOn "
-                f"{external_key[0]}#{external_key[1]} is locally bound by {local_owner}; "
+                f"{external_label} is locally bound by {local_owner}; "
                 "use dependsOn instead"
             )
 
@@ -296,12 +352,12 @@ def corpus_errors(
         else:
             names[name] = path
 
-        for key, local_owner in _document_bindings(document):
+        for key, local_owner, label in _document_bindings(document):
             existing = bindings.get(key)
             if existing is not None:
                 existing_path, existing_owner = existing
                 message = (
-                    f"GitHub issue {key[0]}#{key[1]} is bound across manifests: "
+                    f"GitHub issue {label} is bound across manifests: "
                     f"{existing_path} ({existing_owner}) and {path} ({local_owner})"
                 )
                 failures[existing_path].append(message)

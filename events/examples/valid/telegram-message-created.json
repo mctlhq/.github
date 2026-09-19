@@ -1,0 +1,15 @@
+{
+  "specversion": "mctl.events/v1",
+  "id": "telegram:evt:v1:12:210408407:5531",
+  "type": "telegram.message.created",
+  "source": "mctl-telegram",
+  "occurred_at": "2026-09-17T08:00:00Z",
+  "correlation_id": "telegram:evt:v1:12:210408407:5531",
+  "subject": {
+    "kind": "telegram.message",
+    "account_id": "12",
+    "chat_id": "210408407",
+    "message_id": "5531",
+    "peer": "user:210408407"
+  }
+}
