@@ -53,6 +53,11 @@ spec:
       dependsOn:
         - telegram-compatibility
 
+    # The body names a live Phase 1 portal as its prerequisite, in two parts:
+    # the portal spike itself, which is already this epic's
+    # compatibility-spike, and the allowlist pin that made the portal's tool
+    # surface deliberate. Only telegram-compatibility was recorded, so the
+    # measurement read startable with nothing to measure against.
     - id: denied-user-and-bypass
       phase: portal
       required: true
@@ -61,6 +66,10 @@ spec:
         number: 616
       dependsOn:
         - telegram-compatibility
+        - compatibility-spike
+      externalDependsOn:
+        - repository: mctlhq/mctl-telegram
+          number: 609
 
     - id: gateway-dlp-result
       phase: gateway
@@ -89,6 +98,11 @@ spec:
       dependsOn:
         - gateway-dlp-result
 
+    # The body calls this the executable counterpart of mctlhq/.github#41 and
+    # names a live Phase 1 portal as well: the mapping decisions are the input
+    # to the adapter, and the portal is what the compatibility matrix is
+    # measured through. Neither was an edge, so the adapter read startable
+    # before the decisions it implements existed.
     - id: mcp-tasks
       phase: extensions
       required: true
@@ -97,6 +111,10 @@ spec:
         number: 284
       dependsOn:
         - correlation-contract
+        - compatibility-spike
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 41
 
     - id: mcp-apps
       phase: extensions
