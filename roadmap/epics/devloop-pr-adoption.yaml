@@ -46,6 +46,18 @@ spec:
         number: 334
       dependsOn:
         - steward-review-fix
+
+    # Adoption state is written each tick and dropped again until the shepherd
+    # CWFT stages it, so the flag cannot be enabled on the core alone.
+    - id: cwft-adopted-prs-persistence
+      phase: adoption
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1278
+      dependsOn:
+        - proposal-less-pr-adoption
+
   completion:
     mode: allRequired
   successCriteria:

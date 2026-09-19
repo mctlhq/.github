@@ -107,6 +107,17 @@ spec:
       dependsOn:
         - correlation-contract
 
+    # Host matrix, screenshots and submission positioning need a human at a
+    # real client, so they are their own item rather than implementer DoD.
+    - id: mcp-apps-validation
+      phase: extensions
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 650
+      dependsOn:
+        - mcp-apps
+
     - id: enterprise-endpoint-decision
       title: Document the tenant-specific enterprise endpoint and identity-boundary decision
       owner: mctlhq/.github
