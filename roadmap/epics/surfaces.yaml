@@ -68,6 +68,9 @@ spec:
       owner: mctl-api
       phase: resume
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 341
       dependsOn:
         - investigator-resume
         - telegram-work-item-adapter
@@ -77,6 +80,9 @@ spec:
       owner: mctl-agents
       phase: continuity
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 431
       dependsOn:
         - investigator-resume
       externalDependsOn:
@@ -88,6 +94,9 @@ spec:
       owner: mctl-portal
       phase: ux
       required: true
+      issue:
+        repository: mctlhq/mctl-portal
+        number: 126
       dependsOn:
         - second-surface-pilot
         - working-memory-continuity
