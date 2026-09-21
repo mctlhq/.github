@@ -51,6 +51,7 @@ spec:
         repository: mctlhq/mctl-telegram
         number: 483
       dependsOn:
+        - device-registry
         - self-service-activation
 
     - id: cli-and-rollout
@@ -60,6 +61,8 @@ spec:
         repository: mctlhq/mctl-telegram
         number: 484
       dependsOn:
+        - device-registry
+        - self-service-activation
         - device-bound-security
   completion:
     mode: allRequired
