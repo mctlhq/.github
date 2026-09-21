@@ -13,11 +13,18 @@ A work item's readiness is one of four states:
     complete  the item's own bound issue is delivered
     ready     the item is itself incomplete, and every authored predecessor
               (dependsOn and externalDependsOn) is complete
-    blocked   the item is itself incomplete, and at least one predecessor was
-              observed incomplete (an evidenced non-readiness)
+    blocked   the item is itself incomplete, and non-readiness is evidenced --
+              either a predecessor was observed incomplete, or the item's own
+              issue is closed as not_planned/duplicate
     unknown   the item's own readiness could not be proven -- because the item
               itself is unbound/unobserved/ambiguous/not-found, or because a
               predecessor is
+
+`ready` is narrower than "own issue not complete": only an item whose own
+issue is `open` can be executable. `closed_not_planned` and `closed_duplicate`
+are evidence of undelivered work for a *dependent*, but for the item itself
+they mean GitHub has already retired it -- handing one to a wave launcher
+would launch work against a closed issue.
 
 `blocked` outranks `unknown` when both apply to the same item: non-readiness
 is already proven, the same certainty-first precedence `completion.compute`
@@ -75,6 +82,12 @@ STATES: tuple[str, ...] = (READY, BLOCKED, COMPLETE, UNKNOWN)
 # closed_reason_unrecognized) is indeterminate: it says readiness cannot be
 # proven, not that the predecessor is definitely still open.
 BLOCKING_REASONS = frozenset({"open", "closed_not_planned", "closed_duplicate"})
+
+# The only own reason an executable item can carry. The other two blocking
+# reasons are retirements: they block a dependent, but they also disqualify
+# the item itself, which is why this is not simply `BLOCKING_REASONS`.
+OPEN = "open"
+RETIRED_REASONS = BLOCKING_REASONS - {OPEN}
 
 # A predecessor's (or an item's own) contribution to readiness.
 _SATISFIED = "satisfied"
@@ -188,6 +201,21 @@ def compute(
             # unprovable state.
             state = UNKNOWN
             blockers = []
+        elif reason in RETIRED_REASONS:
+            # The item's own issue is closed as not_planned / duplicate. That is
+            # observed evidence, not an unprovable state, so it is not `unknown`
+            # -- but it is the item itself that is retired, so no predecessor is
+            # to blame and `blockers` would otherwise be empty or list only
+            # predecessors that are perfectly fine. It names itself instead.
+            state = BLOCKED
+            blockers.append(
+                {
+                    "kind": "workItem",
+                    "id": item_id,
+                    "status": status,
+                    "reason": reason,
+                }
+            )
         elif _BLOCKING in predecessor_classes:
             # Non-readiness is already proven, even if another predecessor is
             # also indeterminate -- the same certainty-first precedence
@@ -245,10 +273,10 @@ def consistency_errors(document: dict[str, Any]) -> list[str]:
         if state == READY:
             if blockers:
                 errors.append(f"{item_id}: state ready carries blockers {blockers!r}")
-            if own_reason not in BLOCKING_REASONS:
+            if own_reason != OPEN:
                 errors.append(
-                    f"{item_id}: state ready has own reason {own_reason!r}, "
-                    f"not one of {sorted(BLOCKING_REASONS)}"
+                    f"{item_id}: state ready has own reason {own_reason!r}, not {OPEN!r} "
+                    "-- only an item whose own issue is open is executable"
                 )
         elif state == COMPLETE:
             if blockers:
@@ -278,10 +306,20 @@ def consistency_errors(document: dict[str, Any]) -> list[str]:
             errors.append(f"{item_id}: unrecognised state {state!r}")
 
         for blocker in blockers:
-            if blocker.get("kind") == "workItem" and blocker.get("id") not in ids:
+            if blocker.get("kind") != "workItem":
+                continue
+            if blocker.get("id") not in ids:
                 errors.append(
                     f"{item_id}: blocker names work item {blocker.get('id')!r}, "
                     "not part of this manifest"
+                )
+            elif blocker.get("id") == item_id and blocker.get("reason") not in RETIRED_REASONS:
+                # An item is its own blocker in exactly one case: its own issue
+                # was retired. Any other self-reference is a dependency cycle
+                # that validate.py should already have rejected.
+                errors.append(
+                    f"{item_id}: names itself as a blocker with reason "
+                    f"{blocker.get('reason')!r}, not one of {sorted(RETIRED_REASONS)}"
                 )
 
     expected_ready = sorted(item["id"] for item in items if item.get("state") == READY)

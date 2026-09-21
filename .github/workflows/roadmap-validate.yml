@@ -76,6 +76,10 @@ jobs:
           assert not any(
               item["state"] == "ready" and "issue" not in item for item in document["items"]
           ), "an unbound item must never be ready"
+          assert not any(
+              item["state"] == "ready" and item["completion"]["reason"] != "open"
+              for item in document["items"]
+          ), "a ready item's own issue must be open"
           PY
 
       - name: Assess readiness for epic #66 against its immutable live capture
@@ -95,6 +99,10 @@ jobs:
           assert not any(
               item["state"] == "ready" and "issue" not in item for item in document["items"]
           ), "an unbound item must never be ready"
+          assert not any(
+              item["state"] == "ready" and item["completion"]["reason"] != "open"
+              for item in document["items"]
+          ), "a ready item's own issue must be open"
           PY
 
       - name: Assess readiness for epic #87 against its immutable live capture
@@ -114,6 +122,10 @@ jobs:
           assert not any(
               item["state"] == "ready" and "issue" not in item for item in document["items"]
           ), "an unbound item must never be ready"
+          assert not any(
+              item["state"] == "ready" and item["completion"]["reason"] != "open"
+              for item in document["items"]
+          ), "a ready item's own issue must be open"
           PY
 
       # The write boundary, exercised offline end to end: plan the converged

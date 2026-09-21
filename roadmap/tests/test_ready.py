@@ -151,6 +151,7 @@ class ReadyTest(unittest.TestCase):
         }
         graph = github_graph.observed_graph(snapshot)
         result = ready.compute(document, graph)
+        self.assertEqual([], ready.consistency_errors(result))
         item = next(entry for entry in result["items"] if entry["id"] == "req")
         self.assertEqual("blocked", item["state"])
         self.assertEqual(
@@ -170,6 +171,100 @@ class ReadyTest(unittest.TestCase):
         self.assertEqual("ready", item["state"])
         self.assertEqual([], item["blockers"])
         self.assertIn("guarded-recovery", result["ready"])
+
+    def test_own_issue_closed_not_planned_is_blocked_never_ready(self) -> None:
+        # Every predecessor of guarded-recovery is delivered, so the ONLY thing
+        # between it and `ready` is its own issue -- which GitHub has closed as
+        # not_planned. `_classify` calls that reason `_BLOCKING`, exactly like
+        # `open`, so before this was fixed the item fell through to the
+        # predecessor checks and came out `ready`: a wave launcher would have
+        # been handed an issue GitHub had already closed. `consistency_errors`
+        # did not catch it either -- it only asserted the own reason was one of
+        # BLOCKING_REASONS, and `closed_not_planned` is.
+        graph = mutations.synthetic_snapshot(self.lifecycle)
+        for issue in ("mctlhq/mctl-api#293", "mctlhq/mctl-agents#352", "mctlhq/mctl-agents#353"):
+            graph = mutations.set_state(graph, issue, "closed", "completed")
+
+        for reason in ("not_planned", "duplicate"):
+            with self.subTest(reason=reason):
+                retired = mutations.set_state(graph, "mctlhq/mctl-api#294", "closed", reason)
+                # _assess also runs the schema and consistency_errors.
+                result, _ = self._assess(LIFECYCLE, self.lifecycle, retired)
+                item = self._item(result, "guarded-recovery")
+                self.assertEqual("blocked", item["state"])
+                self.assertNotIn("guarded-recovery", result["ready"])
+                # No predecessor is to blame, so the item names itself -- and a
+                # `blocked` item with no blockers fails both the schema and
+                # consistency_errors, so it cannot simply be left empty.
+                self.assertEqual(
+                    [
+                        {
+                            "kind": "workItem",
+                            "id": "guarded-recovery",
+                            "status": "incomplete",
+                            "reason": "closed_%s" % reason,
+                        }
+                    ],
+                    item["blockers"],
+                )
+
+    def test_retired_predecessor_still_blocks_its_dependent(self) -> None:
+        # The other half of the asymmetry: on a PREDECESSOR the same reason
+        # keeps meaning "evidence of undelivered work", so the dependent stays
+        # `blocked` on it rather than going `unknown`. Tightening the item's own
+        # axis must not have moved this one.
+        graph = mutations.synthetic_snapshot(self.lifecycle)
+        graph = mutations.set_state(graph, "mctlhq/mctl-agents#350", "closed", "not_planned")
+        result, _ = self._assess(LIFECYCLE, self.lifecycle, graph)
+        item = self._item(result, "devloop-ownership")
+        self.assertEqual("blocked", item["state"])
+        self.assertEqual(
+            [
+                {
+                    "kind": "workItem",
+                    "id": "ownership-contract",
+                    "status": "incomplete",
+                    "reason": "closed_not_planned",
+                }
+            ],
+            item["blockers"],
+        )
+
+    def test_consistency_errors_reject_a_ready_item_whose_own_issue_is_not_open(self) -> None:
+        # The self-check has to reject the pre-fix document on its own, so a
+        # consumer that did not compute the ready set cannot be handed one.
+        graph = mutations.synthetic_snapshot(self.lifecycle)
+        for issue in ("mctlhq/mctl-api#293", "mctlhq/mctl-agents#352", "mctlhq/mctl-agents#353"):
+            graph = mutations.set_state(graph, issue, "closed", "completed")
+        result, _ = self._assess(LIFECYCLE, self.lifecycle, graph)
+        self.assertEqual("ready", self._item(result, "guarded-recovery")["state"])
+
+        forged = copy.deepcopy(result)
+        item = next(e for e in forged["items"] if e["id"] == "guarded-recovery")
+        item["completion"]["reason"] = "closed_not_planned"
+        self.assertTrue(
+            any("state ready has own reason" in error
+                for error in ready.consistency_errors(forged)),
+            ready.consistency_errors(forged),
+        )
+
+        # A self-blocker is legitimate only for a retirement; anything else is a
+        # cycle validate.py should already have rejected.
+        forged = copy.deepcopy(result)
+        item = next(e for e in forged["items"] if e["id"] == "devloop-ownership")
+        item["blockers"] = [
+            {
+                "kind": "workItem",
+                "id": "devloop-ownership",
+                "status": "incomplete",
+                "reason": "open",
+            }
+        ]
+        self.assertTrue(
+            any("names itself as a blocker" in error
+                for error in ready.consistency_errors(forged)),
+            ready.consistency_errors(forged),
+        )
 
     # -- T5/T6/T7: required vs optional -----------------------------------
 
@@ -233,6 +328,7 @@ class ReadyTest(unittest.TestCase):
         }
         graph = github_graph.observed_graph(snapshot)
         result = ready.compute(document, graph)
+        self.assertEqual([], ready.consistency_errors(result))
         item = next(entry for entry in result["items"] if entry["id"] == "req")
         self.assertEqual("blocked", item["state"])
         self.assertEqual(

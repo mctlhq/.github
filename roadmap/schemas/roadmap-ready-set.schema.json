@@ -207,7 +207,7 @@
       }
     },
     "blocker": {
-      "description": "One non-satisfied predecessor. Discriminated by kind: workItem names a local id, external names an issueRef. No synthetic id is invented for an external issue.",
+      "description": "One unsatisfied input to this item's readiness. Normally a non-satisfied predecessor; a workItem blocker may also name the item itself, and only then, when its own issue is closed as not_planned or duplicate. Discriminated by kind: workItem names a local id, external names an issueRef. No synthetic id is invented for an external issue.",
       "oneOf": [
         {
           "type": "object",

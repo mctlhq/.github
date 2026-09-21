@@ -400,8 +400,8 @@ Per work item, one of four states:
 | state | meaning |
 | --- | --- |
 | `complete` | the item's own bound issue is delivered |
-| `ready` | the item is itself incomplete, and every authored predecessor is complete |
-| `blocked` | the item is itself incomplete, and at least one predecessor was observed incomplete (`open`, `closed_not_planned` or `closed_duplicate`) |
+| `ready` | the item's own issue is `open`, and every authored predecessor is complete |
+| `blocked` | the item is itself incomplete, and non-readiness is evidenced: a predecessor was observed incomplete (`open`, `closed_not_planned` or `closed_duplicate`), or the item's own issue is closed as `not_planned`/`duplicate` |
 | `unknown` | the item's own readiness could not be proven, or a predecessor's could not |
 
 `blocked` beats `unknown` when both apply to the same item: non-readiness is
@@ -433,8 +433,16 @@ Invariants:
   rejects dependency cycles, and a `complete` predecessor's own predecessors say
   nothing about this item.
 - An unbound work item is always `unknown`, never `ready` -- the strongest safety
-  property for a wave launcher: `state: ready` implies a bound, observed,
-  incomplete issue.
+  property for a wave launcher: `state: ready` implies a bound, observed, `open`
+  issue.
+- `ready` is narrower than "own issue not complete". `closed_not_planned` and
+  `closed_duplicate` are evidence of undelivered work when a *predecessor*
+  carries them, but on the item's own issue they mean GitHub has already retired
+  it, so the item is `blocked`, never `ready` -- otherwise a wave launcher would
+  be handed an issue that is already closed. The asymmetry is deliberate: it is
+  the one place where an item's own reason and a predecessor's are read
+  differently. Such an item is the only case where `blockers` names the item
+  itself; every other blocker is a predecessor.
 - `required: false` items still get a readiness state, and still count as real
   predecessors of anything that names them in `dependsOn`.
 - No snapshot at all: no `RoadmapReadySet` is emitted, the failure goes to
@@ -459,12 +467,13 @@ whole corpus is validated before any network call.
 `ready.consistency_errors(document)` is the semantic check to run on a
 `RoadmapReadySet` a caller did not compute itself, the same way
 `completion.consistency_errors` is run on a completion block: it rejects a `ready`
-item with blockers, a `blocked` item with no blocker whose reason is evidence of
-undelivered work, a `complete` item with any blocker, an `unknown` item with
-neither an indeterminate own reason nor an indeterminate blocker, a `ready` list
-that is not exactly the sorted ready ids, summary counts that disagree with
-`items`, or a `workItem` blocker naming an id that is not part of the same
-manifest.
+item with blockers, a `ready` item whose own reason is not `open`, a `blocked`
+item with no blocker whose reason is evidence of undelivered work, a `complete`
+item with any blocker, an `unknown` item with neither an indeterminate own reason
+nor an indeterminate blocker, a `ready` list that is not exactly the sorted ready
+ids, summary counts that disagree with `items`, a `workItem` blocker naming an id
+that is not part of the same manifest, or an item naming itself as a blocker for
+any reason other than its own retirement.
 
 `roadmap/tests/mutations.synthetic_snapshot()` builds a converged graph for any
 manifest directly from `reconcile.desired_graph()`, so `lifecycle-ownership` and
