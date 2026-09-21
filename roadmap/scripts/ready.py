@@ -83,11 +83,18 @@ STATES: tuple[str, ...] = (READY, BLOCKED, COMPLETE, UNKNOWN)
 # proven, not that the predecessor is definitely still open.
 BLOCKING_REASONS = frozenset({"open", "closed_not_planned", "closed_duplicate"})
 
-# The only own reason an executable item can carry. The other two blocking
-# reasons are retirements: they block a dependent, but they also disqualify
-# the item itself, which is why this is not simply `BLOCKING_REASONS`.
+# The only own reason an executable item can carry, and its complement: the
+# reasons that mean GitHub has already retired the item. Both block a
+# *dependent*, which is why BLOCKING_REASONS alone cannot decide readiness --
+# but only `open` leaves the item itself executable.
+#
+# Spelled out rather than derived by subtraction from BLOCKING_REASONS: a
+# future blocking reason must be an explicit decision about which side it
+# falls on, not a silent default into "retired". `test_ready` asserts the two
+# sets partition BLOCKING_REASONS exactly, so adding one to that set alone
+# fails loudly.
 OPEN = "open"
-RETIRED_REASONS = BLOCKING_REASONS - {OPEN}
+RETIRED_REASONS = frozenset({"closed_not_planned", "closed_duplicate"})
 
 # A predecessor's (or an item's own) contribution to readiness.
 _SATISFIED = "satisfied"

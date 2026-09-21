@@ -172,6 +172,15 @@ class ReadyTest(unittest.TestCase):
         self.assertEqual([], item["blockers"])
         self.assertIn("guarded-recovery", result["ready"])
 
+    def test_open_and_retired_reasons_partition_the_blocking_set(self) -> None:
+        # ready.py reads a blocking reason two ways: as a predecessor's, where
+        # every member of BLOCKING_REASONS blocks, and as the item's own, where
+        # only `open` leaves it executable. A new blocking reason has to be
+        # placed on one side deliberately -- this is what makes forgetting loud
+        # instead of defaulting it into "retired".
+        self.assertEqual(ready.BLOCKING_REASONS, ready.RETIRED_REASONS | {ready.OPEN})
+        self.assertEqual(frozenset(), ready.RETIRED_REASONS & {ready.OPEN})
+
     def test_own_issue_closed_not_planned_is_blocked_never_ready(self) -> None:
         # Every predecessor of guarded-recovery is delivered, so the ONLY thing
         # between it and `ready` is its own issue -- which GitHub has closed as
