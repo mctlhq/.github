@@ -52,6 +52,7 @@ roadmap/
     github-graph-snapshot.schema.json
     roadmap-diff.schema.json
     roadmap-health.schema.json
+    roadmap-ready-set.schema.json
     roadmap-apply-plan.schema.json
     roadmap-apply-result.schema.json
   epics/
@@ -65,6 +66,7 @@ roadmap/
     reconcile.py          desired vs observed
     health.py
     completion.py
+    ready.py              dependency-aware readiness
     plan.py               diff -> the mutations a manifest authorizes
     github_apply.py       the only module that may write
     apply.py              execute a plan, emit an audited result
@@ -73,6 +75,7 @@ roadmap/
     test_reconcile.py
     test_health.py
     test_completion.py
+    test_ready.py
     test_plan.py
     test_apply.py
     mutations.py
@@ -377,6 +380,107 @@ it does not change the CLI exit code. An item nobody could observe is `unknown`,
 `incomplete` and never `complete`. Snapshots carry GitHub's `stateReason` so closed-as-done
 can be told apart from closed-as-not-planned; the reason is kept verbatim, so an unrecognised
 value surfaces as `unknown` instead of being dropped and read as delivered.
+
+## Readiness
+
+`ready.py` answers a different question than completion: not "is this item done"
+but "which bound work items are executable right now." It joins each work item's
+authored `dependsOn` / `externalDependsOn` predecessors with `completion.item_status`
+-- the same completion axis `health.py` computes, never a second interpretation of
+GitHub state -- and emits a `RoadmapReadySet`:
+
+```bash
+python roadmap/scripts/ready.py roadmap/epics/human-input.yaml \
+  --corpus roadmap/epics \
+  --snapshot roadmap/fixtures/human-input/converged-fixture.json
+```
+
+Per work item, one of four states:
+
+| state | meaning |
+| --- | --- |
+| `complete` | the item's own bound issue is delivered |
+| `ready` | the item's own issue is `open`, and every authored predecessor is complete |
+| `blocked` | the item is itself incomplete, and non-readiness is evidenced: a predecessor was observed incomplete (`open`, `closed_not_planned` or `closed_duplicate`), or the item's own issue is closed as `not_planned`/`duplicate` |
+| `unknown` | the item's own readiness could not be proven, or a predecessor's could not |
+
+`blocked` beats `unknown` when both apply to the same item: non-readiness is
+already proven evidence, the same certainty-first precedence `completion.compute`
+uses when it prefers `incomplete` over `unknown`. Every non-satisfied predecessor
+is still listed in `blockers`, so nothing is hidden either way.
+
+Unbound and not-found predecessors are `unknown`, not `blocked`: `completion.py`
+calls both `incomplete` because they are evidence of undelivered work, but
+`ready.py` only lets `open`, `closed_not_planned` and `closed_duplicate` make a
+*dependent* item `blocked` -- an unbound or not-found predecessor means readiness
+cannot be proven, not that it is definitely still open. This is a readiness-layer
+refinement; it changes nothing in `completion.py`.
+
+An `externalDependsOn` reference is evaluated with the same rules as a bound work
+item, from the same captured snapshot, and appears in `blockers` as
+`{"kind": "external", "issue": {...}, ...}` rather than a synthetic local id. If
+its completion cannot be proven from the snapshot, the dependent item is `unknown`,
+never `ready`.
+
+Invariants:
+
+- Dependencies are derived only from the manifest's authored `dependsOn` and
+  `externalDependsOn` -- never from GitHub labels, issue prose, observed
+  `blockedBy` edges or `parent`/`subIssues` hierarchy. `reconcile.py`'s
+  `DependencyMissing` diagnostic is what tells you the observed graph disagrees
+  with the manifest; `ready.py` never falls back to the observed graph itself.
+- Only one hop over the authored graph is evaluated: `validate.py` already
+  rejects dependency cycles, and a `complete` predecessor's own predecessors say
+  nothing about this item.
+- An unbound work item is always `unknown`, never `ready` -- the strongest safety
+  property for a wave launcher: `state: ready` implies a bound, observed, `open`
+  issue.
+- `ready` is narrower than "own issue not complete". `closed_not_planned` and
+  `closed_duplicate` are evidence of undelivered work when a *predecessor*
+  carries them, but on the item's own issue they mean GitHub has already retired
+  it, so the item is `blocked`, never `ready` -- otherwise a wave launcher would
+  be handed an issue that is already closed. The asymmetry is deliberate: it is
+  the one place where an item's own reason and a predecessor's are read
+  differently. Such an item is the only case where `blockers` names the item
+  itself; every other blocker is a predecessor.
+- `required: false` items still get a readiness state, and still count as real
+  predecessors of anything that names them in `dependsOn`.
+- No snapshot at all: no `RoadmapReadySet` is emitted, the failure goes to
+  stderr, exit `4`. A partial snapshot still emits a document -- the affected
+  items are `unknown`, never silently absent -- and still exits `4`.
+- Readiness never changes `RoadmapHealth` state, `completion` block, diagnostic
+  code or CLI exit code of `reconcile.py`, `health.py`, `plan.py` or `apply.py`.
+  It is a new file, not an edit to an existing contract.
+
+CLI, mirroring `reconcile.py` / `health.py`: positional manifests, `--corpus`,
+`--schema`, `--ready-schema`, `--snapshot`, `--live`, `--capture`, `--api-base`,
+`--output`; `--snapshot` and `--live`/`--capture` stay mutually exclusive, and the
+whole corpus is validated before any network call.
+
+| exit | meaning |
+| --- | --- |
+| `0` | a ready set was produced (an epic with zero ready items is not an error) |
+| `2` | usage/IO error |
+| `3` | the authored desired state (manifest or corpus) did not validate; nothing was observed |
+| `4` | some state this epic depends on could not be observed, in whole or in part |
+
+`ready.consistency_errors(document)` is the semantic check to run on a
+`RoadmapReadySet` a caller did not compute itself, the same way
+`completion.consistency_errors` is run on a completion block: it rejects a `ready`
+item with blockers, a `ready` item whose own reason is not `open`, a `blocked`
+item with no blocker whose reason is evidence of undelivered work, a `complete`
+item with any blocker, an `unknown` item with neither an indeterminate own reason
+nor an indeterminate blocker, a `ready` list that is not exactly the sorted ready
+ids, summary counts that disagree with `items`, a `workItem` blocker naming an id
+that is not part of the same manifest, or an item naming itself as a blocker for
+any reason other than its own retirement.
+
+`roadmap/tests/mutations.synthetic_snapshot()` builds a converged graph for any
+manifest directly from `reconcile.desired_graph()`, so `lifecycle-ownership` and
+`unified-identity` -- which have no committed capture -- get a graph to test
+readiness against without hand-editing one. It always stamps
+`source.mode: synthetic-fixture`, so a test graph can never masquerade as live
+evidence.
 
 ## Dogfood: epic #66
 
