@@ -12,7 +12,7 @@ spec:
     Claude Code session in mctl-claude-remote through platform Valkey Streams and a
     Claude Code channel, with no polling and no Slack/Gmail bridge. Events carry
     references only; Claude hydrates canonical state through MCP and GitHub tools.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
