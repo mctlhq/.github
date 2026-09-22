@@ -11,7 +11,7 @@ spec:
     Make lifecycle responsibility explicit, durable and queryable by separating
     entity ownership from executor claims, authorization and approval, then prove
     safe handoff, fencing and reconciliation on the DevLoop proposal/PR lifecycle.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
