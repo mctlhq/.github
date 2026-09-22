@@ -109,11 +109,16 @@ spec:
       dependsOn:
         - zone-state-migration
 
+    # Bound 2026-09-22 (mctl-gitops#1333). This was the only work item in this
+    # epic with an inline title and no issue, so the roadmap reported it
+    # unbound -- and because it is mcp-portal-iac's only blocker, #1092
+    # reported `unknown` rather than `blocked` behind real work.
     - id: git-only-operations-proof
-      title: Exercise reviewed apply, scheduled drift and rollback on cut-over resources
-      owner: mctl-gitops
       phase: operations
       required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1333
       dependsOn:
         - zone-state-migration
         - worker-routes
