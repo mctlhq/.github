@@ -57,10 +57,11 @@ spec:
         number: 438
 
     - id: login-bot-update-receiver
-      title: Provide the safe login-bot update receiver required for notification preferences and broadcast delivery
-      owner: mctl-telegram
       phase: broadcast
       required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 619
       dependsOn:
         - client-reachability-preferences
 
