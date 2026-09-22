@@ -11,7 +11,7 @@ spec:
     Ensure same-repository implementation PRs never become silently ownerless:
     direct implementer PRs retain lifecycle ownership, and proposal-less PRs can
     be safely adopted into the existing bounded review/remediation lifecycle.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
