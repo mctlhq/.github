@@ -34,10 +34,11 @@ spec:
         number: 902
 
     - id: attribute-catalog
-      title: Define the mctl telemetry attribute catalog and OTel mapping
-      owner: mctl-docs
       phase: gateway
       required: true
+      issue:
+        repository: mctlhq/mctl-docs
+        number: 116
       dependsOn:
         - telemetry-gateway
 
