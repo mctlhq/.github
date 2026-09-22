@@ -80,6 +80,9 @@ spec:
       owner: mctl-api
       phase: correlation
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 285
       dependsOn:
         - devloop-traces
 
