@@ -347,7 +347,25 @@ jobs:
             # one physical machine — created, renamed, or wiped independently
             # of this file — would turn a missing directory into an org-wide
             # outage. Degrade to the runner's own logged-in HOME instead.
-            local target_home="$1"
+            # Seconds for --print-timeout, defaulting to what is left of the
+            # step budget (`remaining` is defined below but only evaluated
+            # at call time, and evaluated once, so the default IS the cap)
+            # and clamped here, in the one place every call goes through,
+            # to [60, remaining]: a call site added later can neither get
+            # more time than the job can afford nor hand agy a zero or
+            # negative timeout. Bare seconds, not a Go duration: a value
+            # such as `15m` fails the ceiling test, which substitutes the
+            # cap; the floor test then runs against that integer. `[` says
+            # so once in the log ("integer expression expected") — stderr
+            # is deliberately not silenced. Neither bound is reachable from
+            # the loop below, which passes no argument; they exist for that
+            # future call site only.
+            local target_home="$1" cap
+            cap=$(remaining)
+            local secs="${2:-$cap}"
+            [ "$secs" -le "$cap" ] || secs="$cap"
+            [ "$secs" -ge 60 ] || secs=60
+            local print_timeout="${secs}s"
             if [ ! -d "$target_home" ]; then
               echo "::warning::$target_home missing — using the runner's default HOME instead"
               target_home="$HOME"
@@ -366,7 +384,7 @@ jobs:
               --model "$AGY_MODEL" \
               --effort "$AGY_EFFORT" \
               --output-format json \
-              --print-timeout 15m \
+              --print-timeout "$print_timeout" \
               --sandbox \
               --dangerously-skip-permissions \
               > result.json
@@ -412,8 +430,130 @@ jobs:
             fi
           }
 
-          run_agy "$AGY_HOME_PRIMARY" || true
-          read_result
+          # A backend blip is the third failure class, next to quota and a
+          # genuine non-review, and it is the one that produced every "empty
+          # FAIL" on 2026-09-23 (mctl-gitops#1342/#1343/#1344): Google's
+          # fetchAvailableModels answered UNAVAILABLE (503) for ~1 min at a
+          # time, on both accounts and both runners (fallback CLI log
+          # cli-20260923_205430.log on dmitriis-mac-mini-2). agy then has no
+          # model catalog, so `model_config_manager` cannot map --effort
+          # onto the slug and prints the misleading client-side error
+          # "invalid model selection (--model gemini-3.8-flash-medium
+          # --effort medium): --effort is not supported for model ..."; a
+          # bare "Eligibility check failed: ... UNAVAILABLE (code 503)" is
+          # the same blip caught one step later. Both verified transient: a
+          # probe re-running the identical flags under the same fallback
+          # HOME on the same runner 55 min later returned PROBE-OK. Neither
+          # says anything about the diff, and switching accounts cannot
+          # fix either, so the run is retried on the SAME account, a few
+          # times, before the verdict is declared missing.
+          #
+          # Matching is anchored so that a match can only mean that blip,
+          # because a match flips the merge gate open (no_verdict=1):
+          # - "UNAVAILABLE (code 503)" is the gRPC status text itself. A bare
+          #   "Eligibility check failed" is NOT matched: without the 503 it
+          #   is also what a suspended or unauthorised account says, and
+          #   that must keep failing closed.
+          # - The --effort message is matched only with our own model slug
+          #   quoted in it AND only when the slug's tier suffix equals the
+          #   requested effort (guaranteed by the reconciliation above for
+          #   gemini-*-{high,medium,low}). With a consistent pair the only
+          #   way agy can print it is the missing catalog; a caller whose
+          #   model/effort pair is genuinely incompatible (say a model
+          #   with no tier suffix) does not satisfy the guard, is not
+          #   retried, and still fails closed as before.
+          # Same shape as the reconciliation block: only a slug that block
+          # normalises counts as consistent, not any string that happens to
+          # end in the effort name.
+          case "$AGY_MODEL" in
+            gemini-*-"$effort_lower") tier_consistent=1 ;;
+            *) tier_consistent=0 ;;
+          esac
+          is_transient() {
+            case "$1" in
+              *"UNAVAILABLE (code 503)"*)
+                return 0
+                ;;
+              *"--effort is not supported for model \"$AGY_MODEL\""*)
+                if [ "$tier_consistent" = 1 ]; then return 0; fi
+                ;;
+            esac
+            # Every arm ends with status 0 (an `if` whose condition fails
+            # returns 0), so the case never carries a status out and every
+            # exit from this function is an explicit return. It is still a
+            # predicate: a bare `is_transient "$x"` returning 1 aborts
+            # under -e like any other failing statement, so callers use it
+            # as an if/&& condition, as both call sites below do.
+            return 1
+          }
+
+          # Every agy call, first or retry, on either account, is given the
+          # time left in ONE step budget, so the cross-account total is
+          # bounded by construction. The bound is against the JOB, not
+          # this step: `timeout-minutes: 20` (line 92) also has to cover
+          # the full-history checkout before this step and the
+          # comment-publishing steps after it, on a runner that is not
+          # generous (lines 116-120), so the budget is 14 minutes and the
+          # rest is theirs. This step ends at most `budget` seconds after
+          # it began, give or take agy's own shutdown and the jq reads:
+          # the 30 s pauses are inside the budget, not on top of it, since
+          # `remaining()` is recomputed after each one and the next
+          # attempt gets that much less. Two things the constant also decides,
+          # both traded deliberately against a cancelled job: the ceiling
+          # for one legitimate review is 840 s where it used to be 900 s
+          # (a review that needs more ends as no_verdict=1, with the
+          # truncated result.json visible in the log), and a quota error
+          # that arrives with under two minutes left forfeits the fallback
+          # account. If reviews in this org routinely approach 14 minutes,
+          # the lever is `timeout-minutes` together with `budget`, not the
+          # budget alone.
+          # A cancelled job would write no no-verdict and skip `Note agy
+          # failure`, the red-check-with-no-comment outcome the no_verdict
+          # mechanism exists to prevent, and a fixed per-attempt timeout
+          # could not rule that out (15m + 15m across the quota switch was
+          # reachable before this change). A retry, and the switch to the
+          # fallback account, are started only while at least two minutes
+          # remain: agy's own catalog and eligibility timeouts eat about
+          # that much before a review can even begin.
+          step_start=$SECONDS
+          budget=840
+          remaining() { echo $(( budget - (SECONDS - step_start) )); }
+          run_agy_retrying() {
+            local target_home="$1" attempt=1 safe_error
+            while :; do
+              run_agy "$target_home" || true
+              read_result
+              if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ]; then
+                return 0
+              fi
+              # Said out loud, like the fallback switch below: an attempt
+              # that failed transiently past t=720 (agy answering 503 late,
+              # rather than within the ~1 min a blip usually takes; the
+              # checkout runs in another step and does not count against
+              # this budget) leaves no room for a retry and must not read
+              # like a three-attempt outage in the log, since both end in
+              # the same non-blocking no-verdict comment. Repeated "not
+              # retrying after attempt 1" lines from the primary loop mean
+              # attempts run long; the same line after "retrying on the
+              # fallback account" means the primary already spent the
+              # budget (that loop starts with whatever was left). A
+              # genuine three-attempt outage shows "unavailable on attempt
+              # 1" and "on attempt 2" and no line from this branch: the
+              # third attempt returns above, silently, by design.
+              if [ "$(remaining)" -lt 120 ]; then
+                echo "::warning::not retrying after attempt $attempt: $(remaining)s of the step budget left"
+                return 0
+              fi
+              # Same sanitization as below: $error is free text agy produced
+              # while processing an attacker-controllable diff.
+              safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
+              echo "::warning::agy backend unavailable on attempt $attempt ($safe_error); retrying in 30s"
+              attempt=$((attempt + 1))
+              sleep 30
+            done
+          }
+
+          run_agy_retrying "$AGY_HOME_PRIMARY"
 
           # The one shape observed in production (2026-09-07/08) is agy's
           # own human-readable message, "Individual quota reached. Please
@@ -440,18 +580,24 @@ jobs:
             # emitted it itself.
             safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
             echo "::warning::agy primary account is out of quota ($safe_error)"
-            if [ -d "$AGY_HOME_FALLBACK" ]; then
+            if [ ! -d "$AGY_HOME_FALLBACK" ]; then
               # Guarded, not just left to run_agy's own missing-directory
               # fallback: without this check, a missing FALLBACK directory
               # would silently re-run against the runner's default HOME —
-              # plausibly the same account that just failed — while this
-              # summary line still claimed a real account switch happened.
+              # plausibly the same account that just failed — while the
+              # summary line below still claimed a real account switch.
+              echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
+            elif [ "$(remaining)" -lt 120 ]; then
+              # Decided here, before the summary line, so the log never
+              # announces a switch that did not happen. An attempt this
+              # short cannot reach a review and cannot change the outcome
+              # (retry=1 already means no verdict); it would only spend
+              # the job's last minutes.
+              echo "::warning::not retrying on the fallback account: $(remaining)s of the step budget left"
+            else
               echo "::warning::retrying on the fallback account"
               echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
-              run_agy "$AGY_HOME_FALLBACK" || true
-              read_result
-            else
-              echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
+              run_agy_retrying "$AGY_HOME_FALLBACK"
             fi
           fi
 
@@ -477,6 +623,9 @@ jobs:
             [ "$status" = "UNKNOWN" ] && no_verdict=1
             [ -s result.json ] || no_verdict=1
             [ "$retry" = 1 ] && no_verdict=1
+            # A backend blip that outlived the retries above is the same
+            # class as quota: agy never read the diff.
+            is_transient "$error" && no_verdict=1
             echo "$no_verdict" > no-verdict
             exit 1
           fi
