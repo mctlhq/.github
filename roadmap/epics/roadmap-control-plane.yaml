@@ -11,7 +11,7 @@ spec:
     Make a versioned EpicDefinition manifest the canonical desired graph for an epic,
     and derive drift, health and completion from the observed GitHub graph
     deterministically, with GitHub remaining the human planning surface.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github

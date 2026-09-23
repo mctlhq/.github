@@ -67,9 +67,10 @@ spec:
       dependsOn:
         - telegram-compatibility
         - compatibility-spike
-      externalDependsOn:
-        - repository: mctlhq/mctl-telegram
-          number: 609
+      # The pinned portal tool allowlist this spike measures against landed as
+      # mctlhq/mctl-telegram#609, a pull request merged on 2026-09-10. GitHub
+      # blocked-by edges may only point at issues, so it is not authored as an
+      # external dependency; the spike issue body carries the reference.
 
     - id: gateway-dlp-result
       phase: gateway
@@ -141,6 +142,9 @@ spec:
       owner: mctlhq/.github
       phase: enterprise-identity
       required: true
+      issue:
+        repository: mctlhq/.github
+        number: 128
       dependsOn:
         - denied-user-and-bypass
         - correlation-contract

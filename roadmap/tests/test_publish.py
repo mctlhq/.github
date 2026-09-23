@@ -353,6 +353,15 @@ class PublishTest(unittest.TestCase):
 
     def test_unbound_and_unobservable_stay_distinguishable(self) -> None:
         corpus = self.corpus(HUMAN_INPUT, UNIFIED_IDENTITY)
+        # unified-identity is bound on GitHub now; the wholly unbound epic this
+        # test needs is derived from it rather than assumed of it.
+        unified = yaml.safe_load(UNIFIED_IDENTITY.read_text(encoding="utf-8"))
+        unbound = mutations.unbind(
+            unified, *[item["id"] for item in unified["spec"]["workItems"]]
+        )
+        (corpus / UNIFIED_IDENTITY.name).write_text(
+            yaml.safe_dump(unbound, sort_keys=False), encoding="utf-8"
+        )
         # An observed-but-missing issue: bound, yet its state cannot be proven.
         snapshot = mutations.mark_missing(
             self.snapshot(CONVERGED_HUMAN_INPUT), "mctlhq/mctl-api#261"

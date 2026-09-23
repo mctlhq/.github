@@ -33,12 +33,18 @@ spec:
       owner: mctl-api
       phase: principal
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 373
 
     - id: identity-federation
       title: Introduce a swappable OIDC federation and broker boundary
       owner: mctl-api
       phase: federation
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 374
       dependsOn:
         - principal-model
 
@@ -47,6 +53,9 @@ spec:
       owner: mctl-api
       phase: mcp
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 375
       dependsOn:
         - principal-model
         - identity-federation
@@ -56,6 +65,9 @@ spec:
       owner: mctl-agents
       phase: delegation
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 376
       dependsOn:
         - principal-model
 
@@ -64,6 +76,9 @@ spec:
       owner: mctl-api
       phase: migration
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 377
       dependsOn:
         - identity-federation
         - mcp-oauth-cimd
