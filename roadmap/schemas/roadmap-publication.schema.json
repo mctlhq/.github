@@ -34,10 +34,22 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "sha256"],
+        "required": ["path", "sha256", "epic"],
         "properties": {
           "path": {"type": "string", "minLength": 1},
-          "sha256": {"$ref": "#/$defs/sha256"}
+          "sha256": {"$ref": "#/$defs/sha256"},
+          "epic": {
+            "description": "The epic's identity and lifecycle, copied from the manifest these digests cover.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "lifecycle", "title", "goal"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "lifecycle": {"enum": ["proposed", "active", "paused", "completed", "archived"]},
+              "title": {"type": "string", "minLength": 1},
+              "goal": {"type": "string", "minLength": 1}
+            }
+          }
         }
       }
     },

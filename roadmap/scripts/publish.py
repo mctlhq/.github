@@ -222,6 +222,7 @@ def derive(
             {
                 "path": reconcile._manifest_label(path, corpus),
                 "sha256": validation.manifests[path].sha256,
+                "epic": _epic_identity(validation.manifests[path].document),
             }
             for path in selected
         ],
@@ -234,6 +235,25 @@ def derive(
         raise PublishError(EXIT_INVALID, "publication failed schema validation: " + "; ".join(failures))
     files[PUBLICATION_FILE] = canonical_bytes(publication)
     return files
+
+
+def _epic_identity(document: dict[str, Any]) -> dict[str, Any]:
+    """What a consumer needs to name and filter an epic, copied verbatim.
+
+    The ready set and health documents carry the epic's name, root issue and
+    manifest digest but not its lifecycle, title or goal; a consumer asked for
+    "every active epic" would otherwise have to re-read the manifests at
+    source.revision. These fields come from the same validated bytes whose
+    digest sits beside them, so the publication stays the only thing to read.
+    """
+
+    spec = document["spec"]
+    return {
+        "name": document["metadata"]["name"],
+        "lifecycle": spec["lifecycle"],
+        "title": spec["title"],
+        "goal": spec["goal"],
+    }
 
 
 def _as_list(kind: str, documents: list[dict[str, Any]]) -> dict[str, Any]:
