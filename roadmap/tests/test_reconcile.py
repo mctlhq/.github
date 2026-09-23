@@ -128,9 +128,11 @@ class ReconcileTest(unittest.TestCase):
         return snapshot, document
 
     def test_unbinding_an_item_leaves_no_edge_naming_its_issue(self) -> None:
-        # Give the item a child first, so every relation that can name it is
-        # exercised: a sub-issue edge, a dependency edge and a parent pointer.
+        # Make every relation that can name the issue name it: its own
+        # sub-issue edge under the epic, a child's parent pointer (DOCS moved
+        # under it), and another issue blocked by it (API).
         snapshot = mutations.repoint_parent(self.converged, DOCS, "mctlhq/mctl-agents#473")
+        snapshot = mutations.add_dependency(snapshot, API, "mctlhq/mctl-agents#473")
         _, unbound = mutations.unbind_observed(self.document, snapshot, "devloop-e2e")
         target = mutations.ref("mctlhq/mctl-agents#473")
         for observation in unbound["issues"]:
