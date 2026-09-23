@@ -565,7 +565,7 @@ class LiveGraphSource(OriginBoundClient):
 
         for repository in sorted(set(repositories)):
             status, payload, _ = self._get(f"{self._api_base}/repos/{repository}")
-            if status in (404, 410) or not isinstance(payload, dict):
+            if status != 200 or not isinstance(payload, dict):
                 raise ObservationError(
                     f"repository {repository} is not visible to this token (HTTP {status})"
                 )

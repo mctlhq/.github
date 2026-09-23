@@ -295,6 +295,8 @@ class PublishTest(unittest.TestCase):
                 self.urls.append(request.full_url)
                 if request.full_url.endswith("/repos/mctlhq/.github"):
                     return _Response(b'{"full_name": "mctlhq/.github", "has_issues": true}')
+                if request.full_url.endswith("/repos/mctlhq/sso-blocked"):
+                    raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, None)
                 if request.full_url.endswith("/repos/mctlhq/no-issues"):
                     return _Response(b'{"full_name": "mctlhq/no-issues", "has_issues": false}')
                 raise urllib.error.HTTPError(request.full_url, 404, "Not Found", {}, None)
@@ -306,10 +308,13 @@ class PublishTest(unittest.TestCase):
             source.check_repositories(["mctlhq/.github", "mctlhq/private-now"])
         with self.assertRaises(ObservationError):
             source.check_repositories(["mctlhq/no-issues"])
+        with self.assertRaises(ObservationError):
+            source.check_repositories(["mctlhq/sso-blocked"])
         self.assertEqual(
             ["https://api.github.com/repos/mctlhq/.github"] * 2
             + ["https://api.github.com/repos/mctlhq/private-now",
-               "https://api.github.com/repos/mctlhq/no-issues"],
+               "https://api.github.com/repos/mctlhq/no-issues",
+               "https://api.github.com/repos/mctlhq/sso-blocked"],
             opener.urls,
         )
         self.assertTrue(all(url.startswith("https://api.github.com/repos/") for url in opener.urls))

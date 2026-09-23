@@ -523,8 +523,10 @@ Rules the tests pin:
   `capturedAt`.
 - **Always a List.** Both derived files are the List form even for a one-manifest corpus
   (the schemas allow a one-item List), so the kind never changes with corpus size.
-- **Fail closed.** An invalid corpus (exit 3), a repository the token cannot see, a failed
-  or incomplete observation, or an unobserved key (exit 4), or a publication that does not reproduce from its own
+- **Fail closed.** An invalid corpus (exit 3), a repository the token cannot see or whose
+  Issues are turned off (`has_issues: false`, which also refuses a fork whose issues would
+  read fine: the safe default), a failed or incomplete observation, or an unobserved key
+  (exit 4), or a publication that does not reproduce from its own
   snapshot fails the run before anything is pushed. The previous publication stays, with
   its older `capturedAt`, so a failed refresh never looks fresh; the failed run is the
   visible signal.
