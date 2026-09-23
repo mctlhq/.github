@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "657575c8a118575eaf7bade0b8de447c31ec2dc9"
+    "revision": "3dad2c1e8319a9afb2c7c1b5094073ab3b7680b1"
   },
   "files": {
     "health.json": {
-      "sha256": "68c4839508c16e354f73264437ccf9aba0d5e3c7883f93e45d58f52b138a80e3"
+      "sha256": "fa7b42c68a6c509ec5bce98525d14e5e9ec9a7f3d23f35313770de4e4ad1e399"
     },
     "ready-set.json": {
-      "sha256": "af537ab5d7f573d74f83983ed07dad219a38397a20e9fd80e0dfe399e83adf01"
+      "sha256": "f5dbb8f5cf9bb36d7cc455e3122b3396d9f739581a7eab8d9bf8c4c546cfc629"
     },
     "snapshot.json": {
-      "sha256": "2ec943fa7108a72687c0420418b25ed39c76a789089534bcef3107f7b173e678"
+      "sha256": "3f444a1268ca7b68c4555b3a68b3a77cc3c686ed156b04a738da09cb5babea7c"
     }
   },
   "kind": "RoadmapPublication",
@@ -154,7 +154,7 @@
         "title": "Cross-surface working context and agentic UX"
       },
       "path": "roadmap/epics/surfaces.yaml",
-      "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
+      "sha256": "93d3421e749808e43550e68457346277408d8a84b1e222f1458ecd2a0ecaf7bc"
     },
     {
       "epic": {
@@ -169,12 +169,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T15:02:28Z",
+    "capturedAt": "2026-09-23T16:23:08Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "657575c8a118575eaf7bade0b8de447c31ec2dc9"
+    "revision": "3dad2c1e8319a9afb2c7c1b5094073ab3b7680b1"
   }
 }

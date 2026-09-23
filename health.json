@@ -96,7 +96,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -539,7 +539,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -649,7 +649,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1049,7 +1049,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -1632,7 +1632,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -1831,7 +1831,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -1960,7 +1960,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2032,7 +2032,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2580,7 +2580,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2846,7 +2846,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3123,7 +3123,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3457,7 +3457,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3577,7 +3577,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3593,7 +3593,9 @@
         "blocking": [
           "agentic-work-item-ux",
           "second-surface-pilot",
+          "surface-execution-request",
           "telegram-work-item-adapter",
+          "work-item-execution-dispatch",
           "working-memory-continuity"
         ],
         "items": [
@@ -3621,6 +3623,16 @@
             "id": "second-surface-pilot",
             "issue": {
               "number": 341,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "surface-execution-request",
+            "issue": {
+              "number": 368,
               "repository": "mctlhq/mctl-api"
             },
             "reason": "open",
@@ -3668,6 +3680,16 @@
             "status": "complete"
           },
           {
+            "id": "work-item-execution-dispatch",
+            "issue": {
+              "number": 461,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
             "id": "working-memory-continuity",
             "issue": {
               "number": 431,
@@ -3681,8 +3703,8 @@
         "mode": "allRequired",
         "required": {
           "complete": 4,
-          "incomplete": 4,
-          "total": 8,
+          "incomplete": 6,
+          "total": 10,
           "unknown": 0
         },
         "status": "incomplete"
@@ -3835,6 +3857,22 @@
         {
           "code": "HierarchyMissingParent",
           "level": "drift",
+          "message": "HierarchyMissingParent (owner surface-execution-request): child=mctlhq/mctl-api#368, expectedParent=mctlhq/.github#21",
+          "subject": {
+            "child": {
+              "number": 368,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "surface-execution-request"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
           "message": "HierarchyMissingParent (owner working-memory-continuity): child=mctlhq/mctl-agents#431, expectedParent=mctlhq/.github#21",
           "subject": {
             "child": {
@@ -3846,6 +3884,22 @@
               "repository": "mctlhq/.github"
             },
             "owner": "working-memory-continuity"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner work-item-execution-dispatch): child=mctlhq/mctl-agents#461, expectedParent=mctlhq/.github#21",
+          "subject": {
+            "child": {
+              "number": 461,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "work-item-execution-dispatch"
           }
         },
         {
@@ -3892,19 +3946,19 @@
         },
         "manifest": {
           "path": "roadmap/epics/surfaces.yaml",
-          "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
+          "sha256": "93d3421e749808e43550e68457346277408d8a84b1e222f1458ecd2a0ecaf7bc"
         },
         "name": "surfaces"
       },
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "drift",
       "summary": {
-        "drift": 11,
+        "drift": 13,
         "error": 0,
         "info": 1
       }
@@ -4016,7 +4070,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "state": "healthy",

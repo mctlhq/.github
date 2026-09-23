@@ -77,7 +77,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -353,7 +353,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -524,7 +524,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -699,7 +699,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -984,7 +984,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1109,7 +1109,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1218,7 +1218,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1283,7 +1283,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1556,7 +1556,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1750,7 +1750,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1905,7 +1905,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2127,7 +2127,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2320,7 +2320,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2347,7 +2347,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/surfaces.yaml",
-          "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
+          "sha256": "93d3421e749808e43550e68457346277408d8a84b1e222f1458ecd2a0ecaf7bc"
         },
         "name": "surfaces"
       },
@@ -2420,7 +2420,19 @@
         {
           "blockers": [
             {
+              "id": "surface-execution-request",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
               "id": "telegram-work-item-adapter",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "work-item-execution-dispatch",
               "kind": "workItem",
               "reason": "open",
               "status": "incomplete"
@@ -2433,7 +2445,9 @@
           "dependsOn": [
             "work-item-api",
             "investigator-resume",
-            "telegram-work-item-adapter"
+            "telegram-work-item-adapter",
+            "surface-execution-request",
+            "work-item-execution-dispatch"
           ],
           "externalDependsOn": [],
           "id": "second-surface-pilot",
@@ -2444,6 +2458,26 @@
           "phase": "resume",
           "required": true,
           "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "work-item-api",
+            "surface-identity-link"
+          ],
+          "externalDependsOn": [],
+          "id": "surface-execution-request",
+          "issue": {
+            "number": 368,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "resume",
+          "required": true,
+          "state": "ready"
         },
         {
           "blockers": [],
@@ -2465,7 +2499,20 @@
           "state": "complete"
         },
         {
-          "blockers": [],
+          "blockers": [
+            {
+              "id": "surface-execution-request",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "work-item-execution-dispatch",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
           "completion": {
             "reason": "open",
             "status": "incomplete"
@@ -2474,7 +2521,9 @@
             "work-item-contract",
             "work-item-api",
             "surface-identity-link",
-            "investigator-resume"
+            "investigator-resume",
+            "surface-execution-request",
+            "work-item-execution-dispatch"
           ],
           "externalDependsOn": [],
           "id": "telegram-work-item-adapter",
@@ -2484,7 +2533,7 @@
           },
           "phase": "resume",
           "required": true,
-          "state": "ready"
+          "state": "blocked"
         },
         {
           "blockers": [],
@@ -2523,6 +2572,33 @@
           "state": "complete"
         },
         {
+          "blockers": [
+            {
+              "id": "surface-execution-request",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "surface-execution-request",
+            "investigator-resume"
+          ],
+          "externalDependsOn": [],
+          "id": "work-item-execution-dispatch",
+          "issue": {
+            "number": 461,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "resume",
+          "required": true,
+          "state": "blocked"
+        },
+        {
           "blockers": [],
           "completion": {
             "reason": "open",
@@ -2550,23 +2626,23 @@
       ],
       "kind": "RoadmapReadySet",
       "ready": [
-        "telegram-work-item-adapter",
+        "surface-execution-request",
         "working-memory-continuity"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 2,
+          "blocked": 4,
           "complete": 4,
           "ready": 2,
           "unknown": 0
         },
         "required": {
-          "blocked": 2,
+          "blocked": 4,
           "complete": 4,
           "ready": 2,
           "unknown": 0
@@ -2668,7 +2744,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T15:02:28Z",
+        "capturedAt": "2026-09-23T16:23:08Z",
         "mode": "live-capture"
       },
       "summary": {

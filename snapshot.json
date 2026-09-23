@@ -1394,7 +1394,7 @@
           "repository": "mctlhq/mctl-gitops"
         }
       ],
-      "updatedAt": "2026-09-23T14:52:52Z"
+      "updatedAt": "2026-09-23T16:23:40Z"
     },
     {
       "blockedBy": [
@@ -1415,7 +1415,32 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-23T04:34:24Z"
+      "updatedAt": "2026-09-23T15:10:57Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 368,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 267,
+          "repository": "mctlhq/mctl-agents"
+        }
+      ],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 461,
+        "repository": "mctlhq/mctl-agents"
+      },
+      "resolved": {
+        "number": 461,
+        "repository": "mctlhq/mctl-agents"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-23T16:11:10Z"
     },
     {
       "blockedBy": [],
@@ -1697,6 +1722,14 @@
         {
           "number": 443,
           "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 368,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 461,
+          "repository": "mctlhq/mctl-agents"
         }
       ],
       "found": true,
@@ -1762,6 +1795,31 @@
       "stateReason": "completed",
       "subIssues": [],
       "updatedAt": "2026-09-23T11:47:34Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 349,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 350,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 368,
+        "repository": "mctlhq/mctl-api"
+      },
+      "resolved": {
+        "number": 368,
+        "repository": "mctlhq/mctl-api"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-23T16:10:48Z"
     },
     {
       "blockedBy": [
@@ -2463,6 +2521,14 @@
         {
           "number": 227,
           "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 368,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 461,
+          "repository": "mctlhq/mctl-agents"
         }
       ],
       "found": true,
@@ -2480,7 +2546,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-23T13:38:32Z"
+      "updatedAt": "2026-09-23T15:55:23Z"
     },
     {
       "blockedBy": [],
@@ -2697,7 +2763,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T15:02:28Z",
+    "capturedAt": "2026-09-23T16:23:08Z",
     "mode": "live-capture"
   }
 }
