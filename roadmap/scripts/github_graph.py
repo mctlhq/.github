@@ -569,6 +569,9 @@ class LiveGraphSource(OriginBoundClient):
                 raise ObservationError(
                     f"repository {repository} is not visible to this token (HTTP {status})"
                 )
+            # Issues turned off answers 404 on every issue as well.
+            if payload.get("has_issues") is False:
+                raise ObservationError(f"repository {repository} has issues disabled")
 
     def _issue_url(self, key: IssueKey) -> str:
         repository, number = key

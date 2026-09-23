@@ -140,9 +140,10 @@ def build(
     try:
         # A live source first proves it can see every repository: otherwise a
         # repository the token lost sight of reads as every issue in it gone.
-        check_repositories = getattr(source_adapter, "check_repositories", None)
-        if check_repositories is not None:
-            check_repositories([repository for repository, _ in keys])
+        # Keyed on the type, not on duck typing, so a renamed method fails
+        # loudly instead of skipping the guard.
+        if isinstance(source_adapter, github_graph.LiveGraphSource):
+            source_adapter.check_repositories([repository for repository, _ in keys])
         snapshot = source_adapter.snapshot(keys)
     except (ObservationError, SnapshotIncomplete, ValueError, OSError) as exc:
         raise PublishError(EXIT_OBSERVATION_FAILED, f"observation failed: {exc}") from exc

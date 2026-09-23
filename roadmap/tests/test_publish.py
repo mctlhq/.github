@@ -271,13 +271,20 @@ class PublishTest(unittest.TestCase):
         self.assertTrue(str(raised.exception).startswith("snapshot is invalid"), raised.exception)
 
     def test_a_repository_the_token_cannot_see_fails_the_observation(self) -> None:
-        class BlindSource(StaticSource):
+        class BlindLiveSource(github_graph.LiveGraphSource):
+            snapshots = 0
+
             def check_repositories(self, repositories):  # noqa: ANN001
                 raise ObservationError("repository mctlhq/.github is not visible to this token (HTTP 404)")
 
+            def snapshot(self, keys):  # noqa: ANN001
+                BlindLiveSource.snapshots += 1
+                return {}
+
         with self.assertRaises(publish.PublishError) as raised:
-            publish.build(self.corpus(EPIC_66), BlindSource(self.snapshot(CAPTURE_66)), **PROVENANCE)
+            publish.build(self.corpus(EPIC_66), BlindLiveSource("token"), **PROVENANCE)
         self.assertEqual(publish.EXIT_OBSERVATION_FAILED, raised.exception.code)
+        self.assertEqual(0, BlindLiveSource.snapshots, "the capture must not start")
 
     def test_the_live_source_tells_an_invisible_repository_from_a_missing_issue(self) -> None:
         class Opener:
@@ -287,7 +294,9 @@ class PublishTest(unittest.TestCase):
             def open(self, request, timeout=None):  # noqa: ANN001
                 self.urls.append(request.full_url)
                 if request.full_url.endswith("/repos/mctlhq/.github"):
-                    return _Response(b'{"full_name": "mctlhq/.github"}')
+                    return _Response(b'{"full_name": "mctlhq/.github", "has_issues": true}')
+                if request.full_url.endswith("/repos/mctlhq/no-issues"):
+                    return _Response(b'{"full_name": "mctlhq/no-issues", "has_issues": false}')
                 raise urllib.error.HTTPError(request.full_url, 404, "Not Found", {}, None)
 
         opener = Opener()
@@ -295,9 +304,12 @@ class PublishTest(unittest.TestCase):
         source.check_repositories(["mctlhq/.github", "mctlhq/.github"])
         with self.assertRaises(ObservationError):
             source.check_repositories(["mctlhq/.github", "mctlhq/private-now"])
+        with self.assertRaises(ObservationError):
+            source.check_repositories(["mctlhq/no-issues"])
         self.assertEqual(
             ["https://api.github.com/repos/mctlhq/.github"] * 2
-            + ["https://api.github.com/repos/mctlhq/private-now"],
+            + ["https://api.github.com/repos/mctlhq/private-now",
+               "https://api.github.com/repos/mctlhq/no-issues"],
             opener.urls,
         )
         self.assertTrue(all(url.startswith("https://api.github.com/repos/") for url in opener.urls))
