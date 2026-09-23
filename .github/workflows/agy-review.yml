@@ -526,10 +526,15 @@ jobs:
               if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ]; then
                 return 0
               fi
-              # Said out loud, like the fallback switch below: a single
-              # attempt starved by a slow checkout must not read like a
-              # three-attempt outage in the log, since both end in the
-              # same non-blocking no-verdict comment.
+              # Said out loud, like the fallback switch below: an attempt
+              # that failed transiently past t=720 (agy answering 503 late,
+              # rather than within the ~1 min a blip usually takes; the
+              # checkout runs in another step and does not count against
+              # this budget) leaves no room for a retry and must not read
+              # like a three-attempt outage in the log, since both end in
+              # the same non-blocking no-verdict comment. Repeated "after
+              # attempt 1" lines mean attempts run long; repeated "attempt
+              # 3" lines mean the outage is real.
               if [ "$(remaining)" -lt 120 ]; then
                 echo "::warning::not retrying after attempt $attempt: $(remaining)s of the step budget left"
                 return 0
