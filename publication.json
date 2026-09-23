@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "8f0631ef224b717f9a4cfd4f26390623a6534767"
+    "revision": "71d5080ac6639d272c35b209676800545b5968aa"
   },
   "files": {
     "health.json": {
-      "sha256": "c2229a2a499c3e531a19e87c2c14943e06d2324f17ba90e5b3c155df89ce304e"
+      "sha256": "a704440b0ec44d7602b771222c4086610c7dfb8c588d1ded83a9e38e380ae8aa"
     },
     "ready-set.json": {
-      "sha256": "355681524323b146006206da908a65ce9ccdfd705acd4bdd843c14f088a7c92f"
+      "sha256": "225c0da585ec378eb71e726fc2c39e53e82a90aaafe59a161e788abd3ae65ca6"
     },
     "snapshot.json": {
-      "sha256": "8803e79e9e1ed62acb8355b27d94363f8f108c638bb42c26919298182afc6d72"
+      "sha256": "0cbd5c92c31a3bc5198db179818d222a1e21e2edd4b25d890f3e2d6ccb19b6b4"
     }
   },
   "kind": "RoadmapPublication",
@@ -34,7 +34,7 @@
         "title": "Agent definitions, execution profiles and governed agent creation"
       },
       "path": "roadmap/epics/agent-platform.yaml",
-      "sha256": "09efb27eab8afb1261210db66dd450e3923e598a3a54db84c81c78c9b807668d"
+      "sha256": "f19f0930a6f6343cf3fae256e9c3077cb3ee5a516e1a8cacc3548494304bd063"
     },
     {
       "epic": {
@@ -54,7 +54,7 @@
         "title": "Client onboarding and product communication"
       },
       "path": "roadmap/epics/client-lifecycle.yaml",
-      "sha256": "85d6d932d69db2a4dd653c047410d73c47d5543c4f0b727e782c8934234ddf2d"
+      "sha256": "c0de0d6c9fd919e09b9a9c4c2ac8d89e4d530e871962a510df4e8e3a050e7b91"
     },
     {
       "epic": {
@@ -74,7 +74,7 @@
         "title": "Context engineering and retrieval control plane"
       },
       "path": "roadmap/epics/context-platform.yaml",
-      "sha256": "5bbded1b31cec145e1eeb32d8c8bc3f60e08414c7347b6b1be402571fef3d4b9"
+      "sha256": "9967b1947372b0a2abd6e475438246e2fe2663a590c825a29f9ae252a2849552"
     },
     {
       "epic": {
@@ -104,7 +104,7 @@
         "title": "Cloudflare MCP Portal and enterprise MCP boundary"
       },
       "path": "roadmap/epics/enterprise-mcp.yaml",
-      "sha256": "15bf9f29085feff8e49d9f397ebea049862232b3029c52c069213808aaf7d974"
+      "sha256": "b6a10a2eaa6a28c9054cb3e7afa327cf4d47047ff44ddc6fc0393d09eb33a927"
     },
     {
       "epic": {
@@ -139,12 +139,12 @@
     {
       "epic": {
         "goal": "Make a versioned EpicDefinition manifest the canonical desired graph for an epic, and derive drift, health and completion from the observed GitHub graph deterministically, with GitHub remaining the human planning surface.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "roadmap-control-plane",
         "title": "Declarative EpicDefinition and GitHub graph reconciliation"
       },
       "path": "roadmap/epics/roadmap-control-plane.yaml",
-      "sha256": "d1f675d3915e874d4f74f01729b839a57c46db3a744d52575df4497a8549bee7"
+      "sha256": "c999eb5396dad84a2489694b734afbda6f0c4b8cf6e1a173f7a69f4e60c44a7a"
     },
     {
       "epic": {
@@ -174,17 +174,17 @@
         "title": "MCTL Unified Identity and Agent Identity Broker"
       },
       "path": "roadmap/epics/unified-identity.yaml",
-      "sha256": "27685889b990cc9ccf8ee8d232b93d8760f0ef176524826b169252c780eb1167"
+      "sha256": "1ce98bfeb8de26d54d532753458067d591f9aad39cb2007575e0175bd1f67035"
     }
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T20:15:14Z",
+    "capturedAt": "2026-09-23T20:43:27Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "8f0631ef224b717f9a4cfd4f26390623a6534767"
+    "revision": "71d5080ac6639d272c35b209676800545b5968aa"
   }
 }
