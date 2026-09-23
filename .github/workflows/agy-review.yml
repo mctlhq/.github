@@ -347,11 +347,17 @@ jobs:
             # one physical machine — created, renamed, or wiped independently
             # of this file — would turn a missing directory into an org-wide
             # outage. Degrade to the runner's own logged-in HOME instead.
-            # The timeout is a Go duration and defaults to what is left of
-            # the step budget (`remaining` is defined below but only
-            # evaluated at call time), so a call site added later cannot
-            # silently get more time than the job can afford.
-            local target_home="$1" print_timeout="${2:-$(remaining)s}"
+            # Seconds for --print-timeout, defaulting to what is left of the
+            # step budget (`remaining` is defined below but only evaluated
+            # at call time) and floored here, in the one place every call
+            # goes through, at one minute: a call site added later can
+            # neither get more time than the job can afford nor hand agy a
+            # zero or negative timeout. The floor is unreachable from the
+            # loop below (every entry has at least ~90 s left); it exists
+            # for that future call site only.
+            local target_home="$1" secs="${2:-$(remaining)}"
+            [ "$secs" -ge 60 ] 2>/dev/null || secs=60
+            local print_timeout="${secs}s"
             if [ ! -d "$target_home" ]; then
               echo "::warning::$target_home missing — using the runner's default HOME instead"
               target_home="$HOME"
@@ -480,8 +486,11 @@ jobs:
           # the full-history checkout before this step and the
           # comment-publishing steps after it, on a runner that is not
           # generous (lines 116-120), so the budget is 14 minutes and the
-          # rest is theirs. This step ends at most `budget` plus the 30 s
-          # pauses after it began. Two things the constant also decides,
+          # rest is theirs. This step ends at most `budget` seconds after
+          # it began, give or take agy's own shutdown and the jq reads:
+          # the 30 s pauses are inside the budget, not on top of it, since
+          # `remaining()` is recomputed after each one and the next
+          # attempt gets that much less. Two things the constant also decides,
           # both traded deliberately against a cancelled job: the ceiling
           # for one legitimate review is 840 s where it used to be 900 s
           # (a review that needs more ends as no_verdict=1, with the
@@ -502,17 +511,9 @@ jobs:
           budget=840
           remaining() { echo $(( budget - (SECONDS - step_start) )); }
           run_agy_retrying() {
-            local target_home="$1" attempt=1 timeout safe_error
+            local target_home="$1" attempt=1 safe_error
             while :; do
-              timeout=$(remaining)
-              # Unreachable defense: every path into this loop starts with
-              # at least ~90 s left (the primary call starts at `budget`,
-              # a retry only after the 120 s check below minus the pause,
-              # and the fallback switch has its own 120 s check). Kept so
-              # a future call site cannot hand agy a zero or negative
-              # timeout; it does not add a term to the bound above.
-              [ "$timeout" -lt 60 ] && timeout=60
-              run_agy "$target_home" "${timeout}s" || true
+              run_agy "$target_home" "$(remaining)" || true
               read_result
               if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ] || [ "$(remaining)" -lt 120 ]; then
                 return 0
