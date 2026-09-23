@@ -1,0 +1,104 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: communication-agent
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Communication Agent workstream
+  goal: >-
+    Take the Telegram Communication Agent from the demonstrated
+    draft-and-approve mode (C1, headless claude -p worker, Option C) to
+    guarded autopilot (C2) only behind hard, evidenced gates: a production
+    quota domain isolated from interactive Claude Code and PR review, and a
+    C2 safety gate with send-rate and cost ceilings plus an anomaly kill
+    switch. Durable Temporal-backed approvals and the Channels preview are
+    tracked alongside as non-gating tracks.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 518
+  phases:
+    - id: gates
+      title: Guarded-autopilot gates
+    - id: approvals
+      title: Durable Temporal-backed approvals
+    - id: channels
+      title: Channels preview (on hold)
+  workItems:
+    # The canonical plan (docs/plans/communication-agent.md in mctl-telegram)
+    # names the production quota domain as the blocking prerequisite before
+    # guarded autopilot. #518 asks for #334 to be reconciled item by item
+    # against evidence, not closed on the C1 report alone.
+    - id: quota-domain
+      title: Isolate the production communication-agent quota domain
+      phase: gates
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 334
+
+    # The C2 safety work proper: send-rate and cost ceilings, an anomaly
+    # kill switch distinct from the global AGENT_KILL_SWITCH, per-account
+    # opt-in. #518 orders it after #334.
+    - id: c2-safety-gate
+      title: Production-quota-domain and safety gate for autopilot mode
+      phase: gates
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 347
+      dependsOn:
+        - quota-domain
+
+    # #518 states that Temporal-backed approvals are NOT a gate for this
+    # epic: the canonical plan already specifies a DB-backed approval
+    # lifecycle. The track is authored here for visibility and readiness,
+    # and stays optional so it can never block completion.
+    - id: temporal-approvals
+      title: Temporal-backed human approval flow for the Communication Agent
+      phase: approvals
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 339
+
+    - id: approval-workflow
+      title: Implement CommunicationApprovalWorkflow and the Temporal signal contract
+      phase: approvals
+      required: false
+      parent: temporal-approvals
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 340
+
+    - id: approval-api
+      title: Expose approval decisions through the agent API and audit model
+      phase: approvals
+      required: false
+      parent: temporal-approvals
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 341
+      dependsOn:
+        - approval-workflow
+
+    # Deliberately on hold; listed so the portfolio shows it, never required.
+    # #305 (the older one-off PTY proof) was closed as not planned on
+    # 2026-09-17 and is not bound: #350 is the surviving Channels contract.
+    - id: channels-preview
+      title: Channels preview transport (experimental, do not pick up)
+      phase: channels
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 350
+  completion:
+    mode: allRequired
+  successCriteria:
+    - The canonical plan's guarded-autopilot preconditions are all satisfied, with the production quota domain reconciled against real evidence rather than assumed from the C1 report.
+    - The C2 safety gate is satisfied (send-rate and cost ceilings, anomaly kill switch, per-account opt-in, alerting before breach), or C2 is formally dropped.
+    - Between test windows the system stays in its safe stopped state; C1 being demonstrated end to end never means unattended production operation.
+    - Temporal-backed approvals and the Channels preview remain visible, non-gating tracks and are never picked up by the automated pipeline while on hold.
