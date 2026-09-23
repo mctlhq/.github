@@ -63,7 +63,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -215,54 +215,6 @@
       },
       "diagnostics": [
         {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner governed-agent-authoring): blocked=mctlhq/mctl-agents#470, blocker=mctlhq/mctl-agents#242",
-          "subject": {
-            "blocked": {
-              "number": 470,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 242,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "owner": "governed-agent-authoring"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner governed-agent-authoring): blocked=mctlhq/mctl-agents#470, blocker=mctlhq/mctl-api#283",
-          "subject": {
-            "blocked": {
-              "number": 470,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 283,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "governed-agent-authoring"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner governed-agent-authoring): child=mctlhq/mctl-agents#470, expectedParent=mctlhq/.github#18",
-          "subject": {
-            "child": {
-              "number": 470,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "expectedParent": {
-              "number": 18,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "governed-agent-authoring"
-          }
-        },
-        {
           "code": "HierarchyUnexpectedChild",
           "level": "info",
           "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-portal#112, observedParent=mctlhq/.github#18",
@@ -325,12 +277,12 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
-      "state": "drift",
+      "state": "healthy",
       "summary": {
-        "drift": 3,
+        "drift": 0,
         "error": 0,
         "info": 3
       }
@@ -435,7 +387,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -599,7 +551,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -878,7 +830,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -886,6 +838,126 @@
         "drift": 0,
         "error": 0,
         "info": 7
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "c2-safety-gate",
+          "quota-domain"
+        ],
+        "items": [
+          {
+            "id": "approval-api",
+            "issue": {
+              "number": 341,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "approval-workflow",
+            "issue": {
+              "number": 340,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "c2-safety-gate",
+            "issue": {
+              "number": 347,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "channels-preview",
+            "issue": {
+              "number": 350,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "quota-domain",
+            "issue": {
+              "number": 334,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "temporal-approvals",
+            "issue": {
+              "number": 339,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 0,
+          "incomplete": 2,
+          "total": 2,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#305, observedParent=mctlhq/mctl-telegram#518",
+          "subject": {
+            "child": {
+              "number": 305,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 518,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "epic"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 518,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        "manifest": {
+          "path": "roadmap/epics/communication-agent.yaml",
+          "sha256": "d7e394d7c668baa29b033c986f4c99fbcad39cd86aef391e48c7bea77993efb7"
+        },
+        "name": "communication-agent"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T21:13:40Z",
+        "mode": "live-capture"
+      },
+      "state": "healthy",
+      "summary": {
+        "drift": 0,
+        "error": 0,
+        "info": 1
       }
     },
     {
@@ -958,86 +1030,6 @@
         "status": "incomplete"
       },
       "diagnostics": [
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner retrieval-ranking-trust): blocked=mctlhq/mctl-agents#471, blocker=mctlhq/mctl-agents#265",
-          "subject": {
-            "blocked": {
-              "number": 471,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 265,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "owner": "retrieval-ranking-trust"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner context-development-lifecycle): blocked=mctlhq/mctl-agents#472, blocker=mctlhq/mctl-agents#266",
-          "subject": {
-            "blocked": {
-              "number": 472,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 266,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "owner": "context-development-lifecycle"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner context-development-lifecycle): blocked=mctlhq/mctl-agents#472, blocker=mctlhq/mctl-agents#471",
-          "subject": {
-            "blocked": {
-              "number": 472,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 471,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "owner": "context-development-lifecycle"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner retrieval-ranking-trust): child=mctlhq/mctl-agents#471, expectedParent=mctlhq/.github#20",
-          "subject": {
-            "child": {
-              "number": 471,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "expectedParent": {
-              "number": 20,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "retrieval-ranking-trust"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner context-development-lifecycle): child=mctlhq/mctl-agents#472, expectedParent=mctlhq/.github#20",
-          "subject": {
-            "child": {
-              "number": 472,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "expectedParent": {
-              "number": 20,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "context-development-lifecycle"
-          }
-        },
         {
           "code": "HierarchyUnexpectedChild",
           "level": "info",
@@ -1117,12 +1109,12 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
-      "state": "drift",
+      "state": "healthy",
       "summary": {
-        "drift": 5,
+        "drift": 0,
         "error": 0,
         "info": 4
       }
@@ -1197,7 +1189,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1269,7 +1261,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1410,102 +1402,6 @@
         "status": "incomplete"
       },
       "diagnostics": [
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner enterprise-endpoint-decision): blocked=mctlhq/.github#128, blocker=mctlhq/mctl-api#284",
-          "subject": {
-            "blocked": {
-              "number": 128,
-              "repository": "mctlhq/.github"
-            },
-            "blocker": {
-              "number": 284,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "enterprise-endpoint-decision"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner enterprise-endpoint-decision): blocked=mctlhq/.github#128, blocker=mctlhq/mctl-telegram#569",
-          "subject": {
-            "blocked": {
-              "number": 128,
-              "repository": "mctlhq/.github"
-            },
-            "blocker": {
-              "number": 569,
-              "repository": "mctlhq/mctl-telegram"
-            },
-            "owner": "enterprise-endpoint-decision"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner enterprise-endpoint-decision): blocked=mctlhq/.github#128, blocker=mctlhq/mctl-telegram#616",
-          "subject": {
-            "blocked": {
-              "number": 128,
-              "repository": "mctlhq/.github"
-            },
-            "blocker": {
-              "number": 616,
-              "repository": "mctlhq/mctl-telegram"
-            },
-            "owner": "enterprise-endpoint-decision"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner enterprise-endpoint-decision): blocked=mctlhq/.github#128, blocker=mctlhq/mctl-telegram#617",
-          "subject": {
-            "blocked": {
-              "number": 128,
-              "repository": "mctlhq/.github"
-            },
-            "blocker": {
-              "number": 617,
-              "repository": "mctlhq/mctl-telegram"
-            },
-            "owner": "enterprise-endpoint-decision"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner enterprise-endpoint-decision): blocked=mctlhq/.github#128, blocker=mctlhq/.github#91",
-          "subject": {
-            "blocked": {
-              "number": 128,
-              "repository": "mctlhq/.github"
-            },
-            "blocker": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "enterprise-endpoint-decision"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner enterprise-endpoint-decision): child=mctlhq/.github#128, expectedParent=mctlhq/.github#35",
-          "subject": {
-            "child": {
-              "number": 128,
-              "repository": "mctlhq/.github"
-            },
-            "expectedParent": {
-              "number": 35,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "enterprise-endpoint-decision"
-          }
-        },
         {
           "code": "HierarchyUnexpectedChild",
           "level": "info",
@@ -1665,12 +1561,12 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
-      "state": "drift",
+      "state": "healthy",
       "summary": {
-        "drift": 6,
+        "drift": 0,
         "error": 0,
         "info": 9
       }
@@ -1783,7 +1679,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1883,7 +1779,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2025,7 +1921,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2145,7 +2041,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2291,7 +2187,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2371,7 +2267,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2452,200 +2348,7 @@
         },
         "status": "incomplete"
       },
-      "diagnostics": [
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner identity-federation): blocked=mctlhq/mctl-api#374, blocker=mctlhq/mctl-api#373",
-          "subject": {
-            "blocked": {
-              "number": 374,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 373,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "identity-federation"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner mcp-oauth-cimd): blocked=mctlhq/mctl-api#375, blocker=mctlhq/mctl-api#373",
-          "subject": {
-            "blocked": {
-              "number": 375,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 373,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "mcp-oauth-cimd"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner mcp-oauth-cimd): blocked=mctlhq/mctl-api#375, blocker=mctlhq/mctl-api#374",
-          "subject": {
-            "blocked": {
-              "number": 375,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 374,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "mcp-oauth-cimd"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner delegated-agent-identity): blocked=mctlhq/mctl-api#376, blocker=mctlhq/mctl-api#373",
-          "subject": {
-            "blocked": {
-              "number": 376,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 373,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "delegated-agent-identity"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner github-decoupling): blocked=mctlhq/mctl-api#377, blocker=mctlhq/mctl-api#374",
-          "subject": {
-            "blocked": {
-              "number": 377,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 374,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "github-decoupling"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner github-decoupling): blocked=mctlhq/mctl-api#377, blocker=mctlhq/mctl-api#375",
-          "subject": {
-            "blocked": {
-              "number": 377,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 375,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "github-decoupling"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner github-decoupling): blocked=mctlhq/mctl-api#377, blocker=mctlhq/mctl-api#376",
-          "subject": {
-            "blocked": {
-              "number": 377,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 376,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "github-decoupling"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner principal-model): child=mctlhq/mctl-api#373, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 373,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "principal-model"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner identity-federation): child=mctlhq/mctl-api#374, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 374,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "identity-federation"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner mcp-oauth-cimd): child=mctlhq/mctl-api#375, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 375,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "mcp-oauth-cimd"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner delegated-agent-identity): child=mctlhq/mctl-api#376, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 376,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "delegated-agent-identity"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner github-decoupling): child=mctlhq/mctl-api#377, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 377,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "github-decoupling"
-          }
-        }
-      ],
+      "diagnostics": [],
       "epic": {
         "issue": {
           "number": 91,
@@ -2660,12 +2363,12 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-23T20:43:27Z",
+        "capturedAt": "2026-09-23T21:13:40Z",
         "mode": "live-capture"
       },
-      "state": "drift",
+      "state": "healthy",
       "summary": {
-        "drift": 12,
+        "drift": 0,
         "error": 0,
         "info": 0
       }

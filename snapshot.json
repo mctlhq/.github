@@ -62,6 +62,10 @@
         {
           "number": 395,
           "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 470,
+          "repository": "mctlhq/mctl-agents"
         }
       ],
       "updatedAt": "2026-09-20T15:03:52Z"
@@ -106,6 +110,14 @@
         },
         {
           "number": 60,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 471,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 472,
           "repository": "mctlhq/mctl-agents"
         }
       ],
@@ -204,6 +216,10 @@
         },
         {
           "number": 619,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 679,
           "repository": "mctlhq/mctl-telegram"
         }
       ],
@@ -310,6 +326,10 @@
         {
           "number": 650,
           "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 128,
+          "repository": "mctlhq/.github"
         }
       ],
       "updatedAt": "2026-09-11T23:28:41Z"
@@ -934,7 +954,28 @@
         "repository": "mctlhq/.github"
       },
       "state": "open",
-      "subIssues": [],
+      "subIssues": [
+        {
+          "number": 373,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 374,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 375,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 376,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 377,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "updatedAt": "2026-09-17T22:36:34Z"
     },
     {
@@ -996,9 +1037,33 @@
       "updatedAt": "2026-09-23T08:57:24Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 284,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 569,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 616,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 617,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 91,
+          "repository": "mctlhq/.github"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 35,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 128,
         "repository": "mctlhq/.github"
@@ -1148,7 +1213,7 @@
       "state": "closed",
       "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-23T20:15:15Z"
+      "updatedAt": "2026-09-23T21:08:11Z"
     },
     {
       "blockedBy": [
@@ -1689,7 +1754,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-23T20:14:38Z"
+      "updatedAt": "2026-09-23T20:51:04Z"
     },
     {
       "blockedBy": [
@@ -1704,10 +1769,21 @@
         {
           "number": 199,
           "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 242,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 283,
+          "repository": "mctlhq/mctl-api"
         }
       ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 18,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 470,
         "repository": "mctlhq/mctl-agents"
@@ -1721,9 +1797,17 @@
       "updatedAt": "2026-09-23T20:22:57Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 265,
+          "repository": "mctlhq/mctl-agents"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 20,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 471,
         "repository": "mctlhq/mctl-agents"
@@ -1734,12 +1818,24 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-23T20:23:04Z"
+      "updatedAt": "2026-09-23T21:07:00Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 266,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 471,
+          "repository": "mctlhq/mctl-agents"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 20,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 472,
         "repository": "mctlhq/mctl-agents"
@@ -2195,7 +2291,10 @@
     {
       "blockedBy": [],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 373,
         "repository": "mctlhq/mctl-api"
@@ -2209,9 +2308,17 @@
       "updatedAt": "2026-09-23T20:23:20Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 373,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 374,
         "repository": "mctlhq/mctl-api"
@@ -2225,9 +2332,21 @@
       "updatedAt": "2026-09-23T20:23:23Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 373,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 374,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 375,
         "repository": "mctlhq/mctl-api"
@@ -2241,9 +2360,17 @@
       "updatedAt": "2026-09-23T20:23:26Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 373,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 376,
         "repository": "mctlhq/mctl-api"
@@ -2257,9 +2384,25 @@
       "updatedAt": "2026-09-23T20:23:28Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 374,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 375,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 376,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 377,
         "repository": "mctlhq/mctl-api"
@@ -2993,6 +3136,139 @@
       "updatedAt": "2026-09-20T15:40:46Z"
     },
     {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 518,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "requested": {
+        "number": 334,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 334,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-07-26T21:05:30Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 518,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "requested": {
+        "number": 339,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 339,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [
+        {
+          "number": 340,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 341,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
+      "updatedAt": "2026-09-10T23:10:47Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 339,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "requested": {
+        "number": 340,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 340,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-07-29T00:40:18Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 340,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 339,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "requested": {
+        "number": 341,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 341,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-07-29T00:35:48Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 334,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 518,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "requested": {
+        "number": 347,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 347,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-07-31T23:49:14Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": {
+        "number": 518,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "requested": {
+        "number": 350,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 350,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-08-01T00:49:38Z"
+    },
+    {
       "blockedBy": [
         {
           "number": 1182,
@@ -3289,6 +3565,43 @@
       "updatedAt": "2026-09-04T12:16:22Z"
     },
     {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 518,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "resolved": {
+        "number": 518,
+        "repository": "mctlhq/mctl-telegram"
+      },
+      "state": "open",
+      "subIssues": [
+        {
+          "number": 339,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 334,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 347,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 305,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 350,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
+      "updatedAt": "2026-09-23T21:14:20Z"
+    },
+    {
       "blockedBy": [
         {
           "number": 617,
@@ -3560,7 +3873,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T20:43:27Z",
+    "capturedAt": "2026-09-23T21:13:40Z",
     "mode": "live-capture"
   }
 }
