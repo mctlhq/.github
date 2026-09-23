@@ -356,8 +356,14 @@ class ReadyTest(unittest.TestCase):
         self.assertEqual("unbound", item["completion"]["reason"])
         self.assertNotIn("devloop-e2e", result["ready"])
 
-        snapshot = mutations.synthetic_snapshot(self.unified_identity)
-        result, _ = self._assess(UNIFIED_IDENTITY, self.unified_identity, snapshot)
+        # A wholly unbound epic, built from the manifest rather than assumed of
+        # it: unified-identity is bound on GitHub now.
+        unbound = mutations.unbind(
+            self.unified_identity,
+            *[item["id"] for item in self.unified_identity["spec"]["workItems"]],
+        )
+        snapshot = mutations.synthetic_snapshot(unbound)
+        result, _ = self._assess(UNIFIED_IDENTITY, unbound, snapshot)
         item = self._item(result, "principal-model")
         self.assertEqual("unknown", item["state"])
         self.assertEqual("unbound", item["completion"]["reason"])

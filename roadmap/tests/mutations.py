@@ -175,6 +175,27 @@ def set_state(
     return result
 
 
+def unbind(document: dict[str, Any], *item_ids: str) -> dict[str, Any]:
+    """Return a copy of an EpicDefinition with the named work items unbound.
+
+    The manifest corpus is roadmap content, not a test oracle: an epic that is
+    fully unbound today gets bound the moment its issues exist, so a test that
+    needs an unbound item builds one here instead of relying on which live
+    manifest happens to lack issues right now.
+    """
+    copied = copy.deepcopy(document)
+    wanted = set(item_ids)
+    seen: set[str] = set()
+    for item in copied["spec"]["workItems"]:
+        if item["id"] in wanted:
+            item.pop("issue", None)
+            seen.add(item["id"])
+    missing = wanted - seen
+    if missing:
+        raise KeyError(f"no such work item: {', '.join(sorted(missing))}")
+    return copied
+
+
 def synthetic_snapshot(
     document: dict[str, Any],
     states: dict[str, tuple[str, str | None]] | None = None,
