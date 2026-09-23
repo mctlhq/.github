@@ -55,6 +55,7 @@ roadmap/
     roadmap-ready-set.schema.json
     roadmap-apply-plan.schema.json
     roadmap-apply-result.schema.json
+    roadmap-publication.schema.json
   epics/
     human-input.yaml
   fixtures/
@@ -70,6 +71,9 @@ roadmap/
     plan.py               diff -> the mutations a manifest authorizes
     github_apply.py       the only module that may write
     apply.py              execute a plan, emit an audited result
+    publish.py            one RoadmapPublication for the roadmap-state branch
+  publication/
+    README.md             copied onto roadmap-state as its README
   tests/
     test_validate.py
     test_reconcile.py
@@ -78,6 +82,7 @@ roadmap/
     test_ready.py
     test_plan.py
     test_apply.py
+    test_publish.py
     mutations.py
 ```
 
@@ -481,6 +486,55 @@ manifest directly from `reconcile.desired_graph()`, so `lifecycle-ownership` and
 readiness against without hand-editing one. It always stamps
 `source.mode: synthetic-fixture`, so a test graph can never masquerade as live
 evidence.
+
+## Publication
+
+`.github/workflows/roadmap-publish.yml` is the one place the evaluator runs against live
+GitHub on a schedule (every two hours, on every `roadmap/**` change on `main`, and on
+demand). A read-only `build` job installs the evaluator, observes and verifies; a
+`publish` job that installs nothing and holds the only write token pushes exactly one
+commit to the orphan branch `roadmap-state`, holding one `RoadmapPublication` (#119):
+
+| File | Content |
+|---|---|
+| `snapshot.json` | one GET-only capture over the union of every manifest's issues |
+| `ready-set.json` | `RoadmapReadySetList`: `ready.py` for every manifest, replayed from that snapshot |
+| `health.json` | `RoadmapHealthList`: `health.py` for every manifest, replayed from that snapshot |
+| `publication.json` | evaluator and source revision, manifest sha256s, the observation, file sha256s |
+
+```bash
+# what the workflow runs; --snapshot instead of --live replays a fixture
+python3 roadmap/scripts/publish.py build --live --output out/ \
+  --evaluator-revision "$(git rev-parse HEAD)" --source-repository mctlhq/.github \
+  --source-ref main --source-revision "$(git rev-parse HEAD)"
+# recompute a publication from its own snapshot at the recorded revision
+python3 roadmap/scripts/publish.py verify out/
+```
+
+Rules the tests pin:
+
+- **Generated state, not a source.** Nothing on `roadmap-state` is edited by hand or read
+  back as desired state; the manifests are never written.
+- **One observation.** All three derived files come from the snapshot in the same
+  commit, so they cannot disagree about what GitHub looked like.
+- **Freshness is `observation.capturedAt`.** There is no wall clock in the output: the
+  same manifests and snapshot give the same bytes. Every live capture has its own
+  `capturedAt`, so every successful run commits. A `synthetic-fixture` observation has no
+  `capturedAt`.
+- **Always a List.** Both derived files are the List form even for a one-manifest corpus
+  (the schemas allow a one-item List), so the kind never changes with corpus size.
+- **Fail closed.** An invalid corpus (exit 3), a repository the token cannot see or whose
+  Issues are turned off (`has_issues: false`, which also refuses a fork whose issues would
+  read fine: the safe default), a failed or incomplete observation, or an unobserved key
+  (exit 4), or a publication that does not reproduce from its own
+  snapshot fails the run before anything is pushed. The previous publication stays, with
+  its older `capturedAt`, so a failed refresh never looks fresh; the failed run is the
+  visible signal.
+- **Unbound is not unknown.** Both reach consumers as `unknown`, distinguished by
+  `completion.reason: unbound`.
+
+Consumers (mctl-api#333) read these files; they never run the evaluator or infer
+readiness themselves.
 
 ## Dogfood: epic #66
 

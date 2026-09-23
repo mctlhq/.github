@@ -553,6 +553,26 @@ class LiveGraphSource(OriginBoundClient):
 
     # -- observation -----------------------------------------------------
 
+    def check_repositories(self, repositories: Sequence[str]) -> None:
+        """Raise unless the token can see every repository.
+
+        GitHub answers 404, not 403, for a repository the caller cannot see,
+        and `_observe` rightly reads a 404 on one issue as that issue being
+        gone. Across a whole repository the same 404 means the token lost
+        sight of it, which is a failed observation, not a graph where every
+        issue there vanished. One GET per repository tells the two apart.
+        """
+
+        for repository in sorted(set(repositories)):
+            status, payload, _ = self._get(f"{self._api_base}/repos/{repository}")
+            if status != 200 or not isinstance(payload, dict):
+                raise ObservationError(
+                    f"repository {repository} is not visible to this token (HTTP {status})"
+                )
+            # Issues turned off answers 404 on every issue as well.
+            if payload.get("has_issues") is False:
+                raise ObservationError(f"repository {repository} has issues disabled")
+
     def _issue_url(self, key: IssueKey) -> str:
         repository, number = key
         return f"{self._api_base}/repos/{repository}/issues/{number}"
