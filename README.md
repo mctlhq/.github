@@ -8,7 +8,7 @@ overwritten by the next run and, until then, fails `publish.py verify`.
 
 | File | Kind | What it is |
 |---|---|---|
-| `publication.json` | `RoadmapPublication` | Provenance: evaluator and source revisions, manifest digests, the observation, and a digest of each file below |
+| `publication.json` | `RoadmapPublication` | Provenance: evaluator and source revisions, manifest digests with each epic's name, lifecycle, title and goal, the observation, and a digest of each file below |
 | `snapshot.json` | `GitHubGraphSnapshot` | The one GET-only observation everything below is derived from |
 | `ready-set.json` | `RoadmapReadySetList` | `ready.py` over every manifest, replayed from `snapshot.json` |
 | `health.json` | `RoadmapHealthList` | `health.py` over every manifest, replayed from `snapshot.json` |

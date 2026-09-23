@@ -1,90 +1,180 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "ec08fb85360cead12aec1f17ec9453cd06387216"
+    "revision": "657575c8a118575eaf7bade0b8de447c31ec2dc9"
   },
   "files": {
     "health.json": {
-      "sha256": "f402ad1d64a77514b20e5a08265c0801db01b88ca935910f8e31ca6af021cf4e"
+      "sha256": "5270f3c5cfe89aaf313ed6c2daa671fec58f4d9a792c751d765b04a234225452"
     },
     "ready-set.json": {
-      "sha256": "d03101dd772a1a4c132c4ccb9f1737493a96a183a752e7cc39f3d3828e9c5472"
+      "sha256": "d261f85717a4676c1fd49549385e55a4154c7ec50c3a79d0107a8da540c49fdd"
     },
     "snapshot.json": {
-      "sha256": "12a5e5f51446a161d422cfa53dcdafd1d20fe0667a9ec805c45a104e330b90f5"
+      "sha256": "fd76df5a0771b3091b7685ea178ab05d06109ff59490974bc2b18aa32fb10a73"
     }
   },
   "kind": "RoadmapPublication",
   "manifests": [
     {
+      "epic": {
+        "goal": "Make model usage and cost attributable to exact mctl executions and DevLoop stages through a backend-neutral, durable and replay-safe usage ledger.",
+        "lifecycle": "active",
+        "name": "agent-finops",
+        "title": "Agent FinOps and model usage attribution"
+      },
       "path": "roadmap/epics/agent-finops.yaml",
       "sha256": "b733800ba387f07a9081bf009b1a6eed413ebecc7fe75b2dd967ccc0055bbbe2"
     },
     {
+      "epic": {
+        "goal": "Make agents first-class declarative platform resources whose immutable definitions and execution profiles determine model, skills, capabilities, policy, runtime, budget and evidence, with governed publication and creation.",
+        "lifecycle": "active",
+        "name": "agent-platform",
+        "title": "Agent definitions, execution profiles and governed agent creation"
+      },
       "path": "roadmap/epics/agent-platform.yaml",
       "sha256": "09efb27eab8afb1261210db66dd450e3923e598a3a54db84c81c78c9b807668d"
     },
     {
+      "epic": {
+        "goal": "A Telegram message or a GitHub pull request event wakes an already running Claude Code session in mctl-claude-remote through platform Valkey Streams and a Claude Code channel, with no polling and no Slack/Gmail bridge. Events carry references only; Claude hydrates canonical state through MCP and GitHub tools.",
+        "lifecycle": "completed",
+        "name": "claude-remote-inbound-channels",
+        "title": "Event-driven inbound Channels for Claude Remote"
+      },
       "path": "roadmap/epics/claude-remote-inbound-channels.yaml",
       "sha256": "cdbc0b630b9d924d22ffb44f2917c8ba7507ff4b56dbfd10c8aae9c414a6c4d3"
     },
     {
+      "epic": {
+        "goal": "Model client identity, reachability and notification preferences, then build a consent-aware, previewable and audited path for product communication without granting a model direct broadcast authority.",
+        "lifecycle": "active",
+        "name": "client-lifecycle",
+        "title": "Client onboarding and product communication"
+      },
       "path": "roadmap/epics/client-lifecycle.yaml",
       "sha256": "85d6d932d69db2a4dd653c047410d73c47d5543c4f0b727e782c8934234ddf2d"
     },
     {
+      "epic": {
+        "goal": "Move durable Cloudflare configuration to reviewed OpenTofu GitOps with mctl-owned remote state, controlled apply, drift detection and an explicit boundary around interactive and runtime state.",
+        "lifecycle": "active",
+        "name": "cloudflare-iac",
+        "title": "Declarative Cloudflare control plane with self-hosted state"
+      },
       "path": "roadmap/epics/cloudflare-iac.yaml",
       "sha256": "83ce4fe606b8908420ac580a9e055a77cb5104b6a26ab35d91b4b42f8f96d799"
     },
     {
+      "epic": {
+        "goal": "Make execution context a first-class, immutable and evaluable platform resource with provenance, deterministic assembly, retrieval quality signals and versioned context-development lifecycle.",
+        "lifecycle": "active",
+        "name": "context-platform",
+        "title": "Context engineering and retrieval control plane"
+      },
       "path": "roadmap/epics/context-platform.yaml",
       "sha256": "5bbded1b31cec145e1eeb32d8c8bc3f60e08414c7347b6b1be402571fef3d4b9"
     },
     {
+      "epic": {
+        "goal": "Ensure same-repository implementation PRs never become silently ownerless: direct implementer PRs retain lifecycle ownership, and proposal-less PRs can be safely adopted into the existing bounded review/remediation lifecycle.",
+        "lifecycle": "completed",
+        "name": "devloop-pr-adoption",
+        "title": "Adopt PRs that fall outside normal proposal ownership"
+      },
       "path": "roadmap/epics/devloop-pr-adoption.yaml",
       "sha256": "389dbcc450674de30970f0e8afcfb555e3947416c09fdc812b37e34bad2652ab"
     },
     {
+      "epic": {
+        "goal": "Evaluate whether Android devices can provide a governed local execution surface for mctl agents without weakening identity, policy, evidence or remote fallback semantics.",
+        "lifecycle": "paused",
+        "name": "edge-ai-android",
+        "title": "Edge AI on Android"
+      },
       "path": "roadmap/epics/edge-ai-android.yaml",
       "sha256": "f29c77722186ed861ff6bbb767f03ce1b07440eb07f7d5af2f25572a83624f29"
     },
     {
+      "epic": {
+        "goal": "Provide an enterprise MCP entry point where Cloudflare supplies the outer access and portal layer while mctl remains authoritative for identity, authorization, consent, durable execution and audit evidence.",
+        "lifecycle": "active",
+        "name": "enterprise-mcp",
+        "title": "Cloudflare MCP Portal and enterprise MCP boundary"
+      },
       "path": "roadmap/epics/enterprise-mcp.yaml",
       "sha256": "15bf9f29085feff8e49d9f397ebea049862232b3029c52c069213808aaf7d974"
     },
     {
+      "epic": {
+        "goal": "Allow an agent to suspend durable work, ask an authorized human for missing information, and resume the same WorkItem without treating clarification as approval.",
+        "lifecycle": "active",
+        "name": "human-input",
+        "title": "Durable agent clarification / feedback primitive"
+      },
       "path": "roadmap/epics/human-input.yaml",
       "sha256": "837fc21c9c61e868c44cf92fd6fada6a55f1e342f26f7b17dea0f59da729520e"
     },
     {
+      "epic": {
+        "goal": "Make lifecycle responsibility explicit, durable and queryable by separating entity ownership from executor claims, authorization and approval, then prove safe handoff, fencing and reconciliation on the DevLoop proposal/PR lifecycle.",
+        "lifecycle": "completed",
+        "name": "lifecycle-ownership",
+        "title": "First-class entity owner/executor contract and reconciliation"
+      },
       "path": "roadmap/epics/lifecycle-ownership.yaml",
       "sha256": "3937bc8a8c061efce42c61d4f29b12d09aca784b9b045ebdb5e8c7e7f51db779"
     },
     {
+      "epic": {
+        "goal": "Make mctl executions observable as correlated OpenTelemetry traces through a vendor-neutral OTLP boundary, with canonical execution identity, backend portability and no private payload recording by default.",
+        "lifecycle": "active",
+        "name": "observability",
+        "title": "Vendor-neutral execution tracing for agents and DevLoop"
+      },
       "path": "roadmap/epics/observability.yaml",
       "sha256": "95a4158421bd774a632fbb8c12de0d6062e740cd03e3a30dd01b63d0a5fc7a6a"
     },
     {
+      "epic": {
+        "goal": "Make a versioned EpicDefinition manifest the canonical desired graph for an epic, and derive drift, health and completion from the observed GitHub graph deterministically, with GitHub remaining the human planning surface.",
+        "lifecycle": "active",
+        "name": "roadmap-control-plane",
+        "title": "Declarative EpicDefinition and GitHub graph reconciliation"
+      },
       "path": "roadmap/epics/roadmap-control-plane.yaml",
       "sha256": "d1f675d3915e874d4f74f01729b839a57c46db3a744d52575df4497a8549bee7"
     },
     {
+      "epic": {
+        "goal": "Keep durable work state in the platform so a WorkItem can be inspected and resumed across Telegram, MCP, CLI and web surfaces without replaying raw conversation history or inheriting privileges across surfaces.",
+        "lifecycle": "active",
+        "name": "surfaces",
+        "title": "Cross-surface working context and agentic UX"
+      },
       "path": "roadmap/epics/surfaces.yaml",
       "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
     },
     {
+      "epic": {
+        "goal": "Decouple MCTL principals from GitHub identity by introducing stable canonical identities for humans, agents and services, with linked external identities, swappable federation, CIMD-aware MCP OAuth and delegated agent identity.",
+        "lifecycle": "active",
+        "name": "unified-identity",
+        "title": "MCTL Unified Identity and Agent Identity Broker"
+      },
       "path": "roadmap/epics/unified-identity.yaml",
       "sha256": "27685889b990cc9ccf8ee8d232b93d8760f0ef176524826b169252c780eb1167"
     }
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T08:51:18Z",
+    "capturedAt": "2026-09-23T09:09:33Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "ec08fb85360cead12aec1f17ec9453cd06387216"
+    "revision": "657575c8a118575eaf7bade0b8de447c31ec2dc9"
   }
 }
