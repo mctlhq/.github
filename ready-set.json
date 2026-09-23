@@ -1,0 +1,2743 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "items": [
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 48,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/agent-finops.yaml",
+          "sha256": "b733800ba387f07a9081bf009b1a6eed413ebecc7fe75b2dd967ccc0055bbbe2"
+        },
+        "name": "agent-finops"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "usage-ledger"
+          ],
+          "externalDependsOn": [],
+          "id": "devloop-instrumentation",
+          "issue": {
+            "number": 50,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "instrumentation",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "usage-contract",
+          "issue": {
+            "number": 49,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "usage-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "usage-ledger",
+          "issue": {
+            "number": 266,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "ledger",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "devloop-instrumentation"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 2,
+          "ready": 1,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 2,
+          "ready": 1,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 18,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/agent-platform.yaml",
+          "sha256": "09efb27eab8afb1261210db66dd450e3923e598a3a54db84c81c78c9b807668d"
+        },
+        "name": "agent-platform"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "agent-contract",
+          "issue": {
+            "number": 226,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "agent-contract",
+            "runtime-resolver"
+          ],
+          "externalDependsOn": [],
+          "id": "capability-discovery",
+          "issue": {
+            "number": 242,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "capabilities",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "execution-admission",
+          "issue": {
+            "number": 395,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "admission",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "execution-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "execution-evidence",
+          "issue": {
+            "number": 199,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "governance",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "agent-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "execution-identity",
+          "issue": {
+            "number": 196,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "governance",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "agent-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "gitops-catalog",
+          "issue": {
+            "number": 950,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "catalog",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "capability-discovery",
+            "release-binding",
+            "runtime-policy",
+            "human-approval",
+            "execution-evidence"
+          ],
+          "externalDependsOn": [],
+          "id": "governed-agent-authoring",
+          "phase": "authoring",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [
+            {
+              "id": "runtime-policy",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "execution-identity",
+            "runtime-policy"
+          ],
+          "externalDependsOn": [],
+          "id": "human-approval",
+          "issue": {
+            "number": 198,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "governance",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "runtime-resolver",
+            "gitops-catalog"
+          ],
+          "externalDependsOn": [],
+          "id": "release-binding",
+          "issue": {
+            "number": 283,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "catalog",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "execution-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "runtime-policy",
+          "issue": {
+            "number": 197,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "governance",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "agent-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "runtime-resolver",
+          "issue": {
+            "number": 227,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "runtime",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "agent-contract",
+            "runtime-resolver"
+          ],
+          "externalDependsOn": [],
+          "id": "service-skills",
+          "issue": {
+            "number": 305,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "capabilities",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "capability-discovery",
+        "execution-evidence",
+        "runtime-policy"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 1,
+          "complete": 7,
+          "ready": 3,
+          "unknown": 1
+        },
+        "required": {
+          "blocked": 1,
+          "complete": 7,
+          "ready": 3,
+          "unknown": 1
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 87,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/claude-remote-inbound-channels.yaml",
+          "sha256": "cdbc0b630b9d924d22ffb44f2917c8ba7507ff4b56dbfd10c8aae9c414a6c4d3"
+        },
+        "name": "claude-remote-inbound-channels"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "valkey"
+          ],
+          "externalDependsOn": [],
+          "id": "channel-skeleton",
+          "issue": {
+            "number": 54,
+            "repository": "mctlhq/mctl-claude-remote"
+          },
+          "phase": "skeleton",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "telegram-producer",
+            "github-producer"
+          ],
+          "externalDependsOn": [],
+          "id": "delivery-guarantees",
+          "issue": {
+            "number": 55,
+            "repository": "mctlhq/mctl-claude-remote"
+          },
+          "phase": "hardening",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "telegram-producer",
+            "github-producer",
+            "delivery-guarantees"
+          ],
+          "externalDependsOn": [],
+          "id": "e2e-audit",
+          "issue": {
+            "number": 89,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "proof",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "envelope",
+          "issue": {
+            "number": 88,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "telegram",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "envelope",
+            "telegram-producer"
+          ],
+          "externalDependsOn": [],
+          "id": "github-producer",
+          "issue": {
+            "number": 323,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "github",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "channel-skeleton",
+            "envelope"
+          ],
+          "externalDependsOn": [],
+          "id": "telegram-producer",
+          "issue": {
+            "number": 646,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "telegram",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "valkey",
+          "issue": {
+            "number": 1260,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "skeleton",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 7,
+          "ready": 0,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 7,
+          "ready": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 22,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/client-lifecycle.yaml",
+          "sha256": "85d6d932d69db2a4dd653c047410d73c47d5543c4f0b727e782c8934234ddf2d"
+        },
+        "name": "client-lifecycle"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "client-reachability-preferences",
+          "issue": {
+            "number": 438,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "lifecycle",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "client-reachability-preferences"
+          ],
+          "externalDependsOn": [],
+          "id": "login-bot-update-receiver",
+          "issue": {
+            "number": 619,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "broadcast",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "lookup-deployment",
+          "issue": {
+            "number": 1182,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "identity",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "operator-identity-lookup",
+            "safe-broadcast",
+            "product-update-feed"
+          ],
+          "externalDependsOn": [],
+          "id": "onboarding-integration",
+          "phase": "onboarding",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [
+            {
+              "id": "lookup-deployment",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "lookup-deployment"
+          ],
+          "externalDependsOn": [],
+          "id": "operator-identity-lookup",
+          "issue": {
+            "number": 400,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "identity",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "safe-broadcast"
+          ],
+          "externalDependsOn": [],
+          "id": "product-update-feed",
+          "issue": {
+            "number": 440,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "updates",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "client-reachability-preferences",
+            "login-bot-update-receiver"
+          ],
+          "externalDependsOn": [],
+          "id": "safe-broadcast",
+          "issue": {
+            "number": 439,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "broadcast",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "lookup-deployment",
+        "product-update-feed"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 1,
+          "complete": 3,
+          "ready": 2,
+          "unknown": 1
+        },
+        "required": {
+          "blocked": 1,
+          "complete": 3,
+          "ready": 2,
+          "unknown": 1
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 47,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/cloudflare-iac.yaml",
+          "sha256": "83ce4fe606b8908420ac580a9e055a77cb5104b6a26ab35d91b4b42f8f96d799"
+        },
+        "name": "cloudflare-iac"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "apply-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "account-access",
+          "issue": {
+            "number": 1088,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "cutover",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "iac-bootstrap"
+          ],
+          "externalDependsOn": [],
+          "id": "apply-identity",
+          "issue": {
+            "number": 1111,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "bootstrap",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "id": "worker-routes",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "zone-state-migration",
+            "worker-routes"
+          ],
+          "externalDependsOn": [],
+          "id": "git-only-operations-proof",
+          "issue": {
+            "number": 1333,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "operations",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "inventory"
+          ],
+          "externalDependsOn": [],
+          "id": "iac-bootstrap",
+          "issue": {
+            "number": 1093,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "bootstrap",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "inventory",
+          "issue": {
+            "number": 1083,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "inventory",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "id": "git-only-operations-proof",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "git-only-operations-proof"
+          ],
+          "externalDependsOn": [],
+          "id": "mcp-portal-iac",
+          "issue": {
+            "number": 1092,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "enterprise",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "zone-state-migration"
+          ],
+          "externalDependsOn": [],
+          "id": "operator-runbook",
+          "issue": {
+            "number": 1180,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "operations",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "iac-bootstrap"
+          ],
+          "externalDependsOn": [],
+          "id": "state-credential-hardening",
+          "issue": {
+            "number": 1118,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "bootstrap",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "apply-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "tunnel-handoff",
+          "issue": {
+            "number": 1090,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "cutover",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "apply-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "worker-routes",
+          "issue": {
+            "number": 1179,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "cutover",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "zone-state-migration"
+          ],
+          "externalDependsOn": [],
+          "id": "zone-apply-evidence",
+          "issue": {
+            "number": 1281,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "cutover",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "apply-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "zone-state-migration",
+          "issue": {
+            "number": 1178,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "cutover",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "account-access",
+        "operator-runbook",
+        "state-credential-hardening",
+        "tunnel-handoff",
+        "worker-routes",
+        "zone-apply-evidence"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 2,
+          "complete": 4,
+          "ready": 6,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 2,
+          "complete": 4,
+          "ready": 3,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 20,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/context-platform.yaml",
+          "sha256": "5bbded1b31cec145e1eeb32d8c8bc3f60e08414c7347b6b1be402571fef3d4b9"
+        },
+        "name": "context-platform"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "context-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "context-assembly",
+          "issue": {
+            "number": 265,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "assembly",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "context-contract",
+          "issue": {
+            "number": 264,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "retrieval-ranking-trust",
+            "context-evals"
+          ],
+          "externalDependsOn": [],
+          "id": "context-development-lifecycle",
+          "phase": "lifecycle",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "context-assembly"
+          ],
+          "externalDependsOn": [],
+          "id": "context-evals",
+          "issue": {
+            "number": 266,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "evaluation",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "context-assembly"
+          ],
+          "externalDependsOn": [],
+          "id": "retrieval-ranking-trust",
+          "phase": "ranking",
+          "required": true,
+          "state": "unknown"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "context-evals"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 2,
+          "ready": 1,
+          "unknown": 2
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 2,
+          "ready": 1,
+          "unknown": 2
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 38,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/devloop-pr-adoption.yaml",
+          "sha256": "389dbcc450674de30970f0e8afcfb555e3947416c09fdc812b37e34bad2652ab"
+        },
+        "name": "devloop-pr-adoption"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "proposal-less-pr-adoption"
+          ],
+          "externalDependsOn": [],
+          "id": "cwft-adopted-prs-persistence",
+          "issue": {
+            "number": 1278,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "adoption",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "direct-implementer-ownership",
+          "issue": {
+            "number": 239,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "direct",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "steward-review-fix"
+          ],
+          "externalDependsOn": [],
+          "id": "proposal-less-pr-adoption",
+          "issue": {
+            "number": 334,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "adoption",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "steward-review-fix",
+          "issue": {
+            "number": 292,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "steward",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 4,
+          "ready": 0,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 4,
+          "ready": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 34,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/edge-ai-android.yaml",
+          "sha256": "f29c77722186ed861ff6bbb767f03ce1b07440eb07f7d5af2f25572a83624f29"
+        },
+        "name": "edge-ai-android"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "feasibility-spike",
+          "phase": "feasibility",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "feasibility-spike"
+          ],
+          "externalDependsOn": [],
+          "id": "local-execution-contract",
+          "phase": "contract",
+          "required": true,
+          "state": "unknown"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 0,
+          "ready": 0,
+          "unknown": 2
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 0,
+          "ready": 0,
+          "unknown": 2
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 35,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/enterprise-mcp.yaml",
+          "sha256": "15bf9f29085feff8e49d9f397ebea049862232b3029c52c069213808aaf7d974"
+        },
+        "name": "enterprise-mcp"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "compatibility-spike",
+          "issue": {
+            "number": 44,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "compatibility",
+          "required": false,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "gateway-dlp-result"
+          ],
+          "externalDependsOn": [],
+          "id": "correlation-contract",
+          "issue": {
+            "number": 617,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "correlation",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "telegram-compatibility",
+            "compatibility-spike"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 609,
+              "repository": "mctlhq/mctl-telegram"
+            }
+          ],
+          "id": "denied-user-and-bypass",
+          "issue": {
+            "number": 616,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "portal",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "denied-user-and-bypass",
+            "correlation-contract",
+            "mcp-tasks",
+            "mcp-apps"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 91,
+              "repository": "mctlhq/.github"
+            }
+          ],
+          "id": "enterprise-endpoint-decision",
+          "phase": "enterprise-identity",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "telegram-compatibility"
+          ],
+          "externalDependsOn": [],
+          "id": "gateway-dlp-result",
+          "issue": {
+            "number": 1181,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "gateway",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "gateway-dlp-result"
+          ],
+          "externalDependsOn": [],
+          "id": "gateway-hardening",
+          "issue": {
+            "number": 1193,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "gateway",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "telegram-compatibility"
+          ],
+          "externalDependsOn": [],
+          "id": "local-bridge-proof",
+          "issue": {
+            "number": 615,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "portal",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "correlation-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "mcp-apps",
+          "issue": {
+            "number": 569,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "extensions",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "mcp-apps"
+          ],
+          "externalDependsOn": [],
+          "id": "mcp-apps-validation",
+          "issue": {
+            "number": 650,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "extensions",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 41,
+                "repository": "mctlhq/.github"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "correlation-contract",
+            "compatibility-spike"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 41,
+              "repository": "mctlhq/.github"
+            }
+          ],
+          "id": "mcp-tasks",
+          "issue": {
+            "number": 284,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "extensions",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "telegram-compatibility",
+          "issue": {
+            "number": 585,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "compatibility",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "denied-user-and-bypass",
+        "gateway-hardening",
+        "local-bridge-proof",
+        "mcp-apps-validation"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 1,
+          "complete": 5,
+          "ready": 4,
+          "unknown": 1
+        },
+        "required": {
+          "blocked": 1,
+          "complete": 4,
+          "ready": 2,
+          "unknown": 1
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 42,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/human-input.yaml",
+          "sha256": "837fc21c9c61e868c44cf92fd6fada6a55f1e342f26f7b17dea0f59da729520e"
+        },
+        "name": "human-input"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "human-input-core"
+          ],
+          "externalDependsOn": [],
+          "id": "catalog-profile-rollout",
+          "issue": {
+            "number": 1277,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "core",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "telegram-adapter",
+            "catalog-profile-rollout"
+          ],
+          "externalDependsOn": [],
+          "id": "devloop-e2e",
+          "phase": "e2e",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "human-input-core",
+            "human-input-api"
+          ],
+          "externalDependsOn": [],
+          "id": "docs",
+          "issue": {
+            "number": 106,
+            "repository": "mctlhq/mctl-docs"
+          },
+          "phase": "surfaces",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "human-input-core"
+          ],
+          "externalDependsOn": [],
+          "id": "human-input-api",
+          "issue": {
+            "number": 261,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "api",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "human-input-core",
+          "issue": {
+            "number": 333,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "core",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 350,
+                "repository": "mctlhq/mctl-api"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "human-input-api"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 350,
+              "repository": "mctlhq/mctl-api"
+            }
+          ],
+          "id": "portal-card",
+          "issue": {
+            "number": 124,
+            "repository": "mctlhq/mctl-portal"
+          },
+          "phase": "surfaces",
+          "required": false,
+          "state": "blocked"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 350,
+                "repository": "mctlhq/mctl-api"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "issue": {
+                "number": 443,
+                "repository": "mctlhq/mctl-telegram"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "human-input-core",
+            "human-input-api"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 443,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            {
+              "number": 350,
+              "repository": "mctlhq/mctl-api"
+            }
+          ],
+          "id": "telegram-adapter",
+          "issue": {
+            "number": 571,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "surfaces",
+          "required": true,
+          "state": "blocked"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "docs"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 2,
+          "complete": 3,
+          "ready": 1,
+          "unknown": 1
+        },
+        "required": {
+          "blocked": 1,
+          "complete": 3,
+          "ready": 0,
+          "unknown": 1
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 57,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/lifecycle-ownership.yaml",
+          "sha256": "3937bc8a8c061efce42c61d4f29b12d09aca784b9b045ebdb5e8c7e7f51db779"
+        },
+        "name": "lifecycle-ownership"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "ownership-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "devloop-ownership",
+          "issue": {
+            "number": 351,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "pilot",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "ownership-contract",
+            "devloop-ownership"
+          ],
+          "externalDependsOn": [],
+          "id": "executor-fencing",
+          "issue": {
+            "number": 352,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "fencing",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "ownership-inspection",
+            "executor-fencing",
+            "ownership-reconciler"
+          ],
+          "externalDependsOn": [],
+          "id": "guarded-recovery",
+          "issue": {
+            "number": 294,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "operations",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "ownership-contract",
+          "issue": {
+            "number": 350,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "ownership-contract",
+            "devloop-ownership"
+          ],
+          "externalDependsOn": [],
+          "id": "ownership-inspection",
+          "issue": {
+            "number": 293,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "operations",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "ownership-contract",
+            "devloop-ownership",
+            "executor-fencing"
+          ],
+          "externalDependsOn": [],
+          "id": "ownership-reconciler",
+          "issue": {
+            "number": 353,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "reconcile",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 6,
+          "ready": 0,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 6,
+          "ready": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 55,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/observability.yaml",
+          "sha256": "95a4158421bd774a632fbb8c12de0d6062e740cd03e3a30dd01b63d0a5fc7a6a"
+        },
+        "name": "observability"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "telemetry-gateway"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "agent-traces",
+          "issue": {
+            "number": 38,
+            "repository": "mctlhq/mctl-agent"
+          },
+          "phase": "tracing",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "telemetry-gateway"
+          ],
+          "externalDependsOn": [],
+          "id": "attribute-catalog",
+          "issue": {
+            "number": 116,
+            "repository": "mctlhq/mctl-docs"
+          },
+          "phase": "gateway",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "telemetry-gateway"
+          ],
+          "externalDependsOn": [],
+          "id": "backend-bakeoff",
+          "issue": {
+            "number": 903,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "backend",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "id": "devloop-traces",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "mcp-span-context",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "devloop-traces",
+            "agent-traces",
+            "mcp-span-context"
+          ],
+          "externalDependsOn": [],
+          "id": "cross-system-correlation",
+          "issue": {
+            "number": 97,
+            "repository": "mctlhq/mctl-agent"
+          },
+          "phase": "correlation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "telemetry-gateway"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "devloop-traces",
+          "issue": {
+            "number": 195,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "tracing",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "backend-bakeoff"
+          ],
+          "externalDependsOn": [],
+          "id": "live-bakeoff",
+          "issue": {
+            "number": 1280,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "backend",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [
+            {
+              "id": "devloop-traces",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "devloop-traces"
+          ],
+          "externalDependsOn": [],
+          "id": "mcp-span-context",
+          "issue": {
+            "number": 285,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "correlation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "telemetry-gateway",
+          "issue": {
+            "number": 902,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "gateway",
+          "required": true,
+          "state": "complete"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "devloop-traces",
+        "live-bakeoff"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 2,
+          "complete": 4,
+          "ready": 2,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 2,
+          "complete": 4,
+          "ready": 2,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 66,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/roadmap-control-plane.yaml",
+          "sha256": "d1f675d3915e874d4f74f01729b839a57c46db3a744d52575df4497a8549bee7"
+        },
+        "name": "roadmap-control-plane"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "ready-work-items",
+            "roadmap-publication"
+          ],
+          "externalDependsOn": [],
+          "id": "epic-status-api",
+          "issue": {
+            "number": 333,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "waves",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "reconciler"
+          ],
+          "externalDependsOn": [],
+          "id": "governed-apply",
+          "issue": {
+            "number": 68,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "apply",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "id": "epic-status-api",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "ready-work-items",
+            "epic-status-api"
+          ],
+          "externalDependsOn": [],
+          "id": "governed-wave-start",
+          "issue": {
+            "number": 334,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "waves",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "reconciler",
+            "roadmap-health"
+          ],
+          "externalDependsOn": [],
+          "id": "ready-work-items",
+          "issue": {
+            "number": 99,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "waves",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "reconciler",
+          "issue": {
+            "number": 67,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "detect",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "reconciler"
+          ],
+          "externalDependsOn": [],
+          "id": "roadmap-health",
+          "issue": {
+            "number": 83,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "health",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "ready-work-items",
+            "roadmap-health"
+          ],
+          "externalDependsOn": [],
+          "id": "roadmap-publication",
+          "issue": {
+            "number": 119,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "waves",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "roadmap-health"
+          ],
+          "externalDependsOn": [],
+          "id": "temporal-health",
+          "issue": {
+            "number": 85,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "temporal",
+          "required": false,
+          "state": "ready"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "epic-status-api",
+        "temporal-health"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 1,
+          "complete": 5,
+          "ready": 2,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 1,
+          "complete": 5,
+          "ready": 1,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 21,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/surfaces.yaml",
+          "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
+        },
+        "name": "surfaces"
+      },
+      "items": [
+        {
+          "blockers": [
+            {
+              "id": "second-surface-pilot",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "working-memory-continuity",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "second-surface-pilot",
+            "working-memory-continuity"
+          ],
+          "externalDependsOn": [],
+          "id": "agentic-work-item-ux",
+          "issue": {
+            "number": 126,
+            "repository": "mctlhq/mctl-portal"
+          },
+          "phase": "ux",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "work-item-contract"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 264,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 1279,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            {
+              "number": 335,
+              "repository": "mctlhq/mctl-api"
+            }
+          ],
+          "id": "investigator-resume",
+          "issue": {
+            "number": 267,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "resume",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "id": "telegram-work-item-adapter",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "work-item-api",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "work-item-api",
+            "investigator-resume",
+            "telegram-work-item-adapter"
+          ],
+          "externalDependsOn": [],
+          "id": "second-surface-pilot",
+          "issue": {
+            "number": 341,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "resume",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "work-item-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "surface-identity-link",
+          "issue": {
+            "number": 350,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [
+            {
+              "id": "surface-identity-link",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "work-item-api",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "work-item-contract",
+            "work-item-api",
+            "surface-identity-link",
+            "investigator-resume"
+          ],
+          "externalDependsOn": [],
+          "id": "telegram-work-item-adapter",
+          "issue": {
+            "number": 443,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "resume",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "work-item-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "work-item-api",
+          "issue": {
+            "number": 349,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "work-item-contract",
+          "issue": {
+            "number": 227,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [
+            {
+              "id": "work-item-api",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "investigator-resume",
+            "work-item-api"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 265,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "working-memory-continuity",
+          "issue": {
+            "number": 431,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "continuity",
+          "required": true,
+          "state": "blocked"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "surface-identity-link",
+        "work-item-api"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 4,
+          "complete": 2,
+          "ready": 2,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 4,
+          "complete": 2,
+          "ready": 2,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 91,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/unified-identity.yaml",
+          "sha256": "27685889b990cc9ccf8ee8d232b93d8760f0ef176524826b169252c780eb1167"
+        },
+        "name": "unified-identity"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "principal-model"
+          ],
+          "externalDependsOn": [],
+          "id": "delegated-agent-identity",
+          "phase": "delegation",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "identity-federation",
+            "mcp-oauth-cimd",
+            "delegated-agent-identity"
+          ],
+          "externalDependsOn": [],
+          "id": "github-decoupling",
+          "phase": "migration",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "principal-model"
+          ],
+          "externalDependsOn": [],
+          "id": "identity-federation",
+          "phase": "federation",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "principal-model",
+            "identity-federation"
+          ],
+          "externalDependsOn": [],
+          "id": "mcp-oauth-cimd",
+          "phase": "mcp",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "principal-model",
+          "phase": "principal",
+          "required": true,
+          "state": "unknown"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 0,
+          "ready": 0,
+          "unknown": 5
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 0,
+          "ready": 0,
+          "unknown": 5
+        }
+      }
+    }
+  ],
+  "kind": "RoadmapReadySetList"
+}

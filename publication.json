@@ -1,0 +1,90 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "evaluator": {
+    "revision": "ec08fb85360cead12aec1f17ec9453cd06387216"
+  },
+  "files": {
+    "health.json": {
+      "sha256": "f402ad1d64a77514b20e5a08265c0801db01b88ca935910f8e31ca6af021cf4e"
+    },
+    "ready-set.json": {
+      "sha256": "d03101dd772a1a4c132c4ccb9f1737493a96a183a752e7cc39f3d3828e9c5472"
+    },
+    "snapshot.json": {
+      "sha256": "12a5e5f51446a161d422cfa53dcdafd1d20fe0667a9ec805c45a104e330b90f5"
+    }
+  },
+  "kind": "RoadmapPublication",
+  "manifests": [
+    {
+      "path": "roadmap/epics/agent-finops.yaml",
+      "sha256": "b733800ba387f07a9081bf009b1a6eed413ebecc7fe75b2dd967ccc0055bbbe2"
+    },
+    {
+      "path": "roadmap/epics/agent-platform.yaml",
+      "sha256": "09efb27eab8afb1261210db66dd450e3923e598a3a54db84c81c78c9b807668d"
+    },
+    {
+      "path": "roadmap/epics/claude-remote-inbound-channels.yaml",
+      "sha256": "cdbc0b630b9d924d22ffb44f2917c8ba7507ff4b56dbfd10c8aae9c414a6c4d3"
+    },
+    {
+      "path": "roadmap/epics/client-lifecycle.yaml",
+      "sha256": "85d6d932d69db2a4dd653c047410d73c47d5543c4f0b727e782c8934234ddf2d"
+    },
+    {
+      "path": "roadmap/epics/cloudflare-iac.yaml",
+      "sha256": "83ce4fe606b8908420ac580a9e055a77cb5104b6a26ab35d91b4b42f8f96d799"
+    },
+    {
+      "path": "roadmap/epics/context-platform.yaml",
+      "sha256": "5bbded1b31cec145e1eeb32d8c8bc3f60e08414c7347b6b1be402571fef3d4b9"
+    },
+    {
+      "path": "roadmap/epics/devloop-pr-adoption.yaml",
+      "sha256": "389dbcc450674de30970f0e8afcfb555e3947416c09fdc812b37e34bad2652ab"
+    },
+    {
+      "path": "roadmap/epics/edge-ai-android.yaml",
+      "sha256": "f29c77722186ed861ff6bbb767f03ce1b07440eb07f7d5af2f25572a83624f29"
+    },
+    {
+      "path": "roadmap/epics/enterprise-mcp.yaml",
+      "sha256": "15bf9f29085feff8e49d9f397ebea049862232b3029c52c069213808aaf7d974"
+    },
+    {
+      "path": "roadmap/epics/human-input.yaml",
+      "sha256": "837fc21c9c61e868c44cf92fd6fada6a55f1e342f26f7b17dea0f59da729520e"
+    },
+    {
+      "path": "roadmap/epics/lifecycle-ownership.yaml",
+      "sha256": "3937bc8a8c061efce42c61d4f29b12d09aca784b9b045ebdb5e8c7e7f51db779"
+    },
+    {
+      "path": "roadmap/epics/observability.yaml",
+      "sha256": "95a4158421bd774a632fbb8c12de0d6062e740cd03e3a30dd01b63d0a5fc7a6a"
+    },
+    {
+      "path": "roadmap/epics/roadmap-control-plane.yaml",
+      "sha256": "d1f675d3915e874d4f74f01729b839a57c46db3a744d52575df4497a8549bee7"
+    },
+    {
+      "path": "roadmap/epics/surfaces.yaml",
+      "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
+    },
+    {
+      "path": "roadmap/epics/unified-identity.yaml",
+      "sha256": "27685889b990cc9ccf8ee8d232b93d8760f0ef176524826b169252c780eb1167"
+    }
+  ],
+  "observation": {
+    "apiBase": "https://api.github.com",
+    "capturedAt": "2026-09-23T08:51:18Z",
+    "mode": "live-capture"
+  },
+  "source": {
+    "ref": "main",
+    "repository": "mctlhq/.github",
+    "revision": "ec08fb85360cead12aec1f17ec9453cd06387216"
+  }
+}

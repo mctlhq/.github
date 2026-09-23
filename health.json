@@ -1,0 +1,4036 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "items": [
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "devloop-instrumentation"
+        ],
+        "items": [
+          {
+            "id": "devloop-instrumentation",
+            "issue": {
+              "number": 50,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "usage-contract",
+            "issue": {
+              "number": 49,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "usage-ledger",
+            "issue": {
+              "number": 266,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 2,
+          "incomplete": 1,
+          "total": 3,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner usage-ledger): blocked=mctlhq/mctl-api#266, blocker=mctlhq/.github#49",
+          "subject": {
+            "blocked": {
+              "number": 266,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 49,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "usage-ledger"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner devloop-instrumentation): blocked=mctlhq/.github#50, blocker=mctlhq/mctl-api#266",
+          "subject": {
+            "blocked": {
+              "number": 50,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 266,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "devloop-instrumentation"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 48,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/agent-finops.yaml",
+          "sha256": "b733800ba387f07a9081bf009b1a6eed413ebecc7fe75b2dd967ccc0055bbbe2"
+        },
+        "name": "agent-finops"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 2,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "capability-discovery",
+          "execution-evidence",
+          "governed-agent-authoring",
+          "human-approval",
+          "runtime-policy"
+        ],
+        "items": [
+          {
+            "id": "agent-contract",
+            "issue": {
+              "number": 226,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "capability-discovery",
+            "issue": {
+              "number": 242,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "execution-admission",
+            "issue": {
+              "number": 395,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "execution-evidence",
+            "issue": {
+              "number": 199,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "execution-identity",
+            "issue": {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "gitops-catalog",
+            "issue": {
+              "number": 950,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "governed-agent-authoring",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "human-approval",
+            "issue": {
+              "number": 198,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "release-binding",
+            "issue": {
+              "number": 283,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "runtime-policy",
+            "issue": {
+              "number": 197,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "runtime-resolver",
+            "issue": {
+              "number": 227,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "service-skills",
+            "issue": {
+              "number": 305,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 7,
+          "incomplete": 5,
+          "total": 12,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner execution-identity): blocked=mctlhq/mctl-agents#196, blocker=mctlhq/mctl-agents#226",
+          "subject": {
+            "blocked": {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 226,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "execution-identity"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner runtime-policy): blocked=mctlhq/mctl-agents#197, blocker=mctlhq/mctl-agents#196",
+          "subject": {
+            "blocked": {
+              "number": 197,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "runtime-policy"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner human-approval): blocked=mctlhq/mctl-agents#198, blocker=mctlhq/mctl-agents#196",
+          "subject": {
+            "blocked": {
+              "number": 198,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "human-approval"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner human-approval): blocked=mctlhq/mctl-agents#198, blocker=mctlhq/mctl-agents#197",
+          "subject": {
+            "blocked": {
+              "number": 198,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 197,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "human-approval"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner execution-evidence): blocked=mctlhq/mctl-agents#199, blocker=mctlhq/mctl-agents#196",
+          "subject": {
+            "blocked": {
+              "number": 199,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "execution-evidence"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner runtime-resolver): blocked=mctlhq/mctl-agents#227, blocker=mctlhq/mctl-agents#226",
+          "subject": {
+            "blocked": {
+              "number": 227,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 226,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "runtime-resolver"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner capability-discovery): blocked=mctlhq/mctl-agents#242, blocker=mctlhq/mctl-agents#226",
+          "subject": {
+            "blocked": {
+              "number": 242,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 226,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "capability-discovery"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner capability-discovery): blocked=mctlhq/mctl-agents#242, blocker=mctlhq/mctl-agents#227",
+          "subject": {
+            "blocked": {
+              "number": 242,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 227,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "capability-discovery"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner release-binding): blocked=mctlhq/mctl-api#283, blocker=mctlhq/mctl-agents#227",
+          "subject": {
+            "blocked": {
+              "number": 283,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 227,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "release-binding"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner release-binding): blocked=mctlhq/mctl-api#283, blocker=mctlhq/mctl-gitops#950",
+          "subject": {
+            "blocked": {
+              "number": 283,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 950,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "release-binding"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner service-skills): blocked=mctlhq/mctl-agents#305, blocker=mctlhq/mctl-agents#226",
+          "subject": {
+            "blocked": {
+              "number": 305,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 226,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "service-skills"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner service-skills): blocked=mctlhq/mctl-agents#305, blocker=mctlhq/mctl-agents#227",
+          "subject": {
+            "blocked": {
+              "number": 305,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 227,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "service-skills"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner gitops-catalog): blocked=mctlhq/mctl-gitops#950, blocker=mctlhq/mctl-agents#226",
+          "subject": {
+            "blocked": {
+              "number": 950,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 226,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "gitops-catalog"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner execution-admission): child=mctlhq/mctl-agents#395, expectedParent=mctlhq/.github#18",
+          "subject": {
+            "child": {
+              "number": 395,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 18,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "execution-admission"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner governed-agent-authoring)",
+          "subject": {
+            "owner": "governed-agent-authoring"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-portal#112, observedParent=mctlhq/.github#18",
+          "subject": {
+            "child": {
+              "number": 112,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "observedParent": {
+              "number": 18,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner execution-admission): child=mctlhq/mctl-gitops#1285, observedParent=mctlhq/mctl-agents#395",
+          "subject": {
+            "child": {
+              "number": 1285,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 395,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "execution-admission"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner execution-admission): child=mctlhq/mctl-agents#396, observedParent=mctlhq/mctl-agents#395",
+          "subject": {
+            "child": {
+              "number": 396,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "observedParent": {
+              "number": 395,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "execution-admission"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 18,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/agent-platform.yaml",
+          "sha256": "09efb27eab8afb1261210db66dd450e3923e598a3a54db84c81c78c9b807668d"
+        },
+        "name": "agent-platform"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 14,
+        "error": 0,
+        "info": 4
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [],
+        "items": [
+          {
+            "id": "channel-skeleton",
+            "issue": {
+              "number": 54,
+              "repository": "mctlhq/mctl-claude-remote"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "delivery-guarantees",
+            "issue": {
+              "number": 55,
+              "repository": "mctlhq/mctl-claude-remote"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "e2e-audit",
+            "issue": {
+              "number": 89,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "envelope",
+            "issue": {
+              "number": 88,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "github-producer",
+            "issue": {
+              "number": 323,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "telegram-producer",
+            "issue": {
+              "number": 646,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "valkey",
+            "issue": {
+              "number": 1260,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 7,
+          "incomplete": 0,
+          "total": 7,
+          "unknown": 0
+        },
+        "status": "complete"
+      },
+      "diagnostics": [],
+      "epic": {
+        "issue": {
+          "number": 87,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/claude-remote-inbound-channels.yaml",
+          "sha256": "cdbc0b630b9d924d22ffb44f2917c8ba7507ff4b56dbfd10c8aae9c414a6c4d3"
+        },
+        "name": "claude-remote-inbound-channels"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "healthy",
+      "summary": {
+        "drift": 0,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "lookup-deployment",
+          "onboarding-integration",
+          "operator-identity-lookup",
+          "product-update-feed"
+        ],
+        "items": [
+          {
+            "id": "client-reachability-preferences",
+            "issue": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "login-bot-update-receiver",
+            "issue": {
+              "number": 619,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "lookup-deployment",
+            "issue": {
+              "number": 1182,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "onboarding-integration",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "operator-identity-lookup",
+            "issue": {
+              "number": 400,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "product-update-feed",
+            "issue": {
+              "number": 440,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "safe-broadcast",
+            "issue": {
+              "number": 439,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 3,
+          "incomplete": 4,
+          "total": 7,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner operator-identity-lookup): blocked=mctlhq/mctl-telegram#400, blocker=mctlhq/mctl-gitops#1182",
+          "subject": {
+            "blocked": {
+              "number": 400,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 1182,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "operator-identity-lookup"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner safe-broadcast): blocked=mctlhq/mctl-telegram#439, blocker=mctlhq/mctl-telegram#438",
+          "subject": {
+            "blocked": {
+              "number": 439,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "safe-broadcast"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner safe-broadcast): blocked=mctlhq/mctl-telegram#439, blocker=mctlhq/mctl-telegram#619",
+          "subject": {
+            "blocked": {
+              "number": 439,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 619,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "safe-broadcast"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner product-update-feed): blocked=mctlhq/mctl-telegram#440, blocker=mctlhq/mctl-telegram#439",
+          "subject": {
+            "blocked": {
+              "number": 440,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 439,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "product-update-feed"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner login-bot-update-receiver): blocked=mctlhq/mctl-telegram#619, blocker=mctlhq/mctl-telegram#438",
+          "subject": {
+            "blocked": {
+              "number": 619,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "login-bot-update-receiver"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner lookup-deployment): child=mctlhq/mctl-gitops#1182, expectedParent=mctlhq/.github#22, observedParent=mctlhq/mctl-telegram#515",
+          "subject": {
+            "child": {
+              "number": 1182,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 515,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "lookup-deployment"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner operator-identity-lookup): child=mctlhq/mctl-telegram#400, expectedParent=mctlhq/.github#22, observedParent=mctlhq/mctl-telegram#515",
+          "subject": {
+            "child": {
+              "number": 400,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 515,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "operator-identity-lookup"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner client-reachability-preferences): child=mctlhq/mctl-telegram#438, expectedParent=mctlhq/.github#22, observedParent=mctlhq/mctl-telegram#515",
+          "subject": {
+            "child": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 515,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "client-reachability-preferences"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner safe-broadcast): child=mctlhq/mctl-telegram#439, expectedParent=mctlhq/.github#22, observedParent=mctlhq/mctl-telegram#618",
+          "subject": {
+            "child": {
+              "number": 439,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 618,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "safe-broadcast"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner product-update-feed): child=mctlhq/mctl-telegram#440, expectedParent=mctlhq/.github#22, observedParent=mctlhq/mctl-telegram#618",
+          "subject": {
+            "child": {
+              "number": 440,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 618,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "product-update-feed"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner login-bot-update-receiver): child=mctlhq/mctl-telegram#619, expectedParent=mctlhq/.github#22, observedParent=mctlhq/mctl-telegram#618",
+          "subject": {
+            "child": {
+              "number": 619,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 618,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "login-bot-update-receiver"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner onboarding-integration)",
+          "subject": {
+            "owner": "onboarding-integration"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#515, observedParent=mctlhq/.github#22",
+          "subject": {
+            "child": {
+              "number": 515,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#618, observedParent=mctlhq/.github#22",
+          "subject": {
+            "child": {
+              "number": 618,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 22,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner client-reachability-preferences): child=mctlhq/mctl-telegram#620, observedParent=mctlhq/mctl-telegram#438",
+          "subject": {
+            "child": {
+              "number": 620,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "client-reachability-preferences"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner client-reachability-preferences): child=mctlhq/mctl-telegram#621, observedParent=mctlhq/mctl-telegram#438",
+          "subject": {
+            "child": {
+              "number": 621,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "client-reachability-preferences"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner client-reachability-preferences): child=mctlhq/mctl-telegram#622, observedParent=mctlhq/mctl-telegram#438",
+          "subject": {
+            "child": {
+              "number": 622,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 438,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "client-reachability-preferences"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 22,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/client-lifecycle.yaml",
+          "sha256": "85d6d932d69db2a4dd653c047410d73c47d5543c4f0b727e782c8934234ddf2d"
+        },
+        "name": "client-lifecycle"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 11,
+        "error": 0,
+        "info": 6
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "git-only-operations-proof",
+          "mcp-portal-iac",
+          "operator-runbook",
+          "worker-routes",
+          "zone-apply-evidence"
+        ],
+        "items": [
+          {
+            "id": "account-access",
+            "issue": {
+              "number": 1088,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "apply-identity",
+            "issue": {
+              "number": 1111,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "git-only-operations-proof",
+            "issue": {
+              "number": 1333,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "iac-bootstrap",
+            "issue": {
+              "number": 1093,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "inventory",
+            "issue": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "mcp-portal-iac",
+            "issue": {
+              "number": 1092,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "operator-runbook",
+            "issue": {
+              "number": 1180,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "state-credential-hardening",
+            "issue": {
+              "number": 1118,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "tunnel-handoff",
+            "issue": {
+              "number": 1090,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "worker-routes",
+            "issue": {
+              "number": 1179,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "zone-apply-evidence",
+            "issue": {
+              "number": 1281,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "zone-state-migration",
+            "issue": {
+              "number": 1178,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 4,
+          "incomplete": 5,
+          "total": 9,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner account-access): blocked=mctlhq/mctl-gitops#1088, blocker=mctlhq/mctl-gitops#1111",
+          "subject": {
+            "blocked": {
+              "number": 1088,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1111,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "account-access"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner tunnel-handoff): blocked=mctlhq/mctl-gitops#1090, blocker=mctlhq/mctl-gitops#1111",
+          "subject": {
+            "blocked": {
+              "number": 1090,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1111,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "tunnel-handoff"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-portal-iac): blocked=mctlhq/mctl-gitops#1092, blocker=mctlhq/mctl-gitops#1333",
+          "subject": {
+            "blocked": {
+              "number": 1092,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1333,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "mcp-portal-iac"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner iac-bootstrap): blocked=mctlhq/mctl-gitops#1093, blocker=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "blocked": {
+              "number": 1093,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "iac-bootstrap"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner apply-identity): blocked=mctlhq/mctl-gitops#1111, blocker=mctlhq/mctl-gitops#1093",
+          "subject": {
+            "blocked": {
+              "number": 1111,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1093,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "apply-identity"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner state-credential-hardening): blocked=mctlhq/mctl-gitops#1118, blocker=mctlhq/mctl-gitops#1093",
+          "subject": {
+            "blocked": {
+              "number": 1118,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1093,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "state-credential-hardening"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner zone-state-migration): blocked=mctlhq/mctl-gitops#1178, blocker=mctlhq/mctl-gitops#1111",
+          "subject": {
+            "blocked": {
+              "number": 1178,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1111,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "zone-state-migration"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner worker-routes): blocked=mctlhq/mctl-gitops#1179, blocker=mctlhq/mctl-gitops#1111",
+          "subject": {
+            "blocked": {
+              "number": 1179,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1111,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "worker-routes"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner operator-runbook): blocked=mctlhq/mctl-gitops#1180, blocker=mctlhq/mctl-gitops#1178",
+          "subject": {
+            "blocked": {
+              "number": 1180,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1178,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "operator-runbook"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner zone-apply-evidence): blocked=mctlhq/mctl-gitops#1281, blocker=mctlhq/mctl-gitops#1178",
+          "subject": {
+            "blocked": {
+              "number": 1281,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1178,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "zone-apply-evidence"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner git-only-operations-proof): blocked=mctlhq/mctl-gitops#1333, blocker=mctlhq/mctl-gitops#1178",
+          "subject": {
+            "blocked": {
+              "number": 1333,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1178,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "git-only-operations-proof"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner git-only-operations-proof): blocked=mctlhq/mctl-gitops#1333, blocker=mctlhq/mctl-gitops#1179",
+          "subject": {
+            "blocked": {
+              "number": 1333,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1179,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "git-only-operations-proof"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner zone-apply-evidence): child=mctlhq/mctl-gitops#1281, expectedParent=mctlhq/.github#47",
+          "subject": {
+            "child": {
+              "number": 1281,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "zone-apply-evidence"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner git-only-operations-proof): child=mctlhq/mctl-gitops#1333, expectedParent=mctlhq/.github#47",
+          "subject": {
+            "child": {
+              "number": 1333,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "git-only-operations-proof"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner account-access): child=mctlhq/mctl-gitops#1088, expectedParent=mctlhq/.github#47, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1088,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "account-access"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner tunnel-handoff): child=mctlhq/mctl-gitops#1090, expectedParent=mctlhq/.github#47, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1090,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "tunnel-handoff"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner mcp-portal-iac): child=mctlhq/mctl-gitops#1092, expectedParent=mctlhq/.github#47, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1092,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "mcp-portal-iac"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner iac-bootstrap): child=mctlhq/mctl-gitops#1093, expectedParent=mctlhq/.github#47, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1093,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "iac-bootstrap"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner inventory): child=mctlhq/mctl-gitops#1087, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1087,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "inventory"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner inventory): child=mctlhq/mctl-gitops#1089, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1089,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "inventory"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner inventory): child=mctlhq/mctl-gitops#1091, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1091,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "inventory"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner inventory): child=mctlhq/mctl-gitops#1103, observedParent=mctlhq/mctl-gitops#1083",
+          "subject": {
+            "child": {
+              "number": 1103,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 1083,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "inventory"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-gitops#1109, observedParent=mctlhq/.github#47",
+          "subject": {
+            "child": {
+              "number": 1109,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-gitops#1114, observedParent=mctlhq/.github#47",
+          "subject": {
+            "child": {
+              "number": 1114,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-gitops#1115, observedParent=mctlhq/.github#47",
+          "subject": {
+            "child": {
+              "number": 1115,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "observedParent": {
+              "number": 47,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 47,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/cloudflare-iac.yaml",
+          "sha256": "83ce4fe606b8908420ac580a9e055a77cb5104b6a26ab35d91b4b42f8f96d799"
+        },
+        "name": "cloudflare-iac"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 18,
+        "error": 0,
+        "info": 7
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "context-development-lifecycle",
+          "context-evals",
+          "retrieval-ranking-trust"
+        ],
+        "items": [
+          {
+            "id": "context-assembly",
+            "issue": {
+              "number": 265,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "context-contract",
+            "issue": {
+              "number": 264,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "context-development-lifecycle",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "context-evals",
+            "issue": {
+              "number": 266,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "retrieval-ranking-trust",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 2,
+          "incomplete": 3,
+          "total": 5,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner context-assembly): blocked=mctlhq/mctl-agents#265, blocker=mctlhq/mctl-agents#264",
+          "subject": {
+            "blocked": {
+              "number": 265,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 264,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "context-assembly"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner context-evals): blocked=mctlhq/mctl-agents#266, blocker=mctlhq/mctl-agents#265",
+          "subject": {
+            "blocked": {
+              "number": 266,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 265,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "context-evals"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner context-development-lifecycle)",
+          "subject": {
+            "owner": "context-development-lifecycle"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner retrieval-ranking-trust)",
+          "subject": {
+            "owner": "retrieval-ranking-trust"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-portal#111, observedParent=mctlhq/.github#20",
+          "subject": {
+            "child": {
+              "number": 111,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "observedParent": {
+              "number": 20,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-api#249, observedParent=mctlhq/.github#20",
+          "subject": {
+            "child": {
+              "number": 249,
+              "repository": "mctlhq/mctl-api"
+            },
+            "observedParent": {
+              "number": 20,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-agents#310, observedParent=mctlhq/.github#20",
+          "subject": {
+            "child": {
+              "number": 310,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "observedParent": {
+              "number": 20,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-agents#60, observedParent=mctlhq/.github#20",
+          "subject": {
+            "child": {
+              "number": 60,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "observedParent": {
+              "number": 20,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 20,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/context-platform.yaml",
+          "sha256": "5bbded1b31cec145e1eeb32d8c8bc3f60e08414c7347b6b1be402571fef3d4b9"
+        },
+        "name": "context-platform"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 2,
+        "error": 0,
+        "info": 6
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [],
+        "items": [
+          {
+            "id": "cwft-adopted-prs-persistence",
+            "issue": {
+              "number": 1278,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "direct-implementer-ownership",
+            "issue": {
+              "number": 239,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "proposal-less-pr-adoption",
+            "issue": {
+              "number": 334,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "steward-review-fix",
+            "issue": {
+              "number": 292,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 4,
+          "incomplete": 0,
+          "total": 4,
+          "unknown": 0
+        },
+        "status": "complete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner cwft-adopted-prs-persistence): blocked=mctlhq/mctl-gitops#1278, blocker=mctlhq/mctl-agents#334",
+          "subject": {
+            "blocked": {
+              "number": 1278,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 334,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "cwft-adopted-prs-persistence"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner proposal-less-pr-adoption): blocked=mctlhq/mctl-agents#334, blocker=mctlhq/mctl-agents#292",
+          "subject": {
+            "blocked": {
+              "number": 334,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 292,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "proposal-less-pr-adoption"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner cwft-adopted-prs-persistence): child=mctlhq/mctl-gitops#1278, expectedParent=mctlhq/.github#38",
+          "subject": {
+            "child": {
+              "number": 1278,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 38,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "cwft-adopted-prs-persistence"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 38,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/devloop-pr-adoption.yaml",
+          "sha256": "389dbcc450674de30970f0e8afcfb555e3947416c09fdc812b37e34bad2652ab"
+        },
+        "name": "devloop-pr-adoption"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 3,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "feasibility-spike",
+          "local-execution-contract"
+        ],
+        "items": [
+          {
+            "id": "feasibility-spike",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "local-execution-contract",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 0,
+          "incomplete": 2,
+          "total": 2,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner feasibility-spike)",
+          "subject": {
+            "owner": "feasibility-spike"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner local-execution-contract)",
+          "subject": {
+            "owner": "local-execution-contract"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 34,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/edge-ai-android.yaml",
+          "sha256": "f29c77722186ed861ff6bbb767f03ce1b07440eb07f7d5af2f25572a83624f29"
+        },
+        "name": "edge-ai-android"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "healthy",
+      "summary": {
+        "drift": 0,
+        "error": 0,
+        "info": 2
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "denied-user-and-bypass",
+          "enterprise-endpoint-decision",
+          "mcp-apps-validation",
+          "mcp-tasks"
+        ],
+        "items": [
+          {
+            "id": "compatibility-spike",
+            "issue": {
+              "number": 44,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": false,
+            "status": "complete"
+          },
+          {
+            "id": "correlation-contract",
+            "issue": {
+              "number": 617,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "denied-user-and-bypass",
+            "issue": {
+              "number": 616,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "enterprise-endpoint-decision",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "gateway-dlp-result",
+            "issue": {
+              "number": 1181,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "gateway-hardening",
+            "issue": {
+              "number": 1193,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "local-bridge-proof",
+            "issue": {
+              "number": 615,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "mcp-apps",
+            "issue": {
+              "number": 569,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "mcp-apps-validation",
+            "issue": {
+              "number": 650,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "mcp-tasks",
+            "issue": {
+              "number": 284,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "telegram-compatibility",
+            "issue": {
+              "number": 585,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 4,
+          "incomplete": 4,
+          "total": 8,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner gateway-dlp-result): blocked=mctlhq/mctl-gitops#1181, blocker=mctlhq/mctl-telegram#585",
+          "subject": {
+            "blocked": {
+              "number": 1181,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 585,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "gateway-dlp-result"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner gateway-hardening): blocked=mctlhq/mctl-gitops#1193, blocker=mctlhq/mctl-gitops#1181",
+          "subject": {
+            "blocked": {
+              "number": 1193,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 1181,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "gateway-hardening"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-tasks): blocked=mctlhq/mctl-api#284, blocker=mctlhq/.github#41",
+          "subject": {
+            "blocked": {
+              "number": 284,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 41,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "mcp-tasks"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-tasks): blocked=mctlhq/mctl-api#284, blocker=mctlhq/.github#44",
+          "subject": {
+            "blocked": {
+              "number": 284,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 44,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "mcp-tasks"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-tasks): blocked=mctlhq/mctl-api#284, blocker=mctlhq/mctl-telegram#617",
+          "subject": {
+            "blocked": {
+              "number": 284,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 617,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "mcp-tasks"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-apps): blocked=mctlhq/mctl-telegram#569, blocker=mctlhq/mctl-telegram#617",
+          "subject": {
+            "blocked": {
+              "number": 569,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 617,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "mcp-apps"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner local-bridge-proof): blocked=mctlhq/mctl-telegram#615, blocker=mctlhq/mctl-telegram#585",
+          "subject": {
+            "blocked": {
+              "number": 615,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 585,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "local-bridge-proof"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner denied-user-and-bypass): blocked=mctlhq/mctl-telegram#616, blocker=mctlhq/.github#44",
+          "subject": {
+            "blocked": {
+              "number": 616,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 44,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "denied-user-and-bypass"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner denied-user-and-bypass): blocked=mctlhq/mctl-telegram#616, blocker=mctlhq/mctl-telegram#585",
+          "subject": {
+            "blocked": {
+              "number": 616,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 585,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "denied-user-and-bypass"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner denied-user-and-bypass): blocked=mctlhq/mctl-telegram#616, blocker=mctlhq/mctl-telegram#609",
+          "subject": {
+            "blocked": {
+              "number": 616,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 609,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "denied-user-and-bypass"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner correlation-contract): blocked=mctlhq/mctl-telegram#617, blocker=mctlhq/mctl-gitops#1181",
+          "subject": {
+            "blocked": {
+              "number": 617,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 1181,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "correlation-contract"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-apps-validation): blocked=mctlhq/mctl-telegram#650, blocker=mctlhq/mctl-telegram#569",
+          "subject": {
+            "blocked": {
+              "number": 650,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 569,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "mcp-apps-validation"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner gateway-hardening): child=mctlhq/mctl-gitops#1193, expectedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 1193,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "gateway-hardening"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner mcp-apps-validation): child=mctlhq/mctl-telegram#650, expectedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 650,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "mcp-apps-validation"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner telegram-compatibility): child=mctlhq/mctl-telegram#585, expectedParent=mctlhq/.github#35, observedParent=mctlhq/.github#44",
+          "subject": {
+            "child": {
+              "number": 585,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 44,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "telegram-compatibility"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner enterprise-endpoint-decision)",
+          "subject": {
+            "owner": "enterprise-endpoint-decision"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-api#276, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 276,
+              "repository": "mctlhq/mctl-api"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/.github#41, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 41,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/.github#43, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 43,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/seerrsense#54, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 54,
+              "repository": "mctlhq/seerrsense"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#568, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 568,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner compatibility-spike): child=mctlhq/mctl-telegram#605, observedParent=mctlhq/.github#44",
+          "subject": {
+            "child": {
+              "number": 605,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 44,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "compatibility-spike"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#607, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 607,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#614, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 614,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/.github#63, observedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 63,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 35,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/enterprise-mcp.yaml",
+          "sha256": "15bf9f29085feff8e49d9f397ebea049862232b3029c52c069213808aaf7d974"
+        },
+        "name": "enterprise-mcp"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 15,
+        "error": 0,
+        "info": 10
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "devloop-e2e",
+          "telegram-adapter"
+        ],
+        "items": [
+          {
+            "id": "catalog-profile-rollout",
+            "issue": {
+              "number": 1277,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "devloop-e2e",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "docs",
+            "issue": {
+              "number": 106,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "human-input-api",
+            "issue": {
+              "number": 261,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "human-input-core",
+            "issue": {
+              "number": 333,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "portal-card",
+            "issue": {
+              "number": 124,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "telegram-adapter",
+            "issue": {
+              "number": 571,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 3,
+          "incomplete": 2,
+          "total": 5,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner docs): blocked=mctlhq/mctl-docs#106, blocker=mctlhq/mctl-api#261",
+          "subject": {
+            "blocked": {
+              "number": 106,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "blocker": {
+              "number": 261,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "docs"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner docs): blocked=mctlhq/mctl-docs#106, blocker=mctlhq/mctl-agents#333",
+          "subject": {
+            "blocked": {
+              "number": 106,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "blocker": {
+              "number": 333,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "docs"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner portal-card): blocked=mctlhq/mctl-portal#124, blocker=mctlhq/mctl-api#261",
+          "subject": {
+            "blocked": {
+              "number": 124,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "blocker": {
+              "number": 261,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "portal-card"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner catalog-profile-rollout): blocked=mctlhq/mctl-gitops#1277, blocker=mctlhq/mctl-agents#333",
+          "subject": {
+            "blocked": {
+              "number": 1277,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 333,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "catalog-profile-rollout"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner telegram-adapter): blocked=mctlhq/mctl-telegram#571, blocker=mctlhq/mctl-api#261",
+          "subject": {
+            "blocked": {
+              "number": 571,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "blocker": {
+              "number": 261,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "telegram-adapter"
+          }
+        },
+        {
+          "code": "DependencyUnexpected",
+          "level": "drift",
+          "message": "DependencyUnexpected (owner human-input-core): blocked=mctlhq/mctl-agents#333, blocker=mctlhq/mctl-api#227",
+          "subject": {
+            "blocked": {
+              "number": 333,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 227,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "human-input-core"
+          }
+        },
+        {
+          "code": "DependencyUnexpected",
+          "level": "drift",
+          "message": "DependencyUnexpected (owner human-input-core): blocked=mctlhq/mctl-agents#333, blocker=mctlhq/mctl-agents#264",
+          "subject": {
+            "blocked": {
+              "number": 333,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 264,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "human-input-core"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner catalog-profile-rollout): child=mctlhq/mctl-gitops#1277, expectedParent=mctlhq/.github#42",
+          "subject": {
+            "child": {
+              "number": 1277,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 42,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "catalog-profile-rollout"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner portal-card): child=mctlhq/mctl-portal#124, expectedParent=mctlhq/.github#42, observedParent=mctlhq/mctl-portal#111",
+          "subject": {
+            "child": {
+              "number": 124,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "expectedParent": {
+              "number": 42,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 111,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "owner": "portal-card"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner devloop-e2e)",
+          "subject": {
+            "owner": "devloop-e2e"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 42,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/human-input.yaml",
+          "sha256": "837fc21c9c61e868c44cf92fd6fada6a55f1e342f26f7b17dea0f59da729520e"
+        },
+        "name": "human-input"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 9,
+        "error": 0,
+        "info": 1
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [],
+        "items": [
+          {
+            "id": "devloop-ownership",
+            "issue": {
+              "number": 351,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "executor-fencing",
+            "issue": {
+              "number": 352,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "guarded-recovery",
+            "issue": {
+              "number": 294,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "ownership-contract",
+            "issue": {
+              "number": 350,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "ownership-inspection",
+            "issue": {
+              "number": 293,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "ownership-reconciler",
+            "issue": {
+              "number": 353,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 6,
+          "incomplete": 0,
+          "total": 6,
+          "unknown": 0
+        },
+        "status": "complete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner ownership-inspection): blocked=mctlhq/mctl-api#293, blocker=mctlhq/mctl-agents#350",
+          "subject": {
+            "blocked": {
+              "number": 293,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 350,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "ownership-inspection"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner ownership-inspection): blocked=mctlhq/mctl-api#293, blocker=mctlhq/mctl-agents#351",
+          "subject": {
+            "blocked": {
+              "number": 293,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 351,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "ownership-inspection"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner guarded-recovery): blocked=mctlhq/mctl-api#294, blocker=mctlhq/mctl-api#293",
+          "subject": {
+            "blocked": {
+              "number": 294,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 293,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "guarded-recovery"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner guarded-recovery): blocked=mctlhq/mctl-api#294, blocker=mctlhq/mctl-agents#352",
+          "subject": {
+            "blocked": {
+              "number": 294,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 352,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "guarded-recovery"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner guarded-recovery): blocked=mctlhq/mctl-api#294, blocker=mctlhq/mctl-agents#353",
+          "subject": {
+            "blocked": {
+              "number": 294,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 353,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "guarded-recovery"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner devloop-ownership): blocked=mctlhq/mctl-agents#351, blocker=mctlhq/mctl-agents#350",
+          "subject": {
+            "blocked": {
+              "number": 351,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 350,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "devloop-ownership"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner executor-fencing): blocked=mctlhq/mctl-agents#352, blocker=mctlhq/mctl-agents#350",
+          "subject": {
+            "blocked": {
+              "number": 352,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 350,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "executor-fencing"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner executor-fencing): blocked=mctlhq/mctl-agents#352, blocker=mctlhq/mctl-agents#351",
+          "subject": {
+            "blocked": {
+              "number": 352,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 351,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "executor-fencing"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner ownership-reconciler): blocked=mctlhq/mctl-agents#353, blocker=mctlhq/mctl-agents#350",
+          "subject": {
+            "blocked": {
+              "number": 353,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 350,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "ownership-reconciler"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner ownership-reconciler): blocked=mctlhq/mctl-agents#353, blocker=mctlhq/mctl-agents#351",
+          "subject": {
+            "blocked": {
+              "number": 353,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 351,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "ownership-reconciler"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner ownership-reconciler): blocked=mctlhq/mctl-agents#353, blocker=mctlhq/mctl-agents#352",
+          "subject": {
+            "blocked": {
+              "number": 353,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 352,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "ownership-reconciler"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 57,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/lifecycle-ownership.yaml",
+          "sha256": "3937bc8a8c061efce42c61d4f29b12d09aca784b9b045ebdb5e8c7e7f51db779"
+        },
+        "name": "lifecycle-ownership"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 11,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "cross-system-correlation",
+          "devloop-traces",
+          "live-bakeoff",
+          "mcp-span-context"
+        ],
+        "items": [
+          {
+            "id": "agent-traces",
+            "issue": {
+              "number": 38,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "attribute-catalog",
+            "issue": {
+              "number": 116,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "backend-bakeoff",
+            "issue": {
+              "number": 903,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "cross-system-correlation",
+            "issue": {
+              "number": 97,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "devloop-traces",
+            "issue": {
+              "number": 195,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "live-bakeoff",
+            "issue": {
+              "number": 1280,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "mcp-span-context",
+            "issue": {
+              "number": 285,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "telemetry-gateway",
+            "issue": {
+              "number": 902,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 4,
+          "incomplete": 4,
+          "total": 8,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner attribute-catalog): blocked=mctlhq/mctl-docs#116, blocker=mctlhq/mctl-gitops#902",
+          "subject": {
+            "blocked": {
+              "number": 116,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "blocker": {
+              "number": 902,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "attribute-catalog"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner live-bakeoff): blocked=mctlhq/mctl-gitops#1280, blocker=mctlhq/mctl-gitops#903",
+          "subject": {
+            "blocked": {
+              "number": 1280,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 903,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "live-bakeoff"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner devloop-traces): blocked=mctlhq/mctl-agents#195, blocker=mctlhq/mctl-gitops#902",
+          "subject": {
+            "blocked": {
+              "number": 195,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 902,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "devloop-traces"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner mcp-span-context): blocked=mctlhq/mctl-api#285, blocker=mctlhq/mctl-agents#195",
+          "subject": {
+            "blocked": {
+              "number": 285,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 195,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "mcp-span-context"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner agent-traces): blocked=mctlhq/mctl-agent#38, blocker=mctlhq/mctl-agents#196",
+          "subject": {
+            "blocked": {
+              "number": 38,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "blocker": {
+              "number": 196,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "agent-traces"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner agent-traces): blocked=mctlhq/mctl-agent#38, blocker=mctlhq/mctl-gitops#902",
+          "subject": {
+            "blocked": {
+              "number": 38,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "blocker": {
+              "number": 902,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "agent-traces"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner backend-bakeoff): blocked=mctlhq/mctl-gitops#903, blocker=mctlhq/mctl-gitops#902",
+          "subject": {
+            "blocked": {
+              "number": 903,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "blocker": {
+              "number": 902,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "backend-bakeoff"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner cross-system-correlation): blocked=mctlhq/mctl-agent#97, blocker=mctlhq/mctl-agents#195",
+          "subject": {
+            "blocked": {
+              "number": 97,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "blocker": {
+              "number": 195,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "cross-system-correlation"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner cross-system-correlation): blocked=mctlhq/mctl-agent#97, blocker=mctlhq/mctl-api#285",
+          "subject": {
+            "blocked": {
+              "number": 97,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "blocker": {
+              "number": 285,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "cross-system-correlation"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner cross-system-correlation): blocked=mctlhq/mctl-agent#97, blocker=mctlhq/mctl-agent#38",
+          "subject": {
+            "blocked": {
+              "number": 97,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "blocker": {
+              "number": 38,
+              "repository": "mctlhq/mctl-agent"
+            },
+            "owner": "cross-system-correlation"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner attribute-catalog): child=mctlhq/mctl-docs#116, expectedParent=mctlhq/.github#55",
+          "subject": {
+            "child": {
+              "number": 116,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "expectedParent": {
+              "number": 55,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "attribute-catalog"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner live-bakeoff): child=mctlhq/mctl-gitops#1280, expectedParent=mctlhq/.github#55",
+          "subject": {
+            "child": {
+              "number": 1280,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 55,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "live-bakeoff"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-docs#107, observedParent=mctlhq/.github#55",
+          "subject": {
+            "child": {
+              "number": 107,
+              "repository": "mctlhq/mctl-docs"
+            },
+            "observedParent": {
+              "number": 55,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 55,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/observability.yaml",
+          "sha256": "95a4158421bd774a632fbb8c12de0d6062e740cd03e3a30dd01b63d0a5fc7a6a"
+        },
+        "name": "observability"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 12,
+        "error": 0,
+        "info": 1
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "epic-status-api",
+          "governed-wave-start"
+        ],
+        "items": [
+          {
+            "id": "epic-status-api",
+            "issue": {
+              "number": 333,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "governed-apply",
+            "issue": {
+              "number": 68,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "governed-wave-start",
+            "issue": {
+              "number": 334,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "ready-work-items",
+            "issue": {
+              "number": 99,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "reconciler",
+            "issue": {
+              "number": 67,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "roadmap-health",
+            "issue": {
+              "number": 83,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "roadmap-publication",
+            "issue": {
+              "number": 119,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "temporal-health",
+            "issue": {
+              "number": 85,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 5,
+          "incomplete": 2,
+          "total": 7,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [],
+      "epic": {
+        "issue": {
+          "number": 66,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/roadmap-control-plane.yaml",
+          "sha256": "d1f675d3915e874d4f74f01729b839a57c46db3a744d52575df4497a8549bee7"
+        },
+        "name": "roadmap-control-plane"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "healthy",
+      "summary": {
+        "drift": 0,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "agentic-work-item-ux",
+          "second-surface-pilot",
+          "surface-identity-link",
+          "telegram-work-item-adapter",
+          "work-item-api",
+          "working-memory-continuity"
+        ],
+        "items": [
+          {
+            "id": "agentic-work-item-ux",
+            "issue": {
+              "number": 126,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "investigator-resume",
+            "issue": {
+              "number": 267,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "second-surface-pilot",
+            "issue": {
+              "number": 341,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "surface-identity-link",
+            "issue": {
+              "number": 350,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "telegram-work-item-adapter",
+            "issue": {
+              "number": 443,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "work-item-api",
+            "issue": {
+              "number": 349,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "work-item-contract",
+            "issue": {
+              "number": 227,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "working-memory-continuity",
+            "issue": {
+              "number": 431,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 2,
+          "incomplete": 6,
+          "total": 8,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner agentic-work-item-ux): blocked=mctlhq/mctl-portal#126, blocker=mctlhq/mctl-api#341",
+          "subject": {
+            "blocked": {
+              "number": 126,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "blocker": {
+              "number": 341,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "agentic-work-item-ux"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner agentic-work-item-ux): blocked=mctlhq/mctl-portal#126, blocker=mctlhq/mctl-agents#431",
+          "subject": {
+            "blocked": {
+              "number": 126,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "blocker": {
+              "number": 431,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "agentic-work-item-ux"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner investigator-resume): blocked=mctlhq/mctl-agents#267, blocker=mctlhq/mctl-gitops#1279",
+          "subject": {
+            "blocked": {
+              "number": 267,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 1279,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "investigator-resume"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner investigator-resume): blocked=mctlhq/mctl-agents#267, blocker=mctlhq/mctl-agents#264",
+          "subject": {
+            "blocked": {
+              "number": 267,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 264,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "investigator-resume"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner investigator-resume): blocked=mctlhq/mctl-agents#267, blocker=mctlhq/mctl-api#335",
+          "subject": {
+            "blocked": {
+              "number": 267,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 335,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "investigator-resume"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner working-memory-continuity): blocked=mctlhq/mctl-agents#431, blocker=mctlhq/mctl-agents#265",
+          "subject": {
+            "blocked": {
+              "number": 431,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 265,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "working-memory-continuity"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner working-memory-continuity): blocked=mctlhq/mctl-agents#431, blocker=mctlhq/mctl-agents#267",
+          "subject": {
+            "blocked": {
+              "number": 431,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 267,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "working-memory-continuity"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner agentic-work-item-ux): child=mctlhq/mctl-portal#126, expectedParent=mctlhq/.github#21",
+          "subject": {
+            "child": {
+              "number": 126,
+              "repository": "mctlhq/mctl-portal"
+            },
+            "expectedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "agentic-work-item-ux"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner second-surface-pilot): child=mctlhq/mctl-api#341, expectedParent=mctlhq/.github#21",
+          "subject": {
+            "child": {
+              "number": 341,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "second-surface-pilot"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner working-memory-continuity): child=mctlhq/mctl-agents#431, expectedParent=mctlhq/.github#21",
+          "subject": {
+            "child": {
+              "number": 431,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "working-memory-continuity"
+          }
+        },
+        {
+          "code": "HierarchyWrongParent",
+          "level": "drift",
+          "message": "HierarchyWrongParent (owner telegram-work-item-adapter): child=mctlhq/mctl-telegram#443, expectedParent=mctlhq/.github#21, observedParent=mctlhq/mctl-telegram#517",
+          "subject": {
+            "child": {
+              "number": 443,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "expectedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "observedParent": {
+              "number": 517,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "telegram-work-item-adapter"
+          }
+        },
+        {
+          "code": "HierarchyUnexpectedChild",
+          "level": "info",
+          "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-telegram#517, observedParent=mctlhq/.github#21",
+          "subject": {
+            "child": {
+              "number": 517,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "observedParent": {
+              "number": 21,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "epic"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 21,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/surfaces.yaml",
+          "sha256": "d2a2b3f134107c699dc2f7589f14d097a4915a9aa6978f904d732093c899a603"
+        },
+        "name": "surfaces"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 11,
+        "error": 0,
+        "info": 1
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "delegated-agent-identity",
+          "github-decoupling",
+          "identity-federation",
+          "mcp-oauth-cimd",
+          "principal-model"
+        ],
+        "items": [
+          {
+            "id": "delegated-agent-identity",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "github-decoupling",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "identity-federation",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "mcp-oauth-cimd",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "principal-model",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 0,
+          "incomplete": 5,
+          "total": 5,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner delegated-agent-identity)",
+          "subject": {
+            "owner": "delegated-agent-identity"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner github-decoupling)",
+          "subject": {
+            "owner": "github-decoupling"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner identity-federation)",
+          "subject": {
+            "owner": "identity-federation"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner mcp-oauth-cimd)",
+          "subject": {
+            "owner": "mcp-oauth-cimd"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner principal-model)",
+          "subject": {
+            "owner": "principal-model"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 91,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/unified-identity.yaml",
+          "sha256": "27685889b990cc9ccf8ee8d232b93d8760f0ef176524826b169252c780eb1167"
+        },
+        "name": "unified-identity"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-09-23T08:51:18Z",
+        "mode": "live-capture"
+      },
+      "state": "healthy",
+      "summary": {
+        "drift": 0,
+        "error": 0,
+        "info": 5
+      }
+    }
+  ],
+  "kind": "RoadmapHealthList"
+}
