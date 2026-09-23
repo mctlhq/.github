@@ -80,6 +80,38 @@ spec:
       dependsOn:
         - work-item-contract
 
+    # A surface requests execution; it never declares execution identity
+    # (owner decision 2026-09-23 on mctl-telegram#443). mctl-api's /resume
+    # requires engine + engine_ref, so a surface-originated resume or start
+    # needs its own durable, claimable request that only the platform fulfils.
+    - id: surface-execution-request
+      title: Surface-originated execution requests with platform-owned execution identity
+      owner: mctl-api
+      phase: resume
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 368
+      dependsOn:
+        - work-item-api
+        - surface-identity-link
+
+    # Nothing turned a WorkItem + request into an execution: the dispatcher
+    # claims requests and runs them through DevLoop/investigator, creating
+    # the canonical execution. It lives in the execution platform, never in
+    # a surface.
+    - id: work-item-execution-dispatch
+      title: Dispatch WorkItem execution requests into DevLoop with canonical execution identity
+      owner: mctl-agents
+      phase: resume
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 461
+      dependsOn:
+        - surface-execution-request
+        - investigator-resume
+
     # mctl-telegram#443 states its own prerequisites as #227 AND mctl-agents#267:
     # the adapter binds Telegram threads to the WorkItem that the investigator
     # resume path defines, so the contract alone is not enough to start it.
@@ -90,11 +122,15 @@ spec:
       issue:
         repository: mctlhq/mctl-telegram
         number: 443
+      # Its acceptance path launches the investigator from Telegram and resumes
+      # it: the request resource and the dispatcher supply that, not the bot.
       dependsOn:
         - work-item-contract
         - work-item-api
         - surface-identity-link
         - investigator-resume
+        - surface-execution-request
+        - work-item-execution-dispatch
 
     - id: second-surface-pilot
       title: Resume the same WorkItem from a second non-Telegram surface
@@ -108,6 +144,9 @@ spec:
         - work-item-api
         - investigator-resume
         - telegram-work-item-adapter
+        # Resume from MCP/API goes through the same request + dispatch path.
+        - surface-execution-request
+        - work-item-execution-dispatch
 
     - id: working-memory-continuity
       title: Derive new immutable ContextSnapshots when a WorkItem resumes
