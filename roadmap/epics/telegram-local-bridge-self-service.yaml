@@ -1,0 +1,76 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: telegram-local-bridge-self-service
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Telegram Local Bridge self-service onboarding
+  goal: >-
+    Make Local Bridge a zero-admin, local-first Telegram access path where
+    Telegram authentication and MTProto session state remain on the user's
+    device, activation binds the local identity to an mctl account, sending is
+    explicitly owner-controlled, and device-bound credentials can refresh and
+    revoke without operator intervention.
+  lifecycle: completed
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 479
+  phases:
+    - id: foundation
+      title: Device identity foundation
+    - id: activation
+      title: Self-service Telegram identity activation
+    - id: credentials
+      title: Owner consent and device-bound credentials
+    - id: rollout
+      title: CLI, daemon lifecycle and zero-admin product path
+  workItems:
+    - id: device-registry
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 481
+
+    - id: self-service-activation
+      phase: activation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 482
+      dependsOn:
+        - device-registry
+
+    - id: device-bound-security
+      phase: credentials
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 483
+      dependsOn:
+        - device-registry
+        - self-service-activation
+
+    - id: cli-and-rollout
+      phase: rollout
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 484
+      dependsOn:
+        - device-registry
+        - self-service-activation
+        - device-bound-security
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A brand-new user can complete Local Bridge onboarding without any operator or admin action.
+    - Telegram authentication and MTProto session material remain local; the server never stores a hosted session for the fresh local-first flow.
+    - Activation binds the Telegram identity to the intended owner and device idempotently and leaves sending disabled by default.
+    - Send permission is granted and revoked explicitly by the owner and is reflected in newly derived credential scopes.
+    - Local Bridge credentials are short-lived, device-bound, refreshed with proof of possession, and stop refreshing after revocation.
+    - The CLI and daemon recover through credential expiry and reconnect without requiring a manually minted worker token.
+    - The primary documentation and onboarding UX present the zero-admin Local Bridge path while preserving hosted and legacy compatibility paths.
