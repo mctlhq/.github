@@ -231,6 +231,11 @@ def unbind_observed(
             observation[relation] = [
                 entry for entry in observation.get(relation, []) if not _same(entry, target)
             ]
+        # A child of the removed issue is left without a parent, not pointing
+        # at an observation that no longer exists.
+        parent = observation.get("parent")
+        if parent is not None and _same(parent, target):
+            observation["parent"] = None
     return unbind(document, item_id), result
 
 

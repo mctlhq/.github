@@ -127,6 +127,18 @@ class ReconcileTest(unittest.TestCase):
         )
         return snapshot, document
 
+    def test_unbinding_an_item_leaves_no_edge_naming_its_issue(self) -> None:
+        # Give the item a child first, so every relation that can name it is
+        # exercised: a sub-issue edge, a dependency edge and a parent pointer.
+        snapshot = mutations.repoint_parent(self.converged, DOCS, "mctlhq/mctl-agents#473")
+        _, unbound = mutations.unbind_observed(self.document, snapshot, "devloop-e2e")
+        target = mutations.ref("mctlhq/mctl-agents#473")
+        for observation in unbound["issues"]:
+            self.assertNotEqual(target, observation["requested"])
+            self.assertNotEqual(target, observation.get("parent"))
+            for relation in ("subIssues", "blockedBy"):
+                self.assertNotIn(target, observation.get(relation, []))
+
     def test_the_converged_pilot_is_fully_bound(self) -> None:
         self.assertEqual([], self._diff(self.converged)["binding"])
 
