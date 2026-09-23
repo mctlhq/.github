@@ -119,6 +119,9 @@ spec:
         number: 431
       dependsOn:
         - investigator-resume
+        # Its acceptance resumes a live WorkItem; the resume client calls
+        # GET /api/v1/work-items/{id}, which only work-item-api provides.
+        - work-item-api
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 265
