@@ -347,7 +347,7 @@ jobs:
             # one physical machine — created, renamed, or wiped independently
             # of this file — would turn a missing directory into an org-wide
             # outage. Degrade to the runner's own logged-in HOME instead.
-            local target_home="$1"
+            local target_home="$1" print_timeout="${2:-15m}"
             if [ ! -d "$target_home" ]; then
               echo "::warning::$target_home missing — using the runner's default HOME instead"
               target_home="$HOME"
@@ -366,7 +366,7 @@ jobs:
               --model "$AGY_MODEL" \
               --effort "$AGY_EFFORT" \
               --output-format json \
-              --print-timeout 15m \
+              --print-timeout "$print_timeout" \
               --sandbox \
               --dangerously-skip-permissions \
               > result.json
@@ -428,23 +428,50 @@ jobs:
           # HOME on the same runner 55 min later returned PROBE-OK. Neither
           # says anything about the diff, and switching accounts cannot
           # fix either, so the run is retried on the SAME account, a few
-          # times, before the verdict is declared missing. Each failed
-          # attempt costs ~2 min (agy's own catalog-fetch and eligibility
-          # timeouts), so three attempts stay inside the 20-minute job
-          # budget even after a quota-triggered account switch.
+          # times, before the verdict is declared missing.
+          #
+          # Matching is anchored so that a match can only mean that blip,
+          # because a match flips the merge gate open (no_verdict=1):
+          # - "UNAVAILABLE (code 503)" is the gRPC status text itself. A bare
+          #   "Eligibility check failed" is NOT matched: without the 503 it
+          #   is also what a suspended or unauthorised account says, and
+          #   that must keep failing closed.
+          # - The --effort message is matched only with our own model slug
+          #   quoted in it AND only when the slug's tier suffix equals the
+          #   requested effort (guaranteed by the reconciliation above for
+          #   gemini-*-{high,medium,low}). With a consistent pair the only
+          #   way agy can print it is the missing catalog; a caller whose
+          #   model/effort pair is genuinely incompatible (say a model
+          #   with no tier suffix) does not satisfy the guard, is not
+          #   retried, and still fails closed as before.
+          case "$AGY_MODEL" in
+            *-"$effort_lower") tier_consistent=1 ;;
+            *) tier_consistent=0 ;;
+          esac
           is_transient() {
             case "$1" in
-              *"UNAVAILABLE (code 503)"*|*"Eligibility check failed"*|*"--effort is not supported for model"*) return 0 ;;
-              *) return 1 ;;
+              *"UNAVAILABLE (code 503)"*) return 0 ;;
+              *"--effort is not supported for model \"$AGY_MODEL\""*) [ "$tier_consistent" = 1 ] && return 0 ;;
             esac
+            return 1
           }
 
+          # Retries are bounded by wall-clock, not only by count: a retry
+          # is started only while less than 8 minutes of the step have
+          # elapsed, and it runs with --print-timeout 6m instead of 15m (a
+          # retry that needs the full 15 minutes is a real review, not the
+          # blip being retried for). The worst case therefore ends before
+          # the 20-minute job timeout (line 92) with result.json and
+          # no-verdict written, instead of a cancelled job that leaves
+          # neither and no explanatory comment. The first attempt on each
+          # account keeps the full budget, as before this change.
+          step_start=$SECONDS
           run_agy_retrying() {
-            local target_home="$1" attempt=1
+            local target_home="$1" attempt=1 print_timeout=15m safe_error
             while :; do
-              run_agy "$target_home" || true
+              run_agy "$target_home" "$print_timeout" || true
               read_result
-              if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ]; then
+              if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ] || [ $((SECONDS - step_start)) -ge 480 ]; then
                 return 0
               fi
               # Same sanitization as below: $error is free text agy produced
@@ -452,6 +479,7 @@ jobs:
               safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
               echo "::warning::agy backend unavailable on attempt $attempt ($safe_error); retrying in 30s"
               attempt=$((attempt + 1))
+              print_timeout=6m
               sleep 30
             done
           }
