@@ -412,8 +412,51 @@ jobs:
             fi
           }
 
-          run_agy "$AGY_HOME_PRIMARY" || true
-          read_result
+          # A backend blip is the third failure class, next to quota and a
+          # genuine non-review, and it is the one that produced every "empty
+          # FAIL" on 2026-09-23 (mctl-gitops#1342/#1343/#1344): Google's
+          # fetchAvailableModels answered UNAVAILABLE (503) for ~1 min at a
+          # time, on both accounts and both runners (fallback CLI log
+          # cli-20260923_205430.log on dmitriis-mac-mini-2). agy then has no
+          # model catalog, so `model_config_manager` cannot map --effort
+          # onto the slug and prints the misleading client-side error
+          # "invalid model selection (--model gemini-3.8-flash-medium
+          # --effort medium): --effort is not supported for model ..."; a
+          # bare "Eligibility check failed: ... UNAVAILABLE (code 503)" is
+          # the same blip caught one step later. Both verified transient: a
+          # probe re-running the identical flags under the same fallback
+          # HOME on the same runner 55 min later returned PROBE-OK. Neither
+          # says anything about the diff, and switching accounts cannot
+          # fix either, so the run is retried on the SAME account, a few
+          # times, before the verdict is declared missing. Each failed
+          # attempt costs ~2 min (agy's own catalog-fetch and eligibility
+          # timeouts), so three attempts stay inside the 20-minute job
+          # budget even after a quota-triggered account switch.
+          is_transient() {
+            case "$1" in
+              *"UNAVAILABLE (code 503)"*|*"Eligibility check failed"*|*"--effort is not supported for model"*) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          run_agy_retrying() {
+            local target_home="$1" attempt=1
+            while :; do
+              run_agy "$target_home" || true
+              read_result
+              if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ]; then
+                return 0
+              fi
+              # Same sanitization as below: $error is free text agy produced
+              # while processing an attacker-controllable diff.
+              safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
+              echo "::warning::agy backend unavailable on attempt $attempt ($safe_error); retrying in 30s"
+              attempt=$((attempt + 1))
+              sleep 30
+            done
+          }
+
+          run_agy_retrying "$AGY_HOME_PRIMARY"
 
           # The one shape observed in production (2026-09-07/08) is agy's
           # own human-readable message, "Individual quota reached. Please
@@ -448,8 +491,7 @@ jobs:
               # summary line still claimed a real account switch happened.
               echo "::warning::retrying on the fallback account"
               echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
-              run_agy "$AGY_HOME_FALLBACK" || true
-              read_result
+              run_agy_retrying "$AGY_HOME_FALLBACK"
             else
               echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
             fi
@@ -477,6 +519,9 @@ jobs:
             [ "$status" = "UNKNOWN" ] && no_verdict=1
             [ -s result.json ] || no_verdict=1
             [ "$retry" = 1 ] && no_verdict=1
+            # A backend blip that outlived the retries above is the same
+            # class as quota: agy never read the diff.
+            is_transient "$error" && no_verdict=1
             echo "$no_verdict" > no-verdict
             exit 1
           fi
