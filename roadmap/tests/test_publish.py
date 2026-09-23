@@ -12,6 +12,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 
+import yaml
+
 ROADMAP = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROADMAP / "scripts"))
 sys.path.insert(0, str(ROADMAP / "tests"))
@@ -166,6 +168,12 @@ class PublishTest(unittest.TestCase):
 
     def test_publication_validates_and_carries_its_provenance(self) -> None:
         corpus = self.corpus(EPIC_66, HUMAN_INPUT)
+        # One epic in another lifecycle, so the copied lifecycle is observable.
+        paused = corpus / HUMAN_INPUT.name
+        paused.write_text(
+            paused.read_text(encoding="utf-8").replace("lifecycle: active", "lifecycle: paused", 1),
+            encoding="utf-8",
+        )
         snapshot = self.snapshot(CAPTURE_66)
         snapshot["issues"] += [
             issue
@@ -186,10 +194,25 @@ class PublishTest(unittest.TestCase):
         # Every manifest, with the digest of the bytes that were validated.
         recorded = {m["path"].split("/")[-1]: m["sha256"] for m in publication["manifests"]}
         expected = {
-            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            path.name: hashlib.sha256((corpus / path.name).read_bytes()).hexdigest()
             for path in (EPIC_66, HUMAN_INPUT)
         }
         self.assertEqual(expected, recorded)
+        # Each carries the epic's identity and lifecycle from those same bytes,
+        # so a consumer can select "every active epic" without the manifests.
+        epics = {m["path"].split("/")[-1]: m["epic"] for m in publication["manifests"]}
+        for path in (EPIC_66, HUMAN_INPUT):
+            document = yaml.safe_load((corpus / path.name).read_text(encoding="utf-8"))
+            self.assertEqual(
+                {
+                    "name": document["metadata"]["name"],
+                    "lifecycle": document["spec"]["lifecycle"],
+                    "title": document["spec"]["title"],
+                    "goal": document["spec"]["goal"],
+                },
+                epics[path.name],
+            )
+        self.assertEqual("paused", epics[HUMAN_INPUT.name]["lifecycle"])
         # And the digests of the files it covers.
         for name in publish.DERIVED_FILES:
             self.assertEqual(
