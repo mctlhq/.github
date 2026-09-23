@@ -533,7 +533,10 @@ jobs:
               # this budget) leaves no room for a retry and must not read
               # like a three-attempt outage in the log, since both end in
               # the same non-blocking no-verdict comment. Repeated "not
-              # retrying after attempt 1" lines mean attempts run long. A
+              # retrying after attempt 1" lines from the primary loop mean
+              # attempts run long; the same line after "retrying on the
+              # fallback account" means the primary already spent the
+              # budget (that loop starts with whatever was left). A
               # genuine three-attempt outage shows "unavailable on attempt
               # 1" and "on attempt 2" and no line from this branch: the
               # third attempt returns above, silently, by design.
