@@ -378,6 +378,108 @@ jobs:
           `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="APPROVE" -f body="No P1/P2 findings (<n> P3). Good to merge."`
         - One or more P1/P2 findings: request changes —
           `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="REQUEST_CHANGES" -f body="Has P1/P2 findings, changes requested: <summary>"`
+      # Reviewer-stage model usage (mctlhq/.github#50, agent-finops). The
+      # reviewer is the one DevLoop stage whose model call runs here rather
+      # than in mctl-agents, so its usage is captured here, at the model-call
+      # boundary, from the result entry the action writes — never inferred
+      # from logs later. The output is an ADR-012 ModelUsageRecord list
+      # (mctlhq/mctl-agents docs/adr/012-model-usage-cost-attribution-
+      # contract.md), shaped exactly as the body of mctl-api's
+      # POST /api/v1/usage/records, one record per (run, model).
+      #
+      # What the program deliberately does NOT do:
+      #   - Copy any text. It reads only the result entry's scalar fields and
+      #     the modelUsage counters; the review prose (`result`) and every
+      #     assistant turn stay in the file, which is what the action hides
+      #     on purpose. There is no record field that could hold them.
+      #   - Write zero for a counter the SDK did not report. Absent is not
+      #     zero (ADR-012): a missing counter is dropped from the record, so
+      #     "nothing was measured" never reads as "nothing was spent".
+      #   - Set provider_reported_cost. The reviewer runs on the Claude
+      #     subscription OAuth token, so no invoice-grade figure exists.
+      #   - Set calculated_cost from costUSD. That figure comes from the
+      #     CLI's built-in price table, not a versioned mctl catalog, and
+      #     ADR-012 forbids calculated_cost without a pricing_version. The
+      #     ledger derives cost from its own catalog at ingest instead.
+      #   - Mint an id. The ledger derives it from session_id/result_uuid/
+      #     model_key, which is what makes redelivery idempotent.
+      USAGE_RECORDS_JQ: |
+        def count: if type == "number" and . >= 0 and . == floor then . else null end;
+        def text: if type == "string" and . != "" then . else null end;
+        (if type == "array" then [.[] | select(type == "object" and .type == "result")] else [] end)
+        | if length == 0 then [] else
+            .[-1] as $r
+            | ($r.modelUsage | if type == "object" then . else {} end)
+            | to_entries
+            | map(select(.key != "" and (.value | type) == "object"))
+            | map(.key as $model | .value as $u | {
+                schema_version: 1,
+                session_id: ($r.session_id | text),
+                result_uuid: ($r.uuid | text),
+                model_key: $model,
+                canonical_model: ($u.canonicalModel | text),
+                provider: ($u.provider | text),
+                agent: "claude-review",
+                devloop_stage: "reviewer",
+                target_repo: ($repo | text),
+                pr_number: ($pr | tonumber? // null | count),
+                input_tokens: ($u.inputTokens | count),
+                output_tokens: ($u.outputTokens | count),
+                cache_read_tokens: ($u.cacheReadInputTokens | count),
+                cache_write_tokens: ($u.cacheCreationInputTokens | count),
+                web_search_requests: ($u.webSearchRequests | count),
+                outcome: (if $r.subtype == "success" and $r.is_error != true then "success" else "error" end),
+                api_error_status: ($r.api_error_status | if type == "number" then tostring else text end),
+                stop_reason: ($r.stop_reason | text),
+                terminal_reason: ($r.terminal_reason | text),
+                num_turns: ($r.num_turns | count),
+                duration_api_ms: ($r.duration_api_ms | count),
+                retry_attempt: $attempt,
+                recorded_at: $captured_at
+              } | with_entries(select(.value != null)))
+            | map(select(.session_id != null))
+          end
+      # The primary and the fallback write the same execution file, and a
+      # fallback that exits without rewriting it leaves the primary's result
+      # there to be captured twice. Collapse on the ledger's own dedupe key
+      # (session_id, result_uuid, model_key, and num_turns only when there is
+      # no uuid) and keep the FIRST occurrence — the ledger's ON CONFLICT DO
+      # NOTHING keeps the first row too. retry_attempt is deliberately not in
+      # the key: a fallback that re-ran the model has a new session_id and is
+      # a second real charge, which must stay a second record.
+      USAGE_MERGE_JQ: |
+        def key: [.session_id, (.result_uuid // null), .model_key,
+                  (if .result_uuid then null else (.num_turns // null) end)];
+        {records: (add // []
+          | reduce .[] as $record ([];
+              if any(.[]; key == ($record | key)) then . else . + [$record] end))}
+      # Run once per reviewer attempt, immediately after it, because the
+      # fallback overwrites the primary's execution file. Never fails: usage
+      # capture is observability, and a reviewer that cannot be measured must
+      # still review. What it must not do is stay silent — an attempt that
+      # left no readable result is reported as UNMEASURED spend, never as a
+      # zero-token run.
+      USAGE_CAPTURE_SH: |
+        out="$RUNNER_TEMP/claude-execution-output.json"
+        dir="$RUNNER_TEMP/model-usage"
+        dest="$dir/attempt-$USAGE_ATTEMPT.json"
+        mkdir -p "$dir"
+        if [ ! -f "$out" ]; then
+          echo "::warning::Reviewer attempt $USAGE_ATTEMPT wrote no execution output; its model usage was not measured."
+          exit 0
+        fi
+        if ! jq --arg repo "$REPO" --arg pr "$PR_NUMBER" \
+            --argjson attempt "$USAGE_ATTEMPT" \
+            --arg captured_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "$USAGE_RECORDS_JQ" "$out" > "$dest.tmp"; then
+          rm -f "$dest.tmp"
+          echo "::warning::Reviewer attempt $USAGE_ATTEMPT left an unreadable execution output; its model usage was not measured."
+          exit 0
+        fi
+        mv "$dest.tmp" "$dest"
+        if [ "$(jq length "$dest")" = "0" ]; then
+          echo "::warning::Reviewer attempt $USAGE_ATTEMPT has no result entry with model usage; its spend was not measured."
+        fi
     steps:
       # A push already auto-triggers a review for its own commit via the
       # pull_request/synchronize path — a manual '@claude review' comment
@@ -939,6 +1041,15 @@ jobs:
             echo "failed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Before the fallback can overwrite the execution file. A cancelled
+      # attempt may still have been paid for, so only `skipped` is excluded.
+      - name: Capture primary reviewer model usage
+        if: always() && contains(fromJSON('["success","failure","cancelled"]'), steps.review.outcome)
+        continue-on-error: true
+        env:
+          USAGE_ATTEMPT: 0
+        run: bash -c "$USAGE_CAPTURE_SH"
+
       # Fallback retry on a SECOND token. An earlier revision of the donor
       # workflow refused to do this, on a 2026-07-22 observation that
       # CLAUDE_CODE_OAUTH_TOKEN and CLAUDE_CODE_OAUTH_TOKEN_2 failed
@@ -961,6 +1072,15 @@ jobs:
           track_progress: true
           prompt: ${{ env.REVIEW_PROMPT }}
           claude_args: '--model ${{ steps.classify.outputs.model }} --allowedTools "Bash(git diff:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/comments:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews:*)"'
+
+      # The fallback re-runs the model: a new session and a second real
+      # charge, so a second record with retry_attempt 1 — not a duplicate.
+      - name: Capture fallback reviewer model usage
+        if: always() && contains(fromJSON('["success","failure","cancelled"]'), steps.review2.outcome)
+        continue-on-error: true
+        env:
+          USAGE_ATTEMPT: 1
+        run: bash -c "$USAGE_CAPTURE_SH"
 
       # The primary and the fallback write the same execution-output file, so
       # re-read it here: after a fallback run it holds the FALLBACK result.
@@ -995,6 +1115,52 @@ jobs:
               echo "failed=false" >> "$GITHUB_OUTPUT"
             fi
           fi
+
+      # Placed before the fail-closed classification below, and `always()`,
+      # so a failed review still publishes what it spent. The records file is
+      # the POST /api/v1/usage/records body; nothing here sends it, because
+      # that endpoint is admin-only and an admin credential does not belong
+      # in every caller repository. Ingestion is a separate, scoped step
+      # (tracked on mctlhq/.github#50). The job summary shows counts only.
+      - name: Publish reviewer model usage
+        id: usage
+        if: always()
+        continue-on-error: true
+        run: |
+          dir="$RUNNER_TEMP/model-usage"
+          shopt -s nullglob
+          attempts=("$dir"/attempt-*.json)
+          if [ "${#attempts[@]}" -eq 0 ]; then
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -s "$USAGE_MERGE_JQ" "${attempts[@]}" > "$dir/model-usage-records.json"
+          count=$(jq '.records | length' "$dir/model-usage-records.json")
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Reviewer model usage"
+            echo
+            echo "Stage \`reviewer\`, $REPO#$PR_NUMBER. Absent counters are shown as — (not measured), never as 0."
+            echo
+            echo "| attempt | model | outcome | input | output | cache read | cache write |"
+            echo "| --- | --- | --- | --- | --- | --- | --- |"
+            jq -r '.records[]
+              | [.retry_attempt, .model_key, (.outcome // "—"),
+                 (.input_tokens // "—"), (.output_tokens // "—"),
+                 (.cache_read_tokens // "—"), (.cache_write_tokens // "—")]
+              | map(tostring) | "| " + join(" | ") + " |"' \
+              "$dir/model-usage-records.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reviewer model usage records
+        if: always() && steps.usage.outputs.count != '' && steps.usage.outputs.count != '0'
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: model-usage-records
+          path: ${{ runner.temp }}/model-usage/model-usage-records.json
+          if-no-files-found: ignore
+          retention-days: 90
 
       # Ported from mctl-gitops/mctl-docs/mctl-portal's own copies (predates
       # this reusable) rather than invented here: a shared-quota hit is not a

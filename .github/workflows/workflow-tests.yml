@@ -1,0 +1,35 @@
+name: Reusable workflow tests
+
+# claude-review.yml cannot be reviewed by the reviewer it defines (see
+# pr-review.yml), so the parts of it that are plain programs — the reviewer
+# model-usage capture (mctlhq/.github#50) — are exercised here instead. The
+# tests read those programs out of the workflow file itself.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/claude-review.yml'
+      - '.github/workflows/workflow-tests.yml'
+      - '.github/tests/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/claude-review.yml'
+      - '.github/workflows/workflow-tests.yml'
+      - '.github/tests/**'
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - name: Install dependencies
+        run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
+
+      - name: Reviewer model-usage capture
+        run: python3 -m unittest discover -s .github/tests -p 'test_*.py' -v
