@@ -457,32 +457,37 @@ jobs:
                 return 0
                 ;;
               *"--effort is not supported for model \"$AGY_MODEL\""*)
-                [ "$tier_consistent" = 1 ] && return 0
+                if [ "$tier_consistent" = 1 ]; then return 0; fi
                 ;;
-              *) ;;
             esac
-            # The case never carries a status out; every exit from this
-            # function is an explicit return. It is still a predicate: a
-            # bare `is_transient "$x"` returning 1 aborts under -e like any
-            # other failing statement, so callers use it as an if/&&
-            # condition, as both call sites below do.
+            # Every arm ends with status 0 (an `if` whose condition fails
+            # returns 0), so the case never carries a status out and every
+            # exit from this function is an explicit return. It is still a
+            # predicate: a bare `is_transient "$x"` returning 1 aborts
+            # under -e like any other failing statement, so callers use it
+            # as an if/&& condition, as both call sites below do.
             return 1
           }
 
           # Every agy call, first or retry, on either account, is given the
           # time left in ONE step budget, so the cross-account total is
-          # bounded by construction: `budget` plus at most one minimum
-          # attempt plus the 30 s pauses stays under the 20-minute job
-          # timeout (line 92). A cancelled job would write no no-verdict
-          # and skip `Note agy failure`, the red-check-with-no-comment
-          # outcome the no_verdict mechanism exists to prevent, and a fixed
-          # per-attempt timeout could not rule that out (15m + 15m across
-          # the quota switch was reachable before this change). A retry is
-          # started only while at least two minutes remain: agy's own
-          # catalog and eligibility timeouts eat about that much before a
-          # review can even begin.
+          # bounded by construction. The bound is against the JOB, not
+          # this step: `timeout-minutes: 20` (line 92) also has to cover
+          # the full-history checkout before this step and the
+          # comment-publishing steps after it, on a runner that is not
+          # generous (lines 116-120), so the budget is 14 minutes and the
+          # rest is theirs. This step ends at most `budget` plus one
+          # in-loop minimum attempt plus the 30 s pauses after it began.
+          # A cancelled job would write no no-verdict and skip `Note agy
+          # failure`, the red-check-with-no-comment outcome the no_verdict
+          # mechanism exists to prevent, and a fixed per-attempt timeout
+          # could not rule that out (15m + 15m across the quota switch was
+          # reachable before this change). A retry, and the switch to the
+          # fallback account, are started only while at least two minutes
+          # remain: agy's own catalog and eligibility timeouts eat about
+          # that much before a review can even begin.
           step_start=$SECONDS
-          budget=1020
+          budget=840
           remaining() { echo $(( budget - (SECONDS - step_start) )); }
           run_agy_retrying() {
             local target_home="$1" attempt=1 timeout safe_error
@@ -533,17 +538,24 @@ jobs:
             # emitted it itself.
             safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
             echo "::warning::agy primary account is out of quota ($safe_error)"
-            if [ -d "$AGY_HOME_FALLBACK" ]; then
+            if [ ! -d "$AGY_HOME_FALLBACK" ]; then
               # Guarded, not just left to run_agy's own missing-directory
               # fallback: without this check, a missing FALLBACK directory
               # would silently re-run against the runner's default HOME —
-              # plausibly the same account that just failed — while this
-              # summary line still claimed a real account switch happened.
+              # plausibly the same account that just failed — while the
+              # summary line below still claimed a real account switch.
+              echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
+            elif [ "$(remaining)" -lt 120 ]; then
+              # Decided here, before the summary line, so the log never
+              # announces a switch that did not happen. An attempt this
+              # short cannot reach a review and cannot change the outcome
+              # (retry=1 already means no verdict); it would only spend
+              # the job's last minutes.
+              echo "::warning::not retrying on the fallback account: $(remaining)s of the step budget left"
+            else
               echo "::warning::retrying on the fallback account"
               echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
               run_agy_retrying "$AGY_HOME_FALLBACK"
-            else
-              echo "::warning::$AGY_HOME_FALLBACK missing — no fallback account to retry on"
             fi
           fi
 
