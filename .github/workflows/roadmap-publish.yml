@@ -1,0 +1,100 @@
+name: Roadmap publication
+
+# Publishes one RoadmapPublication (mctlhq/.github#119) to the generated
+# `roadmap-state` branch: the canonical evaluator runs here and only here, and
+# consumers (mctl-api#333) read the result instead of evaluating.
+#
+# `roadmap-state` is GENERATED STATE: one commit per successful publication,
+# never edited by hand, never the planning source. The manifests on `main` and
+# GitHub stay the desired graph.
+#
+# A run that cannot observe, evaluate, validate or verify fails and pushes
+# nothing, so the last publication keeps its older capturedAt and never looks
+# fresher than the last observation that actually succeeded.
+
+on:
+  schedule:
+    # Every two hours: one live capture is ~400 GETs against GITHUB_TOKEN's
+    # 1000/hour budget for this repository, and freshness is explicit anyway.
+    - cron: '17 */2 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'roadmap/**'
+      - '.github/workflows/roadmap-publish.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+# One publisher at a time, in order: a newer run waits instead of racing an
+# older one to the branch.
+concurrency:
+  group: roadmap-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'mctlhq/.github'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Read the public issue graph (GET only) and push to this repository's
+      # own roadmap-state branch. Nothing else.
+      contents: write
+      issues: read
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Install roadmap evaluator dependencies
+        run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
+
+      # Manifests and evaluator come from the same checkout, so the source and
+      # evaluator revisions are the same commit.
+      - name: Capture and evaluate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          revision="$(git rev-parse HEAD)"
+          python3 roadmap/scripts/publish.py build --live \
+            --output "$RUNNER_TEMP/publication" \
+            --evaluator-revision "$revision" \
+            --source-repository "$GITHUB_REPOSITORY" \
+            --source-ref main \
+            --source-revision "$revision"
+
+      - name: Verify the publication reproduces from its own snapshot
+        run: python3 roadmap/scripts/publish.py verify "$RUNNER_TEMP/publication"
+
+      - name: Commit to roadmap-state
+        env:
+          PUBLICATION: ${{ runner.temp }}/publication
+          WORKTREE: ${{ runner.temp }}/roadmap-state
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin roadmap-state >/dev/null; then
+            git fetch --depth=1 origin roadmap-state
+            git worktree add -B roadmap-state "$WORKTREE" FETCH_HEAD
+          else
+            git worktree add --orphan -b roadmap-state "$WORKTREE"
+          fi
+          # Replace the whole tree: the branch holds exactly one publication.
+          git -C "$WORKTREE" rm -rq --ignore-unmatch .
+          cp "$PUBLICATION"/*.json "$WORKTREE"/
+          cp roadmap/publication/README.md "$WORKTREE"/README.md
+          git -C "$WORKTREE" add -A
+          if git -C "$WORKTREE" diff --cached --quiet; then
+            echo "publication unchanged; nothing to commit"
+            exit 0
+          fi
+          captured="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["observation"].get("capturedAt", "synthetic"))' "$PUBLICATION/publication.json")"
+          git -C "$WORKTREE" commit -q -m "publish: roadmap captured ${captured} from ${GITHUB_SHA::12}"
+          # Never force: a rejected push means another publisher moved the
+          # branch, and failing loudly is the right answer.
+          git -C "$WORKTREE" push origin roadmap-state
