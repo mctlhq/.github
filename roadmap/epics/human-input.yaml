@@ -105,9 +105,6 @@ spec:
       owner: mctl-agents
       phase: e2e
       required: true
-      issue:
-        repository: mctlhq/mctl-agents
-        number: 473
       dependsOn:
         - telegram-adapter
         - catalog-profile-rollout
