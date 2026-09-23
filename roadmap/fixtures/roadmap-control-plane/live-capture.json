@@ -42,6 +42,10 @@
         {
           "number": 99,
           "repository": "mctlhq/.github"
+        },
+        {
+          "number": 119,
+          "repository": "mctlhq/.github"
         }
       ],
       "updatedAt": "2026-09-18T14:52:01Z"
@@ -164,14 +168,47 @@
         "number": 99,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-18T23:36:56Z"
+      "updatedAt": "2026-09-21T23:07:54Z"
     },
     {
       "blockedBy": [
         {
           "number": 99,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 83,
+          "repository": "mctlhq/.github"
+        }
+      ],
+      "found": true,
+      "parent": {
+        "number": 66,
+        "repository": "mctlhq/.github"
+      },
+      "requested": {
+        "number": 119,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 119,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-09-23T06:49:13Z"
+    },
+    {
+      "blockedBy": [
+        {
+          "number": 99,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 119,
           "repository": "mctlhq/.github"
         }
       ],
@@ -190,7 +227,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-18T23:36:58Z"
+      "updatedAt": "2026-09-23T06:28:34Z"
     },
     {
       "blockedBy": [
@@ -224,7 +261,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-19T00:03:42Z",
+    "capturedAt": "2026-09-23T06:52:36Z",
     "mode": "live-capture"
   }
 }

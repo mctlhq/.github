@@ -75,6 +75,20 @@ spec:
         - reconciler
         - roadmap-health
 
+    # The evaluator runs only here; consumers read its versioned output from
+    # the generated roadmap-state branch and never re-evaluate.
+    - id: roadmap-publication
+      title: Publish a versioned RoadmapPublication to the roadmap-state branch
+      owner: mctlhq/.github
+      phase: waves
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 119
+      dependsOn:
+        - ready-work-items
+        - roadmap-health
+
     - id: epic-status-api
       phase: waves
       required: true
@@ -83,6 +97,7 @@ spec:
         number: 333
       dependsOn:
         - ready-work-items
+        - roadmap-publication
 
     - id: governed-wave-start
       phase: waves
