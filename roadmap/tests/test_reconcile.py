@@ -119,8 +119,33 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual([], result["dependency"])
         self.assertFalse(reconcile.has_drift(result))
 
+    def _unbound(self) -> tuple[dict, dict]:
+        """(snapshot, document): the converged pilot with one item unbound."""
+
+        document, snapshot = mutations.unbind_observed(
+            self.document, self.converged, "devloop-e2e"
+        )
+        return snapshot, document
+
+    def test_unbinding_an_item_leaves_no_edge_naming_its_issue(self) -> None:
+        # Make every relation that can name the issue name it: its own
+        # sub-issue edge under the epic, a child's parent pointer (DOCS moved
+        # under it), and another issue blocked by it (API).
+        snapshot = mutations.repoint_parent(self.converged, DOCS, "mctlhq/mctl-agents#473")
+        snapshot = mutations.add_dependency(snapshot, API, "mctlhq/mctl-agents#473")
+        _, unbound = mutations.unbind_observed(self.document, snapshot, "devloop-e2e")
+        target = mutations.ref("mctlhq/mctl-agents#473")
+        for observation in unbound["issues"]:
+            self.assertNotEqual(target, observation["requested"])
+            self.assertNotEqual(target, observation.get("parent"))
+            for relation in ("subIssues", "blockedBy"):
+                self.assertNotIn(target, observation.get(relation, []))
+
+    def test_the_converged_pilot_is_fully_bound(self) -> None:
+        self.assertEqual([], self._diff(self.converged)["binding"])
+
     def test_unbound_work_item_is_informational_only(self) -> None:
-        result = self._diff(self.converged)
+        result = self._diff(*self._unbound())
         self.assertEqual(["BindingUnbound"], _types(result["binding"]))
         entry = result["binding"][0]
         self.assertEqual("devloop-e2e", entry["owner"])
@@ -177,9 +202,7 @@ class ReconcileTest(unittest.TestCase):
 
     def test_unresolvable_binding_does_not_cascade(self) -> None:
         result = self._diff(mutations.mark_missing(self.converged, API))
-        self.assertEqual(
-            ["BindingIssueNotFound", "BindingUnbound"], _types(result["binding"])
-        )
+        self.assertEqual(["BindingIssueNotFound"], _types(result["binding"]))
         self.assertEqual([], result["hierarchy"])
         self.assertEqual([], result["dependency"])
         self.assertEqual(1, result["summary"]["drift"])
@@ -189,9 +212,7 @@ class ReconcileTest(unittest.TestCase):
     def test_redirect_is_binding_drift_and_relations_stay_green(self) -> None:
         moved = mutations.redirect(self.converged, PORTAL, "mctlhq/mctl-web#999")
         result = self._diff(moved)
-        self.assertEqual(
-            ["BindingRedirected", "BindingUnbound"], _types(result["binding"])
-        )
+        self.assertEqual(["BindingRedirected"], _types(result["binding"]))
         entry = next(
             item for item in result["binding"] if item["type"] == "BindingRedirected"
         )
@@ -1155,7 +1176,7 @@ class ReconcileTest(unittest.TestCase):
         from jsonschema import Draft202012Validator
 
         validator = Draft202012Validator(self.diff_schema)
-        result = self._diff(self.converged)
+        result = self._diff(*self._unbound())
 
         promoted = copy.deepcopy(result)
         promoted["binding"][0]["severity"] = "drift"

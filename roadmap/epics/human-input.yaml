@@ -101,10 +101,11 @@ spec:
     # of the adapter. Without this edge the proof reads startable before an
     # investigator could invoke the tool at all.
     - id: devloop-e2e
-      title: Prove investigator to human to automatic continuation
-      owner: mctl-agents
       phase: e2e
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 473
       dependsOn:
         - telegram-adapter
         - catalog-profile-rollout

@@ -189,11 +189,54 @@ def unbind(document: dict[str, Any], *item_ids: str) -> dict[str, Any]:
     for item in copied["spec"]["workItems"]:
         if item["id"] in wanted:
             item.pop("issue", None)
+            # An unbound item must carry its own title and owner, so the copy
+            # stays a valid EpicDefinition and not just a dict the evaluator
+            # happens to accept.
+            item.setdefault("title", f"Synthetic unbound {item['id']}")
+            item.setdefault("owner", copied["metadata"]["owner"])
             seen.add(item["id"])
     missing = wanted - seen
     if missing:
         raise KeyError(f"no such work item: {', '.join(sorted(missing))}")
     return copied
+
+
+def unbind_observed(
+    document: dict[str, Any], snapshot: dict[str, Any], item_id: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Unbind one work item, and make the snapshot agree that it never was.
+
+    `unbind` alone leaves the item's issue in a converged snapshot, still a
+    sub-issue of the epic, which the reconciler would rightly report as an
+    unexpected child. A graph in which the item was simply never created has
+    no such observation and no edge naming it, so both are removed here: the
+    pair describes "converged, with exactly one unbound item" and nothing else.
+    """
+
+    item = next(
+        (entry for entry in document["spec"]["workItems"] if entry["id"] == item_id),
+        None,
+    )
+    if item is None or "issue" not in item:
+        raise KeyError(f"no bound work item {item_id!r}")
+    target = item["issue"]
+    result = copy.deepcopy(snapshot)
+    result["issues"] = [
+        observation
+        for observation in result["issues"]
+        if not _same(observation["requested"], target)
+    ]
+    for observation in result["issues"]:
+        for relation in ("subIssues", "blockedBy"):
+            observation[relation] = [
+                entry for entry in observation.get(relation, []) if not _same(entry, target)
+            ]
+        # A child of the removed issue is left without a parent, not pointing
+        # at an observation that no longer exists.
+        parent = observation.get("parent")
+        if parent is not None and _same(parent, target):
+            observation["parent"] = None
+    return unbind(document, item_id), result
 
 
 def synthetic_snapshot(
