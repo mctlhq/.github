@@ -349,17 +349,20 @@ jobs:
             # outage. Degrade to the runner's own logged-in HOME instead.
             # Seconds for --print-timeout, defaulting to what is left of the
             # step budget (`remaining` is defined below but only evaluated
-            # at call time) and clamped here, in the one place every call
-            # goes through, to [60, remaining]: a call site added later can
-            # neither get more time than the job can afford nor hand agy a
-            # zero or negative timeout. Bare seconds, not a Go duration: a
-            # value such as `15m` fails both tests, is clamped to the
-            # ceiling, and `[` says so in the log ("integer expression
-            # expected") — stderr is deliberately not silenced. Neither
-            # bound is reachable from the loop below, which passes no
-            # argument; they exist for that future call site only.
-            local target_home="$1" secs="${2:-$(remaining)}" cap
+            # at call time, and evaluated once, so the default IS the cap)
+            # and clamped here, in the one place every call goes through,
+            # to [60, remaining]: a call site added later can neither get
+            # more time than the job can afford nor hand agy a zero or
+            # negative timeout. Bare seconds, not a Go duration: a value
+            # such as `15m` fails the ceiling test, which substitutes the
+            # cap; the floor test then runs against that integer. `[` says
+            # so once in the log ("integer expression expected") — stderr
+            # is deliberately not silenced. Neither bound is reachable from
+            # the loop below, which passes no argument; they exist for that
+            # future call site only.
+            local target_home="$1" cap
             cap=$(remaining)
+            local secs="${2:-$cap}"
             [ "$secs" -le "$cap" ] || secs="$cap"
             [ "$secs" -ge 60 ] || secs=60
             local print_timeout="${secs}s"
