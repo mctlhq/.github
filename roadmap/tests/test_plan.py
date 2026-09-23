@@ -67,7 +67,7 @@ class PlanTest(unittest.TestCase):
         self.assertEqual([], built["operations"])
         self.assertEqual([], built["refusals"])
         self.assertEqual(
-            {"operations": 0, "notes": 1, "refusals": 0}, built["summary"]
+            {"operations": 0, "notes": 0, "refusals": 0}, built["summary"]
         )
         self.assertFalse(plan_module.has_operations(built))
         self.assertFalse(plan_module.is_refused(built))
@@ -231,8 +231,11 @@ class PlanTest(unittest.TestCase):
         )
 
     def test_informational_entries_become_notes_and_never_operations(self) -> None:
+        document, snapshot = mutations.unbind_observed(
+            self.document, self.converged, "devloop-e2e"
+        )
         built = self._plan(
-            mutations.add_unexpected_child(self.converged, ROOT_ISSUE, FOREIGN)
+            mutations.add_unexpected_child(snapshot, ROOT_ISSUE, FOREIGN), document
         )
         self.assertEqual([], built["operations"])
         self.assertEqual([], built["refusals"])

@@ -78,6 +78,16 @@ class HealthTest(unittest.TestCase):
     def test_converged_observation_is_healthy(self) -> None:
         result = self._assess(self.converged)
         self.assertEqual("healthy", result["state"])
+        self.assertEqual([], self._codes(result, "info"))
+        self.assertSchemaValid(result)
+
+    def test_an_unbound_item_is_info_and_stays_healthy(self) -> None:
+        document, snapshot = mutations.unbind_observed(
+            self.document, self.converged, "devloop-e2e"
+        )
+        loaded = reconcile.LoadedManifest(document=document, sha256=self.loaded.sha256)
+        result = health.assess(PILOT, loaded, github_graph.FixtureGraphSource(snapshot))
+        self.assertEqual("healthy", result["state"])
         self.assertEqual(["BindingUnbound"], self._codes(result, "info"))
         self.assertSchemaValid(result)
 

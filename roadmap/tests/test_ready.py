@@ -350,7 +350,10 @@ class ReadyTest(unittest.TestCase):
     # -- T8: unbound is never ready -------------------------------------
 
     def test_unbound_items_are_unknown_never_ready(self) -> None:
-        result, _ = self._assess(HUMAN_INPUT, self.human_input, self.converged_human_input)
+        document, snapshot = mutations.unbind_observed(
+            self.human_input, self.converged_human_input, "devloop-e2e"
+        )
+        result, _ = self._assess(HUMAN_INPUT, document, snapshot)
         item = self._item(result, "devloop-e2e")
         self.assertEqual("unknown", item["state"])
         self.assertEqual("unbound", item["completion"]["reason"])
@@ -566,10 +569,13 @@ class ReadyTest(unittest.TestCase):
     # -- contract: consistency_errors ----------------------------------------
 
     def test_consistency_errors_reject_each_rule_in_isolation(self) -> None:
-        snapshot = mutations.set_state(
-            self.converged_human_input, "mctlhq/mctl-agents#333", "closed", "completed"
+        document, snapshot = mutations.unbind_observed(
+            self.human_input, self.converged_human_input, "devloop-e2e"
         )
-        result, _ = self._assess(HUMAN_INPUT, self.human_input, snapshot)
+        snapshot = mutations.set_state(
+            snapshot, "mctlhq/mctl-agents#333", "closed", "completed"
+        )
+        result, _ = self._assess(HUMAN_INPUT, document, snapshot)
         self.assertEqual([], ready.consistency_errors(result))
 
         # sanity on the fixture: one item in each of the four states.
