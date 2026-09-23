@@ -532,9 +532,11 @@ jobs:
               # checkout runs in another step and does not count against
               # this budget) leaves no room for a retry and must not read
               # like a three-attempt outage in the log, since both end in
-              # the same non-blocking no-verdict comment. Repeated "after
-              # attempt 1" lines mean attempts run long; repeated "attempt
-              # 3" lines mean the outage is real.
+              # the same non-blocking no-verdict comment. Repeated "not
+              # retrying after attempt 1" lines mean attempts run long. A
+              # genuine three-attempt outage shows "unavailable on attempt
+              # 1" and "on attempt 2" and no line from this branch: the
+              # third attempt returns above, silently, by design.
               if [ "$(remaining)" -lt 120 ]; then
                 echo "::warning::not retrying after attempt $attempt: $(remaining)s of the step budget left"
                 return 0
