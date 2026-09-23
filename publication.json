@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "90f852c27b7db292b07e84c6dedf0bc267ac3267"
+    "revision": "cc0f5e75f5303617630cba84b6bfbf9325d1637b"
   },
   "files": {
     "health.json": {
-      "sha256": "12d13911bb609c576250fc82ec5b4889654e8f5c35bb55add400921b1617aabc"
+      "sha256": "2042bcea730eabfc151fd4d45e55438f7c6bcbe53642c79169069f834085682a"
     },
     "ready-set.json": {
-      "sha256": "674790d7b3f4b31ef905f847a4e9bac256f8bdbc5c11ca73ff1410810545d14a"
+      "sha256": "be2dd8d8651142386a592ddd48b6b25512639b1b57a1f5308b491bf11926e9f0"
     },
     "snapshot.json": {
-      "sha256": "8f5b1985a186025a48af200492073ac1514b92412ec691f3005dd375b230361f"
+      "sha256": "66d81cdbbcd031258d2c9e7188ac25f9d419fc64b037b9411a121faae8e3e925"
     }
   },
   "kind": "RoadmapPublication",
@@ -124,7 +124,7 @@
         "title": "Durable agent clarification / feedback primitive"
       },
       "path": "roadmap/epics/human-input.yaml",
-      "sha256": "837fc21c9c61e868c44cf92fd6fada6a55f1e342f26f7b17dea0f59da729520e"
+      "sha256": "6ecc4d3c0ee8fa0d58978eb4ef0dcb10dcd3265aa85dad442756ad5865fe2a58"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T22:57:52Z",
+    "capturedAt": "2026-09-23T23:56:37Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "90f852c27b7db292b07e84c6dedf0bc267ac3267"
+    "revision": "cc0f5e75f5303617630cba84b6bfbf9325d1637b"
   }
 }
