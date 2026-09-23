@@ -141,6 +141,9 @@ spec:
       owner: mctlhq/.github
       phase: enterprise-identity
       required: true
+      issue:
+        repository: mctlhq/.github
+        number: 128
       dependsOn:
         - denied-user-and-bypass
         - correlation-contract

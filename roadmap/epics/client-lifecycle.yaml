@@ -89,6 +89,9 @@ spec:
       owner: mctl-telegram
       phase: onboarding
       required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 679
       dependsOn:
         - operator-identity-lookup
         - safe-broadcast

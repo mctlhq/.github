@@ -136,6 +136,9 @@ spec:
       owner: mctl-agents
       phase: authoring
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 470
       dependsOn:
         - capability-discovery
         - release-binding

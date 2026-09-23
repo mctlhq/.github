@@ -49,6 +49,9 @@ spec:
       owner: mctl-agents
       phase: ranking
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 471
       dependsOn:
         - context-assembly
 
@@ -66,6 +69,9 @@ spec:
       owner: mctl-agents
       phase: lifecycle
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 472
       dependsOn:
         - retrieval-ranking-trust
         - context-evals
