@@ -347,7 +347,11 @@ jobs:
             # one physical machine — created, renamed, or wiped independently
             # of this file — would turn a missing directory into an org-wide
             # outage. Degrade to the runner's own logged-in HOME instead.
-            local target_home="$1" print_timeout="${2:-15m}"  # a Go duration, e.g. 900s
+            # The timeout is a Go duration and defaults to what is left of
+            # the step budget (`remaining` is defined below but only
+            # evaluated at call time), so a call site added later cannot
+            # silently get more time than the job can afford.
+            local target_home="$1" print_timeout="${2:-$(remaining)s}"
             if [ ! -d "$target_home" ]; then
               echo "::warning::$target_home missing — using the runner's default HOME instead"
               target_home="$HOME"
@@ -476,8 +480,16 @@ jobs:
           # the full-history checkout before this step and the
           # comment-publishing steps after it, on a runner that is not
           # generous (lines 116-120), so the budget is 14 minutes and the
-          # rest is theirs. This step ends at most `budget` plus one
-          # in-loop minimum attempt plus the 30 s pauses after it began.
+          # rest is theirs. This step ends at most `budget` plus the 30 s
+          # pauses after it began. Two things the constant also decides,
+          # both traded deliberately against a cancelled job: the ceiling
+          # for one legitimate review is 840 s where it used to be 900 s
+          # (a review that needs more ends as no_verdict=1, with the
+          # truncated result.json visible in the log), and a quota error
+          # that arrives with under two minutes left forfeits the fallback
+          # account. If reviews in this org routinely approach 14 minutes,
+          # the lever is `timeout-minutes` together with `budget`, not the
+          # budget alone.
           # A cancelled job would write no no-verdict and skip `Note agy
           # failure`, the red-check-with-no-comment outcome the no_verdict
           # mechanism exists to prevent, and a fixed per-attempt timeout
@@ -493,9 +505,12 @@ jobs:
             local target_home="$1" attempt=1 timeout safe_error
             while :; do
               timeout=$(remaining)
-              # Never less than a minute: an attempt that cannot fetch the
-              # catalog is a retry burned for nothing, and one minute past
-              # the budget is still inside the job timeout.
+              # Unreachable defense: every path into this loop starts with
+              # at least ~90 s left (the primary call starts at `budget`,
+              # a retry only after the 120 s check below minus the pause,
+              # and the fallback switch has its own 120 s check). Kept so
+              # a future call site cannot hand agy a zero or negative
+              # timeout; it does not add a term to the bound above.
               [ "$timeout" -lt 60 ] && timeout=60
               run_agy "$target_home" "${timeout}s" || true
               read_result
