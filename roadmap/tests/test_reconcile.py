@@ -1047,6 +1047,9 @@ class ReconcileTest(unittest.TestCase):
                     mutations.ref(EXTERNAL),
                     {"repository": EXTERNAL.split("#")[0].upper(),
                      "number": int(EXTERNAL.split("#")[1])},
+                    # Keep the adapter's other authored edge, so the only
+                    # drift is the dropped duplicate-authored one.
+                    {"repository": "mctlhq/mctl-api", "number": 350},
                 ]
         desired = reconcile.desired_graph(document)
         self.assertEqual(len(desired.dependencies), len(set(desired.dependencies)))

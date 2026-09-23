@@ -50,9 +50,40 @@ spec:
         - repository: mctlhq/mctl-api
           number: 335
 
+    # work-item-contract (#227) closed on an accepted DESIGN; its own
+    # "Implementation status" says nothing of it is built. The runtime API is
+    # a separate node so consumers cannot read the closed design issue as a
+    # usable API.
+    - id: work-item-api
+      title: Implement the canonical workitem/v1 REST API
+      owner: mctl-api
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 349
+      dependsOn:
+        - work-item-contract
+
+    # Surfaces reach mctl-api as a service principal; the human behind the
+    # surface becomes the actor only through a link the human created
+    # (SurfaceIdentityLink). Shared by the Telegram WorkItem adapter here and,
+    # in the human-input epic, by the Telegram reply adapter and portal card.
+    - id: surface-identity-link
+      title: Delegated surface identity for surface-relayed actions
+      owner: mctl-api
+      phase: contract
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 350
+      dependsOn:
+        - work-item-contract
+
     # mctl-telegram#443 states its own prerequisites as #227 AND mctl-agents#267:
     # the adapter binds Telegram threads to the WorkItem that the investigator
     # resume path defines, so the contract alone is not enough to start it.
+    # It also needs the runtime API and a way to act as the linked human.
     - id: telegram-work-item-adapter
       phase: resume
       required: true
@@ -61,6 +92,8 @@ spec:
         number: 443
       dependsOn:
         - work-item-contract
+        - work-item-api
+        - surface-identity-link
         - investigator-resume
 
     - id: second-surface-pilot
@@ -72,6 +105,7 @@ spec:
         repository: mctlhq/mctl-api
         number: 341
       dependsOn:
+        - work-item-api
         - investigator-resume
         - telegram-work-item-adapter
 
@@ -85,6 +119,9 @@ spec:
         number: 431
       dependsOn:
         - investigator-resume
+        # Its acceptance resumes a live WorkItem; the resume client calls
+        # GET /api/v1/work-items/{id}, which only work-item-api provides.
+        - work-item-api
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 265

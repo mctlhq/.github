@@ -67,6 +67,10 @@ spec:
       externalDependsOn:
         - repository: mctlhq/mctl-telegram
           number: 443
+        # The bot is a service principal; mctl-api#261 refuses service
+        # answers, so a relayed reply needs the linked human as subject.
+        - repository: mctlhq/mctl-api
+          number: 350
 
     - id: portal-card
       phase: surfaces
@@ -76,6 +80,11 @@ spec:
         number: 124
       dependsOn:
         - human-input-api
+      externalDependsOn:
+        # The portal holds only a service token; the answer action needs the
+        # signed-in human as the delegated subject.
+        - repository: mctlhq/mctl-api
+          number: 350
 
     - id: docs
       phase: surfaces

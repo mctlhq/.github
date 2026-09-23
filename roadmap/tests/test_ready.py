@@ -290,6 +290,8 @@ class ReadyTest(unittest.TestCase):
         snapshot = mutations.set_state(
             self.converged_human_input, "mctlhq/mctl-api#261", "closed", "completed"
         )
+        # portal-card also waits on the delegated surface identity it answers with.
+        snapshot = mutations.set_state(snapshot, "mctlhq/mctl-api#350", "closed", "completed")
         result, _ = self._assess(HUMAN_INPUT, self.human_input, snapshot)
         item = self._item(result, "portal-card")
         self.assertFalse(item["required"])
@@ -424,6 +426,9 @@ class ReadyTest(unittest.TestCase):
             self.converged_human_input, "mctlhq/mctl-agents#333", "closed", "completed"
         )
         closed_locals = mutations.set_state(closed_locals, "mctlhq/mctl-api#261", "closed", "completed")
+        # The adapter's second external edge (delegated surface identity) is
+        # satisfied throughout, so the three cases below isolate #443.
+        closed_locals = mutations.set_state(closed_locals, "mctlhq/mctl-api#350", "closed", "completed")
 
         closed_external = mutations.set_state(
             closed_locals, "mctlhq/mctl-telegram#443", "closed", "completed"
