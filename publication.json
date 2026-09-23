@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "3dad2c1e8319a9afb2c7c1b5094073ab3b7680b1"
+    "revision": "8f0631ef224b717f9a4cfd4f26390623a6534767"
   },
   "files": {
     "health.json": {
-      "sha256": "1450d9007f772e5572a8e2b6de68e3c34d2402b8cc0009b108cb2aa580d4842d"
+      "sha256": "c2229a2a499c3e531a19e87c2c14943e06d2324f17ba90e5b3c155df89ce304e"
     },
     "ready-set.json": {
-      "sha256": "41c3ab85ba8ad0ab9daba4189a9b205a6f3a669a540a7c59e1be6d35b9d50ac9"
+      "sha256": "355681524323b146006206da908a65ce9ccdfd705acd4bdd843c14f088a7c92f"
     },
     "snapshot.json": {
-      "sha256": "aa7f9f1bb91b902ec6306688e3d0688d24a8bf252d68ab3cf8c16fba7d6d7273"
+      "sha256": "8803e79e9e1ed62acb8355b27d94363f8f108c638bb42c26919298182afc6d72"
     }
   },
   "kind": "RoadmapPublication",
@@ -158,6 +158,16 @@
     },
     {
       "epic": {
+        "goal": "Make Local Bridge a zero-admin, local-first Telegram access path where Telegram authentication and MTProto session state remain on the user's device, activation binds the local identity to an mctl account, sending is explicitly owner-controlled, and device-bound credentials can refresh and revoke without operator intervention.",
+        "lifecycle": "completed",
+        "name": "telegram-local-bridge-self-service",
+        "title": "Telegram Local Bridge self-service onboarding"
+      },
+      "path": "roadmap/epics/telegram-local-bridge-self-service.yaml",
+      "sha256": "f9b98e99a2bb098d302dea0d1f25168e05c51c452786102bc528559287b68684"
+    },
+    {
+      "epic": {
         "goal": "Decouple MCTL principals from GitHub identity by introducing stable canonical identities for humans, agents and services, with linked external identities, swappable federation, CIMD-aware MCP OAuth and delegated agent identity.",
         "lifecycle": "active",
         "name": "unified-identity",
@@ -169,12 +179,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T19:41:31Z",
+    "capturedAt": "2026-09-23T20:15:14Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "3dad2c1e8319a9afb2c7c1b5094073ab3b7680b1"
+    "revision": "8f0631ef224b717f9a4cfd4f26390623a6534767"
   }
 }
