@@ -55,9 +55,9 @@ class StaticSource:
 
 
 class _Response:
-    def __init__(self, body: bytes) -> None:
+    def __init__(self, body: bytes, status: int = 200) -> None:
         self._body = body
-        self.status = 200
+        self.status = status
         self.headers: dict[str, str] = {}
 
     def read(self) -> bytes:
@@ -299,6 +299,10 @@ class PublishTest(unittest.TestCase):
                     raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, None)
                 if request.full_url.endswith("/repos/mctlhq/no-issues"):
                     return _Response(b'{"full_name": "mctlhq/no-issues", "has_issues": false}')
+                if request.full_url.endswith("/repos/mctlhq/accepted"):
+                    # A well-formed body under a non-200 status is still not
+                    # proof the repository is visible.
+                    return _Response(b'{"full_name": "mctlhq/accepted", "has_issues": true}', status=202)
                 raise urllib.error.HTTPError(request.full_url, 404, "Not Found", {}, None)
 
         opener = Opener()
@@ -310,11 +314,14 @@ class PublishTest(unittest.TestCase):
             source.check_repositories(["mctlhq/no-issues"])
         with self.assertRaises(ObservationError):
             source.check_repositories(["mctlhq/sso-blocked"])
+        with self.assertRaises(ObservationError):
+            source.check_repositories(["mctlhq/accepted"])
         self.assertEqual(
             ["https://api.github.com/repos/mctlhq/.github"] * 2
             + ["https://api.github.com/repos/mctlhq/private-now",
                "https://api.github.com/repos/mctlhq/no-issues",
-               "https://api.github.com/repos/mctlhq/sso-blocked"],
+               "https://api.github.com/repos/mctlhq/sso-blocked",
+               "https://api.github.com/repos/mctlhq/accepted"],
             opener.urls,
         )
         self.assertTrue(all(url.startswith("https://api.github.com/repos/") for url in opener.urls))
