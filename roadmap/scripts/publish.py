@@ -95,8 +95,6 @@ def _load_publication_schema(path: Path = DEFAULT_PUBLICATION_SCHEMA) -> dict[st
 def _validated_corpus(corpus: Path, schema_path: Path) -> reconcile.CorpusValidation:
     try:
         schema = validate._load_schema(schema_path)
-        if not validate._manifest_paths([str(corpus)]):
-            raise reconcile.ReconcileError(f"no EpicDefinition manifests found under {corpus}")
         validation = reconcile.validate_corpus(corpus, schema)
     except (reconcile.ReconcileError, OSError, ValueError, json.JSONDecodeError, SchemaError) as exc:
         raise PublishError(EXIT_USAGE, str(exc)) from exc
@@ -138,8 +136,14 @@ def build(
     validation = _validated_corpus(corpus, schema_path)
     selected = sorted(validation.manifests)
 
+    keys = _union_keys(validation)
     try:
-        snapshot = source_adapter.snapshot(_union_keys(validation))
+        # A live source first proves it can see every repository: otherwise a
+        # repository the token lost sight of reads as every issue in it gone.
+        check_repositories = getattr(source_adapter, "check_repositories", None)
+        if check_repositories is not None:
+            check_repositories([repository for repository, _ in keys])
+        snapshot = source_adapter.snapshot(keys)
     except (ObservationError, SnapshotIncomplete, ValueError, OSError) as exc:
         raise PublishError(EXIT_OBSERVATION_FAILED, f"observation failed: {exc}") from exc
     errors = github_graph.snapshot_errors(snapshot)
@@ -195,8 +199,8 @@ def derive(
 
     files = {
         SNAPSHOT_FILE: canonical_bytes(snapshot),
-        READY_SET_FILE: canonical_bytes(ready.render(ready_documents)),
-        HEALTH_FILE: canonical_bytes(health.render(health_documents)),
+        READY_SET_FILE: canonical_bytes(_as_list("RoadmapReadySetList", ready_documents)),
+        HEALTH_FILE: canonical_bytes(_as_list("RoadmapHealthList", health_documents)),
     }
 
     source = snapshot["source"]
@@ -229,6 +233,18 @@ def derive(
         raise PublishError(EXIT_INVALID, "publication failed schema validation: " + "; ".join(failures))
     files[PUBLICATION_FILE] = canonical_bytes(publication)
     return files
+
+
+def _as_list(kind: str, documents: list[dict[str, Any]]) -> dict[str, Any]:
+    """Always the List form, even for one manifest.
+
+    `ready.render` and `health.render` return a bare document for a single
+    manifest, which suits a CLI. A published file has a consumer, so its kind
+    and the meaning of `items` must not change with the size of the corpus.
+    """
+
+    ordered = sorted(documents, key=lambda item: item["epic"]["manifest"]["path"])
+    return {"apiVersion": API_VERSION, "kind": kind, "items": ordered}
 
 
 def write(files: dict[str, bytes], output: Path) -> None:
@@ -264,13 +280,19 @@ def verify(publication_dir: Path, corpus: Path, schema_path: Path = validate.DEF
         snapshot = json.loads((publication_dir / SNAPSHOT_FILE).read_bytes())
     except (OSError, ValueError) as exc:
         return [f"unreadable publication: {exc}"]
+    # Shape first: everything below indexes into these documents.
+    shape = validate.schema_errors(publication, _load_publication_schema())
+    if shape:
+        return [f"{PUBLICATION_FILE}: {error}" for error in shape]
+    if not isinstance(snapshot, dict):
+        return [f"{SNAPSHOT_FILE}: not a JSON object"]
     for name in DERIVED_FILES:
         try:
             data = (publication_dir / name).read_bytes()
         except OSError as exc:
             problems.append(f"{name}: {exc}")
             continue
-        recorded = publication.get("files", {}).get(name, {}).get("sha256")
+        recorded = publication["files"][name]["sha256"]
         if recorded != sha256(data):
             problems.append(f"{name}: digest {sha256(data)} does not match the recorded {recorded}")
     try:
@@ -331,7 +353,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_USAGE
     try:
         source_adapter = reconcile._build_source(args)
-    except (ObservationError, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (reconcile.ReconcileError, ObservationError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_OBSERVATION_FAILED
     try:

@@ -491,14 +491,15 @@ evidence.
 
 `.github/workflows/roadmap-publish.yml` is the one place the evaluator runs against live
 GitHub on a schedule (every two hours, on every `roadmap/**` change on `main`, and on
-demand). Each successful run pushes exactly one commit to the orphan branch
-`roadmap-state`, holding one `RoadmapPublication` (#119):
+demand). A read-only `build` job installs the evaluator, observes and verifies; a
+`publish` job that installs nothing and holds the only write token pushes exactly one
+commit to the orphan branch `roadmap-state`, holding one `RoadmapPublication` (#119):
 
 | File | Content |
 |---|---|
 | `snapshot.json` | one GET-only capture over the union of every manifest's issues |
-| `ready-set.json` | `ready.py` for every manifest, replayed from that snapshot |
-| `health.json` | `health.py` for every manifest, replayed from that snapshot |
+| `ready-set.json` | `RoadmapReadySetList`: `ready.py` for every manifest, replayed from that snapshot |
+| `health.json` | `RoadmapHealthList`: `health.py` for every manifest, replayed from that snapshot |
 | `publication.json` | evaluator and source revision, manifest sha256s, the observation, file sha256s |
 
 ```bash
@@ -520,8 +521,10 @@ Rules the tests pin:
   same manifests and snapshot give the same bytes. Every live capture has its own
   `capturedAt`, so every successful run commits. A `synthetic-fixture` observation has no
   `capturedAt`.
-- **Fail closed.** An invalid corpus (exit 3), a failed or incomplete observation or an
-  unobserved key (exit 4), or a publication that does not reproduce from its own
+- **Always a List.** Both derived files are the List form even for a one-manifest corpus
+  (the schemas allow a one-item List), so the kind never changes with corpus size.
+- **Fail closed.** An invalid corpus (exit 3), a repository the token cannot see, a failed
+  or incomplete observation, or an unobserved key (exit 4), or a publication that does not reproduce from its own
   snapshot fails the run before anything is pushed. The previous publication stays, with
   its older `capturedAt`, so a failed refresh never looks fresh; the failed run is the
   visible signal.

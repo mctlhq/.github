@@ -34,14 +34,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  # Everything that runs third-party code (pip) or talks to the GitHub API
+  # holds a read-only token. Only the final job can write, and it runs no
+  # installed package: git, cp and the runner's stdlib python.
+  build:
     if: github.repository == 'mctlhq/.github'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      # Read the public issue graph (GET only) and push to this repository's
-      # own roadmap-state branch. Nothing else.
-      contents: write
+      contents: read
       issues: read
     steps:
       - name: Checkout main
@@ -49,7 +50,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 1
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install roadmap evaluator dependencies
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
@@ -71,6 +72,37 @@ jobs:
       - name: Verify the publication reproduces from its own snapshot
         run: python3 roadmap/scripts/publish.py verify "$RUNNER_TEMP/publication"
 
+      - name: Stage the branch README
+        run: cp roadmap/publication/README.md "$RUNNER_TEMP/publication/README.md"
+
+      - name: Hand the publication to the publish job
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: roadmap-publication
+          path: ${{ runner.temp }}/publication/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Push to this repository's own roadmap-state branch. Nothing else.
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Receive the publication
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: roadmap-publication
+          path: ${{ runner.temp }}/publication
+
       - name: Commit to roadmap-state
         env:
           PUBLICATION: ${{ runner.temp }}/publication
@@ -86,15 +118,18 @@ jobs:
           fi
           # Replace the whole tree: the branch holds exactly one publication.
           git -C "$WORKTREE" rm -rq --ignore-unmatch .
-          cp "$PUBLICATION"/*.json "$WORKTREE"/
-          cp roadmap/publication/README.md "$WORKTREE"/README.md
+          cp "$PUBLICATION"/*.json "$PUBLICATION"/README.md "$WORKTREE"/
           git -C "$WORKTREE" add -A
+          # Only a replayed snapshot can repeat bytes: every live capture has
+          # its own capturedAt, so a live run always commits.
           if git -C "$WORKTREE" diff --cached --quiet; then
             echo "publication unchanged; nothing to commit"
             exit 0
           fi
-          captured="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["observation"].get("capturedAt", "synthetic"))' "$PUBLICATION/publication.json")"
-          git -C "$WORKTREE" commit -q -m "publish: roadmap captured ${captured} from ${GITHUB_SHA::12}"
+          # The message names the publication's own provenance, not this
+          # job's checkout: main may have moved since the build job ran.
+          message="$(python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); print("publish: roadmap captured %s from %s" % (p["observation"].get("capturedAt", "synthetic"), p["source"]["revision"][:12]))' "$PUBLICATION/publication.json")"
+          git -C "$WORKTREE" commit -q -m "$message"
           # Never force: a rejected push means another publisher moved the
           # branch, and failing loudly is the right answer.
           git -C "$WORKTREE" push origin roadmap-state

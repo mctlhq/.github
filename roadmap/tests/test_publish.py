@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import urllib.error
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -51,6 +52,22 @@ class StaticSource:
 
     def snapshot(self, keys):  # noqa: ANN001 - mirrors the source protocol
         return self._snapshot
+
+
+class _Response:
+    def __init__(self, body: bytes) -> None:
+        self._body = body
+        self.status = 200
+        self.headers: dict[str, str] = {}
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self):  # noqa: ANN204
+        return self
+
+    def __exit__(self, *exc) -> None:  # noqa: ANN002
+        return None
 
 
 class PublishTest(unittest.TestCase):
@@ -108,11 +125,42 @@ class PublishTest(unittest.TestCase):
         self.assertEqual([], publish.verify(output, corpus))
 
         ready_set = json.loads((output / publish.READY_SET_FILE).read_bytes())
-        ready_set["items"][0]["ready"] = ["forged-item"]
+        forged = ready_set["items"][0]["items"][0]
+        forged["state"] = "blocked" if forged["state"] == "ready" else "ready"
         (output / publish.READY_SET_FILE).write_bytes(publish.canonical_bytes(ready_set))
         problems = publish.verify(output, corpus)
         self.assertTrue(any(p.startswith("ready-set.json: digest") for p in problems), problems)
         self.assertTrue(any("differs from the evaluator" in p for p in problems), problems)
+
+    def test_the_verify_cli_exits_mismatch_on_any_damage(self) -> None:
+        corpus = self.corpus(EPIC_66)
+        output = self.root / "out"
+        publish.write(self.build(corpus, self.snapshot(CAPTURE_66)), output)
+
+        def run() -> int:
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                return publish.main(["verify", str(output), "--corpus", str(corpus)])
+
+        self.assertEqual(publish.EXIT_OK, run())
+        for damage in (b"[]", b'{"files": null}', b"null"):
+            with self.subTest(damage=damage):
+                (output / publish.PUBLICATION_FILE).write_bytes(damage)
+                self.assertEqual(publish.EXIT_MISMATCH, run())
+
+    # -- shape --------------------------------------------------------------
+
+    def test_a_single_manifest_publication_is_still_a_list(self) -> None:
+        files = self.build(self.corpus(EPIC_66), self.snapshot(CAPTURE_66))
+        ready_set = json.loads(files[publish.READY_SET_FILE])
+        health_list = json.loads(files[publish.HEALTH_FILE])
+        self.assertEqual("RoadmapReadySetList", ready_set["kind"])
+        self.assertEqual("RoadmapHealthList", health_list["kind"])
+        self.assertEqual(1, len(ready_set["items"]))
+        self.assertEqual("RoadmapReadySet", ready_set["items"][0]["kind"])
+        self.assertEqual([], validate.schema_errors(
+            ready_set, json.loads((ROADMAP / "schemas" / "roadmap-ready-set.schema.json").read_text())))
+        self.assertEqual([], validate.schema_errors(
+            health_list, json.loads((ROADMAP / "schemas" / "roadmap-health.schema.json").read_text())))
 
     # -- schema and provenance ----------------------------------------------
 
@@ -221,6 +269,38 @@ class PublishTest(unittest.TestCase):
         self.assertEqual(publish.EXIT_OBSERVATION_FAILED, raised.exception.code)
         # Refused as an observation, before anything is evaluated from it.
         self.assertTrue(str(raised.exception).startswith("snapshot is invalid"), raised.exception)
+
+    def test_a_repository_the_token_cannot_see_fails_the_observation(self) -> None:
+        class BlindSource(StaticSource):
+            def check_repositories(self, repositories):  # noqa: ANN001
+                raise ObservationError("repository mctlhq/.github is not visible to this token (HTTP 404)")
+
+        with self.assertRaises(publish.PublishError) as raised:
+            publish.build(self.corpus(EPIC_66), BlindSource(self.snapshot(CAPTURE_66)), **PROVENANCE)
+        self.assertEqual(publish.EXIT_OBSERVATION_FAILED, raised.exception.code)
+
+    def test_the_live_source_tells_an_invisible_repository_from_a_missing_issue(self) -> None:
+        class Opener:
+            def __init__(self) -> None:
+                self.urls: list[str] = []
+
+            def open(self, request, timeout=None):  # noqa: ANN001
+                self.urls.append(request.full_url)
+                if request.full_url.endswith("/repos/mctlhq/.github"):
+                    return _Response(b'{"full_name": "mctlhq/.github"}')
+                raise urllib.error.HTTPError(request.full_url, 404, "Not Found", {}, None)
+
+        opener = Opener()
+        source = github_graph.LiveGraphSource("token", opener=opener)
+        source.check_repositories(["mctlhq/.github", "mctlhq/.github"])
+        with self.assertRaises(ObservationError):
+            source.check_repositories(["mctlhq/.github", "mctlhq/private-now"])
+        self.assertEqual(
+            ["https://api.github.com/repos/mctlhq/.github"] * 2
+            + ["https://api.github.com/repos/mctlhq/private-now"],
+            opener.urls,
+        )
+        self.assertTrue(all(url.startswith("https://api.github.com/repos/") for url in opener.urls))
 
     # -- unbound vs unknown -------------------------------------------------
 
