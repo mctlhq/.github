@@ -117,6 +117,26 @@ def _union_keys(validation: reconcile.CorpusValidation) -> list[github_graph.Iss
     return sorted(keys)
 
 
+# GETs one live capture makes per issue: the issue, /parent, /sub_issues and
+# /dependencies/blocked_by, each relation listing on a single page up to
+# PAGE_SIZE entries. `LiveGraphSource._observe` is the definition; this is its
+# count, kept next to the only caller that needs it.
+GETS_PER_ISSUE = 4
+
+
+def capture_cost(corpus: Path, schema_path: Path = validate.DEFAULT_SCHEMA) -> int:
+    """GitHub REST GETs one live capture of this corpus makes, as a lower bound.
+
+    One `check_repositories` GET per distinct repository plus `GETS_PER_ISSUE`
+    per distinct authored issue. A relation listing longer than PAGE_SIZE costs
+    one more page, which no manifest comes near today; the workflow compares
+    this against the token's remaining budget before it spends any of it.
+    """
+
+    keys = _union_keys(_validated_corpus(corpus, schema_path))
+    return len({repository for repository, _ in keys}) + GETS_PER_ISSUE * len(keys)
+
+
 def build(
     corpus: Path,
     source_adapter: Any,
@@ -360,7 +380,19 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--corpus", default=str(reconcile.DEFAULT_CORPUS))
     check.add_argument("--schema", default=str(validate.DEFAULT_SCHEMA))
 
+    cost = sub.add_parser("cost", help="print the GET count of one live capture")
+    cost.add_argument("--corpus", default=str(reconcile.DEFAULT_CORPUS))
+    cost.add_argument("--schema", default=str(validate.DEFAULT_SCHEMA))
+
     args = parser.parse_args(argv)
+
+    if args.command == "cost":
+        try:
+            print(capture_cost(Path(args.corpus), Path(args.schema)))
+        except PublishError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return exc.code
+        return EXIT_OK
 
     if args.command == "verify":
         problems = verify(Path(args.publication), Path(args.corpus), Path(args.schema))

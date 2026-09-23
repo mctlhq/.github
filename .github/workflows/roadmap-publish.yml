@@ -12,11 +12,26 @@ name: Roadmap publication
 # nothing, so the last publication keeps its older capturedAt and never looks
 # fresher than the last observation that actually succeeded.
 
+# Triggers, and what each is for (roadmap/README.md, "Publication freshness"):
+#
+#   push               a manifest or the evaluator changed on main
+#   workflow_dispatch  something changed the graph without touching main: a
+#                      governed apply requests one after a landed write
+#                      (roadmap/scripts/publication_request.py), and an operator
+#                      requests one before planning a wave
+#   schedule           reconciliation for everything else that moves the graph
+#                      (an issue closed in any repository). It captures only
+#                      when the publication is older than 90 minutes or from
+#                      another revision, so an event-driven publication is not
+#                      re-captured an hour later for nothing.
+#
+# One capture costs `publish.py cost` GETs (545 on 2026-09-23: 9 repositories +
+# 4 x 134 issues). The build job reads the token's remaining budget first and
+# refuses to start a capture it cannot finish.
+
 on:
   schedule:
-    # Every two hours: one live capture is ~400 GETs against GITHUB_TOKEN's
-    # 1000/hour budget for this repository, and freshness is explicit anyway.
-    - cron: '17 */2 * * *'
+    - cron: '17 * * * *'
   push:
     branches:
       - main
@@ -44,6 +59,8 @@ jobs:
     permissions:
       contents: read
       issues: read
+    outputs:
+      capture: ${{ steps.due.outputs.capture }}
     steps:
       - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
@@ -52,12 +69,50 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # Only the schedule asks. A push or a dispatch was started because
+      # something changed, so it always captures.
+      - name: Decide whether this run captures
+        id: due
+        env:
+          EVENT: ${{ github.event_name }}
+          STATE: ${{ runner.temp }}/published
+        run: |
+          capture=true
+          if [ "$EVENT" = schedule ] \
+            && git fetch --depth=1 origin roadmap-state 2>/dev/null \
+            && mkdir -p "$STATE" \
+            && git show FETCH_HEAD:publication.json > "$STATE/publication.json" \
+            && python3 roadmap/scripts/publication_order.py fresh "$STATE" \
+                 --revision "$(git rev-parse HEAD)" --max-age 5400; then
+            capture=false
+          fi
+          echo "capture=$capture" >> "$GITHUB_OUTPUT"
+
       - name: Install roadmap evaluator dependencies
+        if: steps.due.outputs.capture == 'true'
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
+
+      # GET /rate_limit is free. A capture that runs out of budget part-way
+      # fails and publishes nothing, which is safe but wastes what it spent and
+      # starves the next run; refusing up front keeps the budget for a run that
+      # can finish.
+      - name: Check the API budget covers one capture
+        if: steps.due.outputs.capture == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cost="$(python3 roadmap/scripts/publish.py cost)"
+          read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')
+          echo "capture cost ${cost} GETs; core budget ${remaining}/${limit}, resets $(date -u -d "@${reset}" +%H:%M:%SZ)"
+          if [ "$remaining" -lt "$cost" ]; then
+            echo "::error::${remaining} GETs left of ${limit}, a capture needs ${cost}; nothing is captured or published. roadmap-state keeps its older capturedAt."
+            exit 1
+          fi
 
       # Manifests and evaluator come from the same checkout, so the source and
       # evaluator revisions are the same commit.
       - name: Capture and evaluate
+        if: steps.due.outputs.capture == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -69,13 +124,22 @@ jobs:
             --source-ref main \
             --source-revision "$revision"
 
+      - name: Report the API budget after the capture
+        if: steps.due.outputs.capture == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api rate_limit --jq '.resources.core | "core budget \(.remaining)/\(.limit) left"'
+
       - name: Verify the publication reproduces from its own snapshot
+        if: steps.due.outputs.capture == 'true'
         run: python3 roadmap/scripts/publish.py verify "$RUNNER_TEMP/publication"
 
       - name: Stage the branch README
+        if: steps.due.outputs.capture == 'true'
         run: cp roadmap/publication/README.md "$RUNNER_TEMP/publication/README.md"
 
       - name: Hand the publication to the publish job
+        if: steps.due.outputs.capture == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: roadmap-publication
@@ -85,6 +149,7 @@ jobs:
 
   publish:
     needs: build
+    if: needs.build.outputs.capture == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -115,6 +180,17 @@ jobs:
             git worktree add -B roadmap-state "$WORKTREE" FETCH_HEAD
           else
             git worktree add --orphan -b roadmap-state "$WORKTREE"
+          fi
+          # Never move capturedAt backwards: a queued run can hold a capture
+          # that a later-started run has already published past. Overtaken is
+          # not a failure (exit 1, nothing to do); an invalid candidate is.
+          order=0
+          python3 roadmap/scripts/publication_order.py newer "$WORKTREE" "$PUBLICATION" || order=$?
+          if [ "$order" -eq 1 ]; then
+            echo "::notice::a newer publication is already on roadmap-state; this capture is not pushed"
+            exit 0
+          elif [ "$order" -ne 0 ]; then
+            exit "$order"
           fi
           # Replace the whole tree: the branch holds exactly one publication.
           git -C "$WORKTREE" rm -rq --ignore-unmatch .
