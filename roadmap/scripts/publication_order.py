@@ -12,12 +12,13 @@ an older answer. Exit 0: replace. Exit 1: overtaken, nothing is pushed -- the
 newer publication already says more than this one could. Exit 3: CANDIDATE is
 not a live publication at all, which is a failed run.
 
-`fresh STATE --revision SHA --max-age SECONDS` -- does the scheduled
-reconciliation have nothing to do? Yes only when the published source revision
-is SHA (the manifests and evaluator have not moved) and the observation is at
-most SECONDS old. A dispatched or pushed run never asks this: it was started
-because something changed. Exit 0: fresh, skip. Exit 1: stale or unreadable,
-capture.
+`fresh STATE --revision SHA (--max-age SECONDS | --observed-after TIME)` --
+does this run have nothing to add? Only when the published source revision is
+SHA (the publisher's inputs have not moved) and the observation is either at
+most SECONDS old (the scheduled reconciliation) or started strictly after TIME
+(a pushed or dispatched run, where TIME is when the run was created: whatever
+asked for it happened before that, so a capture that started later already
+saw it). Exit 0: fresh, skip. Exit 1: stale or unreadable, capture.
 
 Standard library only: the publish job that runs `newer` holds the only write
 token of the workflow and installs no package.
@@ -110,6 +111,28 @@ def is_fresh(
     return True, f"{int(age)}s old at {revision[:12]}"
 
 
+def observed_after(state: Path, revision: str, after: datetime) -> tuple[bool, str]:
+    published = source_revision(state)
+    if published != revision:
+        return False, f"published source {published} is not {revision}"
+    try:
+        moment = captured_at(state)
+    except Unreadable as exc:
+        return False, str(exc)
+    # Strictly after: capturedAt is floored to the second, so a capture stamped
+    # in the same second as TIME may have started before the change it is
+    # being asked to show.
+    if moment > after:
+        return True, f"captured {_z(moment)}, after this run was requested at {_z(after)}"
+    return False, f"captured {_z(moment)}, not after this run was requested at {_z(after)}"
+
+
+def _parse_utc(value: str) -> datetime:
+    if not value.endswith("Z"):
+        raise ValueError(f"{value!r} is not a UTC timestamp")
+    return datetime.fromisoformat(value[:-1] + "+00:00")
+
+
 def _z(moment: datetime) -> str:
     return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -123,7 +146,9 @@ def main(argv: list[str] | None = None) -> int:
     fresh = sub.add_parser("fresh", help="is STATE fresh enough to skip a scheduled run?")
     fresh.add_argument("state")
     fresh.add_argument("--revision", required=True)
-    fresh.add_argument("--max-age", type=int, required=True, help="seconds")
+    bound = fresh.add_mutually_exclusive_group(required=True)
+    bound.add_argument("--max-age", type=int, help="seconds")
+    bound.add_argument("--observed-after", help="UTC timestamp, e.g. the run's created_at")
     args = parser.parse_args(argv)
 
     if args.command == "newer":
@@ -135,12 +160,20 @@ def main(argv: list[str] | None = None) -> int:
         print(("replace: " if ok else "overtaken: ") + why, file=sys.stderr)
         return EXIT_YES if ok else EXIT_NO
 
-    if args.max_age <= 0:
+    if args.observed_after is not None:
+        try:
+            after = _parse_utc(args.observed_after)
+        except ValueError as exc:
+            print(f"--observed-after: {exc}", file=sys.stderr)
+            return EXIT_USAGE
+        ok, why = observed_after(Path(args.state), args.revision, after)
+    elif args.max_age <= 0:
         print("--max-age must be positive", file=sys.stderr)
         return EXIT_USAGE
-    ok, why = is_fresh(
-        Path(args.state), args.revision, args.max_age, datetime.now(timezone.utc)
-    )
+    else:
+        ok, why = is_fresh(
+            Path(args.state), args.revision, args.max_age, datetime.now(timezone.utc)
+        )
     print(("fresh: " if ok else "stale: ") + why, file=sys.stderr)
     return EXIT_YES if ok else EXIT_NO
 

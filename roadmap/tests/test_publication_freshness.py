@@ -222,6 +222,38 @@ class ApplyRequestsPublicationTest(unittest.TestCase):
         )
         self.assertEqual([], requests)
 
+    def test_an_interrupted_run_with_a_landed_write_says_what_is_stale(self) -> None:
+        requests: list = []
+        err = StringIO()
+        with self.assertRaises(KeyboardInterrupt):
+            with mock.patch.object(
+                apply_module,
+                "_run",
+                lambda args, docs: (
+                    docs.append((Path("m.yaml"), _document(applied=2))),
+                    (_ for _ in ()).throw(KeyboardInterrupt()),
+                ),
+            ), mock.patch.object(
+                publication_request, "request_publication",
+                lambda *a, **k: requests.append(a),
+            ), mock.patch.dict(os.environ, {"GITHUB_TOKEN": "token"}):
+                with redirect_stdout(StringIO()), redirect_stderr(err):
+                    apply_module.main(["--actor", "t", "--live", "--execute"])
+        # No network call from an interrupt, but never silence either.
+        self.assertEqual([], requests)
+        self.assertIn("2 write(s) landed before the run was interrupted", err.getvalue())
+
+    def test_an_interrupted_run_that_wrote_nothing_says_nothing(self) -> None:
+        err = StringIO()
+        with self.assertRaises(KeyboardInterrupt):
+            with mock.patch.object(
+                apply_module, "_run",
+                lambda args, docs: (_ for _ in ()).throw(KeyboardInterrupt()),
+            ), mock.patch.dict(os.environ, {"GITHUB_TOKEN": "token"}):
+                with redirect_stdout(StringIO()), redirect_stderr(err):
+                    apply_module.main(["--actor", "t", "--live", "--execute"])
+        self.assertNotIn("WARNING", err.getvalue())
+
     def test_a_failed_request_is_loud_and_leaves_the_exit_code_to_the_writes(self) -> None:
         def failing(token, api_base=None, opener=None):  # noqa: ANN001
             raise publication_request.PublicationRequestFailed("HTTP 403")
@@ -308,6 +340,38 @@ class PublicationOrderTest(unittest.TestCase):
         # a capture from the future is a broken clock, not freshness.
         self.assertFalse(self._fresh(stamp, "a" * 40, captured - timedelta(minutes=1)))
         self.assertFalse(self._fresh(None, "a" * 40, captured))
+
+    def test_a_requested_run_skips_only_a_capture_that_started_after_it(self) -> None:
+        state = _publication(self.root / "state", "2026-09-23T22:57:52Z", revision="a" * 40)
+        requested = datetime(2026, 9, 23, 22, 50, 0, tzinfo=timezone.utc)
+        self.assertTrue(publication_order.observed_after(state, "a" * 40, requested)[0])
+        # Same second is not after: capturedAt is floored, the capture may have
+        # started before the change that asked for this run.
+        same = datetime(2026, 9, 23, 22, 57, 52, tzinfo=timezone.utc)
+        self.assertFalse(publication_order.observed_after(state, "a" * 40, same)[0])
+        later = datetime(2026, 9, 23, 23, 0, 0, tzinfo=timezone.utc)
+        self.assertFalse(publication_order.observed_after(state, "a" * 40, later)[0])
+        # Other publisher inputs: capture regardless of when.
+        self.assertFalse(publication_order.observed_after(state, "b" * 40, requested)[0])
+
+    def test_the_fresh_cli_takes_exactly_one_bound(self) -> None:
+        state = _publication(self.root / "state", "2026-09-23T22:57:52Z", revision="a" * 40)
+        with redirect_stderr(StringIO()):
+            self.assertEqual(0, publication_order.main(
+                ["fresh", str(state), "--revision", "a" * 40,
+                 "--observed-after", "2026-09-23T22:50:00Z"]))
+            self.assertEqual(1, publication_order.main(
+                ["fresh", str(state), "--revision", "a" * 40,
+                 "--observed-after", "2026-09-23T23:50:00Z"]))
+            self.assertEqual(publication_order.EXIT_USAGE, publication_order.main(
+                ["fresh", str(state), "--revision", "a" * 40,
+                 "--observed-after", "2026-09-23 22:50:00"]))
+            with self.assertRaises(SystemExit):
+                publication_order.main(["fresh", str(state), "--revision", "a" * 40])
+            with self.assertRaises(SystemExit):
+                publication_order.main(
+                    ["fresh", str(state), "--revision", "a" * 40, "--max-age", "5",
+                     "--observed-after", "2026-09-23T22:50:00Z"])
 
     def test_no_state_means_capture(self) -> None:
         empty = self.root / "none"

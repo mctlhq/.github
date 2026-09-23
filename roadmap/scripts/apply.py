@@ -677,6 +677,8 @@ def main(argv: list[str] | None = None) -> int:
         # preserves the status Python gives the interrupt, and re-emitting is
         # harmless -- `_emit` is silent on an empty list.
         _emit(documents, args)
+        # No network call from an interrupt: say what is stale instead.
+        _warn_unrequested_publication(args, documents)
         raise
 
     emitted = _emit(documents, args)
@@ -690,6 +692,22 @@ def landed_writes(documents: list[tuple[Path, dict[str, Any]]]) -> int:
     """How many writes this run is recorded as having made on GitHub."""
 
     return sum(document["summary"]["applied"] for _, document in documents)
+
+
+def _warn_unrequested_publication(
+    args: argparse.Namespace, documents: list[tuple[Path, dict[str, Any]]]
+) -> None:
+    if not (args.live and args.execute) or args.no_publication_request:
+        return
+    landed = landed_writes(documents)
+    if landed:
+        print(
+            f"WARNING: {landed} write(s) landed before the run was interrupted; no "
+            "roadmap publication was requested, so roadmap-state still describes "
+            "the graph before this run. Request one with "
+            "`python3 roadmap/scripts/publication_request.py`.",
+            file=sys.stderr,
+        )
 
 
 def _request_publication(

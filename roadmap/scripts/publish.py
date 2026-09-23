@@ -125,12 +125,15 @@ GETS_PER_ISSUE = 4
 
 
 def capture_cost(corpus: Path, schema_path: Path = validate.DEFAULT_SCHEMA) -> int:
-    """GitHub REST GETs one live capture of this corpus makes, as a lower bound.
+    """GitHub REST GETs one live capture of this corpus makes.
 
     One `check_repositories` GET per distinct repository plus `GETS_PER_ISSUE`
-    per distinct authored issue. A relation listing longer than PAGE_SIZE costs
-    one more page, which no manifest comes near today; the workflow compares
-    this against the token's remaining budget before it spends any of it.
+    per distinct authored issue. That is exact while every issue is found, no
+    two keys resolve to the same issue, and every relation listing fits one
+    page -- the corpus as it stands. A missing or aliased issue costs less (one
+    GET, or a cache hit), so the number errs high there, which is the safe
+    direction for the workflow's budget gate; a relation listing past
+    PAGE_SIZE costs one more page, which no manifest comes near.
     """
 
     keys = _union_keys(_validated_corpus(corpus, schema_path))

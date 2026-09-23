@@ -55,36 +55,65 @@ jobs:
   build:
     if: github.repository == 'mctlhq/.github'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # A push or dispatch may wait up to an hour for the API budget to reset.
+    timeout-minutes: 100
     permissions:
       contents: read
       issues: read
+      # When this run was created, for the skip decision above.
+      actions: read
     outputs:
-      capture: ${{ steps.due.outputs.capture }}
+      capture: ${{ steps.budget.outputs.capture }}
     steps:
       - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
         with:
           ref: main
-          fetch-depth: 1
+          # Full history: the skip decision diffs HEAD against the published
+          # source revision.
+          fetch-depth: 0
           persist-credentials: false
 
-      # Only the schedule asks. A push or a dispatch was started because
-      # something changed, so it always captures.
+      # Skip a capture that would add nothing. The publisher's inputs are
+      # unchanged when every roadmap/** file and this workflow are byte-equal
+      # to the published source revision -- a commit elsewhere on main (a
+      # profile or another workflow) cannot change what is published. Then:
+      #   schedule         skip while the capture is at most 90 minutes old;
+      #   push / dispatch  skip when the published capture started after this
+      #                    run was created. Whatever asked for the run -- a
+      #                    landed apply write, an operator -- happened before
+      #                    that, so the capture already saw it. This is what
+      #                    coalesces a burst of requests into one capture.
       - name: Decide whether this run captures
         id: due
         env:
           EVENT: ${{ github.event_name }}
           STATE: ${{ runner.temp }}/published
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: repos/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           capture=true
-          if [ "$EVENT" = schedule ] \
-            && git fetch --depth=1 origin roadmap-state 2>/dev/null \
-            && mkdir -p "$STATE" \
-            && git show FETCH_HEAD:publication.json > "$STATE/publication.json" \
-            && python3 roadmap/scripts/publication_order.py fresh "$STATE" \
-                 --revision "$(git rev-parse HEAD)" --max-age 5400; then
-            capture=false
+          mkdir -p "$STATE"
+          if git fetch --depth=1 origin roadmap-state \
+            && git show FETCH_HEAD:publication.json > "$STATE/publication.json"; then
+            published="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["source"]["revision"])' "$STATE/publication.json" || true)"
+            revision="$(git rev-parse HEAD)"
+            if [ -n "$published" ] \
+              && git cat-file -e "${published}^{commit}" \
+              && git diff --quiet "$published" HEAD -- roadmap .github/workflows/roadmap-publish.yml; then
+              echo "publisher inputs at HEAD are those of the published ${published}"
+              revision="$published"
+            fi
+            if [ "$EVENT" = schedule ]; then
+              bound=(--max-age 5400)
+            else
+              bound=(--observed-after "$(gh api "$RUN_URL" --jq .created_at)")
+            fi
+            if python3 roadmap/scripts/publication_order.py fresh "$STATE" --revision "$revision" "${bound[@]}"; then
+              capture=false
+            fi
+          else
+            echo "roadmap-state is not readable; capturing"
           fi
           echo "capture=$capture" >> "$GITHUB_OUTPUT"
 
@@ -93,26 +122,44 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
 
       # GET /rate_limit is free. A capture that runs out of budget part-way
-      # fails and publishes nothing, which is safe but wastes what it spent and
-      # starves the next run; refusing up front keeps the budget for a run that
-      # can finish.
-      - name: Check the API budget covers one capture
+      # publishes nothing and spends what the next run needs, so none starts
+      # without the budget to finish. A scheduled run then skips: the next
+      # tick is as good. A push or dispatch waits for the reset instead,
+      # holding the concurrency slot, so every request that arrives meanwhile
+      # coalesces into the one pending run behind it.
+      - name: Wait until the API budget covers one capture
+        id: budget
         if: steps.due.outputs.capture == 'true'
         env:
+          EVENT: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
           cost="$(python3 roadmap/scripts/publish.py cost)"
-          read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')
-          echo "capture cost ${cost} GETs; core budget ${remaining}/${limit}, resets $(date -u -d "@${reset}" +%H:%M:%SZ)"
-          if [ "$remaining" -lt "$cost" ]; then
-            echo "::error::${remaining} GETs left of ${limit}, a capture needs ${cost}; nothing is captured or published. roadmap-state keeps its older capturedAt."
-            exit 1
-          fi
+          while :; do
+            read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')
+            echo "capture cost ${cost} GETs; core budget ${remaining}/${limit}, resets $(date -u -d "@${reset}" +%H:%M:%SZ)"
+            if [ "$remaining" -ge "$cost" ]; then
+              echo "capture=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$limit" -lt "$cost" ]; then
+              echo "::error::a capture needs ${cost} GETs but the whole hourly budget is ${limit}; no wait can fix this"
+              exit 1
+            fi
+            if [ "$EVENT" = schedule ]; then
+              echo "::notice::${remaining}/${limit} GETs left, a capture needs ${cost}; the next scheduled run captures instead"
+              echo "capture=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            wait=$(( reset - $(date +%s) + 5 ))
+            echo "::notice::${remaining}/${limit} GETs left, a capture needs ${cost}; waiting ${wait}s for the reset"
+            sleep "$(( wait > 0 ? wait : 5 ))"
+          done
 
       # Manifests and evaluator come from the same checkout, so the source and
       # evaluator revisions are the same commit.
       - name: Capture and evaluate
-        if: steps.due.outputs.capture == 'true'
+        if: steps.budget.outputs.capture == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -125,21 +172,21 @@ jobs:
             --source-revision "$revision"
 
       - name: Report the API budget after the capture
-        if: steps.due.outputs.capture == 'true'
+        if: steps.budget.outputs.capture == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api rate_limit --jq '.resources.core | "core budget \(.remaining)/\(.limit) left"'
 
       - name: Verify the publication reproduces from its own snapshot
-        if: steps.due.outputs.capture == 'true'
+        if: steps.budget.outputs.capture == 'true'
         run: python3 roadmap/scripts/publish.py verify "$RUNNER_TEMP/publication"
 
       - name: Stage the branch README
-        if: steps.due.outputs.capture == 'true'
+        if: steps.budget.outputs.capture == 'true'
         run: cp roadmap/publication/README.md "$RUNNER_TEMP/publication/README.md"
 
       - name: Hand the publication to the publish job
-        if: steps.due.outputs.capture == 'true'
+        if: steps.budget.outputs.capture == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: roadmap-publication
