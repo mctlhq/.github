@@ -996,8 +996,9 @@
         "repository": "mctlhq/mctl-agents"
       },
       "state": "open",
+      "stateReason": "reopened",
       "subIssues": [],
-      "updatedAt": "2026-09-19T06:58:11Z"
+      "updatedAt": "2026-09-23T14:34:46Z"
     },
     {
       "blockedBy": [],
@@ -1393,7 +1394,7 @@
           "repository": "mctlhq/mctl-gitops"
         }
       ],
-      "updatedAt": "2026-09-23T09:07:51Z"
+      "updatedAt": "2026-09-23T14:52:52Z"
     },
     {
       "blockedBy": [
@@ -1632,9 +1633,10 @@
         "number": 333,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-23T07:38:16Z"
+      "updatedAt": "2026-09-23T09:48:30Z"
     },
     {
       "blockedBy": [
@@ -1660,9 +1662,10 @@
         "number": 334,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-23T07:38:27Z"
+      "updatedAt": "2026-09-23T14:29:36Z"
     },
     {
       "blockedBy": [],
@@ -1730,9 +1733,10 @@
         "number": 349,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-23T06:49:26Z"
+      "updatedAt": "2026-09-23T09:27:42Z"
     },
     {
       "blockedBy": [
@@ -1754,9 +1758,10 @@
         "number": 350,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-23T06:49:02Z"
+      "updatedAt": "2026-09-23T11:47:34Z"
     },
     {
       "blockedBy": [
@@ -2475,7 +2480,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-09-23T07:39:59Z"
+      "updatedAt": "2026-09-23T13:38:32Z"
     },
     {
       "blockedBy": [],
@@ -2692,7 +2697,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T09:11:34Z",
+    "capturedAt": "2026-09-23T15:02:28Z",
     "mode": "live-capture"
   }
 }
