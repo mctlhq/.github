@@ -347,7 +347,7 @@ jobs:
             # one physical machine — created, renamed, or wiped independently
             # of this file — would turn a missing directory into an org-wide
             # outage. Degrade to the runner's own logged-in HOME instead.
-            local target_home="$1" print_timeout="${2:-15m}"
+            local target_home="$1" print_timeout="${2:-15m}"  # a Go duration, e.g. 900s
             if [ ! -d "$target_home" ]; then
               echo "::warning::$target_home missing — using the runner's default HOME instead"
               target_home="$HOME"
@@ -444,34 +444,57 @@ jobs:
           #   model/effort pair is genuinely incompatible (say a model
           #   with no tier suffix) does not satisfy the guard, is not
           #   retried, and still fails closed as before.
+          # Same shape as the reconciliation block: only a slug that block
+          # normalises counts as consistent, not any string that happens to
+          # end in the effort name.
           case "$AGY_MODEL" in
-            *-"$effort_lower") tier_consistent=1 ;;
+            gemini-*-"$effort_lower") tier_consistent=1 ;;
             *) tier_consistent=0 ;;
           esac
           is_transient() {
             case "$1" in
-              *"UNAVAILABLE (code 503)"*) return 0 ;;
-              *"--effort is not supported for model \"$AGY_MODEL\""*) [ "$tier_consistent" = 1 ] && return 0 ;;
+              *"UNAVAILABLE (code 503)"*)
+                return 0
+                ;;
+              *"--effort is not supported for model \"$AGY_MODEL\""*)
+                [ "$tier_consistent" = 1 ] && return 0
+                ;;
+              *) ;;
             esac
+            # The case never carries a status out; every exit from this
+            # function is an explicit return. It is still a predicate: a
+            # bare `is_transient "$x"` returning 1 aborts under -e like any
+            # other failing statement, so callers use it as an if/&&
+            # condition, as both call sites below do.
             return 1
           }
 
-          # Retries are bounded by wall-clock, not only by count: a retry
-          # is started only while less than 8 minutes of the step have
-          # elapsed, and it runs with --print-timeout 6m instead of 15m (a
-          # retry that needs the full 15 minutes is a real review, not the
-          # blip being retried for). The worst case therefore ends before
-          # the 20-minute job timeout (line 92) with result.json and
-          # no-verdict written, instead of a cancelled job that leaves
-          # neither and no explanatory comment. The first attempt on each
-          # account keeps the full budget, as before this change.
+          # Every agy call, first or retry, on either account, is given the
+          # time left in ONE step budget, so the cross-account total is
+          # bounded by construction: `budget` plus at most one minimum
+          # attempt plus the 30 s pauses stays under the 20-minute job
+          # timeout (line 92). A cancelled job would write no no-verdict
+          # and skip `Note agy failure`, the red-check-with-no-comment
+          # outcome the no_verdict mechanism exists to prevent, and a fixed
+          # per-attempt timeout could not rule that out (15m + 15m across
+          # the quota switch was reachable before this change). A retry is
+          # started only while at least two minutes remain: agy's own
+          # catalog and eligibility timeouts eat about that much before a
+          # review can even begin.
           step_start=$SECONDS
+          budget=1020
+          remaining() { echo $(( budget - (SECONDS - step_start) )); }
           run_agy_retrying() {
-            local target_home="$1" attempt=1 print_timeout=15m safe_error
+            local target_home="$1" attempt=1 timeout safe_error
             while :; do
-              run_agy "$target_home" "$print_timeout" || true
+              timeout=$(remaining)
+              # Never less than a minute: an attempt that cannot fetch the
+              # catalog is a retry burned for nothing, and one minute past
+              # the budget is still inside the job timeout.
+              [ "$timeout" -lt 60 ] && timeout=60
+              run_agy "$target_home" "${timeout}s" || true
               read_result
-              if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ] || [ $((SECONDS - step_start)) -ge 480 ]; then
+              if [ "$status" = "SUCCESS" ] || ! is_transient "$error" || [ "$attempt" -ge 3 ] || [ "$(remaining)" -lt 120 ]; then
                 return 0
               fi
               # Same sanitization as below: $error is free text agy produced
@@ -479,7 +502,6 @@ jobs:
               safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
               echo "::warning::agy backend unavailable on attempt $attempt ($safe_error); retrying in 30s"
               attempt=$((attempt + 1))
-              print_timeout=6m
               sleep 30
             done
           }
