@@ -20,6 +20,14 @@ most SECONDS old (the scheduled reconciliation) or started strictly after TIME
 asked for it happened before that, so a capture that started later already
 saw it). Exit 0: fresh, skip. Exit 1: stale or unreadable, capture.
 
+`decide STATE --event EVENT [--run-created TIME] [--repo DIR]` is what the
+workflow runs: it works out which revision to judge freshness against and
+picks the bound from the event. The publisher's inputs are `INPUT_PATHS`; when
+they are byte-equal at HEAD and at the published source revision, a commit
+elsewhere on main (a profile, another workflow) has changed nothing that is
+published, and freshness is judged against the published revision instead of
+HEAD. Same exit codes as `fresh`.
+
 Standard library only: the publish job that runs `newer` holds the only write
 token of the workflow and installs no package.
 """
@@ -28,11 +36,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 PUBLICATION_FILE = "publication.json"
+
+# Everything a publication is derived from: the manifests and evaluator under
+# roadmap/, and the workflow that runs them. Mirrors the push trigger's paths.
+INPUT_PATHS = ("roadmap", ".github/workflows/roadmap-publish.yml")
+
+# The scheduled reconciliation's bound on a publication's age.
+SCHEDULE_MAX_AGE_SECONDS = 5400
 
 EXIT_YES = 0
 EXIT_NO = 1
@@ -127,6 +143,56 @@ def observed_after(state: Path, revision: str, after: datetime) -> tuple[bool, s
     return False, f"captured {_z(moment)}, not after this run was requested at {_z(after)}"
 
 
+def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=False
+    )
+
+
+def judged_revision(repo: Path, published: str | None) -> tuple[str, str]:
+    """The revision freshness is judged against, and why.
+
+    HEAD, unless the published revision is known here and every input path is
+    byte-equal between it and HEAD -- then the published revision, because
+    nothing that is published has changed since it.
+    """
+
+    head = _git(repo, "rev-parse", "HEAD")
+    if head.returncode != 0:
+        raise Unreadable(f"{repo}: not a git checkout: {head.stderr.strip()}")
+    head_revision = head.stdout.strip()
+    if not published:
+        return head_revision, "no published revision"
+    if _git(repo, "cat-file", "-e", f"{published}^{{commit}}").returncode != 0:
+        return head_revision, f"published {published[:12]} is not in this checkout"
+    diff = _git(repo, "diff", "--quiet", published, head_revision, "--", *INPUT_PATHS)
+    if diff.returncode == 0:
+        return published, f"inputs at HEAD are those of the published {published[:12]}"
+    if diff.returncode == 1:
+        return head_revision, f"inputs changed since the published {published[:12]}"
+    # Anything else is git failing, not an answer; capturing is the safe side.
+    return head_revision, f"could not compare with {published[:12]}: {diff.stderr.strip()}"
+
+
+def decide(
+    state: Path,
+    repo: Path,
+    event: str,
+    run_created: datetime | None,
+    now: datetime,
+) -> tuple[bool, str]:
+    """True when this run can skip its capture."""
+
+    revision, why = judged_revision(repo, source_revision(state))
+    if event == "schedule":
+        fresh, reason = is_fresh(state, revision, SCHEDULE_MAX_AGE_SECONDS, now)
+    else:
+        if run_created is None:
+            raise ValueError(f"a {event} run needs --run-created")
+        fresh, reason = observed_after(state, revision, run_created)
+    return fresh, f"{why}; {reason}"
+
+
 def _parse_utc(value: str) -> datetime:
     if not value.endswith("Z"):
         raise ValueError(f"{value!r} is not a UTC timestamp")
@@ -149,7 +215,25 @@ def main(argv: list[str] | None = None) -> int:
     bound = fresh.add_mutually_exclusive_group(required=True)
     bound.add_argument("--max-age", type=int, help="seconds")
     bound.add_argument("--observed-after", help="UTC timestamp, e.g. the run's created_at")
+    choose = sub.add_parser("decide", help="may this workflow run skip its capture?")
+    choose.add_argument("state")
+    choose.add_argument("--event", required=True)
+    choose.add_argument("--run-created", help="UTC created_at of this run (not needed for schedule)")
+    choose.add_argument("--repo", default=".")
     args = parser.parse_args(argv)
+
+    if args.command == "decide":
+        try:
+            created = _parse_utc(args.run_created) if args.run_created else None
+            skip, why = decide(
+                Path(args.state), Path(args.repo), args.event, created,
+                datetime.now(timezone.utc),
+            )
+        except (Unreadable, ValueError) as exc:
+            print(f"capture: {exc}", file=sys.stderr)
+            return EXIT_NO
+        print(("skip: " if skip else "capture: ") + why, file=sys.stderr)
+        return EXIT_YES if skip else EXIT_NO
 
     if args.command == "newer":
         try:

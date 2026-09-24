@@ -28,6 +28,7 @@ three. Origin, HTTPS and redirect rules come from
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
@@ -90,26 +91,38 @@ class PublicationRequester(github_graph.OriginBoundClient):
             raise PublicationRequestFailed(
                 f"refusing to send credentials outside {self._api_base}: {url}"
             )
-        http = urllib.request.Request(
+        request = urllib.request.Request(
             url,
             data=json.dumps(BODY, sort_keys=True).encode("utf-8"),
             method=METHOD,
         )
-        http.add_header("Accept", "application/vnd.github+json")
-        http.add_header("X-GitHub-Api-Version", GITHUB_API_VERSION)
-        http.add_header("Authorization", f"Bearer {self._token}")
-        http.add_header("Content-Type", "application/json")
+        request.add_header("Accept", "application/vnd.github+json")
+        request.add_header("X-GitHub-Api-Version", GITHUB_API_VERSION)
+        request.add_header("Authorization", f"Bearer {self._token}")
+        request.add_header("Content-Type", "application/json")
         try:
-            response = self._opener.open(http, timeout=self._timeout)
+            response = self._opener.open(request, timeout=self._timeout)
         except urllib.error.HTTPError as error:
             raise PublicationRequestFailed(f"{METHOD} {url}: HTTP {error.code}") from error
         except urllib.error.URLError as error:
             raise PublicationRequestFailed(f"{METHOD} {url}: {error.reason}") from error
         except TimeoutError as error:
             raise PublicationRequestFailed(f"{METHOD} {url}: timed out") from error
-        with response:
-            status = getattr(response, "status", 200) or 200
-            response.read()
+        except (http.client.HTTPException, OSError) as error:
+            # urllib does not wrap everything: a connection dropped before the
+            # status line comes out as http.client.RemoteDisconnected or
+            # BadStatusLine, which is neither URLError nor TimeoutError.
+            raise PublicationRequestFailed(f"{METHOD} {url}: {error!r}") from error
+        # The body read is part of the request too: a reset mid-body is the
+        # same failed request, not an exception the caller has never heard of.
+        try:
+            with response:
+                status = getattr(response, "status", 200) or 200
+                response.read()
+        except (http.client.HTTPException, OSError) as error:
+            raise PublicationRequestFailed(
+                f"{METHOD} {url}: failed reading the response: {error!r}"
+            ) from error
         if status not in SUCCESS_STATUSES:
             raise PublicationRequestFailed(f"{METHOD} {url}: HTTP {status}")
 

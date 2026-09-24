@@ -583,7 +583,7 @@ issue closed/reopened anywhere else ----- (no event reaches us)            |
   event reports, such as an issue closed by a merge in another repository.
 
 Every run first decides whether a capture would add anything (`publication_order.py
-fresh`). The publisher's inputs count as unchanged when every `roadmap/**` file and the
+decide`, tested against a real git history). The publisher's inputs count as unchanged when every `roadmap/**` file and the
 workflow are byte-equal to the published source revision; a commit elsewhere on `main`
 cannot change what is published. With unchanged inputs:
 
@@ -612,7 +612,9 @@ starts a capture it cannot finish: one that runs out part-way publishes nothing 
 spends the budget the next run needs. A scheduled run that is short skips, because the
 next tick is as good. A pushed or dispatched run waits for the reset, holding the
 concurrency slot, so requests that arrive meanwhile coalesce into the single pending run
-behind it. The step logs the limit it saw, so the documented 1000 is checked against the
+behind it. It polls at most once a minute and waits at most 75 minutes (two reset
+windows). After that it leaves a `::warning::` and hands the publication to the next
+scheduled run that finds budget, rather than being killed silently by the job timeout. The step logs the limit it saw, so the documented 1000 is checked against the
 real one on every run.
 
 Two guards keep a publication from ever looking fresher than its observation:

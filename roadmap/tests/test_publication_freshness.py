@@ -15,8 +15,10 @@ makes, because the workflow's budget preflight trusts it.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -101,6 +103,29 @@ class PublicationRequestTest(unittest.TestCase):
                     publication_request.request_publication(
                         "token", opener=_Opener(answer)
                     )
+
+    def test_every_transport_failure_is_a_failed_request(self) -> None:
+        # urllib leaves some failures unwrapped (a dropped connection before
+        # the status line), and the body read can fail on its own. Each must
+        # reach apply.py as PublicationRequestFailed, never as a raw exception.
+        class _BrokenBody(_Response):
+            def read(self) -> bytes:
+                raise ConnectionResetError("reset mid-body")
+
+        class _Incomplete(_Response):
+            def read(self) -> bytes:
+                raise http.client.IncompleteRead(b"")
+
+        for answer in (
+            http.client.RemoteDisconnected("closed before the status line"),
+            http.client.BadStatusLine("garbage"),
+            ConnectionResetError("reset"),
+            _BrokenBody(status=204),
+            _Incomplete(status=204),
+        ):
+            with self.subTest(answer=answer):
+                with self.assertRaises(publication_request.PublicationRequestFailed):
+                    publication_request.request_publication("token", opener=_Opener(answer))
 
     def test_no_token_and_no_https_are_refused_before_transmission(self) -> None:
         opener = _Opener(AssertionError("reached the transport"))
@@ -389,7 +414,92 @@ class PublicationOrderTest(unittest.TestCase):
             for line in source.splitlines()
             if line.startswith(("import ", "from "))
         }
-        self.assertLessEqual(imported, {"__future__", "argparse", "json", "sys", "datetime", "pathlib"})
+        self.assertLessEqual(
+            imported, {"__future__", "argparse", "json", "subprocess", "sys", "datetime", "pathlib"}
+        )
+
+
+class DecideTest(unittest.TestCase):
+    """`publication_order.decide` against a real git history."""
+
+    def setUp(self) -> None:
+        self._dir = tempfile.TemporaryDirectory()
+        self.repo = Path(self._dir.name) / "repo"
+        self.repo.mkdir()
+        self._git("init", "-q", "-b", "main")
+        (self.repo / "roadmap").mkdir()
+        (self.repo / "roadmap" / "epic.yaml").write_text("a: 1\n", encoding="utf-8")
+        (self.repo / "profile.md").write_text("hello\n", encoding="utf-8")
+        self.published = self._commit("publisher inputs")
+        self.state = Path(self._dir.name) / "state"
+
+    def tearDown(self) -> None:
+        self._dir.cleanup()
+
+    def _git(self, *args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.email=t@example.invalid",
+             "-c", "user.name=t", "-c", "commit.gpgsign=false", *args],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+
+    def _commit(self, message: str) -> str:
+        self._git("add", "-A")
+        self._git("commit", "-qm", message)
+        return self._git("rev-parse", "HEAD")
+
+    def _decide(self, event: str, captured: str, run_created: datetime | None, now: datetime):
+        _publication(self.state, captured, revision=self.published)
+        return publication_order.decide(self.state, self.repo, event, run_created, now)[0]
+
+    def test_a_commit_outside_the_inputs_does_not_force_a_capture(self) -> None:
+        (self.repo / "profile.md").write_text("changed\n", encoding="utf-8")
+        self._commit("profile only")
+        captured = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)
+        self.assertTrue(
+            self._decide("schedule", "2026-09-24T00:00:00Z", None, captured + timedelta(minutes=30))
+        )
+        self.assertTrue(
+            self._decide("workflow_dispatch", "2026-09-24T00:00:00Z",
+                         captured - timedelta(minutes=1), captured + timedelta(minutes=1))
+        )
+
+    def test_a_changed_input_always_captures(self) -> None:
+        (self.repo / "roadmap" / "epic.yaml").write_text("a: 2\n", encoding="utf-8")
+        self._commit("manifest change")
+        captured = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)
+        self.assertFalse(
+            self._decide("schedule", "2026-09-24T00:00:00Z", None, captured + timedelta(minutes=1))
+        )
+        self.assertFalse(
+            self._decide("push", "2026-09-24T00:00:00Z",
+                         captured - timedelta(minutes=5), captured + timedelta(minutes=1))
+        )
+
+    def test_a_dispatch_captures_unless_the_capture_started_after_it(self) -> None:
+        captured = datetime(2026, 9, 24, 0, 0, 0, tzinfo=timezone.utc)
+        now = captured + timedelta(minutes=2)
+        self.assertTrue(self._decide("workflow_dispatch", "2026-09-24T00:00:00Z",
+                                     captured - timedelta(seconds=1), now))
+        self.assertFalse(self._decide("workflow_dispatch", "2026-09-24T00:00:00Z",
+                                      captured + timedelta(seconds=1), now))
+
+    def test_an_unknown_published_revision_captures(self) -> None:
+        _publication(self.state, "2026-09-24T00:00:00Z", revision="f" * 40)
+        skip, why = publication_order.decide(
+            self.state, self.repo, "schedule", None,
+            datetime(2026, 9, 24, 0, 1, 0, tzinfo=timezone.utc),
+        )
+        self.assertFalse(skip)
+        self.assertIn("not in this checkout", why)
+
+    def test_the_cli_captures_when_a_requested_run_has_no_creation_time(self) -> None:
+        _publication(self.state, "2026-09-24T00:00:00Z", revision=self.published)
+        with redirect_stderr(StringIO()):
+            code = publication_order.main(
+                ["decide", str(self.state), "--event", "workflow_dispatch", "--repo", str(self.repo)]
+            )
+        self.assertEqual(publication_order.EXIT_NO, code)
 
 
 class _LiveGitHub:

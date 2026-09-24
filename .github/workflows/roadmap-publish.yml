@@ -94,22 +94,15 @@ jobs:
         run: |
           capture=true
           mkdir -p "$STATE"
-          if git fetch --depth=1 origin roadmap-state \
+          # Not shallow: this checkout needs full history for the diff.
+          if git fetch origin roadmap-state \
             && git show FETCH_HEAD:publication.json > "$STATE/publication.json"; then
-            published="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["source"]["revision"])' "$STATE/publication.json" || true)"
-            revision="$(git rev-parse HEAD)"
-            if [ -n "$published" ] \
-              && git cat-file -e "${published}^{commit}" \
-              && git diff --quiet "$published" HEAD -- roadmap .github/workflows/roadmap-publish.yml; then
-              echo "publisher inputs at HEAD are those of the published ${published}"
-              revision="$published"
+            created=""
+            if [ "$EVENT" != schedule ]; then
+              created="$(gh api "$RUN_URL" --jq .created_at)"
             fi
-            if [ "$EVENT" = schedule ]; then
-              bound=(--max-age 5400)
-            else
-              bound=(--observed-after "$(gh api "$RUN_URL" --jq .created_at)")
-            fi
-            if python3 roadmap/scripts/publication_order.py fresh "$STATE" --revision "$revision" "${bound[@]}"; then
+            if python3 roadmap/scripts/publication_order.py decide "$STATE" \
+                 --event "$EVENT" ${created:+--run-created "$created"}; then
               capture=false
             fi
           else
@@ -135,6 +128,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cost="$(python3 roadmap/scripts/publish.py cost)"
+          # Two reset windows at most: the budget is shared with every other
+          # workflow here, and a run that loses the race twice says so and
+          # leaves the publication to the scheduled net rather than being
+          # killed silently by the job timeout.
+          deadline=$(( $(date +%s) + 75 * 60 ))
           while :; do
             read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')
             echo "capture cost ${cost} GETs; core budget ${remaining}/${limit}, resets $(date -u -d "@${reset}" +%H:%M:%SZ)"
@@ -151,9 +149,17 @@ jobs:
               echo "capture=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::warning::${remaining}/${limit} GETs left after 75 minutes of waiting, a capture needs ${cost}; not captured. roadmap-state keeps its older capturedAt; the next scheduled run that finds budget captures."
+              echo "capture=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             wait=$(( reset - $(date +%s) + 5 ))
+            # Never poll faster than once a minute: /rate_limit is free of
+            # quota but not of GitHub's secondary (request-rate) limits.
+            [ "$wait" -lt 60 ] && wait=60
             echo "::notice::${remaining}/${limit} GETs left, a capture needs ${cost}; waiting ${wait}s for the reset"
-            sleep "$(( wait > 0 ? wait : 5 ))"
+            sleep "$wait"
           done
 
       # Manifests and evaluator come from the same checkout, so the source and
