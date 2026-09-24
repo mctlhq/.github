@@ -658,7 +658,7 @@
           "repository": "mctlhq/mctl-gitops"
         }
       ],
-      "updatedAt": "2026-09-12T11:11:47Z"
+      "updatedAt": "2026-09-24T06:18:16Z"
     },
     {
       "blockedBy": [],
@@ -2598,7 +2598,7 @@
       "state": "closed",
       "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-09-22T07:41:54Z"
+      "updatedAt": "2026-09-24T06:18:13Z"
     },
     {
       "blockedBy": [
@@ -3906,7 +3906,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-24T06:14:04Z",
+    "capturedAt": "2026-09-24T06:20:38Z",
     "mode": "live-capture"
   }
 }
