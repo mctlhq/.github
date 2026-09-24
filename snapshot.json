@@ -424,6 +424,10 @@
         {
           "number": 1277,
           "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 473,
+          "repository": "mctlhq/mctl-agents"
         }
       ],
       "updatedAt": "2026-09-11T22:48:20Z"
@@ -1850,9 +1854,21 @@
       "updatedAt": "2026-09-23T20:23:08Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 1277,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 571,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 42,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 473,
         "repository": "mctlhq/mctl-agents"
@@ -3890,7 +3906,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-23T23:56:37Z",
+    "capturedAt": "2026-09-24T00:10:18Z",
     "mode": "live-capture"
   }
 }
