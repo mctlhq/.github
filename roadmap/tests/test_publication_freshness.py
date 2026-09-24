@@ -571,11 +571,27 @@ class BudgetStepTest(unittest.TestCase):
         # Three reads, a minute apart: the slot is back in minutes, not 75.
         self.assertLessEqual(ended, 3 * publication_order.BUDGET_POLL_FLOOR_SECONDS)
 
+    def test_the_workflow_defines_the_window_nowhere_else(self) -> None:
+        # The deadline invariant is proven over BUDGET_WAIT_SECONDS; a second
+        # copy of the window in the shell could drift past the job timeout.
+        import yaml
+
+        workflow = yaml.safe_load(
+            (ROADMAP.parent / ".github" / "workflows" / "roadmap-publish.yml").read_text(encoding="utf-8")
+        )
+        build = workflow["jobs"]["build"]
+        step = next(s for s in build["steps"] if s.get("id") == "budget")["run"]
+        self.assertIn("--start", step)
+        self.assertNotIn("--deadline", step)
+        self.assertNotRegex(step, r"75 \* 60|4500")
+        # The job timeout must leave room for the whole window plus a capture.
+        self.assertGreater(build["timeout-minutes"] * 60, publication_order.BUDGET_WAIT_SECONDS + 15 * 60)
+
     def test_the_cli_prints_one_action_and_treats_garbage_as_unreadable(self) -> None:
         def cli(*extra: str) -> str:
             with redirect_stdout(StringIO()) as out, redirect_stderr(StringIO()):
                 code = publication_order.main(
-                    ["budget", "--event", "push", "--now", "0", "--deadline", "4500",
+                    ["budget", "--event", "push", "--now", "0", "--start", "0",
                      "--cost", "545", *extra]
                 )
             self.assertEqual(0, code)

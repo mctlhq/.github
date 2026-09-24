@@ -135,18 +135,23 @@ jobs:
           cost="$(python3 roadmap/scripts/publish.py cost)"
           # Every decision is publication_order.py budget (tested); the shell
           # only reads /rate_limit and sleeps.
-          deadline=$(( $(date +%s) + 75 * 60 ))
+          # The window itself is BUDGET_WAIT_SECONDS, applied to --start.
+          start=$(date +%s)
           failures=0
           while :; do
             budget=()
-            if line="$(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')"; then
-              read -r limit remaining reset <<< "$line" || true
-              budget=(--limit "${limit:-}" --remaining "${remaining:-}" --reset "${reset:-}")
+            line="$(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')" || line=""
+            # Only three integers are a budget; anything else, including a 200
+            # whose fields came back null, is one more consecutive failed read.
+            if [[ "$line" =~ ^[0-9]+\ [0-9]+\ [0-9]+$ ]]; then
+              read -r limit remaining reset <<< "$line"
+              budget=(--limit "$limit" --remaining "$remaining" --reset "$reset")
+              failures=0
             else
               failures=$(( failures + 1 ))
             fi
             action="$(python3 roadmap/scripts/publication_order.py budget \
-              --event "$EVENT" --now "$(date +%s)" --deadline "$deadline" \
+              --event "$EVENT" --now "$(date +%s)" --start "$start" \
               --cost "$cost" --failures "$failures" "${budget[@]}")"
             case "$action" in
               capture) echo "capture=true" >> "$GITHUB_OUTPUT"; exit 0 ;;

@@ -28,11 +28,13 @@ elsewhere on main (a profile, another workflow) has changed nothing that is
 published, and freshness is judged against the published revision instead of
 HEAD. Same exit codes as `fresh`.
 
-`budget --event E --now T --deadline T [--limit L --remaining R --reset T]
+`budget --event E --now T --start T [--limit L --remaining R --reset T]
 --cost C --failures N` is one step of the build job's wait for API budget. It
 prints exactly one action -- `capture`, `skip`, `fail` or `sleep SECONDS` --
-so the shell only calls `gh api` and sleeps. Omitting the three budget fields
-means the budget could not be read. See `budget_step`.
+so the shell only calls `gh api` and sleeps. The deadline is --start plus
+BUDGET_WAIT_SECONDS, so the window is defined once. Omitting the three budget
+fields means the budget could not be read, and --failures counts consecutive
+unreadable reads. See `budget_step`.
 
 Standard library only: the publish job that runs `newer` holds the only write
 token of the workflow and installs no package.
@@ -293,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     step = sub.add_parser("budget", help="one step of the wait for API budget")
     step.add_argument("--event", required=True)
     step.add_argument("--now", type=int, required=True)
-    step.add_argument("--deadline", type=int, required=True)
+    step.add_argument("--start", type=int, required=True, help="epoch seconds the wait began")
     step.add_argument("--cost", type=int, required=True)
     step.add_argument("--failures", type=int, default=0)
     # Strings, not ints: a truncated or garbled /rate_limit answer is an
@@ -308,7 +310,8 @@ def main(argv: list[str] | None = None) -> int:
             return int(value) if value is not None and value.isdigit() else None
 
         action, seconds, message = budget_step(
-            event=args.event, now=args.now, deadline=args.deadline, cost=args.cost,
+            event=args.event, now=args.now, deadline=args.start + BUDGET_WAIT_SECONDS,
+            cost=args.cost,
             failures=args.failures, limit=_int(args.limit),
             remaining=_int(args.remaining), reset=_int(args.reset),
         )
