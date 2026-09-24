@@ -57,11 +57,19 @@ spec:
       issue:
         repository: mctlhq/mctl-agents
         number: 195
+      # The producer code is merged (#466); what remains is live evidence: one
+      # real DevLoop rendered end to end in a trace backend. That needs a
+      # running backend (live-bakeoff) and a collector that keeps the token
+      # counts (mctl-gitops#1332), so without these edges the graph reported
+      # this item as ready while no autonomous work on it was possible.
       dependsOn:
         - telemetry-gateway
+        - live-bakeoff
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 196
+        - repository: mctlhq/mctl-gitops
+          number: 1332
 
     - id: agent-traces
       phase: tracing
