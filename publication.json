@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "7e16f4be8f4b19b54d93e6a1f5b54992a46851d4"
+    "revision": "4c18b2d5aa517ab3c6c4bf151de4a710f8121d47"
   },
   "files": {
     "health.json": {
-      "sha256": "99c55ba985fc8916ac8bb2fd612839dced5dc05b376057a471cfa19b0cbbc664"
+      "sha256": "39217558b8681da750966602c1e3e2c50f0324238e38205bbccd9af225673bdd"
     },
     "ready-set.json": {
-      "sha256": "5f5670088865178f831cbb492e123288f0107da450bff0464200203099a3228a"
+      "sha256": "bca856969e79b43491a36897fd1cf0941360820d76cb50b96331f251a9566e78"
     },
     "snapshot.json": {
-      "sha256": "062f90ee4ed5eaee130ecabb4ecf5dfc00bbfb4b2ac077fc0a1d024cb1604fd7"
+      "sha256": "22d9bf4ab7271de41824dcc3b9d9a77849f89915f3461464b96c1abd414529c2"
     }
   },
   "kind": "RoadmapPublication",
@@ -144,7 +144,7 @@
         "title": "Vendor-neutral execution tracing for agents and DevLoop"
       },
       "path": "roadmap/epics/observability.yaml",
-      "sha256": "95a4158421bd774a632fbb8c12de0d6062e740cd03e3a30dd01b63d0a5fc7a6a"
+      "sha256": "6884e389d140027664781aa32a06715c89723826041f4bcfb9541a63c6672494"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-24T11:57:30Z",
+    "capturedAt": "2026-09-24T13:49:07Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "7e16f4be8f4b19b54d93e6a1f5b54992a46851d4"
+    "revision": "4c18b2d5aa517ab3c6c4bf151de4a710f8121d47"
   }
 }
