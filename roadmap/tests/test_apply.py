@@ -903,6 +903,41 @@ class ApplyCliTest(ApplyTestBase):
             apply_module.WRITE_FAILED, document["operations"][0]["reason"]
         )
 
+    def test_audit_inputs_the_record_would_reject_refuse_before_any_write(self) -> None:
+        # A proposal id with '#' (an issue reference) is not a valid audit id.
+        # The record is assembled only after the writes, so the check has to
+        # run first, or writes land with no record of them.
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        for extra in (
+            ["--proposal-id", "mctlhq/.github#132"],
+            ["--proposal-id", "ok", "--proposal-url", "http://insecure.example"],
+            ["--actor", "two words"],
+        ):
+            with self.subTest(extra=extra):
+                code, rendered, writes = self._run(snapshot, ["--execute", *extra])
+                self.assertEqual(apply_module.EXIT_ERROR, code)
+                self.assertEqual([], writes)
+                self.assertEqual("", rendered)
+
+    def test_a_valid_proposal_reference_is_recorded(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        code, rendered, writes = self._run(
+            snapshot,
+            [
+                "--execute",
+                "--proposal-id",
+                "mctlhq/.github/pull/132",
+                "--proposal-url",
+                "https://github.com/mctlhq/.github/pull/132",
+            ],
+        )
+        self.assertEqual(apply_module.EXIT_OK, code)
+        self.assertEqual(1, len(writes))
+        self.assertEqual(
+            {"id": "mctlhq/.github/pull/132", "url": "https://github.com/mctlhq/.github/pull/132"},
+            json.loads(rendered)["audit"]["proposal"],
+        )
+
     def test_live_without_a_token_is_an_auth_error_not_a_refusal(self) -> None:
         with mock.patch.dict(os.environ, {"GITHUB_TOKEN": "", "GH_TOKEN": ""}):
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):

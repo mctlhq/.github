@@ -563,6 +563,27 @@ def _issue_id_resolver(path: str | None):
     return resolve
 
 
+def _check_audit_inputs(
+    actor: str, proposal: dict[str, Any] | None, result_schema: dict[str, Any]
+) -> None:
+    """Raise ApplyError unless `result` will accept this actor and proposal.
+
+    Validated against the same schema `result` uses, not a copy of its
+    patterns, so the two cannot drift apart.
+    """
+
+    audit = result_schema["$defs"]["audit"]["properties"]
+    for field, value in (("actor", actor), ("proposal", proposal)):
+        subschema = {"$defs": result_schema["$defs"], **audit[field]}
+        errors = validate.schema_errors(value, subschema)
+        if errors:
+            flag = "--actor" if field == "actor" else "--proposal-id/--proposal-url"
+            raise ApplyError(
+                f"{flag} would not fit the audit record ({'; '.join(errors)}); "
+                "refusing before any write rather than after"
+            )
+
+
 def _proposal(args: argparse.Namespace) -> dict[str, Any] | None:
     if args.proposal_url and not args.proposal_id:
         raise ApplyError("--proposal-url requires --proposal-id")
@@ -922,6 +943,11 @@ def _run(
         selected = sorted(corpus)
 
     proposal = _proposal(args)
+    # Operator-supplied audit fields are held to the result schema here, before
+    # any source is built and so before any write: the result document is only
+    # assembled after the writes, and a value it then rejects would leave
+    # writes that landed with no record of them.
+    _check_audit_inputs(args.actor, proposal, result_schema)
     mode = MODE_EXECUTE if args.execute else MODE_PLAN_ONLY
 
     snapshot: dict[str, Any] | None = None
