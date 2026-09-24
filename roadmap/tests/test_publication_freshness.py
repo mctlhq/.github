@@ -668,12 +668,12 @@ class BudgetStepTest(unittest.TestCase):
             calls.write_text("", encoding="utf-8")
             (fake / "gh").write_text(
                 "#!/bin/sh\n"
-                'echo x >> "$FAKE_CALLS"\n'
+                'printf "%s\\n" "$*" >> "$FAKE_CALLS"\n'
                 'n=$(wc -l < "$FAKE_CALLS" | tr -d " ")\n'
                 'if [ "$n" -gt "$(wc -l < "$FAKE_READINGS" | tr -d " ")" ]; then echo "5000 5000 1"; exit 0; fi\n'
                 'line=$(sed -n "${n}p" "$FAKE_READINGS")\n'
                 'if [ -z "$line" ]; then exit 1; fi\n'
-                'echo "$line"\n',
+                'printf "%s\\n" "$line"\n',
                 encoding="utf-8",
             )
             (fake / "sleep").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
@@ -693,7 +693,11 @@ class BudgetStepTest(unittest.TestCase):
                 ["bash", "-e", "-c", step], cwd=ROADMAP.parent, env=env,
                 check=True, capture_output=True, timeout=120,
             )
-            return len(calls.read_text(encoding="utf-8").splitlines()), output.read_text(encoding="utf-8").strip()
+            invocations = calls.read_text(encoding="utf-8").splitlines()
+            # What is read, not only how often: the core pool, as three fields.
+            for invocation in invocations:
+                self.assertTrue(invocation.startswith("api rate_limit --jq .resources.core |"), invocation)
+            return len(invocations), output.read_text(encoding="utf-8").strip()
 
     def test_the_workflow_loop_gives_up_after_the_read_cap(self) -> None:
         # The shell must feed the CLI's FAILURES back as the next --failures.
@@ -707,7 +711,7 @@ class BudgetStepTest(unittest.TestCase):
     def test_the_workflow_loop_counts_only_consecutive_unreadable_reads(self) -> None:
         # A good read in between starts the count again, so two separate
         # glitches never add up to the cap: the run reaches the budget.
-        reads, output = self._run_workflow_loop(["", "null null null", "1000 10 1", "", ""])
+        reads, output = self._run_workflow_loop(["", "null null null", "5000 10 1", "", ""])
         self.assertEqual("capture=true", output)
         self.assertEqual(6, reads)
 
