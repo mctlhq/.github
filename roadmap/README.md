@@ -602,7 +602,8 @@ budget allows:
 | | GETs |
 |---|---|
 | one capture (`publish.py cost`) = repositories + 4 x issues (issue, `/parent`, `/sub_issues`, `/dependencies/blocked_by`) | 9 + 4 x 134 = **545** on 2026-09-23 |
-| `GITHUB_TOKEN` primary budget, per repository per hour (GitHub docs) | 1000 |
+| `GITHUB_TOKEN` primary budget, per repository per hour (GitHub docs; the planning basis) | 1000 |
+| what `GET /rate_limit` reported to the build job on 2026-09-24 (run 35939562422) | 5000, and still 5000 after a 549-GET capture |
 | a cron every 30 minutes | 1090 / hour -- over budget before any event |
 | hourly net, captured every other hour in a quiet period | ~273 / hour on average |
 
@@ -614,8 +615,11 @@ next tick is as good. A pushed or dispatched run waits for the reset, holding th
 concurrency slot, so requests that arrive meanwhile coalesce into the single pending run
 behind it. It polls at most once a minute and waits at most 75 minutes (two reset
 windows). After that it leaves a `::warning::` and hands the publication to the next
-scheduled run that finds budget, rather than being killed silently by the job timeout. The step logs the limit it saw, so the documented 1000 is checked against the
-real one on every run.
+scheduled run that finds budget, rather than being killed silently by the job timeout. The step logs the budget it saw before and after the capture. The first logged run
+(2026-09-24) saw 5000/5000 both times, so `/rate_limit` does not show what a capture
+spends. The preflight still refuses a budget it can see is short. The plan above keeps
+the documented 1000, because it is the lower figure, and it does not rely on the reading
+going down.
 
 Two guards keep a publication from ever looking fresher than its observation:
 
