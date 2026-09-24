@@ -28,13 +28,16 @@ elsewhere on main (a profile, another workflow) has changed nothing that is
 published, and freshness is judged against the published revision instead of
 HEAD. Same exit codes as `fresh`.
 
-`budget --event E --now T --start T [--limit L --remaining R --reset T]
---cost C --failures N` is one step of the build job's wait for API budget. It
-prints exactly one action -- `capture`, `skip`, `fail` or `sleep SECONDS` --
-so the shell only calls `gh api` and sleeps. The deadline is --start plus
-BUDGET_WAIT_SECONDS, so the window is defined once. Omitting the three budget
-fields means the budget could not be read, and --failures counts consecutive
-unreadable reads. See `budget_step`.
+`budget --event E --now T --start T --cost C --failures N --reading "L R T"`
+is one step of the build job's wait for API budget. --reading is the raw
+`limit remaining reset` line from `/rate_limit`, or empty when the read failed;
+only three unsigned integers are a budget (`parse_reading`). --failures is the
+count of consecutive unreadable reads before this one. It prints one line,
+`ACTION SECONDS FAILURES`: the action (`capture`, `skip`, `fail` or `sleep`),
+the seconds to sleep (0 unless `sleep`), and the failure count to pass to the
+next step. The shell therefore only calls `gh api` and sleeps. The deadline is
+--start plus BUDGET_WAIT_SECONDS, so the window is defined once. See
+`budget_step`.
 
 Standard library only: the publish job that runs `newer` holds the only write
 token of the workflow and installs no package.
@@ -44,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -208,6 +212,24 @@ BUDGET_POLL_FLOOR_SECONDS = 60
 BUDGET_READ_ATTEMPTS = 3
 
 
+_READING = re.compile(r"([0-9]+) ([0-9]+) ([0-9]+)")
+
+
+def parse_reading(reading: str) -> tuple[int, int, int] | None:
+    """`limit remaining reset` from one /rate_limit read, or None.
+
+    Only exactly three unsigned ASCII integers separated by single spaces are
+    a budget. An empty line (the read failed), `null null null` (a 200 whose
+    fields were missing) and anything truncated or extended are unreadable.
+    """
+
+    match = _READING.fullmatch(reading)
+    if match is None:
+        return None
+    limit, remaining, reset = (int(group) for group in match.groups())
+    return limit, remaining, reset
+
+
 def budget_step(
     *,
     event: str,
@@ -297,27 +319,25 @@ def main(argv: list[str] | None = None) -> int:
     step.add_argument("--now", type=int, required=True)
     step.add_argument("--start", type=int, required=True, help="epoch seconds the wait began")
     step.add_argument("--cost", type=int, required=True)
-    step.add_argument("--failures", type=int, default=0)
-    # Strings, not ints: a truncated or garbled /rate_limit answer is an
+    step.add_argument("--failures", type=int, default=0,
+                      help="consecutive unreadable reads before this one")
+    # A string, parsed here: a truncated or garbled /rate_limit answer is an
     # unreadable budget, not a usage error that fails the step.
-    step.add_argument("--limit")
-    step.add_argument("--remaining")
-    step.add_argument("--reset")
+    step.add_argument("--reading", default="", help="raw `limit remaining reset` line")
     args = parser.parse_args(argv)
 
     if args.command == "budget":
-        def _int(value: str | None) -> int | None:
-            return int(value) if value is not None and value.isdigit() else None
-
+        budget = parse_reading(args.reading)
+        failures = 0 if budget is not None else args.failures + 1
+        limit, remaining, reset = budget if budget is not None else (None, None, None)
         action, seconds, message = budget_step(
             event=args.event, now=args.now, deadline=args.start + BUDGET_WAIT_SECONDS,
-            cost=args.cost,
-            failures=args.failures, limit=_int(args.limit),
-            remaining=_int(args.remaining), reset=_int(args.reset),
+            cost=args.cost, failures=failures,
+            limit=limit, remaining=remaining, reset=reset,
         )
         if message:
             print(message, file=sys.stderr)
-        print(f"sleep {seconds}" if action == "sleep" else action)
+        print(f"{action} {seconds} {failures}")
         return EXIT_YES
 
     if args.command == "decide":

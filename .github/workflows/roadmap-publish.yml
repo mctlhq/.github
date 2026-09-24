@@ -28,7 +28,8 @@ name: Roadmap publication
 # One capture costs `publish.py cost` GETs (545 on 2026-09-23: 9 repositories +
 # 4 x 134 issues). The build job reads the token's remaining budget first and
 # never starts a capture it cannot finish: a scheduled run skips, a pushed or
-# dispatched one waits for the reset (at most 75 minutes).
+# dispatched one waits for the reset (at most BUDGET_WAIT_SECONDS in
+# roadmap/scripts/publication_order.py).
 
 on:
   schedule:
@@ -56,7 +57,8 @@ jobs:
   build:
     if: github.repository == 'mctlhq/.github'
     runs-on: ubuntu-latest
-    # The budget wait ends itself by 75 minutes; this is only a backstop.
+    # The budget wait ends itself after BUDGET_WAIT_SECONDS; this is only a
+    # backstop, held above that window plus a capture by a test.
     timeout-minutes: 100
     permissions:
       contents: read
@@ -122,9 +124,10 @@ jobs:
       # publishes nothing and spends what the next run needs, so none starts
       # without the budget to finish. A scheduled run then skips: the next
       # tick is as good. A push or dispatch waits for the reset instead, for
-      # at most 75 minutes, holding the concurrency slot, so every request
-      # that arrives meanwhile coalesces into the one pending run behind it.
-      # An unreadable budget is retried at most three times.
+      # at most BUDGET_WAIT_SECONDS, holding the concurrency slot, so every
+      # request that arrives meanwhile coalesces into the one pending run
+      # behind it. An unreadable budget is read at most BUDGET_READ_ATTEMPTS
+      # times in a row.
       - name: Wait until the API budget covers one capture
         id: budget
         if: steps.due.outputs.capture == 'true'
@@ -133,30 +136,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cost="$(python3 roadmap/scripts/publish.py cost)"
-          # Every decision is publication_order.py budget (tested); the shell
-          # only reads /rate_limit and sleeps.
-          # The window itself is BUDGET_WAIT_SECONDS, applied to --start.
+          # Every decision, including whether a /rate_limit answer is a
+          # budget at all, is publication_order.py budget (tested); the shell
+          # only reads /rate_limit and sleeps. The window is
+          # BUDGET_WAIT_SECONDS from --start, which is set once, here.
           start=$(date +%s)
           failures=0
           while :; do
-            budget=()
             line="$(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')" || line=""
-            # Only three integers are a budget; anything else, including a 200
-            # whose fields came back null, is one more consecutive failed read.
-            if [[ "$line" =~ ^[0-9]+\ [0-9]+\ [0-9]+$ ]]; then
-              read -r limit remaining reset <<< "$line"
-              budget=(--limit "$limit" --remaining "$remaining" --reset "$reset")
-              failures=0
-            else
-              failures=$(( failures + 1 ))
-            fi
-            action="$(python3 roadmap/scripts/publication_order.py budget \
+            step="$(python3 roadmap/scripts/publication_order.py budget \
               --event "$EVENT" --now "$(date +%s)" --start "$start" \
-              --cost "$cost" --failures "$failures" "${budget[@]}")"
+              --cost "$cost" --failures "$failures" --reading "$line")"
+            read -r action seconds failures <<< "$step"
             case "$action" in
               capture) echo "capture=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
               skip) echo "capture=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
-              "sleep "*) sleep "${action#sleep }" ;;
+              sleep) sleep "$seconds" ;;
               *) exit 1 ;;
             esac
           done
