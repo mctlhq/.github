@@ -651,24 +651,76 @@ class BudgetStepTest(unittest.TestCase):
         self.assertEqual(["sleep", "60", "2"], self._cli("--failures", "1"))
         self.assertEqual(["skip", "0", "3"], self._cli("--failures", "2"))
 
-    def test_the_shell_loop_counts_only_consecutive_unreadable_reads(self) -> None:
-        # What the workflow's loop does with the CLI's output: feed FAILURES
-        # back in. A good read in between starts the count again, so two
-        # separate glitches never add up to the three that give up.
-        def loop(readings: list[str]) -> list[list[str]]:
-            failures, steps = "0", []
-            for reading in readings:
-                step = self._cli("--failures", failures, "--reading", reading)
-                steps.append(step)
-                failures = step[2]
-                if step[0] != "sleep":
-                    break
-            return steps
+    def _run_workflow_loop(self, readings: list[str], event: str = "push") -> tuple[int, str]:
+        """Run the workflow's own budget step in bash, against a fake `gh`.
 
-        steps = loop(["", "null null null", "1000 10 60", "", "", "1000 900 60"])
-        self.assertEqual(["1", "2", "0", "1", "2", "0"], [s[2] for s in steps])
-        self.assertEqual("capture", steps[-1][0])
-        self.assertEqual(["sleep", "sleep", "skip"], [s[0] for s in loop(["", "", "", ""])])
+        The fake answers `readings` in order, one per `gh api rate_limit`,
+        then an ample budget, so a loop that ignores the read cap still ends
+        (by capturing) instead of polling until the real deadline. `sleep`
+        is a no-op. Returns (reads made, the step's `capture=` output)."""
+        _, step = self._budget_step_run()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            fake = tmp_path / "bin"
+            fake.mkdir()
+            (tmp_path / "readings").write_text("".join(f"{r}\n" for r in readings), encoding="utf-8")
+            calls = tmp_path / "calls"
+            calls.write_text("", encoding="utf-8")
+            (fake / "gh").write_text(
+                "#!/bin/sh\n"
+                'echo x >> "$FAKE_CALLS"\n'
+                'n=$(wc -l < "$FAKE_CALLS" | tr -d " ")\n'
+                'if [ "$n" -gt "$(wc -l < "$FAKE_READINGS" | tr -d " ")" ]; then echo "5000 5000 1"; exit 0; fi\n'
+                'line=$(sed -n "${n}p" "$FAKE_READINGS")\n'
+                'if [ -z "$line" ]; then exit 1; fi\n'
+                'echo "$line"\n',
+                encoding="utf-8",
+            )
+            (fake / "sleep").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            for tool in fake.iterdir():
+                tool.chmod(0o755)
+            output = tmp_path / "output"
+            output.write_text("", encoding="utf-8")
+            env = {
+                **os.environ,
+                "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+                "EVENT": event,
+                "GITHUB_OUTPUT": str(output),
+                "FAKE_CALLS": str(calls),
+                "FAKE_READINGS": str(tmp_path / "readings"),
+            }
+            subprocess.run(
+                ["bash", "-e", "-c", step], cwd=ROADMAP.parent, env=env,
+                check=True, capture_output=True, timeout=120,
+            )
+            return len(calls.read_text(encoding="utf-8").splitlines()), output.read_text(encoding="utf-8").strip()
+
+    def test_the_workflow_loop_gives_up_after_the_read_cap(self) -> None:
+        # The shell must feed the CLI's FAILURES back as the next --failures.
+        # If it dropped or re-zeroed it, the cap would never trip and a
+        # pushed run would poll an unreadable /rate_limit for the whole
+        # window: here the fake then answers with budget and the run captures.
+        reads, output = self._run_workflow_loop(["", "", "", ""])
+        self.assertEqual("capture=false", output)
+        self.assertEqual(publication_order.BUDGET_READ_ATTEMPTS, reads)
+
+    def test_the_workflow_loop_counts_only_consecutive_unreadable_reads(self) -> None:
+        # A good read in between starts the count again, so two separate
+        # glitches never add up to the cap: the run reaches the budget.
+        reads, output = self._run_workflow_loop(["", "null null null", "1000 10 1", "", ""])
+        self.assertEqual("capture=true", output)
+        self.assertEqual(6, reads)
+
+    def test_a_dash_leading_reading_is_unreadable_not_a_usage_error(self) -> None:
+        # Passed as --reading=VALUE, argparse cannot mistake it for an option.
+        reads, output = self._run_workflow_loop(["-bad", "-bad", "-bad"])
+        self.assertEqual("capture=false", output)
+        self.assertEqual(3, reads)
+
+    def test_a_scheduled_run_skips_on_the_first_unreadable_read(self) -> None:
+        reads, output = self._run_workflow_loop([""], event="schedule")
+        self.assertEqual("capture=false", output)
+        self.assertEqual(1, reads)
 
 
 class PublisherInputsTest(unittest.TestCase):

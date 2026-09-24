@@ -619,7 +619,8 @@ sentence to). After that it leaves a `::warning::` and hands the publication to 
 next scheduled run that finds budget, rather than being killed silently by the job
 timeout. An unreadable budget -- a failed read, or anything other than three
 integers -- is read at most 3 times in a row (`BUDGET_READ_ATTEMPTS`) before the run
-gives up the same way.
+gives up the same way. A scheduled run skips on the first unreadable read, as it does on
+a short budget.
 
 The step logs the budget it saw before and after the capture. The first logged run
 (2026-09-24) saw 5000/5000 both times, so `/rate_limit` does not show what a capture

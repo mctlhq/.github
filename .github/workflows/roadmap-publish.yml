@@ -146,7 +146,7 @@ jobs:
             line="$(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')" || line=""
             step="$(python3 roadmap/scripts/publication_order.py budget \
               --event "$EVENT" --now "$(date +%s)" --start "$start" \
-              --cost "$cost" --failures "$failures" --reading "$line")"
+              --cost "$cost" --failures "$failures" --reading="$line")"
             read -r action seconds failures <<< "$step"
             case "$action" in
               capture) echo "capture=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
