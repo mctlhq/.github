@@ -18,6 +18,7 @@ from __future__ import annotations
 import http.client
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -415,7 +416,7 @@ class PublicationOrderTest(unittest.TestCase):
             if line.startswith(("import ", "from "))
         }
         self.assertLessEqual(
-            imported, {"__future__", "argparse", "json", "subprocess", "sys", "datetime", "pathlib"}
+            imported, {"__future__", "argparse", "json", "re", "subprocess", "sys", "datetime", "pathlib"}
         )
 
 
@@ -571,38 +572,159 @@ class BudgetStepTest(unittest.TestCase):
         # Three reads, a minute apart: the slot is back in minutes, not 75.
         self.assertLessEqual(ended, 3 * publication_order.BUDGET_POLL_FLOOR_SECONDS)
 
+    WORKFLOW = ROADMAP.parent / ".github" / "workflows" / "roadmap-publish.yml"
+
+    def _budget_step_run(self) -> tuple[dict, str]:
+        import yaml
+
+        workflow = yaml.safe_load(self.WORKFLOW.read_text(encoding="utf-8"))
+        build = workflow["jobs"]["build"]
+        return build, next(s for s in build["steps"] if s.get("id") == "budget")["run"]
+
     def test_the_workflow_defines_the_window_nowhere_else(self) -> None:
         # The deadline invariant is proven over BUDGET_WAIT_SECONDS; a second
         # copy of the window in the shell could drift past the job timeout.
-        import yaml
-
-        workflow = yaml.safe_load(
-            (ROADMAP.parent / ".github" / "workflows" / "roadmap-publish.yml").read_text(encoding="utf-8")
-        )
-        build = workflow["jobs"]["build"]
-        step = next(s for s in build["steps"] if s.get("id") == "budget")["run"]
-        self.assertIn("--start", step)
+        build, step = self._budget_step_run()
+        self.assertIn('--start "$start"', step)
         self.assertNotIn("--deadline", step)
         self.assertNotRegex(step, r"75 \* 60|4500")
+        # Nor is it restated in the workflow's prose, where it would go stale.
+        self.assertNotRegex(self.WORKFLOW.read_text(encoding="utf-8"), r"\b75\s*min")
         # The job timeout must leave room for the whole window plus a capture.
         self.assertGreater(build["timeout-minutes"] * 60, publication_order.BUDGET_WAIT_SECONDS + 15 * 60)
 
-    def test_the_cli_prints_one_action_and_treats_garbage_as_unreadable(self) -> None:
-        def cli(*extra: str) -> str:
-            with redirect_stdout(StringIO()) as out, redirect_stderr(StringIO()):
-                code = publication_order.main(
-                    ["budget", "--event", "push", "--now", "0", "--start", "0",
-                     "--cost", "545", *extra]
-                )
-            self.assertEqual(0, code)
-            return out.getvalue().strip()
+    def test_the_window_starts_once_before_the_loop(self) -> None:
+        # The deadline is --start + BUDGET_WAIT_SECONDS. If start were taken
+        # inside the loop, every poll would push the deadline back and the
+        # wait would end only at the job timeout; every other pin above would
+        # still hold.
+        _, step = self._budget_step_run()
+        lines = [line.strip() for line in step.splitlines()]
+        starts = [i for i, line in enumerate(lines) if line.startswith("start=")]
+        self.assertEqual(1, len(starts), "start is assigned exactly once")
+        self.assertLess(starts[0], lines.index("while :; do"))
+        code = [line for line in lines if not line.startswith("#")]
+        self.assertEqual(1, sum(line.count("--start") for line in code))
+        self.assertIn('--start "$start"', step)
 
-        self.assertEqual("capture", cli("--limit", "1000", "--remaining", "900", "--reset", "60"))
-        self.assertEqual("sleep 65", cli("--limit", "1000", "--remaining", "10", "--reset", "60"))
+    def test_the_readme_states_the_window_and_the_read_cap_the_code_has(self) -> None:
+        readme = " ".join((ROADMAP / "README.md").read_text(encoding="utf-8").split())
+        waits = re.search(r"waits at most (\d+) minutes \(two reset windows; `BUDGET_WAIT_SECONDS`", readme)
+        reads = re.search(r"is read at most (\d+) times in a row \(`BUDGET_READ_ATTEMPTS`\)", readme)
+        self.assertIsNotNone(waits)
+        self.assertIsNotNone(reads)
+        self.assertEqual(publication_order.BUDGET_WAIT_SECONDS, int(waits.group(1)) * 60)
+        self.assertEqual(publication_order.BUDGET_READ_ATTEMPTS, int(reads.group(1)))
+
+    def test_only_three_unsigned_integers_are_a_budget(self) -> None:
+        self.assertEqual((1000, 900, 1700000000), publication_order.parse_reading("1000 900 1700000000"))
+        for garbage in (
+            "",                      # the read failed
+            "null null null",        # a 200 whose fields were missing
+            "1000 900",              # truncated
+            "1000 900 60 1",         # extended
+            " 1000 900 60",
+            "1000  900 60",
+            "1000 900 60\n",
+            "-1 900 60",
+            "1000 9.5 60",
+            "\u0661\u0662 900 60",   # non-ASCII digits
+        ):
+            with self.subTest(reading=garbage):
+                self.assertIsNone(publication_order.parse_reading(garbage))
+
+    @staticmethod
+    def _cli(*extra: str) -> list[str]:
+        with redirect_stdout(StringIO()) as out, redirect_stderr(StringIO()):
+            code = publication_order.main(
+                ["budget", "--event", "push", "--now", "0", "--start", "0",
+                 "--cost", "545", *extra]
+            )
+        assert code == 0
+        return out.getvalue().split()
+
+    def test_the_cli_prints_action_seconds_and_the_next_failure_count(self) -> None:
+        self.assertEqual(["capture", "0", "0"], self._cli("--reading", "1000 900 60"))
+        self.assertEqual(["sleep", "65", "0"], self._cli("--reading", "1000 10 60"))
         # A truncated answer is not a crash under errexit: it is a retry.
-        self.assertEqual("sleep 60", cli("--limit", "1000", "--remaining", "", "--reset", "6"))
-        self.assertEqual("sleep 60", cli("--failures", "1"))
-        self.assertEqual("skip", cli("--failures", "3"))
+        self.assertEqual(["sleep", "60", "1"], self._cli("--reading", "1000  6"))
+        self.assertEqual(["sleep", "60", "2"], self._cli("--failures", "1"))
+        self.assertEqual(["skip", "0", "3"], self._cli("--failures", "2"))
+
+    def _run_workflow_loop(self, readings: list[str], event: str = "push") -> tuple[int, str]:
+        """Run the workflow's own budget step in bash, against a fake `gh`.
+
+        The fake answers `readings` in order, one per `gh api rate_limit`,
+        then an ample budget, so a loop that ignores the read cap still ends
+        (by capturing) instead of polling until the real deadline. `sleep`
+        is a no-op. Returns (reads made, the step's `capture=` output)."""
+        _, step = self._budget_step_run()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            fake = tmp_path / "bin"
+            fake.mkdir()
+            (tmp_path / "readings").write_text("".join(f"{r}\n" for r in readings), encoding="utf-8")
+            calls = tmp_path / "calls"
+            calls.write_text("", encoding="utf-8")
+            (fake / "gh").write_text(
+                "#!/bin/sh\n"
+                'printf "%s\\n" "$*" >> "$FAKE_CALLS"\n'
+                'n=$(wc -l < "$FAKE_CALLS" | tr -d " ")\n'
+                'if [ "$n" -gt "$(wc -l < "$FAKE_READINGS" | tr -d " ")" ]; then echo "5000 5000 1"; exit 0; fi\n'
+                'line=$(sed -n "${n}p" "$FAKE_READINGS")\n'
+                'if [ -z "$line" ]; then exit 1; fi\n'
+                'printf "%s\\n" "$line"\n',
+                encoding="utf-8",
+            )
+            (fake / "sleep").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            for tool in fake.iterdir():
+                tool.chmod(0o755)
+            output = tmp_path / "output"
+            output.write_text("", encoding="utf-8")
+            env = {
+                **os.environ,
+                "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+                "EVENT": event,
+                "GITHUB_OUTPUT": str(output),
+                "FAKE_CALLS": str(calls),
+                "FAKE_READINGS": str(tmp_path / "readings"),
+            }
+            subprocess.run(
+                ["bash", "-e", "-c", step], cwd=ROADMAP.parent, env=env,
+                check=True, capture_output=True, timeout=120,
+            )
+            invocations = calls.read_text(encoding="utf-8").splitlines()
+            # What is read, not only how often: the core pool, as three fields.
+            for invocation in invocations:
+                self.assertTrue(invocation.startswith("api rate_limit --jq .resources.core |"), invocation)
+            return len(invocations), output.read_text(encoding="utf-8").strip()
+
+    def test_the_workflow_loop_gives_up_after_the_read_cap(self) -> None:
+        # The shell must feed the CLI's FAILURES back as the next --failures.
+        # If it dropped or re-zeroed it, the cap would never trip and a
+        # pushed run would poll an unreadable /rate_limit for the whole
+        # window: here the fake then answers with budget and the run captures.
+        reads, output = self._run_workflow_loop(["", "", "", ""])
+        self.assertEqual("capture=false", output)
+        self.assertEqual(publication_order.BUDGET_READ_ATTEMPTS, reads)
+
+    def test_the_workflow_loop_counts_only_consecutive_unreadable_reads(self) -> None:
+        # A good read in between starts the count again, so two separate
+        # glitches never add up to the cap: the run reaches the budget.
+        reads, output = self._run_workflow_loop(["", "null null null", "5000 10 1", "", ""])
+        self.assertEqual("capture=true", output)
+        self.assertEqual(6, reads)
+
+    def test_a_dash_leading_reading_is_unreadable_not_a_usage_error(self) -> None:
+        # Passed as --reading=VALUE, argparse cannot mistake it for an option.
+        reads, output = self._run_workflow_loop(["-bad", "-bad", "-bad"])
+        self.assertEqual("capture=false", output)
+        self.assertEqual(3, reads)
+
+    def test_a_scheduled_run_skips_on_the_first_unreadable_read(self) -> None:
+        reads, output = self._run_workflow_loop([""], event="schedule")
+        self.assertEqual("capture=false", output)
+        self.assertEqual(1, reads)
 
 
 class PublisherInputsTest(unittest.TestCase):

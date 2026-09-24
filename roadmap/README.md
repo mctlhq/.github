@@ -614,8 +614,15 @@ spends the budget the next run needs. A scheduled run that is short skips, becau
 next tick is as good. A pushed or dispatched run waits for the reset, holding the
 concurrency slot, so requests that arrive meanwhile coalesce into the single pending run
 behind it. It polls at most once a minute and waits at most 75 minutes (two reset
-windows). After that it leaves a `::warning::` and hands the publication to the next
-scheduled run that finds budget, rather than being killed silently by the job timeout. The step logs the budget it saw before and after the capture. The first logged run
+windows; `BUDGET_WAIT_SECONDS` in `publication_order.py`, which a test holds this
+sentence to). After that it leaves a `::warning::` and hands the publication to the
+next scheduled run that finds budget, rather than being killed silently by the job
+timeout. An unreadable budget -- a failed read, or anything other than three
+integers -- is read at most 3 times in a row (`BUDGET_READ_ATTEMPTS`) before the run
+gives up the same way. A scheduled run skips on the first unreadable read, as it does on
+a short budget.
+
+The step logs the budget it saw before and after the capture. The first logged run
 (2026-09-24) saw 5000/5000 both times, so `/rate_limit` does not show what a capture
 spends. The preflight still refuses a budget it can see is short. The plan above keeps
 the documented 1000, because it is the lower figure, and it does not rely on the reading
