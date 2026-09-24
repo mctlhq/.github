@@ -502,6 +502,93 @@ class DecideTest(unittest.TestCase):
         self.assertEqual(publication_order.EXIT_NO, code)
 
 
+class BudgetStepTest(unittest.TestCase):
+    """`publication_order.budget_step`: the whole budget wait, minus `sleep`."""
+
+    COST = 545
+
+    def _run(self, event, *, start, reset_at, refill_every=3600, remaining=100,
+             limit=1000, readable=True, refill_to=100):
+        """Drive the loop the workflow runs, with a simulated clock.
+
+        The budget refills to `refill_to` at each reset -- below the cost by
+        default, so a requested run never gets its capture and has to end on
+        its own deadline.
+        """
+        now = start
+        deadline = start + publication_order.BUDGET_WAIT_SECONDS
+        failures = 0
+        for _ in range(10_000):
+            while reset_at <= now:
+                reset_at += refill_every
+                remaining = refill_to
+            if not readable:
+                failures += 1
+            action, seconds, _ = publication_order.budget_step(
+                event=event, now=now, deadline=deadline, cost=self.COST,
+                failures=failures,
+                limit=limit if readable else None,
+                remaining=remaining if readable else None,
+                reset=reset_at if readable else None,
+            )
+            if action != "sleep":
+                return action, now, deadline
+            self.assertGreater(seconds, 0)
+            self.assertLessEqual(now + seconds, deadline, "a sleep ran past the deadline")
+            now += seconds
+        self.fail("the budget wait never ended")
+
+    def test_every_reset_offset_ends_by_the_deadline_without_a_capture(self) -> None:
+        # The property two earlier bounds got wrong: whatever the reset
+        # offset, a requested run that never gets budget ends by skipping at
+        # or before its deadline, never by the job timeout.
+        for offset in range(0, 3601, 15):
+            with self.subTest(offset=offset):
+                action, ended, deadline = self._run(
+                    "workflow_dispatch", start=0, reset_at=offset
+                )
+                self.assertEqual("skip", action)
+                self.assertLessEqual(ended, deadline)
+
+    def test_a_refilled_budget_is_captured_at_the_reset(self) -> None:
+        action, ended, _ = self._run("push", start=0, reset_at=1200, refill_to=1000)
+        self.assertEqual("capture", action)
+        self.assertLessEqual(ended, 1200 + publication_order.BUDGET_POLL_FLOOR_SECONDS)
+
+    def test_a_scheduled_run_never_waits(self) -> None:
+        self.assertEqual("skip", self._run("schedule", start=0, reset_at=10)[0])
+        self.assertEqual("skip", self._run("schedule", start=0, reset_at=10, readable=False)[0])
+
+    def test_enough_budget_captures_at_once_and_too_small_a_limit_fails(self) -> None:
+        self.assertEqual("capture", self._run("push", start=0, reset_at=10, remaining=600)[0])
+        self.assertEqual("fail", self._run("push", start=0, reset_at=10, limit=500)[0])
+
+    def test_an_unreadable_budget_gives_up_after_three_reads(self) -> None:
+        action, ended, deadline = self._run(
+            "workflow_dispatch", start=0, reset_at=10, readable=False
+        )
+        self.assertEqual("skip", action)
+        # Three reads, a minute apart: the slot is back in minutes, not 75.
+        self.assertLessEqual(ended, 3 * publication_order.BUDGET_POLL_FLOOR_SECONDS)
+
+    def test_the_cli_prints_one_action_and_treats_garbage_as_unreadable(self) -> None:
+        def cli(*extra: str) -> str:
+            with redirect_stdout(StringIO()) as out, redirect_stderr(StringIO()):
+                code = publication_order.main(
+                    ["budget", "--event", "push", "--now", "0", "--deadline", "4500",
+                     "--cost", "545", *extra]
+                )
+            self.assertEqual(0, code)
+            return out.getvalue().strip()
+
+        self.assertEqual("capture", cli("--limit", "1000", "--remaining", "900", "--reset", "60"))
+        self.assertEqual("sleep 65", cli("--limit", "1000", "--remaining", "10", "--reset", "60"))
+        # A truncated answer is not a crash under errexit: it is a retry.
+        self.assertEqual("sleep 60", cli("--limit", "1000", "--remaining", "", "--reset", "6"))
+        self.assertEqual("sleep 60", cli("--failures", "1"))
+        self.assertEqual("skip", cli("--failures", "3"))
+
+
 class PublisherInputsTest(unittest.TestCase):
     def test_the_decision_inputs_are_the_push_trigger_paths(self) -> None:
         # `decide` treats a commit outside INPUT_PATHS as changing nothing

@@ -28,6 +28,12 @@ elsewhere on main (a profile, another workflow) has changed nothing that is
 published, and freshness is judged against the published revision instead of
 HEAD. Same exit codes as `fresh`.
 
+`budget --event E --now T --deadline T [--limit L --remaining R --reset T]
+--cost C --failures N` is one step of the build job's wait for API budget. It
+prints exactly one action -- `capture`, `skip`, `fail` or `sleep SECONDS` --
+so the shell only calls `gh api` and sleeps. Omitting the three budget fields
+means the budget could not be read. See `budget_step`.
+
 Standard library only: the publish job that runs `newer` holds the only write
 token of the workflow and installs no package.
 """
@@ -193,6 +199,70 @@ def decide(
     return fresh, f"{why}; {reason}"
 
 
+# How long a pushed or dispatched run may wait for budget, how often it may
+# poll /rate_limit, and how many unreadable reads it tolerates.
+BUDGET_WAIT_SECONDS = 75 * 60
+BUDGET_POLL_FLOOR_SECONDS = 60
+BUDGET_READ_ATTEMPTS = 3
+
+
+def budget_step(
+    *,
+    event: str,
+    now: int,
+    deadline: int,
+    cost: int,
+    failures: int,
+    limit: int | None,
+    remaining: int | None,
+    reset: int | None,
+) -> tuple[str, int, str]:
+    """One decision of the budget wait: (action, seconds, message).
+
+    action is `capture` (enough budget), `skip` (publish nothing, exit 0 with a
+    warning or notice in `message`), `fail` (no wait can help) or `sleep`
+    (wait `seconds`, then read the budget again). Invariant, pinned by a test
+    over every reset offset: a sleep never ends after `deadline`, so a waiting
+    run always ends by its own decision, never by the job timeout.
+    """
+
+    readable = None not in (limit, remaining, reset)
+    if not readable:
+        if event == "schedule" or failures >= BUDGET_READ_ATTEMPTS or now >= deadline:
+            return "skip", 0, (
+                f"::warning::could not read the API budget ({failures} attempt(s)); "
+                "not captured. roadmap-state keeps its older capturedAt."
+            )
+        return "sleep", max(1, min(BUDGET_POLL_FLOOR_SECONDS, deadline - now)), (
+            "::notice::could not read the API budget; retrying"
+        )
+    assert limit is not None and remaining is not None and reset is not None
+    if remaining >= cost:
+        return "capture", 0, f"capture cost {cost} GETs; core budget {remaining}/{limit}"
+    if limit < cost:
+        return "fail", 0, (
+            f"::error::a capture needs {cost} GETs but the whole hourly budget is "
+            f"{limit}; no wait can fix this"
+        )
+    if event == "schedule":
+        return "skip", 0, (
+            f"::notice::{remaining}/{limit} GETs left, a capture needs {cost}; "
+            "the next scheduled run captures instead"
+        )
+    if now >= deadline:
+        return "skip", 0, (
+            f"::warning::{remaining}/{limit} GETs left after waiting, a capture needs "
+            f"{cost}; not captured. roadmap-state keeps its older capturedAt; the next "
+            "scheduled run that finds budget captures."
+        )
+    wait = max(reset - now + 5, BUDGET_POLL_FLOOR_SECONDS)
+    wait = max(1, min(wait, deadline - now))
+    return "sleep", wait, (
+        f"::notice::{remaining}/{limit} GETs left, a capture needs {cost}; "
+        f"waiting {wait}s for the reset"
+    )
+
+
 def _parse_utc(value: str) -> datetime:
     if not value.endswith("Z"):
         raise ValueError(f"{value!r} is not a UTC timestamp")
@@ -220,7 +290,32 @@ def main(argv: list[str] | None = None) -> int:
     choose.add_argument("--event", required=True)
     choose.add_argument("--run-created", help="UTC created_at of this run (not needed for schedule)")
     choose.add_argument("--repo", default=".")
+    step = sub.add_parser("budget", help="one step of the wait for API budget")
+    step.add_argument("--event", required=True)
+    step.add_argument("--now", type=int, required=True)
+    step.add_argument("--deadline", type=int, required=True)
+    step.add_argument("--cost", type=int, required=True)
+    step.add_argument("--failures", type=int, default=0)
+    # Strings, not ints: a truncated or garbled /rate_limit answer is an
+    # unreadable budget, not a usage error that fails the step.
+    step.add_argument("--limit")
+    step.add_argument("--remaining")
+    step.add_argument("--reset")
     args = parser.parse_args(argv)
+
+    if args.command == "budget":
+        def _int(value: str | None) -> int | None:
+            return int(value) if value is not None and value.isdigit() else None
+
+        action, seconds, message = budget_step(
+            event=args.event, now=args.now, deadline=args.deadline, cost=args.cost,
+            failures=args.failures, limit=_int(args.limit),
+            remaining=_int(args.remaining), reset=_int(args.reset),
+        )
+        if message:
+            print(message, file=sys.stderr)
+        print(f"sleep {seconds}" if action == "sleep" else action)
+        return EXIT_YES
 
     if args.command == "decide":
         try:

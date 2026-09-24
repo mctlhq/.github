@@ -27,7 +27,8 @@ name: Roadmap publication
 #
 # One capture costs `publish.py cost` GETs (545 on 2026-09-23: 9 repositories +
 # 4 x 134 issues). The build job reads the token's remaining budget first and
-# refuses to start a capture it cannot finish.
+# never starts a capture it cannot finish: a scheduled run skips, a pushed or
+# dispatched one waits for the reset (at most 75 minutes).
 
 on:
   schedule:
@@ -55,7 +56,7 @@ jobs:
   build:
     if: github.repository == 'mctlhq/.github'
     runs-on: ubuntu-latest
-    # A push or dispatch may wait up to an hour for the API budget to reset.
+    # The budget wait ends itself by 75 minutes; this is only a backstop.
     timeout-minutes: 100
     permissions:
       contents: read
@@ -120,9 +121,10 @@ jobs:
       # GET /rate_limit is free. A capture that runs out of budget part-way
       # publishes nothing and spends what the next run needs, so none starts
       # without the budget to finish. A scheduled run then skips: the next
-      # tick is as good. A push or dispatch waits for the reset instead,
-      # holding the concurrency slot, so every request that arrives meanwhile
-      # coalesces into the one pending run behind it.
+      # tick is as good. A push or dispatch waits for the reset instead, for
+      # at most 75 minutes, holding the concurrency slot, so every request
+      # that arrives meanwhile coalesces into the one pending run behind it.
+      # An unreadable budget is retried at most three times.
       - name: Wait until the API budget covers one capture
         id: budget
         if: steps.due.outputs.capture == 'true'
@@ -131,54 +133,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cost="$(python3 roadmap/scripts/publish.py cost)"
-          # Two reset windows at most: the budget is shared with every other
-          # workflow here, and a run that loses the race twice says so and
-          # leaves the publication to the scheduled net rather than being
-          # killed silently by the job timeout.
+          # Every decision is publication_order.py budget (tested); the shell
+          # only reads /rate_limit and sleeps.
           deadline=$(( $(date +%s) + 75 * 60 ))
+          failures=0
           while :; do
-            if ! read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"'); then
-              # Could not read the budget: a scheduled run leaves it to the
-              # next tick; a requested one retries within the same deadline.
-              now=$(date +%s)
-              if [ "$EVENT" = schedule ] || [ "$now" -ge "$deadline" ]; then
-                echo "::warning::could not read the API budget; not captured. roadmap-state keeps its older capturedAt."
-                echo "capture=false" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-              echo "::notice::could not read the API budget; retrying in a minute"
-              sleep "$(( deadline - now < 60 ? deadline - now : 60 ))"
-              continue
+            budget=()
+            if line="$(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')"; then
+              read -r limit remaining reset <<< "$line" || true
+              budget=(--limit "${limit:-}" --remaining "${remaining:-}" --reset "${reset:-}")
+            else
+              failures=$(( failures + 1 ))
             fi
-            echo "capture cost ${cost} GETs; core budget ${remaining}/${limit}, resets $(date -u -d "@${reset}" +%H:%M:%SZ)"
-            if [ "$remaining" -ge "$cost" ]; then
-              echo "capture=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            if [ "$limit" -lt "$cost" ]; then
-              echo "::error::a capture needs ${cost} GETs but the whole hourly budget is ${limit}; no wait can fix this"
-              exit 1
-            fi
-            if [ "$EVENT" = schedule ]; then
-              echo "::notice::${remaining}/${limit} GETs left, a capture needs ${cost}; the next scheduled run captures instead"
-              echo "capture=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            now=$(date +%s)
-            if [ "$now" -ge "$deadline" ]; then
-              echo "::warning::${remaining}/${limit} GETs left after 75 minutes of waiting, a capture needs ${cost}; not captured. roadmap-state keeps its older capturedAt; the next scheduled run that finds budget captures."
-              echo "capture=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            wait=$(( reset - now + 5 ))
-            # Never poll faster than once a minute: /rate_limit is free of
-            # quota but not of GitHub's secondary (request-rate) limits.
-            [ "$wait" -lt 60 ] && wait=60
-            # Never sleep past the deadline either, so the check above is what
-            # ends the wait, not the job timeout.
-            [ "$wait" -gt $(( deadline - now )) ] && wait=$(( deadline - now ))
-            echo "::notice::${remaining}/${limit} GETs left, a capture needs ${cost}; waiting ${wait}s for the reset"
-            sleep "$wait"
+            action="$(python3 roadmap/scripts/publication_order.py budget \
+              --event "$EVENT" --now "$(date +%s)" --deadline "$deadline" \
+              --cost "$cost" --failures "$failures" "${budget[@]}")"
+            case "$action" in
+              capture) echo "capture=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              skip) echo "capture=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              "sleep "*) sleep "${action#sleep }" ;;
+              *) exit 1 ;;
+            esac
           done
 
       # Manifests and evaluator come from the same checkout, so the source and
