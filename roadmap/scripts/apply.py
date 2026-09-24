@@ -51,6 +51,7 @@ from jsonschema.exceptions import SchemaError
 import github_apply
 import github_graph
 import plan as plan_module
+import publication_request
 import reconcile
 import validate
 from github_apply import MutationFailed, MutationRefused
@@ -640,6 +641,11 @@ def main(argv: list[str] | None = None) -> int:
         help="offline only; write the post-run snapshot here so it can be reconciled",
     )
     parser.add_argument("--output", help="write the result here instead of stdout")
+    parser.add_argument(
+        "--no-publication-request",
+        action="store_true",
+        help="do not ask roadmap-publish.yml for a fresh publication after live writes",
+    )
     args = parser.parse_args(argv)
 
     if bool(args.snapshot) == bool(args.live):
@@ -663,6 +669,7 @@ def main(argv: list[str] | None = None) -> int:
     except (ApplyRefused, plan_module.PlanRefused, MutationRefused) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
         _emit(documents, args)
+        _request_publication(args, documents)
         return EXIT_REFUSED
     except (
         ApplyError,
@@ -676,6 +683,7 @@ def main(argv: list[str] | None = None) -> int:
     ) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         _emit(documents, args)
+        _request_publication(args, documents)
         return EXIT_ERROR
     except BaseException:
         # Ctrl-C from an operator watching a long `--live --execute` run, a CI
@@ -690,11 +698,80 @@ def main(argv: list[str] | None = None) -> int:
         # preserves the status Python gives the interrupt, and re-emitting is
         # harmless -- `_emit` is silent on an empty list.
         _emit(documents, args)
+        # No network call from an interrupt: say what is stale instead.
+        _warn_unrequested_publication(args, documents)
         raise
 
-    if not _emit(documents, args):
+    emitted = _emit(documents, args)
+    _request_publication(args, documents)
+    if not emitted:
         return EXIT_ERROR
     return exit_code([document for _, document in documents])
+
+
+def landed_writes(documents: list[tuple[Path, dict[str, Any]]]) -> int:
+    """How many writes this run is recorded as having made on GitHub."""
+
+    return sum(document["summary"]["applied"] for _, document in documents)
+
+
+def _warn_unrequested_publication(
+    args: argparse.Namespace, documents: list[tuple[Path, dict[str, Any]]]
+) -> None:
+    if not (args.live and args.execute) or args.no_publication_request:
+        return
+    landed = landed_writes(documents)
+    if landed:
+        print(
+            f"WARNING: {landed} write(s) landed before the run was interrupted; no "
+            "roadmap publication was requested, so roadmap-state still describes "
+            "the graph before this run. Request one with "
+            "`python3 roadmap/scripts/publication_request.py`.",
+            file=sys.stderr,
+        )
+
+
+def _request_publication(
+    args: argparse.Namespace, documents: list[tuple[Path, dict[str, Any]]]
+) -> None:
+    """Ask for a fresh publication when, and only when, the graph was written.
+
+    The trigger is a landed write, not a clean exit. A run that stopped part-way
+    -- refused on manifest 2, or a write failing after others landed -- has
+    still changed the live graph, and the publication describing the old graph
+    is now wrong in exactly the places those writes touched. A plan-only run, a
+    replay against a snapshot, and a live run whose every operation was already
+    satisfied, skipped or failed changed nothing, so they request nothing: there
+    is nothing newer to publish and the capture would only spend API quota.
+
+    The request never decides anything. The publisher captures and verifies on
+    its own; a request that fails leaves `roadmap-state` exactly as old as it
+    was, which is what its `capturedAt` already says. So a failure is reported
+    loudly but does not change the exit code: that code describes the writes,
+    which is what the audit record is about.
+    """
+
+    if not (args.live and args.execute) or args.no_publication_request:
+        return
+    landed = landed_writes(documents)
+    if not landed:
+        return
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+    try:
+        publication_request.request_publication(token, api_base=args.api_base)
+    except publication_request.PublicationRequestFailed as exc:
+        print(
+            f"WARNING: {landed} write(s) landed but requesting a fresh roadmap "
+            f"publication failed: {exc}. roadmap-state still describes the graph "
+            "before this run; request one with "
+            "`python3 roadmap/scripts/publication_request.py`.",
+            file=sys.stderr,
+        )
+        return
+    print(
+        f"requested a fresh roadmap publication after {landed} landed write(s)",
+        file=sys.stderr,
+    )
 
 
 def _emit(

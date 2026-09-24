@@ -72,6 +72,8 @@ roadmap/
     github_apply.py       the only module that may write
     apply.py              execute a plan, emit an audited result
     publish.py            one RoadmapPublication for the roadmap-state branch
+    publication_request.py  ask roadmap-publish.yml for a fresh publication
+    publication_order.py    monotonic capturedAt and scheduled-skip guards (stdlib only)
   publication/
     README.md             copied onto roadmap-state as its README
   tests/
@@ -83,6 +85,7 @@ roadmap/
     test_plan.py
     test_apply.py
     test_publish.py
+    test_publication_freshness.py
     mutations.py
 ```
 
@@ -490,8 +493,8 @@ evidence.
 ## Publication
 
 `.github/workflows/roadmap-publish.yml` is the one place the evaluator runs against live
-GitHub on a schedule (every two hours, on every `roadmap/**` change on `main`, and on
-demand). A read-only `build` job installs the evaluator, observes and verifies; a
+GitHub (on every `roadmap/**` change on `main`, on request, and as an hourly
+reconciliation -- see [Publication freshness](#publication-freshness)). A read-only `build` job installs the evaluator, observes and verifies; a
 `publish` job that installs nothing and holds the only write token pushes exactly one
 commit to the orphan branch `roadmap-state`, holding one `RoadmapPublication` (#119):
 
@@ -535,6 +538,92 @@ Rules the tests pin:
 
 Consumers (mctl-api#333) read these files; they never run the evaluator or infer
 readiness themselves.
+
+### Publication freshness
+
+mctl-api plans and executes a wave only from a publication whose `capturedAt` is at
+most `ROADMAP_WAVE_MAX_AGE` old (default 30 minutes, not overridden in mctl-gitops).
+The graph moves for three kinds of reason, and each has its own path to a new
+publication:
+
+```text
+manifest or evaluator merged to main ---- push -----------------\
+governed apply that landed a write ------ workflow_dispatch -----+--> roadmap-publish.yml
+operator about to plan a wave ----------- workflow_dispatch ----/          ^
+issue closed/reopened anywhere else ----- (no event reaches us)            |
+                                          hourly reconciliation -----------/
+```
+
+- **`push`** runs on every `roadmap/**` change on `main`, as before.
+- **After a governed apply.** `apply.py --live --execute` requests a publication
+  (`publication_request.py`: one `workflow_dispatch` of `roadmap-publish.yml` on `main`,
+  the only request that module can send) when at least one write landed -- including
+  a run that stopped part-way, because its landed writes already changed the graph. A
+  plan-only run, a replay, and a live run whose every operation was already satisfied,
+  skipped or failed request nothing. `--no-publication-request` opts out. A request that
+  fails is a `WARNING` on stderr and leaves the exit code to the writes; the
+  publication then stays exactly as old as its `capturedAt` says. A run interrupted
+  after a write landed sends nothing from the interrupt but prints the same warning.
+
+  The request needs **`actions: write` on `mctlhq/.github`** (a fine-grained token's
+  "Actions: read and write", or a classic token's `repo` scope), which is more than the
+  relation writes need. `apply.py` sends it with the token it already reads
+  (`GITHUB_TOKEN`/`GH_TOKEN`). A token without that scope gets a 403, and every apply
+  then prints the `WARNING` and requests nothing, so a repeated warning means the token
+  needs the scope. It does not mean the publisher is broken.
+- **Before a wave.** No schedule can promise 30 minutes (below), so whoever is about to
+  plan a wave asks first and waits for `capturedAt` to move:
+
+  ```bash
+  GITHUB_TOKEN=... python3 roadmap/scripts/publication_request.py
+  # equivalently: gh workflow run roadmap-publish.yml --repo mctlhq/.github --ref main
+  ```
+
+- **Hourly reconciliation** (`17 * * * *`) is the safety net for graph changes that no
+  event reports, such as an issue closed by a merge in another repository.
+
+Every run first decides whether a capture would add anything (`publication_order.py
+decide`, tested against a real git history). The publisher's inputs count as unchanged when every `roadmap/**` file and the
+workflow are byte-equal to the published source revision; a commit elsewhere on `main`
+cannot change what is published. With unchanged inputs:
+
+- a **scheduled** run skips while the capture is at most 90 minutes old;
+- a **pushed or dispatched** run skips when the published capture started strictly after
+  the run was created. Whatever asked for the run happened before that, so the capture
+  already saw it. Runs are serialized and GitHub keeps one pending run per group, so a
+  burst of applies costs one or two captures, not one per apply.
+
+The cron is a net, not the freshness contract. GitHub runs schedules best effort: on
+2026-09-23, between the workflow's merge at 08:51Z and 23:00Z, seven `17 */2` slots
+passed and three scheduled runs started, at 15:02Z, 19:41Z and 22:57Z -- 40 to 85
+minutes after the nearest slot, the rest not at all. A 30-minute cron would still miss 30 minutes, and would cost more than the
+budget allows:
+
+| | GETs |
+|---|---|
+| one capture (`publish.py cost`) = repositories + 4 x issues (issue, `/parent`, `/sub_issues`, `/dependencies/blocked_by`) | 9 + 4 x 134 = **545** on 2026-09-23 |
+| `GITHUB_TOKEN` primary budget, per repository per hour (GitHub docs) | 1000 |
+| a cron every 30 minutes | 1090 / hour -- over budget before any event |
+| hourly net, captured every other hour in a quiet period | ~273 / hour on average |
+
+So at most one capture fits in any one hour window, whatever triggered it. The build job
+therefore reads the token's real budget (`GET /rate_limit`, which is free) and never
+starts a capture it cannot finish: one that runs out part-way publishes nothing and
+spends the budget the next run needs. A scheduled run that is short skips, because the
+next tick is as good. A pushed or dispatched run waits for the reset, holding the
+concurrency slot, so requests that arrive meanwhile coalesce into the single pending run
+behind it. It polls at most once a minute and waits at most 75 minutes (two reset
+windows). After that it leaves a `::warning::` and hands the publication to the next
+scheduled run that finds budget, rather than being killed silently by the job timeout. The step logs the limit it saw, so the documented 1000 is checked against the
+real one on every run.
+
+Two guards keep a publication from ever looking fresher than its observation:
+
+- **Monotonic.** Runs are serialized (`concurrency: roadmap-publication`), but a queued
+  run can hold a capture that a later-started run already published past. The publish
+  job pushes only a strictly newer `capturedAt` (`publication_order.py newer`); an
+  overtaken capture is a notice, not a push, and an invalid one fails the run.
+- **Never forced.** A rejected push fails the run, as before.
 
 ## Dogfood: epic #66
 
