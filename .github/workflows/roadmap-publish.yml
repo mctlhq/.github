@@ -94,12 +94,15 @@ jobs:
         run: |
           capture=true
           mkdir -p "$STATE"
-          # Not shallow: this checkout needs full history for the diff.
-          if git fetch origin roadmap-state \
+          # Shallow on purpose: only the tip's publication.json is read, and a
+          # --depth fetch of this unrelated branch does not shallow main.
+          if git fetch --depth=1 origin roadmap-state \
             && git show FETCH_HEAD:publication.json > "$STATE/publication.json"; then
             created=""
             if [ "$EVENT" != schedule ]; then
-              created="$(gh api "$RUN_URL" --jq .created_at)"
+              # A failed lookup must not fail the run: without a creation time
+              # `decide` captures, which is the safe answer.
+              created="$(gh api "$RUN_URL" --jq .created_at)" || created=""
             fi
             if python3 roadmap/scripts/publication_order.py decide "$STATE" \
                  --event "$EVENT" ${created:+--run-created "$created"}; then
@@ -134,7 +137,19 @@ jobs:
           # killed silently by the job timeout.
           deadline=$(( $(date +%s) + 75 * 60 ))
           while :; do
-            read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"')
+            if ! read -r limit remaining reset < <(gh api rate_limit --jq '.resources.core | "\(.limit) \(.remaining) \(.reset)"'); then
+              # Could not read the budget: a scheduled run leaves it to the
+              # next tick; a requested one retries within the same deadline.
+              now=$(date +%s)
+              if [ "$EVENT" = schedule ] || [ "$now" -ge "$deadline" ]; then
+                echo "::warning::could not read the API budget; not captured. roadmap-state keeps its older capturedAt."
+                echo "capture=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "::notice::could not read the API budget; retrying in a minute"
+              sleep "$(( deadline - now < 60 ? deadline - now : 60 ))"
+              continue
+            fi
             echo "capture cost ${cost} GETs; core budget ${remaining}/${limit}, resets $(date -u -d "@${reset}" +%H:%M:%SZ)"
             if [ "$remaining" -ge "$cost" ]; then
               echo "capture=true" >> "$GITHUB_OUTPUT"
@@ -149,15 +164,19 @@ jobs:
               echo "capture=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            if [ "$(date +%s)" -ge "$deadline" ]; then
+            now=$(date +%s)
+            if [ "$now" -ge "$deadline" ]; then
               echo "::warning::${remaining}/${limit} GETs left after 75 minutes of waiting, a capture needs ${cost}; not captured. roadmap-state keeps its older capturedAt; the next scheduled run that finds budget captures."
               echo "capture=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            wait=$(( reset - $(date +%s) + 5 ))
+            wait=$(( reset - now + 5 ))
             # Never poll faster than once a minute: /rate_limit is free of
             # quota but not of GitHub's secondary (request-rate) limits.
             [ "$wait" -lt 60 ] && wait=60
+            # Never sleep past the deadline either, so the check above is what
+            # ends the wait, not the job timeout.
+            [ "$wait" -gt $(( deadline - now )) ] && wait=$(( deadline - now ))
             echo "::notice::${remaining}/${limit} GETs left, a capture needs ${cost}; waiting ${wait}s for the reset"
             sleep "$wait"
           done

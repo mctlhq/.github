@@ -502,6 +502,28 @@ class DecideTest(unittest.TestCase):
         self.assertEqual(publication_order.EXIT_NO, code)
 
 
+class PublisherInputsTest(unittest.TestCase):
+    def test_the_decision_inputs_are_the_push_trigger_paths(self) -> None:
+        # `decide` treats a commit outside INPUT_PATHS as changing nothing
+        # published. If the push trigger ever watches a path INPUT_PATHS does
+        # not, a real input change would be skipped as unchanged.
+        import yaml
+
+        workflow = yaml.safe_load(
+            (ROADMAP.parent / ".github" / "workflows" / "roadmap-publish.yml").read_text(
+                encoding="utf-8"
+            )
+        )
+        # PyYAML reads the key `on` as the boolean True.
+        triggers = workflow.get("on", workflow.get(True))
+        watched = triggers["push"]["paths"]
+        expected = [
+            path if path.endswith(".yml") else f"{path}/**"
+            for path in publication_order.INPUT_PATHS
+        ]
+        self.assertEqual(sorted(expected), sorted(watched))
+
+
 class _LiveGitHub:
     """Answers every GET the live reader makes with an empty, valid graph."""
 
