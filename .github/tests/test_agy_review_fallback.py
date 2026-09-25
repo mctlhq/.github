@@ -39,6 +39,7 @@ MODES = {
         f"error: Eligibility check failed: Your current account is not eligible for Antigravity.\n{VERIFY_URL}\n",
     ),
     "unavailable": ({"status": "ERROR", "error": "Eligibility check failed: rpc error: UNAVAILABLE (code 503)"}, ""),
+    "loggedout": ({"status": "ERROR", "error": "You are not logged into Antigravity."}, ""),
     "declined": ({"status": "ERROR", "error": "The model declined to review this diff."}, ""),
     "forged": ({"status": "ERROR", "error": "x\n::error::forged by the diff"}, "::error::forged on stderr\n"),
 }
@@ -157,6 +158,23 @@ class FallbackAndClassificationTest(unittest.TestCase):
         self.assertEqual(r.rc, 1, r.log)
         self.assertEqual(r.no_verdict(), "1")
 
+    def test_quota_then_an_account_level_fallback_failure_is_no_verdict(self) -> None:
+        # main's classification for a quota-exhausted primary (the
+        # 2026-09-08 release hold) survives a fallback that is logged out or
+        # ineligible: neither account read the diff.
+        for fallback in ("loggedout", "ineligible"):
+            with self.subTest(fallback=fallback):
+                r = self.run_step("quota", fallback)
+                self.assertEqual(r.rc, 1, r.log)
+                self.assertEqual(r.no_verdict(), "1")
+
+    def test_ineligible_then_an_account_level_fallback_failure_fails_closed(self) -> None:
+        for fallback in ("loggedout", "ineligible"):
+            with self.subTest(fallback=fallback):
+                r = self.run_step("ineligible", fallback)
+                self.assertEqual(r.rc, 1, r.log)
+                self.assertEqual(r.no_verdict(), "0")
+
     def test_quota_without_a_fallback_account_is_no_verdict(self) -> None:
         r = self.run_step("quota", None)
         self.assertEqual(r.rc, 1, r.log)
@@ -228,7 +246,7 @@ class RedactionTest(unittest.TestCase):
             out = proc.stdout + proc.stderr
             self.assertIn("killed mid-call https://accounts.google.com/signin/continue<redacted>", out)
             self.assertNotIn(MARKER, out)
-            self.assertNotIn("\n::error::forged", out)
+            self.assertNotIn("::error::forged", out)
             self.assertFalse((Path(d) / "agy-stderr.log").exists())
 
 

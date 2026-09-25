@@ -350,9 +350,12 @@ jobs:
           esac
           echo "model=$AGY_MODEL" >> "$GITHUB_OUTPUT"
 
-          # Everything agy says reaches the job log through one of these two
-          # filters, and job logs are world-readable on a public caller
-          # (mctl-gitops). Two hazards, both observed or structural:
+          # agy's stderr and its `.error` reach the job log only through one
+          # of these two filters, and job logs are world-readable on a public
+          # caller (mctl-gitops). `.response` (review.md) is deliberately NOT
+          # filtered: it is the review itself, posted as the PR comment and
+          # read by the verdict check, and rewriting it would corrupt both.
+          # Two hazards, both observed or structural:
           # - URL query strings. On 2026-09-25 agy's "Eligibility check
           #   failed: Your current account is not eligible for Antigravity"
           #   carried a Google account-verification link with its session
@@ -417,9 +420,11 @@ jobs:
             # stderr goes to a file and is replayed through redact_stream
             # once agy exits, so it shows up in the log after the attempt
             # rather than live. If agy is killed instead (job timeout,
-            # cancellation), the "Replay interrupted agy stderr" step does it. `rc` is captured explicitly: every call site
-            # runs this function as `run_agy … || true`, which suspends -e
-            # inside it, so the replay runs even when agy failed.
+            # cancellation), the "Replay interrupted agy stderr" step does it.
+            #
+            # `rc` is captured explicitly: every call site runs this function
+            # as `run_agy … || true`, which suspends -e inside it, so the
+            # replay runs even when agy failed.
             local rc=0
             HOME="$target_home" agy \
               -p "$(cat prompt.md)" \
@@ -624,8 +629,11 @@ jobs:
           # sentence, not on "Eligibility check failed": the 503 blip above
           # uses that same prefix, is retried on the same account, and
           # switching cannot fix it, hence the is_transient guard too.
-          # Unlike quota, eligibility does not mark the run as no-verdict
-          # (see the classification below): whether a broken account may
+          # Unlike quota, an ineligible primary does not by itself mark the
+          # run as no-verdict: if the fallback also fails at the account
+          # level, or declines, the run fails closed, as on main. Only a
+          # fallback that is out of quota makes it no-verdict (see the
+          # classification below). Whether an ineligible account alone may
           # wave a blocking caller's merge through is a separate decision.
           account_problem=""
           if [ "$status" != "SUCCESS" ] && ! is_transient "$error"; then
@@ -684,13 +692,24 @@ jobs:
             no_verdict=0
             [ "$status" = "UNKNOWN" ] && no_verdict=1
             [ -s result.json ] || no_verdict=1
-            # Classified on the LAST attempt's error, not the primary's: a
-            # quota-exhausted primary followed by a fallback whose model
-            # declined is a decline and fails closed, and an ineligible
-            # primary followed by a quota-exhausted fallback is quota.
+            # Quota is classified on the LAST attempt's error: an ineligible
+            # primary followed by a quota-exhausted fallback never read the
+            # diff either, so it is no-verdict like any quota failure.
             case "$error" in
               *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*) no_verdict=1 ;;
             esac
+            # A quota-exhausted primary keeps main's classification (the
+            # 2026-09-08 release hold) when the fallback also failed at the
+            # account level: ineligible, or its login lapsed ("You are not
+            # logged into Antigravity", the state the GEMINI_API_KEY note
+            # above records). Neither account read the diff. Any other
+            # fallback failure, such as a model that declined, is a result
+            # about the diff and fails closed, as it would on the primary.
+            if [ "$account_problem" = "is out of quota" ]; then
+              case "$error" in
+                *"not eligible for Antigravity"*|*"not logged into Antigravity"*) no_verdict=1 ;;
+              esac
+            fi
             # A backend blip that outlived the retries above is the same
             # class as quota: agy never read the diff.
             is_transient "$error" && no_verdict=1
