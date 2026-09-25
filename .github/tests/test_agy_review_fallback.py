@@ -23,8 +23,8 @@ WORKFLOW_DOC = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
 JOB = WORKFLOW_DOC["jobs"]["review"]
 STEPS = JOB["steps"]
 
-SECRET = "SENTINEL-session-parameter"
-VERIFY_URL = f"https://accounts.google.com/signin/continue?sarp=1&plt={SECRET}&flowName=X"
+MARKER = "MARKER-session-parameter"
+VERIFY_URL = f"https://accounts.google.com/signin/continue?sarp=1&plt={MARKER}&flowName=X"
 INELIGIBLE = (
     "Eligibility check failed: Your current account is not eligible for "
     f"Antigravity. Verify your account to continue. Please verify: {VERIFY_URL}"
@@ -186,7 +186,7 @@ class RedactionTest(unittest.TestCase):
     def test_the_verification_link_never_reaches_the_log(self) -> None:
         r = Run("ineligible", "ineligible")
         self.addCleanup(r.close)
-        self.assertNotIn(SECRET, r.log)
+        self.assertNotIn(MARKER, r.log)
         self.assertIn("https://accounts.google.com/signin/continue<redacted>", r.log)
 
     def test_agy_output_cannot_forge_a_workflow_command(self) -> None:
@@ -227,7 +227,7 @@ class RedactionTest(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             out = proc.stdout + proc.stderr
             self.assertIn("killed mid-call https://accounts.google.com/signin/continue<redacted>", out)
-            self.assertNotIn(SECRET, out)
+            self.assertNotIn(MARKER, out)
             self.assertNotIn("\n::error::forged", out)
             self.assertFalse((Path(d) / "agy-stderr.log").exists())
 
