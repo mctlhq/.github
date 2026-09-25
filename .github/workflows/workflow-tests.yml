@@ -9,6 +9,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/claude-review.yml'
+      - '.github/workflows/agy-review.yml'
       - '.github/workflows/workflow-tests.yml'
       - '.github/tests/**'
   push:
@@ -16,6 +17,7 @@ on:
       - main
     paths:
       - '.github/workflows/claude-review.yml'
+      - '.github/workflows/agy-review.yml'
       - '.github/workflows/workflow-tests.yml'
       - '.github/tests/**'
 
@@ -31,5 +33,5 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
 
-      - name: Reviewer model-usage capture
+      - name: Reviewer workflow tests (claude-review usage capture, agy-review fallback and redaction)
         run: python3 -m unittest discover -s .github/tests -p 'test_*.py' -v
