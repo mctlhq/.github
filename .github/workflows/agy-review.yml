@@ -340,6 +340,29 @@ jobs:
           esac
           echo "model=$AGY_MODEL" >> "$GITHUB_OUTPUT"
 
+          # Everything agy says reaches the job log through one of these two
+          # filters, and job logs are world-readable on a public caller
+          # (mctl-gitops). Two hazards, both observed or structural:
+          # - URL query strings. On 2026-09-25 agy's "Eligibility check
+          #   failed: Your current account is not eligible for Antigravity"
+          #   carried a Google account-verification link with its session
+          #   parameters, printed twice per run (raw stderr, then the echoed
+          #   .error) in six public mctl-gitops runs. Scheme, host and path
+          #   stay readable; the query is replaced.
+          # - `::` workflow commands. $error and stderr are free text agy
+          #   produced while processing an attacker-controllable diff; an
+          #   embedded `::error::` line must not read as if the runner had
+          #   emitted it.
+          # redact_stream keeps line structure (stderr is multi-line and
+          # read as such); sanitize additionally flattens to one line for
+          # use inside a single `::warning::` or `::error::` command.
+          redact_stream() {
+            sed -E 's#(https?://[^[:space:]?"]*)\?[^[:space:]"]*#\1?<redacted>#g; s/::/:_:/g'
+          }
+          sanitize() {
+            printf '%s' "$1" | tr -d '\r' | tr '\n' ' ' | redact_stream
+          }
+
           run_agy() {
             # This file is consumed by every mctlhq repository the moment it
             # merges to main, with no per-repo rollout or version pin. A
@@ -379,6 +402,13 @@ jobs:
             # not isolate files within $target_home (the credential profile). The
             # prompt instructions above therefore explicitly forbid executing
             # commands or inspecting external files.
+            #
+            # stderr goes to a file and is replayed through redact_stream
+            # once agy exits, so it shows up in the log after the attempt
+            # rather than live. `rc` is captured explicitly: every call site
+            # runs this function as `run_agy … || true`, which suspends -e
+            # inside it, so the replay runs even when agy failed.
+            local rc=0
             HOME="$target_home" agy \
               -p "$(cat prompt.md)" \
               --model "$AGY_MODEL" \
@@ -387,7 +417,9 @@ jobs:
               --print-timeout "$print_timeout" \
               --sandbox \
               --dangerously-skip-permissions \
-              > result.json
+              > result.json 2> agy-stderr.log || rc=$?
+            redact_stream < agy-stderr.log >&2 || true
+            return "$rc"
           }
 
           # Reads result.json into $status/$error, tolerating every shape
@@ -544,9 +576,7 @@ jobs:
                 echo "::warning::not retrying after attempt $attempt: $(remaining)s of the step budget left"
                 return 0
               fi
-              # Same sanitization as below: $error is free text agy produced
-              # while processing an attacker-controllable diff.
-              safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
+              safe_error=$(sanitize "$error")
               echo "::warning::agy backend unavailable on attempt $attempt ($safe_error); retrying in 30s"
               attempt=$((attempt + 1))
               sleep 30
@@ -567,19 +597,38 @@ jobs:
           # duration, "retries exhausted") in an error that switching
           # accounts cannot fix — which would spend a call on the personal
           # fallback subscription for nothing.
-          case "$error" in
-            *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*) retry=1 ;;
-            *) retry=0 ;;
-          esac
+          #
+          # The second account-level shape is eligibility: on 2026-09-25 the
+          # primary account started answering "Eligibility check failed:
+          # Your current account is not eligible for Antigravity. Verify
+          # your account to continue." on every run, from both runner
+          # registrations (they share one host and one primary profile),
+          # until the owner re-verified it the next day. That is a fact
+          # about the account, not the diff, so it is worth one call on
+          # the fallback account like quota is. Matched on agy's full
+          # sentence, not on "Eligibility check failed": the 503 blip above
+          # uses that same prefix, is retried on the same account, and
+          # switching cannot fix it, hence the is_transient guard too.
+          # Unlike quota, eligibility does NOT set quota=1 and so does not
+          # mark the run as no-verdict: whether a broken account may wave a
+          # blocking caller's merge through is a separate decision.
+          quota=0
+          account_problem=""
+          if [ "$status" != "SUCCESS" ] && ! is_transient "$error"; then
+            case "$error" in
+              *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*)
+                quota=1
+                account_problem="is out of quota"
+                ;;
+              *"Your current account is not eligible for Antigravity"*)
+                account_problem="is not eligible for Antigravity (re-verify it on the runner)"
+                ;;
+            esac
+          fi
 
-          if [ "$status" != "SUCCESS" ] && [ "$retry" = 1 ]; then
-            # $error came from agy while it was processing an
-            # attacker-controllable diff; sanitize before it goes into a
-            # workflow command or the log, so an embedded newline can't
-            # forge a second ::error::/::notice:: line as if the runner had
-            # emitted it itself.
-            safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
-            echo "::warning::agy primary account is out of quota ($safe_error)"
+          if [ -n "$account_problem" ]; then
+            safe_error=$(sanitize "$error")
+            echo "::warning::agy primary account $account_problem ($safe_error)"
             if [ ! -d "$AGY_HOME_FALLBACK" ]; then
               # Guarded, not just left to run_agy's own missing-directory
               # fallback: without this check, a missing FALLBACK directory
@@ -591,18 +640,18 @@ jobs:
               # Decided here, before the summary line, so the log never
               # announces a switch that did not happen. An attempt this
               # short cannot reach a review and cannot change the outcome
-              # (retry=1 already means no verdict); it would only spend
+              # (the primary already failed); it would only spend
               # the job's last minutes.
               echo "::warning::not retrying on the fallback account: $(remaining)s of the step budget left"
             else
               echo "::warning::retrying on the fallback account"
-              echo "agy: primary account out of quota, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
+              echo "agy: primary account $account_problem, retried on the fallback account" >> "$GITHUB_STEP_SUMMARY"
               run_agy_retrying "$AGY_HOME_FALLBACK"
             fi
           fi
 
           if [ "$status" != "SUCCESS" ]; then
-            safe_error=$(printf '%s' "${error:-unknown error}" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
+            safe_error=$(sanitize "${error:-unknown error}")
             echo "::error::agy run did not succeed (status=$status)"
             echo "$safe_error"
 
@@ -622,7 +671,7 @@ jobs:
             no_verdict=0
             [ "$status" = "UNKNOWN" ] && no_verdict=1
             [ -s result.json ] || no_verdict=1
-            [ "$retry" = 1 ] && no_verdict=1
+            [ "$quota" = 1 ] && no_verdict=1
             # A backend blip that outlived the retries above is the same
             # class as quota: agy never read the diff.
             is_transient "$error" && no_verdict=1
