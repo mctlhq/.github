@@ -148,28 +148,22 @@ class FallbackAndClassificationTest(unittest.TestCase):
         self.assertEqual(r.rc, 0, r.log)
         self.assertEqual(r.accounts_called(), ["primary", "fallback"])
 
-    def test_quota_then_declined_is_classified_by_the_last_attempt(self) -> None:
-        r = self.run_step("quota", "declined")
-        self.assertEqual(r.rc, 1, r.log)
-        self.assertEqual(r.no_verdict(), "0", "a fallback that declined must fail closed")
+    def test_a_quota_primary_is_no_verdict_whatever_the_fallback_did(self) -> None:
+        # main's rule for a quota-exhausted primary, unchanged: the
+        # fallback's own error is not consulted.
+        for fallback in ("declined", "loggedout", "ineligible", "quota"):
+            with self.subTest(fallback=fallback):
+                r = self.run_step("quota", fallback)
+                self.assertEqual(r.rc, 1, r.log)
+                self.assertEqual(r.no_verdict(), "1")
 
     def test_ineligible_then_quota_is_no_verdict(self) -> None:
         r = self.run_step("ineligible", "quota")
         self.assertEqual(r.rc, 1, r.log)
         self.assertEqual(r.no_verdict(), "1")
 
-    def test_quota_then_an_account_level_fallback_failure_is_no_verdict(self) -> None:
-        # main's classification for a quota-exhausted primary (the
-        # 2026-09-08 release hold) survives a fallback that is logged out or
-        # ineligible: neither account read the diff.
-        for fallback in ("loggedout", "ineligible"):
-            with self.subTest(fallback=fallback):
-                r = self.run_step("quota", fallback)
-                self.assertEqual(r.rc, 1, r.log)
-                self.assertEqual(r.no_verdict(), "1")
-
-    def test_ineligible_then_an_account_level_fallback_failure_fails_closed(self) -> None:
-        for fallback in ("loggedout", "ineligible"):
+    def test_ineligible_then_any_other_fallback_failure_fails_closed(self) -> None:
+        for fallback in ("declined", "loggedout", "ineligible"):
             with self.subTest(fallback=fallback):
                 r = self.run_step("ineligible", fallback)
                 self.assertEqual(r.rc, 1, r.log)

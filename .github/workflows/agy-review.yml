@@ -630,18 +630,24 @@ jobs:
           # uses that same prefix, is retried on the same account, and
           # switching cannot fix it, hence the is_transient guard too.
           # Unlike quota, an ineligible primary does not by itself mark the
-          # run as no-verdict: if the fallback also fails at the account
-          # level, or declines, the run fails closed, as on main. Only a
-          # fallback that is out of quota makes it no-verdict (see the
+          # run as no-verdict: whatever the fallback then does, the run
+          # fails closed unless the fallback was out of quota (see the
           # classification below). Whether an ineligible account alone may
           # wave a blocking caller's merge through is a separate decision.
+          # primary_quota / primary_ineligible record which account-level
+          # failure the PRIMARY had; the classification below keys on these
+          # flags, never on the account_problem wording, which is log prose.
           account_problem=""
+          primary_quota=0
+          primary_ineligible=0
           if [ "$status" != "SUCCESS" ] && ! is_transient "$error"; then
             case "$error" in
               *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*)
+                primary_quota=1
                 account_problem="is out of quota"
                 ;;
               *"Your current account is not eligible for Antigravity"*)
+                primary_ineligible=1
                 account_problem="is not eligible for Antigravity (re-verify it on the runner)"
                 ;;
             esac
@@ -692,22 +698,18 @@ jobs:
             no_verdict=0
             [ "$status" = "UNKNOWN" ] && no_verdict=1
             [ -s result.json ] || no_verdict=1
-            # Quota is classified on the LAST attempt's error: an ineligible
-            # primary followed by a quota-exhausted fallback never read the
-            # diff either, so it is no-verdict like any quota failure.
-            case "$error" in
-              *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*) no_verdict=1 ;;
-            esac
-            # A quota-exhausted primary keeps main's classification (the
-            # 2026-09-08 release hold) when the fallback also failed at the
-            # account level: ineligible, or its login lapsed ("You are not
-            # logged into Antigravity", the state the GEMINI_API_KEY note
-            # above records). Neither account read the diff. Any other
-            # fallback failure, such as a model that declined, is a result
-            # about the diff and fails closed, as it would on the primary.
-            if [ "$account_problem" = "is out of quota" ]; then
+            # A quota-exhausted primary is no-verdict whatever the fallback
+            # then did: main's rule, unchanged here (the 2026-09-08 release
+            # hold). The fallback's $error is not consulted for it.
+            [ "$primary_quota" = 1 ] && no_verdict=1
+            # The one route this adds: an ineligible primary whose fallback
+            # was out of quota. Neither account read the diff. Matched with
+            # the same quota patterns main applies to the primary; every
+            # other fallback outcome after an ineligible primary fails
+            # closed, as the ineligible primary alone did on main.
+            if [ "$primary_ineligible" = 1 ]; then
               case "$error" in
-                *"not eligible for Antigravity"*|*"not logged into Antigravity"*) no_verdict=1 ;;
+                *[Qq]uota*|*RESOURCE_EXHAUSTED*|*"code 429"*) no_verdict=1 ;;
               esac
             fi
             # A backend blip that outlived the retries above is the same

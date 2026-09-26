@@ -50,5 +50,5 @@ jobs:
       - name: agy-review fallback and redaction on BSD sed
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install --disable-pip-version-check -q pyyaml
+          "$RUNNER_TEMP/venv/bin/pip" install --disable-pip-version-check -q -r roadmap/requirements.txt
           "$RUNNER_TEMP/venv/bin/python" -m unittest discover -s .github/tests -p 'test_agy_review_fallback.py' -v
