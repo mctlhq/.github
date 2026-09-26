@@ -5,13 +5,13 @@
   },
   "files": {
     "health.json": {
-      "sha256": "ce521bc191c884032761d2e9e05bc82a480cec00aca00b411003e621e0a3204c"
+      "sha256": "9461c2ca1960793339547feb5e5755a2854e6749eb3c04abc5963f0c7d88d865"
     },
     "ready-set.json": {
-      "sha256": "2ad6e96f2498c4a6eb9fd1d7e7da3182bb166b94b04d34186609ed1327d25ae2"
+      "sha256": "c2694303a67bee05429f1e2b31cf99f7892a7ce0d5a11f2c83f13fef77b5f240"
     },
     "snapshot.json": {
-      "sha256": "be5e35d57981e5ddbb13ca025753f16c4f2dc71a8aeb4bf535205ba79037c2bc"
+      "sha256": "2109ee98f37eb309dc5f5c33140b9df821ae4fee19d416caf4371ef0dfdce0ae"
     }
   },
   "kind": "RoadmapPublication",
@@ -189,7 +189,7 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-25T21:40:08Z",
+    "capturedAt": "2026-09-26T00:40:16Z",
     "mode": "live-capture"
   },
   "source": {
