@@ -9,6 +9,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/claude-review.yml'
+      - '.github/workflows/agy-review.yml'
       - '.github/workflows/workflow-tests.yml'
       - '.github/tests/**'
   push:
@@ -16,6 +17,7 @@ on:
       - main
     paths:
       - '.github/workflows/claude-review.yml'
+      - '.github/workflows/agy-review.yml'
       - '.github/workflows/workflow-tests.yml'
       - '.github/tests/**'
 
@@ -31,5 +33,22 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
 
-      - name: Reviewer model-usage capture
+      - name: Reviewer workflow tests (claude-review usage capture, agy-review fallback and redaction)
         run: python3 -m unittest discover -s .github/tests -p 'test_*.py' -v
+
+  # agy-review.yml runs only on the self-hosted Mac mini, so its redaction
+  # filter (AGY_REDACT_SED) runs under BSD sed there, while the job above
+  # exercises GNU sed. A GNU-only construct would pass above and silently stop
+  # redacting on the runner, which fails open (the log keeps the query
+  # string). This leg runs the agy suite under the same BSD userland.
+  agy-review-bsd:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - name: agy-review fallback and redaction on BSD sed
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --disable-pip-version-check -q -r roadmap/requirements.txt
+          "$RUNNER_TEMP/venv/bin/python" -m unittest discover -s .github/tests -p 'test_agy_review_fallback.py' -v
