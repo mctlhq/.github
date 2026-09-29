@@ -11,7 +11,7 @@ spec:
     Make execution context a first-class, immutable and evaluable platform
     resource with provenance, deterministic assembly, retrieval quality signals
     and versioned context-development lifecycle.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
