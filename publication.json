@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "4c18b2d5aa517ab3c6c4bf151de4a710f8121d47"
+    "revision": "66432dc6ccdd7a670e1e6928cd1af6e34b2ce2e6"
   },
   "files": {
     "health.json": {
-      "sha256": "e88ea3cd22de9c0895fe073ae008a99fb6744b8edca7ddf3f2d783d375e96342"
+      "sha256": "b6a0d39a33f5f7a5f0f423cd32fd4090603f36b6ab149afdc5209fa220dc481f"
     },
     "ready-set.json": {
-      "sha256": "591e9ad2316da48c0db00615dff8c0b9d4a3c293816de42db848ad6cac9dba9f"
+      "sha256": "6443d85733cddec601ad36a5bf21f1d5439337ffb46ac3d01c8bb296a72e7bcb"
     },
     "snapshot.json": {
-      "sha256": "d315e8227cd702ad827c6566a7f12d2df63de04338e3c93b1c02eada03089687"
+      "sha256": "4530149bf017f7dfbb5fd3b7ca6140ee96d84f4ecfdb09836cc36898df21c717"
     }
   },
   "kind": "RoadmapPublication",
@@ -79,12 +79,12 @@
     {
       "epic": {
         "goal": "Make execution context a first-class, immutable and evaluable platform resource with provenance, deterministic assembly, retrieval quality signals and versioned context-development lifecycle.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "context-platform",
         "title": "Context engineering and retrieval control plane"
       },
       "path": "roadmap/epics/context-platform.yaml",
-      "sha256": "9967b1947372b0a2abd6e475438246e2fe2663a590c825a29f9ae252a2849552"
+      "sha256": "bd1dd001d8ac9c51222631ede19018a6bbca2ac7b22ece64422900a95bcaefae"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-29T18:41:09Z",
+    "capturedAt": "2026-09-29T22:06:39Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "4c18b2d5aa517ab3c6c4bf151de4a710f8121d47"
+    "revision": "66432dc6ccdd7a670e1e6928cd1af6e34b2ce2e6"
   }
 }
