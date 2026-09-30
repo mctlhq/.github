@@ -61,6 +61,18 @@ spec:
       dependsOn:
         - safe-broadcast
 
+    - id: digest-broadcast-handoff
+      title: Hand frozen product-update digests to broadcast Prepare by source_ref
+      owner: mctl-telegram
+      phase: updates
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 683
+      dependsOn:
+        - product-update-feed
+        - safe-broadcast
+
     - id: onboarding-integration
       title: Integrate identity, consent, reachability and product communication into the client lifecycle
       owner: mctl-telegram
@@ -72,6 +84,7 @@ spec:
       dependsOn:
         - safe-broadcast
         - product-update-feed
+        - digest-broadcast-handoff
   completion:
     mode: allRequired
   successCriteria:
