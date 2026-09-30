@@ -77,7 +77,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -362,7 +362,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -533,7 +533,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -560,7 +560,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/client-lifecycle.yaml",
-          "sha256": "dadd5999f3ac038e7d9393774b1c8479e96f3572226ec7674023e3942ae38eb8"
+          "sha256": "139bd289fb9849821c41c3964dda047a9c9dc05d3ac90f105cbf1c143f9a2eb1"
         },
         "name": "client-lifecycle"
       },
@@ -585,6 +585,26 @@
         {
           "blockers": [],
           "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "product-update-feed",
+            "safe-broadcast"
+          ],
+          "externalDependsOn": [],
+          "id": "digest-broadcast-handoff",
+          "issue": {
+            "number": 683,
+            "repository": "mctlhq/mctl-telegram"
+          },
+          "phase": "updates",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
             "reason": "closed",
             "status": "complete"
           },
@@ -602,14 +622,22 @@
           "state": "complete"
         },
         {
-          "blockers": [],
+          "blockers": [
+            {
+              "id": "digest-broadcast-handoff",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
           "completion": {
             "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
             "safe-broadcast",
-            "product-update-feed"
+            "product-update-feed",
+            "digest-broadcast-handoff"
           ],
           "externalDependsOn": [],
           "id": "onboarding-integration",
@@ -619,7 +647,7 @@
           },
           "phase": "onboarding",
           "required": true,
-          "state": "ready"
+          "state": "blocked"
         },
         {
           "blockers": [],
@@ -663,22 +691,22 @@
       ],
       "kind": "RoadmapReadySet",
       "ready": [
-        "onboarding-integration"
+        "digest-broadcast-handoff"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 0,
+          "blocked": 1,
           "complete": 4,
           "ready": 1,
           "unknown": 0
         },
         "required": {
-          "blocked": 0,
+          "blocked": 1,
           "complete": 4,
           "ready": 1,
           "unknown": 0
@@ -936,7 +964,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1098,7 +1126,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1229,7 +1257,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1338,7 +1366,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1403,7 +1431,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1697,7 +1725,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1902,7 +1930,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2057,7 +2085,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2299,7 +2327,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2492,7 +2520,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2771,7 +2799,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2885,7 +2913,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3047,7 +3075,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T08:41:02Z",
+        "capturedAt": "2026-09-30T15:49:03Z",
         "mode": "live-capture"
       },
       "summary": {
