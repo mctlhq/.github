@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "26846e6bc52af115471ffb031541f560434cbf2f"
+    "revision": "3b8aebd41d8f2da197b36b197866f0dd41bd8eea"
   },
   "files": {
     "health.json": {
-      "sha256": "c403621efd6d7b59059f17d3e2037271d4bd1fe9d2baa258ffcaf5db5717f45e"
+      "sha256": "83c2155f375399756de60299c4f47f91194385f50f641603b2e0a344b6bbf5ad"
     },
     "ready-set.json": {
-      "sha256": "1d542831d1a1df1ba5896ae6ae52fc490256ff1c929e315d8bc4d9b9806f16f9"
+      "sha256": "75d7c7b6e813a995a71caeb80ea867370d4863d9757716447ce347c5a4255791"
     },
     "snapshot.json": {
-      "sha256": "a808cbdbcbe481781376e907ea06c9b26664d7546e0cede285c86a168443ce42"
+      "sha256": "33ca08e635b0a706139fad56cb1493086e8a3ff0431506fdfd5015d92219157e"
     }
   },
   "kind": "RoadmapPublication",
@@ -54,7 +54,7 @@
         "title": "Client onboarding and product communication"
       },
       "path": "roadmap/epics/client-lifecycle.yaml",
-      "sha256": "e74a0ffc68efcb7c1e932085b2aa453c67536c4b55573891b3f280b60951c615"
+      "sha256": "dadd5999f3ac038e7d9393774b1c8479e96f3572226ec7674023e3942ae38eb8"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-30T01:28:06Z",
+    "capturedAt": "2026-09-30T01:58:50Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "26846e6bc52af115471ffb031541f560434cbf2f"
+    "revision": "3b8aebd41d8f2da197b36b197866f0dd41bd8eea"
   }
 }
