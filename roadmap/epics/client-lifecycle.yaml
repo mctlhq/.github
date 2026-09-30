@@ -93,7 +93,6 @@ spec:
         repository: mctlhq/mctl-telegram
         number: 679
       dependsOn:
-        - operator-identity-lookup
         - safe-broadcast
         - product-update-feed
   completion:
