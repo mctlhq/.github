@@ -105,7 +105,7 @@ on:
       model-mid:
         description: Model for ordinary source changes.
         type: string
-        default: claude-sonnet-5
+        default: claude-sonnet-5-5
       model-low:
         description: >
           Model for docs/config-only diffs. Not a cheaper reviewer any more:
@@ -115,7 +115,7 @@ on:
           exists because the classifier's `skip` output is what `skip-paths`
           rides on, but the model no longer drops below model-mid.
         type: string
-        default: claude-sonnet-5
+        default: claude-sonnet-5-5
       allowed-bots:
         description: >
           Comma-separated bot actors whose pushes may still be reviewed.
