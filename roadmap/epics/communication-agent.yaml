@@ -15,7 +15,7 @@ spec:
     C2 safety gate with send-rate and cost ceilings plus an anomaly kill
     switch. Durable Temporal-backed approvals and the Channels preview are
     tracked alongside as non-gating tracks.
-  lifecycle: active
+  lifecycle: paused
   github:
     issue:
       repository: mctlhq/mctl-telegram
