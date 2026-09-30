@@ -77,7 +77,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -362,7 +362,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -533,7 +533,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -718,7 +718,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -987,7 +987,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1014,7 +1014,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/communication-agent.yaml",
-          "sha256": "d7e394d7c668baa29b033c986f4c99fbcad39cd86aef391e48c7bea77993efb7"
+          "sha256": "eac65a2620459855bdf5afe0b0aaefb360c94e1119d7ebae6901a54cdf94fd2b"
         },
         "name": "communication-agent"
       },
@@ -1149,7 +1149,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1280,7 +1280,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1389,7 +1389,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1454,7 +1454,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1748,7 +1748,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1953,7 +1953,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2108,7 +2108,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2350,7 +2350,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2543,7 +2543,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2822,7 +2822,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2936,7 +2936,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3098,7 +3098,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-29T22:06:39Z",
+        "capturedAt": "2026-09-30T00:24:36Z",
         "mode": "live-capture"
       },
       "summary": {

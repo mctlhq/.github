@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "66432dc6ccdd7a670e1e6928cd1af6e34b2ce2e6"
+    "revision": "664634db9c1dbb07ef50d3f8c676fac4160dcd54"
   },
   "files": {
     "health.json": {
-      "sha256": "b6a0d39a33f5f7a5f0f423cd32fd4090603f36b6ab149afdc5209fa220dc481f"
+      "sha256": "f4b2f139ec928b0f3982b351b8549fee766dceae561f331d6fea11b2613fdb66"
     },
     "ready-set.json": {
-      "sha256": "6443d85733cddec601ad36a5bf21f1d5439337ffb46ac3d01c8bb296a72e7bcb"
+      "sha256": "4873702fbc6cf7d95ded07a06e02e9ea6499e7be5c834253078f6afb29f957b9"
     },
     "snapshot.json": {
-      "sha256": "4530149bf017f7dfbb5fd3b7ca6140ee96d84f4ecfdb09836cc36898df21c717"
+      "sha256": "606e0340ac6f012b210646df22a1bb1732b1f9dc2d108454db5643ff944246d0"
     }
   },
   "kind": "RoadmapPublication",
@@ -69,12 +69,12 @@
     {
       "epic": {
         "goal": "Take the Telegram Communication Agent from the demonstrated draft-and-approve mode (C1, headless claude -p worker, Option C) to guarded autopilot (C2) only behind hard, evidenced gates: a production quota domain isolated from interactive Claude Code and PR review, and a C2 safety gate with send-rate and cost ceilings plus an anomaly kill switch. Durable Temporal-backed approvals and the Channels preview are tracked alongside as non-gating tracks.",
-        "lifecycle": "active",
+        "lifecycle": "paused",
         "name": "communication-agent",
         "title": "Communication Agent workstream"
       },
       "path": "roadmap/epics/communication-agent.yaml",
-      "sha256": "d7e394d7c668baa29b033c986f4c99fbcad39cd86aef391e48c7bea77993efb7"
+      "sha256": "eac65a2620459855bdf5afe0b0aaefb360c94e1119d7ebae6901a54cdf94fd2b"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-29T22:06:39Z",
+    "capturedAt": "2026-09-30T00:24:36Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "66432dc6ccdd7a670e1e6928cd1af6e34b2ce2e6"
+    "revision": "664634db9c1dbb07ef50d3f8c676fac4160dcd54"
   }
 }
