@@ -3906,10 +3906,6 @@
     {
       "blockedBy": [
         {
-          "number": 400,
-          "repository": "mctlhq/mctl-telegram"
-        },
-        {
           "number": 439,
           "repository": "mctlhq/mctl-telegram"
         },
@@ -3939,7 +3935,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-09-30T00:24:36Z",
+    "capturedAt": "2026-09-30T01:25:34Z",
     "mode": "live-capture"
   }
 }
