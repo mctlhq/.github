@@ -101,7 +101,7 @@ on:
           carefully enumerate their auth/crypto/db paths were getting the
           middle tier's model on them.
         type: string
-        default: claude-opus-5
+        default: claude-opus-5-5
       model-mid:
         description: Model for ordinary source changes.
         type: string
