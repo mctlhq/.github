@@ -11,7 +11,7 @@ spec:
     Model client identity, reachability and notification preferences, then build
     a consent-aware, previewable and audited path for product communication
     without granting a model direct broadcast authority.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
