@@ -63,7 +63,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -292,7 +292,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -402,7 +402,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -554,7 +554,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -829,7 +829,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -949,7 +949,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1104,7 +1104,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1184,7 +1184,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1256,7 +1256,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1556,7 +1556,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1669,7 +1669,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1769,7 +1769,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1943,7 +1943,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2063,7 +2063,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2079,8 +2079,7 @@
         "blocking": [
           "agentic-work-item-ux",
           "second-surface-pilot",
-          "telegram-work-item-adapter",
-          "working-memory-continuity"
+          "telegram-work-item-adapter"
         ],
         "items": [
           {
@@ -2179,15 +2178,15 @@
               "number": 431,
               "repository": "mctlhq/mctl-agents"
             },
-            "reason": "open",
+            "reason": "closed",
             "required": true,
-            "status": "incomplete"
+            "status": "complete"
           }
         ],
         "mode": "allRequired",
         "required": {
-          "complete": 6,
-          "incomplete": 4,
+          "complete": 7,
+          "incomplete": 3,
           "total": 10,
           "unknown": 0
         },
@@ -2208,7 +2207,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2288,7 +2287,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2383,7 +2382,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-09-30T20:51:35Z",
+        "capturedAt": "2026-10-01T00:36:37Z",
         "mode": "live-capture"
       },
       "state": "healthy",
