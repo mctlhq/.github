@@ -1,0 +1,94 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: agent-runtime-assurance
+  owner: mctl-agents
+  labels:
+    - roadmap
+    - security
+    - agents
+spec:
+  title: Adaptive runtime assurance for governed agents
+  goal: >-
+    Continuously probe agent, MCP and tool execution boundaries with adaptive
+    adversarial scenarios while keeping execution deterministic, bounded,
+    reproducible and promotable into regression coverage.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 151
+    issueType: Epic
+    project:
+      priority: P1
+  phases:
+    - id: contract
+      title: Assurance scenario and finding contracts
+    - id: harness
+      title: Deterministic bounded probe harness
+    - id: suites
+      title: Adversarial boundary suites
+    - id: validation
+      title: Finding validation and deterministic replay
+    - id: integration
+      title: Historical proof and regression promotion
+  workItems:
+    - id: assurance-contract
+      title: Define AssuranceScenario, run, result and finding contracts with explicit trust boundaries
+      owner: mctl-agents
+      phase: contract
+      required: true
+
+    - id: probe-harness
+      title: Implement a deterministic bounded probe executor with target allowlists, budgets and safe failure behavior
+      owner: mctl-agents
+      phase: harness
+      required: true
+      dependsOn:
+        - assurance-contract
+
+    - id: adversarial-boundary-suite
+      title: Add MCP, tool-output, context-injection, policy, identity, approval and lifecycle adversarial scenarios
+      owner: mctl-agents
+      phase: suites
+      required: true
+      dependsOn:
+        - probe-harness
+
+    - id: finding-replay-validation
+      title: Validate findings with exact-version evidence, deterministic replay and explicit false-positive handling
+      owner: mctl-agents
+      phase: validation
+      required: true
+      dependsOn:
+        - adversarial-boundary-suite
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 199
+
+    - id: historical-proof
+      title: Reproduce historical mctl security-boundary failure shapes in safe fixtures and prove their regressions
+      owner: mctl-agents
+      phase: integration
+      required: true
+      dependsOn:
+        - finding-replay-validation
+
+    - id: regression-promotion
+      title: Promote confirmed assurance findings into deterministic CI and DevLoop regression coverage
+      owner: mctl-agents
+      phase: integration
+      required: true
+      dependsOn:
+        - historical-proof
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Adaptive probe generation cannot choose arbitrary targets, credentials or write surfaces outside the deterministic harness.
+    - Production mutation is disabled by default and any live probe remains subject to the normal mctl policy and approval boundary.
+    - Untrusted target output is treated as data and cannot become authority over the harness.
+    - A model-reported finding is never accepted as ground truth without reproducible validation.
+    - Findings bind to exact scenario, runtime and target versions and durable evidence.
+    - The harness reproduces the unsafe shapes behind mctlhq/mctl-agents#183 and mctlhq/mctl-telegram#602 in safe fixtures.
+    - Confirmed findings can be promoted into deterministic regressions that fail when the corresponding guarantee regresses.
+    - Existing execution identity, policy, ownership, evidence and observability contracts remain authoritative rather than being reimplemented here.
