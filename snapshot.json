@@ -3884,10 +3884,10 @@
         "number": 679,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
-      "stateReason": "reopened",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-01T18:58:56Z"
+      "updatedAt": "2026-10-01T20:41:34Z"
     },
     {
       "blockedBy": [
@@ -3922,7 +3922,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-01T20:22:51Z",
+    "capturedAt": "2026-10-01T20:44:14Z",
     "mode": "live-capture"
   }
 }

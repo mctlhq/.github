@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "e46d0534959f7b397d697e71970ef06e6bdc4176"
+    "revision": "e35703c7061aa88124fdcace3b21cbaba1032bee"
   },
   "files": {
     "health.json": {
-      "sha256": "9b64cdb2d37ab54c88f994304d879360111970d616d7de93010022b511372354"
+      "sha256": "1d5df871a799321e292071332da56047afc7a84e6a3e0608d3be844c6cd2769d"
     },
     "ready-set.json": {
-      "sha256": "f3b38b9e52e7e8d8f3dce7f65c22f7e772ad571c67774844457eb84b2f4ab53d"
+      "sha256": "9baf13140a017fe75609972f7054fb595d26852986ec1289bc7f22411c8f88ad"
     },
     "snapshot.json": {
-      "sha256": "49c44bc6fda063715de61bcdb3a90b385903ad07c92321302990338edf055074"
+      "sha256": "efd575c8d3edef0726dfb44722b4dc1a00df99d632a89a8ce75b4ec8a2e9b90d"
     }
   },
   "kind": "RoadmapPublication",
@@ -49,12 +49,12 @@
     {
       "epic": {
         "goal": "Model client identity, reachability and notification preferences, then build a consent-aware, previewable and audited path for product communication without granting a model direct broadcast authority.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "client-lifecycle",
         "title": "Client onboarding and product communication"
       },
       "path": "roadmap/epics/client-lifecycle.yaml",
-      "sha256": "139bd289fb9849821c41c3964dda047a9c9dc05d3ac90f105cbf1c143f9a2eb1"
+      "sha256": "d559b4ac44a3cc2adaad423781d54de4804d1af5400c4204767de923470acc9a"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-01T20:22:51Z",
+    "capturedAt": "2026-10-01T20:44:14Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "e46d0534959f7b397d697e71970ef06e6bdc4176"
+    "revision": "e35703c7061aa88124fdcace3b21cbaba1032bee"
   }
 }
