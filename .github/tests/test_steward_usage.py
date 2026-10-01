@@ -81,6 +81,23 @@ class StewardUsageProgramTest(unittest.TestCase):
         self.assertEqual(run({"records": [record(session_id=""), record(model_key=None)]}), [])
         self.assertEqual(len(run({"records": [record(result_uuid=str(i)) for i in range(50)]})), 20)
 
+    def test_cap_applies_after_validation(self):
+        payload = {"records": [1] * 25 + [record(session_id="") for _ in range(5)] + [record()]}
+        self.assertEqual(run(payload), [record()])
+
+    def test_implausible_counters_are_dropped(self):
+        [out] = run({"records": [record(input_tokens=10**15, output_tokens=1_000_000_000,
+                                        cache_read_tokens=1_000_000_001, web_search_requests=10**6,
+                                        num_turns=10**7, retry_attempt=10**6)]})
+        self.assertEqual(out["output_tokens"], 1_000_000_000)
+        for key in ("input_tokens", "cache_read_tokens", "web_search_requests", "num_turns", "retry_attempt"):
+            self.assertNotIn(key, out)
+
+    def test_model_key_outside_the_model_id_charset_drops_the_record(self):
+        for bad in ("a|b", "<b>x</b>", "[x](http://e)", "a b", "x\ny"):
+            self.assertEqual(run({"records": [record(model_key=bad)]}), [], bad)
+        self.assertEqual(len(run({"records": [record(model_key="us.anthropic.claude-sonnet-5-5:1@v/x")]})), 1)
+
     def test_garbage_payloads_yield_no_records(self):
         for payload in (None, [], "x", {"records": "x"}, {"records": [1, "a", None]}, {}):
             self.assertEqual(run(payload), [], payload)

@@ -28,45 +28,53 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      # At most MAX_RECORDS records; each projected onto the allowlist below.
-      # Absent stays absent: a counter that is missing or not a non-negative
-      # integer is dropped, never set to 0. No cost field is accepted: the
+      # Each record is projected onto the allowlist below; at most 20 accepted
+      # records are kept (the cap applies after validation, so malformed
+      # entries cannot displace valid ones). Absent stays absent: a counter
+      # that is missing, not a non-negative integer, or above a plausible
+      # ceiling is dropped, never set to 0. No cost field is accepted: the
       # ledger prices the token counts from its own catalog at ingest.
+      # model_key is restricted to a model-id charset, so it can be written
+      # into the step summary table unescaped.
       STEWARD_USAGE_JQ: |
         def count: if type == "number" and . >= 0 and . == floor then . else null end;
+        def tokens: count | if . != null and . > 1000000000 then null else . end;
+        def small: count | if . != null and . > 100000 then null else . end;
+        def modelkey: if type == "string" and length <= 200 and test("^[A-Za-z0-9._:@/-]+$") then . else null end;
         def text: if type == "string" and . != "" and length <= 200 then . else null end;
         def repo: if type == "string" and test("^mctlhq/[A-Za-z0-9_.-]+$") then . else null end;
         (if type == "object" then .records else null end)
-        | (if type == "array" then .[:20] else [] end)
+        | (if type == "array" then . else [] end)
         | map(select(type == "object"))
         | map({
             schema_version: 1,
             session_id: (.session_id | text),
             result_uuid: (.result_uuid | text),
-            model_key: (.model_key | text),
+            model_key: (.model_key | modelkey),
             canonical_model: (.canonical_model | text),
             provider: (.provider | text),
             agent: "pr-steward",
             devloop_stage: "shepherd",
             target_repo: (.target_repo | repo),
             pr_number: (.pr_number | count | if . == 0 then null else . end),
-            input_tokens: (.input_tokens | count),
-            output_tokens: (.output_tokens | count),
-            cache_read_tokens: (.cache_read_tokens | count),
-            cache_write_tokens: (.cache_write_tokens | count),
-            web_search_requests: (.web_search_requests | count),
+            input_tokens: (.input_tokens | tokens),
+            output_tokens: (.output_tokens | tokens),
+            cache_read_tokens: (.cache_read_tokens | tokens),
+            cache_write_tokens: (.cache_write_tokens | tokens),
+            web_search_requests: (.web_search_requests | small),
             outcome: (.outcome | if . == "success" or . == "error" then . else null end),
             api_error_status: (.api_error_status | text),
             stop_reason: (.stop_reason | text),
             terminal_reason: (.terminal_reason | text),
-            num_turns: (.num_turns | count),
+            num_turns: (.num_turns | small),
             duration_api_ms: (.duration_api_ms | count),
-            retry_attempt: (.retry_attempt | count),
+            retry_attempt: (.retry_attempt | small),
             recorded_at: (.recorded_at | text)
           }
           | if .target_repo == null then del(.pr_number) else . end
           | with_entries(select(.value != null)))
         | map(select(.session_id != null and .model_key != null))
+        | .[:20]
         | {records: .}
     steps:
       - name: Validate steward usage records
