@@ -3886,7 +3886,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-01T05:46:55Z"
+      "updatedAt": "2026-10-01T13:25:41Z"
     },
     {
       "blockedBy": [
@@ -3921,7 +3921,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-01T07:14:05Z",
+    "capturedAt": "2026-10-01T14:35:07Z",
     "mode": "live-capture"
   }
 }
