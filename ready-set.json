@@ -75,7 +75,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -360,7 +360,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -531,7 +531,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -684,7 +684,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -952,7 +952,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1114,7 +1114,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1245,7 +1245,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1354,7 +1354,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1419,7 +1419,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1713,7 +1713,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1918,7 +1918,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2073,7 +2073,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2315,7 +2315,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2508,7 +2508,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2780,7 +2780,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2894,7 +2894,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2921,7 +2921,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/unified-identity.yaml",
-          "sha256": "1ce98bfeb8de26d54d532753458067d591f9aad39cb2007575e0175bd1f67035"
+          "sha256": "d168fef934a460ecc673e2b0622d1be3e0a69f3672d296a6162d4ae2d6434610"
         },
         "name": "unified-identity"
       },
@@ -2964,6 +2964,12 @@
               "kind": "workItem",
               "reason": "open",
               "status": "incomplete"
+            },
+            {
+              "id": "zitadel-identity-linking",
+              "kind": "workItem",
+              "reason": "unbound",
+              "status": "incomplete"
             }
           ],
           "completion": {
@@ -2973,7 +2979,8 @@
           "dependsOn": [
             "identity-federation",
             "mcp-oauth-cimd",
-            "delegated-agent-identity"
+            "delegated-agent-identity",
+            "zitadel-identity-linking"
           ],
           "externalDependsOn": [],
           "id": "github-decoupling",
@@ -3047,6 +3054,81 @@
           "phase": "principal",
           "required": true,
           "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "zitadel-deployment"
+          ],
+          "externalDependsOn": [],
+          "id": "tenant-app-sso",
+          "phase": "federation",
+          "required": false,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "zitadel-deployment",
+          "phase": "federation",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "identity-federation",
+            "zitadel-deployment"
+          ],
+          "externalDependsOn": [],
+          "id": "zitadel-federation-provider",
+          "phase": "federation",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "principal-model",
+            "zitadel-federation-provider"
+          ],
+          "externalDependsOn": [],
+          "id": "zitadel-identity-linking",
+          "phase": "migration",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "zitadel-deployment"
+          ],
+          "externalDependsOn": [],
+          "id": "zitadel-platform-sso",
+          "phase": "migration",
+          "required": false,
+          "state": "unknown"
         }
       ],
       "kind": "RoadmapReadySet",
@@ -3056,7 +3138,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T11:04:42Z",
+        "capturedAt": "2026-10-03T13:45:40Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3064,13 +3146,13 @@
           "blocked": 2,
           "complete": 1,
           "ready": 2,
-          "unknown": 0
+          "unknown": 5
         },
         "required": {
           "blocked": 2,
           "complete": 1,
           "ready": 2,
-          "unknown": 0
+          "unknown": 3
         }
       }
     }

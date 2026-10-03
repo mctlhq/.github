@@ -529,7 +529,7 @@
           "repository": "mctlhq/mctl-gitops"
         }
       ],
-      "updatedAt": "2026-10-03T11:02:24Z"
+      "updatedAt": "2026-10-03T12:11:15Z"
     },
     {
       "blockedBy": [],
@@ -3924,7 +3924,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-03T11:04:42Z",
+    "capturedAt": "2026-10-03T13:45:40Z",
     "mode": "live-capture"
   }
 }
