@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "378c88403e4b632188a9091497eeeaec5150d223"
+    "revision": "ac6fc943b6ce18c4716966108ccc881fd849e9c4"
   },
   "files": {
     "health.json": {
-      "sha256": "3f51cdf478807216cfbbfaae6dd2236b6a12227985333d07aac141c53363dea9"
+      "sha256": "e3c7c6b37ed48a904d378b1e0cc30c1d06a2df940898b918d9e2b88abbf025bf"
     },
     "ready-set.json": {
-      "sha256": "f529a743f5ff6794707f5f32075b10129ee4cc6ff7a869b8f900b728d3b6ec88"
+      "sha256": "ac2b2f32795eb8302b9b46139dd0c88a03ed8400cd20eb2cf1f572bb6840d84b"
     },
     "snapshot.json": {
-      "sha256": "e7aff28489fd6732ad7c95567288e9200e97d004386452df01c597c6a26f75bf"
+      "sha256": "65ea5f679b8379b48369f38161abc7243085ec4ecb6fcb1034763f4932905819"
     }
   },
   "kind": "RoadmapPublication",
@@ -184,17 +184,17 @@
         "title": "MCTL Unified Identity and Agent Identity Broker"
       },
       "path": "roadmap/epics/unified-identity.yaml",
-      "sha256": "b81c7e541eee696c08014d62fea880c0a735faca4a0cddc0dc85ca42a1118f24"
+      "sha256": "5950b182b628d60090e7cb8d5f5418f86523f1302f55e73e2711350340cd80c6"
     }
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-03T13:55:52Z",
+    "capturedAt": "2026-10-03T14:38:18Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "378c88403e4b632188a9091497eeeaec5150d223"
+    "revision": "ac6fc943b6ce18c4716966108ccc881fd849e9c4"
   }
 }
