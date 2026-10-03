@@ -97,12 +97,18 @@ spec:
       owner: mctl-gitops
       phase: federation
       required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1499
 
     - id: zitadel-federation-provider
       title: Register ZITADEL in the mctl-api federation registry with per-provider issuer and enforced audience
       owner: mctl-api
       phase: federation
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 434
       dependsOn:
         - identity-federation
         - zitadel-deployment
@@ -115,6 +121,9 @@ spec:
       owner: mctl-api
       phase: migration
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 435
       dependsOn:
         - principal-model
         - zitadel-federation-provider
@@ -124,15 +133,20 @@ spec:
       owner: mctl-gitops
       phase: migration
       required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1500
       dependsOn:
         - zitadel-deployment
 
-    # First candidate: ERPact (ERPNext), formerly stteam.
     - id: tenant-app-sso
       title: Offer tenant applications sign-in through a per-tenant ZITADEL organization
       owner: mctl-gitops
       phase: federation
       required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1501
       dependsOn:
         - zitadel-deployment
   completion:
