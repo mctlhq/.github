@@ -112,6 +112,7 @@ spec:
       dependsOn:
         - identity-federation
         - zitadel-deployment
+        - platform-host-reservation
 
     # Linking is an explicit action, never by spelling (#373 decision,
     # 2026-09-24): an existing GitHub or Dex principal gains a ZITADEL
@@ -149,6 +150,31 @@ spec:
         number: 1501
       dependsOn:
         - zitadel-deployment
+        - tenant-domain-separation
+
+    # auth.mctl.ai shares the registrable domain mctl.ai with tenant
+    # applications, so browsers treat them as one site (cookie tossing,
+    # SameSite gives no separation). Accepted for ZITADEL phase 1 only while
+    # nothing signs in through it (mctl-gitops docs/runbooks/zitadel.md).
+    - id: platform-host-reservation
+      title: Reserve platform hostnames on *.mctl.ai at admission so no tenant can claim auth.mctl.ai
+      owner: mctl-gitops
+      phase: federation
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1503
+
+    - id: tenant-domain-separation
+      title: Move tenant applications to a separate registrable domain listed in the Public Suffix List
+      owner: mctl-gitops
+      phase: migration
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 1504
+      dependsOn:
+        - platform-host-reservation
   completion:
     mode: allRequired
   successCriteria:
