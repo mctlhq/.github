@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "e35703c7061aa88124fdcace3b21cbaba1032bee"
+    "revision": "edbffdf556626a12e562a67157b1d3f57d20f605"
   },
   "files": {
     "health.json": {
-      "sha256": "2d790b9ceea4da6754d231f71f941350d850532025a02e1dab31b94957001e7a"
+      "sha256": "344f59ab50d384798975d542be3d6bfada5007365861ec8f1a4439f5aeab1184"
     },
     "ready-set.json": {
-      "sha256": "dbd36403348694352d408904641299b1483ba08f0e3e91d8247af5608aab42a2"
+      "sha256": "d41401cbf838f743a4d16500318f2bfcc52dcd4af8ea3641a88be70b4d35cc3c"
     },
     "snapshot.json": {
-      "sha256": "2d94de9dcdafe8a6229e1139739d5900bb7a4cbc7cbee23f0185e5843742de29"
+      "sha256": "201a03926b34ee27d5f2cc554cb9cc1d8b2d974697966439d1dc995ad1029980"
     }
   },
   "kind": "RoadmapPublication",
@@ -19,12 +19,12 @@
     {
       "epic": {
         "goal": "Make model usage and cost attributable to exact mctl executions and DevLoop stages through a backend-neutral, durable and replay-safe usage ledger.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "agent-finops",
         "title": "Agent FinOps and model usage attribution"
       },
       "path": "roadmap/epics/agent-finops.yaml",
-      "sha256": "b733800ba387f07a9081bf009b1a6eed413ebecc7fe75b2dd967ccc0055bbbe2"
+      "sha256": "c63774ff1f99ce8bf807cc513242cd15f12bf9f20cd72ba1adf322ae35daa149"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-02T23:50:59Z",
+    "capturedAt": "2026-10-03T03:15:50Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "e35703c7061aa88124fdcace3b21cbaba1032bee"
+    "revision": "edbffdf556626a12e562a67157b1d3f57d20f605"
   }
 }

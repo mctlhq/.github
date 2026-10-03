@@ -600,9 +600,10 @@
         "number": 50,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-02T22:27:28Z"
+      "updatedAt": "2026-10-03T03:12:44Z"
     },
     {
       "blockedBy": [],
@@ -3922,7 +3923,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-02T23:50:59Z",
+    "capturedAt": "2026-10-03T03:15:50Z",
     "mode": "live-capture"
   }
 }
