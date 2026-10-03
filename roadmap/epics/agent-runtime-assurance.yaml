@@ -28,6 +28,8 @@ spec:
       title: Deterministic bounded probe harness
     - id: suites
       title: Adversarial boundary suites
+    - id: adaptation
+      title: Adaptive probe generation
     - id: validation
       title: Finding validation and deterministic replay
     - id: integration
@@ -55,13 +57,21 @@ spec:
       dependsOn:
         - probe-harness
 
+    - id: adaptive-probe-generation
+      title: Generate bounded follow-up probes from prior observations without expanding target or capability authority
+      owner: mctl-agents
+      phase: adaptation
+      required: true
+      dependsOn:
+        - adversarial-boundary-suite
+
     - id: finding-replay-validation
       title: Validate findings with exact-version evidence, deterministic replay and explicit false-positive handling
       owner: mctl-agents
       phase: validation
       required: true
       dependsOn:
-        - adversarial-boundary-suite
+        - adaptive-probe-generation
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 199
