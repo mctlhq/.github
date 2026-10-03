@@ -11,7 +11,7 @@ spec:
     Move durable Cloudflare configuration to reviewed OpenTofu GitOps with
     mctl-owned remote state, controlled apply, drift detection and an explicit
     boundary around interactive and runtime state.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
