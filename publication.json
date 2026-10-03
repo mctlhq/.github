@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "edbffdf556626a12e562a67157b1d3f57d20f605"
+    "revision": "fea151f630fc07bcf636c94adfa6e74827d7eb30"
   },
   "files": {
     "health.json": {
-      "sha256": "c79fb57ba115e8c374b9406ee1c7e4df5c27ecb8d9f43df7de79bafdd8ab6b32"
+      "sha256": "8ea40c43fe0afad214a0eec4cca8cd4a189f6f3d27a05bb98a4ab08f122bfb2f"
     },
     "ready-set.json": {
-      "sha256": "262d4cc9fe03995148d061c210f33fbe049af14709b020fcaae2e967457ad15e"
+      "sha256": "b931999e2868764d054d80445ea04655e91a45099442b9f57e6c270e39ac2a39"
     },
     "snapshot.json": {
-      "sha256": "e0aa967b7fc9a22bcf06125557484af026ea93fe71be2259dcaa8de47780252d"
+      "sha256": "c49cdf734865851c3b046cd1113d1d683d372c9451bf27379529928dbb9e92fc"
     }
   },
   "kind": "RoadmapPublication",
@@ -59,12 +59,12 @@
     {
       "epic": {
         "goal": "Move durable Cloudflare configuration to reviewed OpenTofu GitOps with mctl-owned remote state, controlled apply, drift detection and an explicit boundary around interactive and runtime state.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "cloudflare-iac",
         "title": "Declarative Cloudflare control plane with self-hosted state"
       },
       "path": "roadmap/epics/cloudflare-iac.yaml",
-      "sha256": "83ce4fe606b8908420ac580a9e055a77cb5104b6a26ab35d91b4b42f8f96d799"
+      "sha256": "5ac17a261abdf496caf29d972b7437ce464cdf82642612147007793886bf9144"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-03T05:26:43Z",
+    "capturedAt": "2026-10-03T11:04:42Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "edbffdf556626a12e562a67157b1d3f57d20f605"
+    "revision": "fea151f630fc07bcf636c94adfa6e74827d7eb30"
   }
 }

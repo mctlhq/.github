@@ -75,7 +75,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -360,7 +360,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -531,7 +531,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -684,7 +684,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -711,7 +711,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/cloudflare-iac.yaml",
-          "sha256": "83ce4fe606b8908420ac580a9e055a77cb5104b6a26ab35d91b4b42f8f96d799"
+          "sha256": "5ac17a261abdf496caf29d972b7437ce464cdf82642612147007793886bf9144"
         },
         "name": "cloudflare-iac"
       },
@@ -832,8 +832,8 @@
         {
           "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "zone-state-migration"
@@ -846,7 +846,7 @@
           },
           "phase": "operations",
           "required": true,
-          "state": "ready"
+          "state": "complete"
         },
         {
           "blockers": [],
@@ -947,26 +947,25 @@
       "kind": "RoadmapReadySet",
       "ready": [
         "account-access",
-        "operator-runbook",
         "state-credential-hardening",
         "tunnel-handoff"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
           "blocked": 0,
-          "complete": 8,
-          "ready": 4,
+          "complete": 9,
+          "ready": 3,
           "unknown": 0
         },
         "required": {
           "blocked": 0,
-          "complete": 8,
-          "ready": 1,
+          "complete": 9,
+          "ready": 0,
           "unknown": 0
         }
       }
@@ -1115,7 +1114,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1246,7 +1245,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1355,7 +1354,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1420,7 +1419,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1714,7 +1713,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1919,7 +1918,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2074,7 +2073,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2316,7 +2315,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2509,7 +2508,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2781,7 +2780,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2895,7 +2894,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3057,7 +3056,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T05:26:43Z",
+        "capturedAt": "2026-10-03T11:04:42Z",
         "mode": "live-capture"
       },
       "summary": {
