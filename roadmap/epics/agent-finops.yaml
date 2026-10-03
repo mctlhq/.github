@@ -12,7 +12,7 @@ spec:
   goal: >-
     Make model usage and cost attributable to exact mctl executions and DevLoop stages
     through a backend-neutral, durable and replay-safe usage ledger.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
