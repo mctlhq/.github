@@ -27,6 +27,8 @@ spec:
       title: Durable usage ledger and queries
     - id: instrumentation
       title: End-to-end DevLoop instrumentation
+    - id: outcomes
+      title: Outcome and trajectory economics
   workItems:
     - id: usage-contract
       phase: contract
@@ -50,6 +52,14 @@ spec:
         number: 50
       dependsOn:
         - usage-ledger
+
+    - id: trajectory-economics
+      title: Attribute cost, retries, review rounds and model-switch overhead to successful work outcomes
+      owner: mctl-api
+      phase: outcomes
+      required: true
+      dependsOn:
+        - devloop-instrumentation
   completion:
     mode: allRequired
   successCriteria:
@@ -59,4 +69,5 @@ spec:
     - Retry, replay and exporter redelivery cannot double-count one paid invocation.
     - Usage remains queryable after observability backend retention expires.
     - One complete DevLoop can be broken down by investigator, implementer, reviewer and remediation stage.
+    - Outcome queries report cost per successful work item and expose retries, review rounds, abandoned spend and model-switch overhead separately from token price.
     - FinOps does not require prompt or completion payload storage.
