@@ -61,7 +61,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -290,7 +290,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -400,7 +400,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -549,7 +549,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -822,7 +822,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -942,7 +942,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1097,7 +1097,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1177,7 +1177,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1249,7 +1249,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1549,7 +1549,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1662,7 +1662,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1762,7 +1762,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1936,7 +1936,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2056,7 +2056,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2200,7 +2200,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2280,7 +2280,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2413,168 +2413,7 @@
         },
         "status": "incomplete"
       },
-      "diagnostics": [
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner github-decoupling): blocked=mctlhq/mctl-api#377, blocker=mctlhq/mctl-api#435",
-          "subject": {
-            "blocked": {
-              "number": 377,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 435,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "github-decoupling"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner zitadel-federation-provider): blocked=mctlhq/mctl-api#434, blocker=mctlhq/mctl-gitops#1499",
-          "subject": {
-            "blocked": {
-              "number": 434,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 1499,
-              "repository": "mctlhq/mctl-gitops"
-            },
-            "owner": "zitadel-federation-provider"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner zitadel-federation-provider): blocked=mctlhq/mctl-api#434, blocker=mctlhq/mctl-api#374",
-          "subject": {
-            "blocked": {
-              "number": 434,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 374,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "zitadel-federation-provider"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner zitadel-identity-linking): blocked=mctlhq/mctl-api#435, blocker=mctlhq/mctl-api#373",
-          "subject": {
-            "blocked": {
-              "number": 435,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 373,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "zitadel-identity-linking"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner zitadel-identity-linking): blocked=mctlhq/mctl-api#435, blocker=mctlhq/mctl-api#434",
-          "subject": {
-            "blocked": {
-              "number": 435,
-              "repository": "mctlhq/mctl-api"
-            },
-            "blocker": {
-              "number": 434,
-              "repository": "mctlhq/mctl-api"
-            },
-            "owner": "zitadel-identity-linking"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner zitadel-deployment): child=mctlhq/mctl-gitops#1499, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 1499,
-              "repository": "mctlhq/mctl-gitops"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "zitadel-deployment"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner zitadel-platform-sso): child=mctlhq/mctl-gitops#1500, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 1500,
-              "repository": "mctlhq/mctl-gitops"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "zitadel-platform-sso"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner tenant-app-sso): child=mctlhq/mctl-gitops#1501, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 1501,
-              "repository": "mctlhq/mctl-gitops"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "tenant-app-sso"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner zitadel-federation-provider): child=mctlhq/mctl-api#434, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 434,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "zitadel-federation-provider"
-          }
-        },
-        {
-          "code": "HierarchyMissingParent",
-          "level": "drift",
-          "message": "HierarchyMissingParent (owner zitadel-identity-linking): child=mctlhq/mctl-api#435, expectedParent=mctlhq/.github#91",
-          "subject": {
-            "child": {
-              "number": 435,
-              "repository": "mctlhq/mctl-api"
-            },
-            "expectedParent": {
-              "number": 91,
-              "repository": "mctlhq/.github"
-            },
-            "owner": "zitadel-identity-linking"
-          }
-        }
-      ],
+      "diagnostics": [],
       "epic": {
         "issue": {
           "number": 91,
@@ -2589,12 +2428,12 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-03T13:52:29Z",
+        "capturedAt": "2026-10-03T13:55:52Z",
         "mode": "live-capture"
       },
-      "state": "drift",
+      "state": "healthy",
       "summary": {
-        "drift": 10,
+        "drift": 0,
         "error": 0,
         "info": 0
       }

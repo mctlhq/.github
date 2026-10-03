@@ -976,6 +976,26 @@
         {
           "number": 377,
           "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 1499,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 1500,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 1501,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 434,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 435,
+          "repository": "mctlhq/mctl-api"
         }
       ],
       "updatedAt": "2026-09-17T22:36:34Z"
@@ -2438,6 +2458,10 @@
         {
           "number": 376,
           "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 435,
+          "repository": "mctlhq/mctl-api"
         }
       ],
       "found": true,
@@ -2458,9 +2482,21 @@
       "updatedAt": "2026-09-23T20:23:31Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 1499,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 374,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 434,
         "repository": "mctlhq/mctl-api"
@@ -2474,9 +2510,21 @@
       "updatedAt": "2026-10-03T13:49:28Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 373,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 434,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 435,
         "repository": "mctlhq/mctl-api"
@@ -3158,7 +3206,10 @@
     {
       "blockedBy": [],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 1499,
         "repository": "mctlhq/mctl-gitops"
@@ -3179,7 +3230,10 @@
         }
       ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 1500,
         "repository": "mctlhq/mctl-gitops"
@@ -3200,7 +3254,10 @@
         }
       ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 1501,
         "repository": "mctlhq/mctl-gitops"
@@ -4014,7 +4071,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-03T13:52:29Z",
+    "capturedAt": "2026-10-03T13:55:52Z",
     "mode": "live-capture"
   }
 }
