@@ -996,6 +996,14 @@
         {
           "number": 435,
           "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 1503,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 1504,
+          "repository": "mctlhq/mctl-gitops"
         }
       ],
       "updatedAt": "2026-09-17T22:36:34Z"
@@ -4122,7 +4130,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-03T14:38:18Z",
+    "capturedAt": "2026-10-03T14:41:41Z",
     "mode": "live-capture"
   }
 }
