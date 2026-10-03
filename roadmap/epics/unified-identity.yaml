@@ -83,6 +83,58 @@ spec:
         - identity-federation
         - mcp-oauth-cimd
         - delegated-agent-identity
+        - zitadel-identity-linking
+
+    # Identity provider decision (owner, 2026-10-03): the human identity
+    # provider is self-hosted ZITADEL. It is one more OIDC entry in the
+    # federation registry (MCTL_OIDC_PROVIDERS, mctl-api#374 slice A), not a
+    # broker in front of every request, so the #374 design rationale stands:
+    # static service tokens, local MCP OAuth JWTs and GitHub PATs stay
+    # verified by mctl-api itself. ZITADEL replaces Argo CD's embedded Dex
+    # (ops.mctl.ai/api/dex) as the source of human sign-in.
+    - id: zitadel-deployment
+      title: Run self-hosted ZITADEL as the MCTL human identity provider (Postgres, Vault-held secrets, backups, alerting)
+      owner: mctl-gitops
+      phase: federation
+      required: true
+
+    - id: zitadel-federation-provider
+      title: Register ZITADEL in the mctl-api federation registry with per-provider issuer and enforced audience
+      owner: mctl-api
+      phase: federation
+      required: true
+      dependsOn:
+        - identity-federation
+        - zitadel-deployment
+
+    # Linking is an explicit action, never by spelling (#373 decision,
+    # 2026-09-24): an existing GitHub or Dex principal gains a ZITADEL
+    # identity only through a verified link, not a name match.
+    - id: zitadel-identity-linking
+      title: Link existing GitHub and Dex principals to their ZITADEL identities through an explicit, verified flow
+      owner: mctl-api
+      phase: migration
+      required: true
+      dependsOn:
+        - principal-model
+        - zitadel-federation-provider
+
+    - id: zitadel-platform-sso
+      title: Move Argo CD, the portal and Cloudflare Access sign-in from Dex and Google to ZITADEL
+      owner: mctl-gitops
+      phase: migration
+      required: false
+      dependsOn:
+        - zitadel-deployment
+
+    # First candidate: ERPact (ERPNext), formerly stteam.
+    - id: tenant-app-sso
+      title: Offer tenant applications sign-in through a per-tenant ZITADEL organization
+      owner: mctl-gitops
+      phase: federation
+      required: false
+      dependsOn:
+        - zitadel-deployment
   completion:
     mode: allRequired
   successCriteria:
@@ -94,3 +146,4 @@ spec:
     - Tenant membership and authorization resolve against canonical MCTL principals.
     - Agent actions distinguish the acting agent from the on-behalf-of subject.
     - The federation provider can change without changing the MCTL authorization model.
+    - Human sign-in to MCTL goes through self-hosted ZITADEL; GitHub and Google are linked upstream identities.
