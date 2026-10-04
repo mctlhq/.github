@@ -61,7 +61,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -290,7 +290,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -400,7 +400,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -549,7 +549,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -822,7 +822,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -942,7 +942,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1097,7 +1097,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1177,7 +1177,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1249,7 +1249,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1549,7 +1549,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1659,7 +1659,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1759,7 +1759,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1871,38 +1871,6 @@
       },
       "diagnostics": [
         {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner devloop-traces): blocked=mctlhq/mctl-agents#195, blocker=mctlhq/mctl-gitops#1280",
-          "subject": {
-            "blocked": {
-              "number": 195,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 1280,
-              "repository": "mctlhq/mctl-gitops"
-            },
-            "owner": "devloop-traces"
-          }
-        },
-        {
-          "code": "DependencyMissing",
-          "level": "drift",
-          "message": "DependencyMissing (owner devloop-traces): blocked=mctlhq/mctl-agents#195, blocker=mctlhq/mctl-gitops#1332",
-          "subject": {
-            "blocked": {
-              "number": 195,
-              "repository": "mctlhq/mctl-agents"
-            },
-            "blocker": {
-              "number": 1332,
-              "repository": "mctlhq/mctl-gitops"
-            },
-            "owner": "devloop-traces"
-          }
-        },
-        {
           "code": "HierarchyUnexpectedChild",
           "level": "info",
           "message": "HierarchyUnexpectedChild (owner epic): child=mctlhq/mctl-docs#107, observedParent=mctlhq/.github#55",
@@ -1933,12 +1901,12 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
-      "state": "drift",
+      "state": "healthy",
       "summary": {
-        "drift": 2,
+        "drift": 0,
         "error": 0,
         "info": 1
       }
@@ -2053,7 +2021,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2195,7 +2163,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2275,7 +2243,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2441,7 +2409,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-04T19:17:46Z",
+        "capturedAt": "2026-10-04T19:40:57Z",
         "mode": "live-capture"
       },
       "state": "healthy",

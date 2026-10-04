@@ -193,7 +193,8 @@
         "number": 22,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [
         {
           "number": 438,
@@ -220,7 +221,7 @@
           "repository": "mctlhq/mctl-telegram"
         }
       ],
-      "updatedAt": "2026-09-26T23:45:02Z"
+      "updatedAt": "2026-10-04T19:32:14Z"
     },
     {
       "blockedBy": [],
@@ -396,7 +397,8 @@
         "number": 42,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [
         {
           "number": 261,
@@ -427,7 +429,7 @@
           "repository": "mctlhq/mctl-agents"
         }
       ],
-      "updatedAt": "2026-09-11T22:48:20Z"
+      "updatedAt": "2026-10-04T19:21:14Z"
     },
     {
       "blockedBy": [],
@@ -466,7 +468,8 @@
         "number": 47,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [
         {
           "number": 1083,
@@ -529,7 +532,7 @@
           "repository": "mctlhq/mctl-gitops"
         }
       ],
-      "updatedAt": "2026-10-03T12:11:15Z"
+      "updatedAt": "2026-10-04T19:32:11Z"
     },
     {
       "blockedBy": [],
@@ -543,7 +546,8 @@
         "number": 48,
         "repository": "mctlhq/.github"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [
         {
           "number": 49,
@@ -558,7 +562,7 @@
           "repository": "mctlhq/mctl-api"
         }
       ],
-      "updatedAt": "2026-09-11T22:48:33Z"
+      "updatedAt": "2026-10-04T19:32:06Z"
     },
     {
       "blockedBy": [],
@@ -1175,6 +1179,14 @@
         },
         {
           "number": 902,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 1280,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 1332,
           "repository": "mctlhq/mctl-gitops"
         }
       ],
@@ -4136,7 +4148,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-04T19:17:46Z",
+    "capturedAt": "2026-10-04T19:40:57Z",
     "mode": "live-capture"
   }
 }
