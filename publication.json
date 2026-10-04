@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "d8b48876b9c9febed08e544baf5b058393ccb23a"
+    "revision": "39c2256465fecd73c317d24bb9e6fb9b1e086162"
   },
   "files": {
     "health.json": {
-      "sha256": "6c33b098970b727aaf64e0907b9a98d7e15a0ee1a91d9a89d833b6f5f0f5f41b"
+      "sha256": "e069b834d140e74b130d7ad0bd48166e99f28420dc26aa23dc402529b357bd8e"
     },
     "ready-set.json": {
-      "sha256": "821d1e09c96de2fc61bd0c7e29e76fa6f70dad4e0ea3568862428355e85615df"
+      "sha256": "c32801db300d6be5c944b3211ccca1042af64497588403516f37602c35ffdc71"
     },
     "snapshot.json": {
-      "sha256": "65ecce244cfa0010e4ac1c23204baf1731065238e6b2a427f1fbefdcbe618d9c"
+      "sha256": "2510f962004b39557ceb4de4d966ddc82faf9739221b49fec37cad0dacaf0e6c"
     }
   },
   "kind": "RoadmapPublication",
@@ -159,12 +159,12 @@
     {
       "epic": {
         "goal": "Keep durable work state in the platform so a WorkItem can be inspected and resumed across Telegram, MCP, CLI and web surfaces without replaying raw conversation history or inheriting privileges across surfaces.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "surfaces",
         "title": "Cross-surface working context and agentic UX"
       },
       "path": "roadmap/epics/surfaces.yaml",
-      "sha256": "93d3421e749808e43550e68457346277408d8a84b1e222f1458ecd2a0ecaf7bc"
+      "sha256": "2bbe4768319f6af963d7d64106623a516be78e17a3b4061b66aa79105313a48d"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-04T19:40:57Z",
+    "capturedAt": "2026-10-04T20:16:57Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "d8b48876b9c9febed08e544baf5b058393ccb23a"
+    "revision": "39c2256465fecd73c317d24bb9e6fb9b1e086162"
   }
 }
