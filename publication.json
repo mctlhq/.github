@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "ac6fc943b6ce18c4716966108ccc881fd849e9c4"
+    "revision": "d8b48876b9c9febed08e544baf5b058393ccb23a"
   },
   "files": {
     "health.json": {
-      "sha256": "678e2d5708d96e32b6e53a84b8d9a4d14cae50afcec9e887bb4ffa88e302d88c"
+      "sha256": "e7eb7cec9f50b0d4d0e5382c5ea997a7f5e72b8e5fce855589c23887f7aeb422"
     },
     "ready-set.json": {
-      "sha256": "161dd4ac959c1c5fc562a8f521e2617023b5fc0439da777fe2d9732338348532"
+      "sha256": "6fe766777fa347f395c5f3995a870598d35d4970050121f11be580eafd727760"
     },
     "snapshot.json": {
-      "sha256": "5b8796d3e97a59692d7c10a52e90d177f547a7273ddbd97253bc9fb328f63da5"
+      "sha256": "b08d3b7ec251114eae9c2e62617c5719efdaa589484a6bb5f5f7a5835ee4c675"
     }
   },
   "kind": "RoadmapPublication",
@@ -119,12 +119,12 @@
     {
       "epic": {
         "goal": "Allow an agent to suspend durable work, ask an authorized human for missing information, and resume the same WorkItem without treating clarification as approval.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "human-input",
         "title": "Durable agent clarification / feedback primitive"
       },
       "path": "roadmap/epics/human-input.yaml",
-      "sha256": "6ecc4d3c0ee8fa0d58978eb4ef0dcb10dcd3265aa85dad442756ad5865fe2a58"
+      "sha256": "d3da21e07a8678b566b26715848d0f25b280d821a7952ae27b9920740d1abe67"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-04T15:24:55Z",
+    "capturedAt": "2026-10-04T19:17:46Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "ac6fc943b6ce18c4716966108ccc881fd849e9c4"
+    "revision": "d8b48876b9c9febed08e544baf5b058393ccb23a"
   }
 }
