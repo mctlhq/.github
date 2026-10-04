@@ -1006,7 +1006,7 @@
           "repository": "mctlhq/mctl-gitops"
         }
       ],
-      "updatedAt": "2026-09-17T22:36:34Z"
+      "updatedAt": "2026-10-04T14:31:14Z"
     },
     {
       "blockedBy": [
@@ -1913,9 +1913,10 @@
         "number": 473,
         "repository": "mctlhq/mctl-agents"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-04T00:32:54Z"
+      "updatedAt": "2026-10-04T11:15:26Z"
     },
     {
       "blockedBy": [],
@@ -2520,7 +2521,7 @@
       "state": "closed",
       "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-04T09:48:18Z"
+      "updatedAt": "2026-10-04T11:10:23Z"
     },
     {
       "blockedBy": [
@@ -3258,7 +3259,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-04T08:58:20Z"
+      "updatedAt": "2026-10-04T12:45:54Z"
     },
     {
       "blockedBy": [
@@ -3286,7 +3287,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-04T09:06:42Z"
+      "updatedAt": "2026-10-04T10:44:51Z"
     },
     {
       "blockedBy": [],
@@ -3384,9 +3385,10 @@
         "number": 126,
         "repository": "mctlhq/mctl-portal"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-03T17:07:10Z"
+      "updatedAt": "2026-10-04T11:51:32Z"
     },
     {
       "blockedBy": [],
@@ -3648,10 +3650,10 @@
         "number": 443,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
-      "stateReason": "reopened",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-04T08:22:54Z"
+      "updatedAt": "2026-10-04T10:17:28Z"
     },
     {
       "blockedBy": [],
@@ -3888,9 +3890,10 @@
         "number": 571,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-03T23:22:33Z"
+      "updatedAt": "2026-10-04T11:15:24Z"
     },
     {
       "blockedBy": [],
@@ -4133,7 +4136,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-04T09:55:12Z",
+    "capturedAt": "2026-10-04T15:24:55Z",
     "mode": "live-capture"
   }
 }
