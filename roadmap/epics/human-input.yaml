@@ -11,7 +11,7 @@ spec:
     Allow an agent to suspend durable work, ask an authorized human for missing
     information, and resume the same WorkItem without treating clarification as
     approval.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
