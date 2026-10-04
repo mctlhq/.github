@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -169,11 +170,15 @@ class PublishTest(unittest.TestCase):
     def test_publication_validates_and_carries_its_provenance(self) -> None:
         corpus = self.corpus(EPIC_66, HUMAN_INPUT)
         # One epic in another lifecycle, so the copied lifecycle is observable.
+        # Whatever the manifest's own lifecycle is: a silent no-op replace would
+        # leave the assertion below depending on the live manifest.
         paused = corpus / HUMAN_INPUT.name
-        paused.write_text(
-            paused.read_text(encoding="utf-8").replace("lifecycle: active", "lifecycle: paused", 1),
-            encoding="utf-8",
+        text, replaced = re.subn(
+            r"^  lifecycle: \w+$", "  lifecycle: paused", paused.read_text(encoding="utf-8"),
+            count=1, flags=re.MULTILINE,
         )
+        self.assertEqual(1, replaced)
+        paused.write_text(text, encoding="utf-8")
         snapshot = self.snapshot(CAPTURE_66)
         snapshot["issues"] += [
             issue
