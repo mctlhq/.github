@@ -27,6 +27,8 @@ spec:
       title: Gateway and DLP capability result
     - id: correlation
       title: mctl-native correlation and evidence
+    - id: context-efficiency
+      title: Adaptive tool exposure and context efficiency
     - id: enterprise-identity
       title: Tenant-specific enterprise identity boundary
   workItems:
@@ -98,6 +100,35 @@ spec:
         number: 617
       dependsOn:
         - gateway-dlp-result
+
+    # This is follow-up optimization scope, not a new baseline completion gate.
+    # It turns the deferred context-efficiency section in .github#35 into an
+    # observable work item while preserving the epic's existing allRequired
+    # completion semantics.
+    - id: tool-exposure-benchmark
+      title: Benchmark context-efficient tool exposure on real MCP workloads
+      owner: mctlhq/mctl-agents
+      phase: context-efficiency
+      required: false
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 597
+      dependsOn:
+        - correlation-contract
+
+    # Adoption is deliberately blocked on the benchmark recommendation. The
+    # implementation path may be mctl-native, Portal-native, hybrid or no
+    # rollout at all; this cross-repo issue owns that bounded decision.
+    - id: adaptive-tool-exposure
+      title: Adopt the benchmark-selected adaptive tool exposure path
+      owner: mctlhq/.github
+      phase: context-efficiency
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 165
+      dependsOn:
+        - tool-exposure-benchmark
 
     # The body calls this the executable counterpart of mctlhq/.github#41 and
     # names a live Phase 1 portal as well: the mapping decisions are the input
