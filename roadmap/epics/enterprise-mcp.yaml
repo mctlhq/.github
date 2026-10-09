@@ -150,9 +150,15 @@ spec:
         - correlation-contract
         - mcp-tasks
         - mcp-apps
+      # This decision needs the stable canonical-principal contract and the
+      # swappable federation boundary, not every remaining migration in the
+      # Unified Identity epic. CIMD, delegated-agent identity and the final
+      # GitHub authorization cut-over may proceed independently.
       externalDependsOn:
-        - repository: mctlhq/.github
-          number: 91
+        - repository: mctlhq/mctl-api
+          number: 373
+        - repository: mctlhq/mctl-api
+          number: 374
   completion:
     mode: allRequired
   successCriteria:
