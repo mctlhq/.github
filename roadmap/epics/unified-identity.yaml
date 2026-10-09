@@ -37,8 +37,13 @@ spec:
         repository: mctlhq/mctl-api
         number: 373
 
+    # The provider registry and first production provider are already real, but
+    # #374 deliberately split its accepted design into separately mergeable
+    # slices. Keep this required item open until those remaining federation
+    # slices are explicitly completed or moved to follow-ups by owner decision;
+    # do not equate "ZITADEL works" with the whole #374 contract being done.
     - id: identity-federation
-      title: Introduce a swappable OIDC federation and broker boundary
+      title: Complete the swappable OIDC federation boundary and migration contract
       owner: mctl-api
       phase: federation
       required: true
@@ -116,9 +121,12 @@ spec:
 
     # Linking is an explicit action, never by spelling (#373 decision,
     # 2026-09-24): an existing GitHub or Dex principal gains a ZITADEL
-    # identity only through a verified link, not a name match.
+    # identity only through a verified link, not a name match. The core browser
+    # flow and admin merge implementation landed in mctl-api#446; this work
+    # item remains open until the client/wiring and a live link proof establish
+    # that existing principals can actually use the path in production.
     - id: zitadel-identity-linking
-      title: Link existing GitHub and Dex principals to their ZITADEL identities through an explicit, verified flow
+      title: Ship and prove explicit ZITADEL identity linking for existing principals
       owner: mctl-api
       phase: migration
       required: true
