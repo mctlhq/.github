@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "39c2256465fecd73c317d24bb9e6fb9b1e086162"
+    "revision": "fe96549ca3baafdbbdbf741810acc25b25fef564"
   },
   "files": {
     "health.json": {
-      "sha256": "4f81b8ea5a2bac5f256c84709c691c909893eb1775f9e7f01250d864ddc5dfee"
+      "sha256": "aead6c0077a591d5c94e1b251e6bfb6893ba8f0254b72fa633e12eef19488532"
     },
     "ready-set.json": {
-      "sha256": "78f9eac90045647c59d92e01db82fe01132991d282ead63fa00d25e3e2891deb"
+      "sha256": "541d46fe7c2c4b6dc27c51fbf77e9900d26efb8843ac28381e7b3a6ea85ddb57"
     },
     "snapshot.json": {
-      "sha256": "e76d38d5e2baef3a23cf438f033136a6a83df982be330043bbf77b8bcfb011be"
+      "sha256": "e5a043ac2689ad3a0cd2e45b4de7ed10f63d5797e7fb08c33aedbc6fde3aba6c"
     }
   },
   "kind": "RoadmapPublication",
@@ -29,12 +29,12 @@
     {
       "epic": {
         "goal": "Make agents first-class declarative platform resources whose immutable definitions and execution profiles determine model, skills, capabilities, policy, runtime, budget and evidence, with governed publication and creation.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "agent-platform",
         "title": "Agent definitions, execution profiles and governed agent creation"
       },
       "path": "roadmap/epics/agent-platform.yaml",
-      "sha256": "f19f0930a6f6343cf3fae256e9c3077cb3ee5a516e1a8cacc3548494304bd063"
+      "sha256": "a243661d4f9fd02371540fbb6cae74ff1563759226e93949f91f5ada3af9f1a8"
     },
     {
       "epic": {
@@ -189,12 +189,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-09T09:42:02Z",
+    "capturedAt": "2026-10-09T14:09:57Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "39c2256465fecd73c317d24bb9e6fb9b1e086162"
+    "revision": "fe96549ca3baafdbbdbf741810acc25b25fef564"
   }
 }
