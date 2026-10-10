@@ -75,7 +75,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -344,7 +344,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -515,7 +515,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -668,7 +668,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -936,7 +936,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1098,7 +1098,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1229,7 +1229,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1338,7 +1338,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1403,7 +1403,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1697,7 +1697,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1885,7 +1885,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2040,7 +2040,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2067,7 +2067,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/observability.yaml",
-          "sha256": "6884e389d140027664781aa32a06715c89723826041f4bcfb9541a63c6672494"
+          "sha256": "8c909efd3249f781627af97a5ffb2e88c2faf4f611347143d7a301ff7c94f760"
         },
         "name": "observability"
       },
@@ -2224,7 +2224,8 @@
             "status": "complete"
           },
           "dependsOn": [
-            "devloop-traces"
+            "telemetry-gateway",
+            "attribute-catalog"
           ],
           "externalDependsOn": [],
           "id": "mcp-span-context",
@@ -2260,7 +2261,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2453,7 +2454,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2709,7 +2710,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2823,7 +2824,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3127,7 +3128,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-10T15:27:07Z",
+        "capturedAt": "2026-10-10T19:59:12Z",
         "mode": "live-capture"
       },
       "summary": {
