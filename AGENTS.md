@@ -1,5 +1,5 @@
 # Active plans
 
-- [Agent Commerce](docs/plans/agent-commerce.md): proposed capability commerce
-  foundation, live audit, issue drafts and materialization review gate. Keep this
-  repository document canonical until the graph is materialized in EpicDefinition.
+- [Agent Commerce](docs/plans/agent-commerce.md): capability commerce foundation,
+  live audit and acceptance rationale (root mctlhq/.github#173). The dependency
+  graph is owned by `roadmap/epics/agent-commerce.yaml`, not by the plan.

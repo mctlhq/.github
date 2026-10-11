@@ -1,10 +1,11 @@
 # Agent Commerce
 
-Status: proposed for owner review, 2026-10-10. This is the canonical design and
-issue-body draft; it does not create issues, change the active roadmap graph,
-authorize implementation, or enable payments. After materialization,
-`roadmap/epics/agent-commerce.yaml` will own the dependency graph; this document
-will retain the architecture and acceptance rationale.
+Status: materialized 2026-10-11. The root (mctlhq/.github#173) and six child
+issues exist, and [`roadmap/epics/agent-commerce.yaml`](../../roadmap/epics/agent-commerce.yaml)
+owns the dependency graph with `lifecycle: active`. This document keeps the
+architecture, audit evidence and acceptance rationale. Nothing here authorizes
+implementation of real-money behavior or enables payments; the child issues carry
+no implementation-triggering label.
 
 ## Goal and first milestone
 
@@ -376,125 +377,52 @@ constraints. Conclude adopt/defer; any production integration requires separatel
 reviewed scope. No stored card data, live funds, payouts or merchant onboarding
 are authorized by this issue.
 
-## Proposed EpicDefinition
+## EpicDefinition
 
-The existing schema requires a real root issue number. `EPIC_ISSUE_NUMBER` below
-is an explicit template marker, **not a schema-valid number and not a live issue**.
-Do not place this draft in `roadmap/epics/` until root creation is approved and its
-number is bound. Child items can legally be unbound with title/owner. No schema
-change or fake GitHub binding is needed.
+The graph lives in [`roadmap/epics/agent-commerce.yaml`](../../roadmap/epics/agent-commerce.yaml);
+it is not duplicated here. The draft that stood in this section carried an
+`EPIC_ISSUE_NUMBER` marker and `issueType: Epic`. The marker is now bound to
+mctlhq/.github#173. `issueType` is dropped because the mctlhq organization
+defines no `Epic` issue type (only Task, Bug and Feature), and the roadmap
+tooling does not reconcile issue types.
 
-```yaml
-apiVersion: roadmap.mctl.ai/v1alpha1
-kind: EpicDefinition
-metadata:
-  name: agent-commerce
-  owner: mctl-api
-  labels: [roadmap]
-spec:
-  title: Agent Commerce
-  goal: >-
-    Enable governed capabilities to declare a price and be consumed under policy,
-    approval and atomic budgets, with durable usage and simulated payment first.
-  lifecycle: proposed
-  github:
-    issue:
-      repository: mctlhq/.github
-      number: EPIC_ISSUE_NUMBER
-    issueType: Epic
-  phases:
-    - id: foundation
-      title: Commerce contract and durable accounting
-    - id: execution
-      title: Governed Paid Capabilities with simulated credits
-    - id: interoperability
-      title: External payment compatibility
-  workItems:
-    - id: commerce-contract
-      title: Define capability commerce terms and execution contract
-      owner: mctl-api
-      phase: foundation
-      required: true
-      externalDependsOn:
-        - {repository: mctlhq/mctl-agents, number: 242}
-        - {repository: mctlhq/mctl-api, number: 266}
-        - {repository: mctlhq/mctl-api, number: 373}
-        - {repository: mctlhq/mctl-api, number: 428}
-    - id: invocation-ledger
-      title: Persist invocation usage and economic state durably
-      owner: mctl-api
-      phase: foundation
-      required: true
-      dependsOn: [commerce-contract]
-    - id: budget-authorizer
-      title: Enforce atomic tenant budgets with simulated authorization
-      owner: mctl-api
-      phase: foundation
-      required: true
-      dependsOn: [invocation-ledger]
-    - id: governed-invocation
-      title: Integrate commerce into governed capability invocation
-      owner: mctl-agents
-      phase: execution
-      required: true
-      dependsOn: [budget-authorizer]
-      externalDependsOn:
-        - {repository: mctlhq/mctl-agents, number: 197}
-        - {repository: mctlhq/mctl-agents, number: 198}
-        - {repository: mctlhq/mctl-api, number: 366}
-    - id: paid-capabilities-proof
-      title: Expose commerce discovery and prove Paid Capabilities
-      owner: mctl-agents
-      phase: execution
-      required: true
-      dependsOn: [governed-invocation]
-      externalDependsOn:
-        - {repository: mctlhq/mctl-api, number: 377}
-        - {repository: mctlhq/mctl-api, number: 489}
-    - id: payment-interop
-      title: Evaluate x402 and MPP adapter compatibility
-      owner: mctl-api
-      phase: interoperability
-      required: false
-      dependsOn: [paid-capabilities-proof]
-  completion:
-    mode: allRequired
-  successCriteria:
-    - A capability exposes immutable versioned commerce terms through authorized discovery.
-    - Canonical identity, tenant authorization, policy and exact-action approvals remain authoritative.
-    - Concurrent invocations cannot overspend an atomic tenant budget.
-    - Simulated authorization, capture and release are durable and idempotent.
-    - Usage, outcome, payment and audit evidence correlate to one invocation and execution.
-    - Retries never double-charge; uncertain provider effects are reconciled without blind re-execution.
-    - One controlled provider proves the full paid-capability lifecycle and bypass denial.
-```
+| ID | Issue | Required | Depends on |
+| --- | --- | --- | --- |
+| `commerce-contract` | [mctl-api#546](https://github.com/mctlhq/mctl-api/issues/546) | yes | external mctl-agents#242, mctl-api#266, #373, #428 |
+| `invocation-ledger` | [mctl-api#547](https://github.com/mctlhq/mctl-api/issues/547) | yes | `commerce-contract` |
+| `budget-authorizer` | [mctl-api#548](https://github.com/mctlhq/mctl-api/issues/548) | yes | `invocation-ledger` |
+| `governed-invocation` | [mctl-agents#619](https://github.com/mctlhq/mctl-agents/issues/619) | yes | `budget-authorizer`; external mctl-agents#197, #198, mctl-api#366 |
+| `paid-capabilities-proof` | [mctl-agents#620](https://github.com/mctlhq/mctl-agents/issues/620) | yes | `governed-invocation`; external mctl-api#377, #489 |
+| `payment-interop` | [mctl-api#549](https://github.com/mctlhq/mctl-api/issues/549) | no | `paid-capabilities-proof` |
 
 ## Materialization and review gate
 
 The current [roadmap workflow](../../roadmap/README.md#roadmapproposal-integration)
 says: “A model can influence the GitHub graph only by proposing manifest text that
-a human merges”. This proposal therefore stops before creating an issue graph.
+a human merges”. The proposal therefore stopped before creating an issue graph until the owner authorized it.
 The existing schema requires the epic root to pre-exist, and the current apply
 engine explicitly does not create issues. That bootstrap limitation must be
 handled openly, not hidden with an invented issue ID or a schema relaxation.
 
-After owner review of this concrete proposal:
-1. Re-read relevant issues/PRs and repeat duplicate searches; incorporate changes.
-2. With explicit approval for issue creation/bootstrap, create the root and six
-   child issues from the bodies above without implementation-triggering labels.
-   Record returned IDs; partial failures are resumed by existing URLs, not by
-   re-creating issues.
-3. Move the YAML to `roadmap/epics/agent-commerce.yaml`, bind actual root/children,
-   validate the full corpus, and remove this embedded draft to leave one graph.
-4. Human-review/merge the exact manifest through the existing PR gate. Do not
-   merge it as a side effect of accepting the conceptual architecture.
-5. Use governed plan/apply for native parent and blocked-by edges, with the
-   reviewed manifest hash and audit evidence. External dependencies are not owned
-   or edited. Keep optional interop separate from required completion.
-6. Re-read all issue states, parent/child and blocked-by edges; run live reconcile,
-   health and ready checks. Report links, actual counts, required/optional flags,
-   duplicate results and remaining blockers. Do not claim completion from YAML
-   validation alone, and do not launch implementation or enable real payments.
+Bootstrap record (2026-10-11, owner-authorized issue creation):
+1. Duplicate searches across `mctlhq/*` (Agent Commerce, capability commerce, paid
+   capabilities, invocation ledger, capability pricing, commerce/monetary budget,
+   x402/MPP payment adapter, commerce terms, simulated credits) found no
+   equivalent issue. The only hit, mctl-agents#556, lists x402 as a non-goal of
+   an unrelated governance spike.
+2. The root and six children were created once each from the bodies above, with
+   no labels; each create was preceded by an exact-title search and recorded.
+3. The YAML moved to `roadmap/epics/agent-commerce.yaml` bound to real numbers,
+   the full corpus validates, and the embedded draft was removed.
+
+Remaining gates, unchanged:
+4. Human-review/merge the exact manifest through the existing PR gate.
+5. Only after merge: governed plan/apply for native parent and blocked-by edges,
+   with the reviewed manifest hash and audit evidence. External dependencies are
+   not owned or edited. Optional interop stays out of required completion.
+6. Re-read issue states, parent/child and blocked-by edges; run live reconcile,
+   health and ready checks. Do not claim completion from YAML validation alone,
+   and do not launch implementation or enable real payments.
 
 ## Proposal validation
 
@@ -504,3 +432,7 @@ copy with a numeric root placeholder passed the repository's schema, semantic
 and full-corpus validator alongside all 17 existing epics. That synthetic binding
 was never sent to GitHub or committed. This validates graph structure, not live
 relations or a materialized EpicDefinition. No runtime implementation was changed.
+
+2026-10-11: the bound `roadmap/epics/agent-commerce.yaml` passes the full-corpus
+validator (18 manifests) and the roadmap unit tests. A read-only live plan was
+inspected before any graph write; see the PR that materialized it.

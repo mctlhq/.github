@@ -1,0 +1,131 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: agent-commerce
+  owner: mctl-api
+  labels:
+    - roadmap
+spec:
+  title: Agent Commerce
+  goal: >-
+    A governed capability can declare a price, and an authenticated agent can
+    consume it under identity, tenant authorization, policy, exact-action
+    approval and atomic budget enforcement, with durable invocation and economic
+    state. First milestone: Paid Capabilities with simulated credits.
+  # Active because the owner asked for Commerce on the roadmap (2026-10-11).
+  # Active schedules planning; it does not authorize real money, wallets,
+  # payouts, marketplace behavior or production x402/MPP, and no child carries
+  # an implementation-triggering label. Architecture and acceptance rationale
+  # stay in docs/plans/agent-commerce.md; this manifest owns the graph. The org
+  # has no Epic issue type, so issueType is not declared.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 173
+  phases:
+    - id: foundation
+      title: Commerce contract and durable accounting
+    - id: execution
+      title: Governed Paid Capabilities with simulated credits
+    - id: interoperability
+      title: External payment compatibility
+  workItems:
+    - id: commerce-contract
+      title: Define capability commerce terms and execution contract
+      owner: mctl-api
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 546
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 242
+        - repository: mctlhq/mctl-api
+          number: 266
+        - repository: mctlhq/mctl-api
+          number: 373
+        - repository: mctlhq/mctl-api
+          number: 428
+
+    - id: invocation-ledger
+      title: Persist invocation usage and economic state durably
+      owner: mctl-api
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 547
+      dependsOn:
+        - commerce-contract
+
+    - id: budget-authorizer
+      title: Enforce atomic tenant budgets with simulated authorization
+      owner: mctl-api
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 548
+      dependsOn:
+        - invocation-ledger
+
+    - id: governed-invocation
+      title: Integrate commerce into governed capability invocation
+      owner: mctl-agents
+      phase: execution
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 619
+      dependsOn:
+        - budget-authorizer
+      externalDependsOn:
+        - repository: mctlhq/mctl-agents
+          number: 197
+        - repository: mctlhq/mctl-agents
+          number: 198
+        - repository: mctlhq/mctl-api
+          number: 366
+
+    # Local simulation work does not wait for the whole Unified Identity epic;
+    # shared-tenant enablement waits for these two concrete gates.
+    - id: paid-capabilities-proof
+      title: Expose commerce discovery and prove Paid Capabilities
+      owner: mctl-agents
+      phase: execution
+      required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 620
+      dependsOn:
+        - governed-invocation
+      externalDependsOn:
+        - repository: mctlhq/mctl-api
+          number: 377
+        - repository: mctlhq/mctl-api
+          number: 489
+
+    # Optional: may close with a reasoned defer; never blocks completion.
+    - id: payment-interop
+      title: Evaluate x402 and MPP adapter compatibility
+      owner: mctl-api
+      phase: interoperability
+      required: false
+      issue:
+        repository: mctlhq/mctl-api
+        number: 549
+      dependsOn:
+        - paid-capabilities-proof
+
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A capability exposes immutable versioned commerce terms through authorized discovery.
+    - Canonical identity, tenant authorization, policy and exact-action approvals remain authoritative.
+    - Concurrent invocations cannot overspend an atomic tenant budget.
+    - Simulated authorization, capture and release are durable and idempotent.
+    - Usage, outcome, payment and audit evidence correlate to one invocation and execution.
+    - Retries never double-charge; uncertain provider effects are reconciled without blind re-execution.
+    - One controlled provider proves the full paid-capability lifecycle and bypass denial.
