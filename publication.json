@@ -1,21 +1,31 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "c0308c37bd1746fb9345a6ee0e317faad2bde989"
+    "revision": "db3498869b2104880e1de7817ead311877581384"
   },
   "files": {
     "health.json": {
-      "sha256": "f3ad08721370939f753b6efc2f855d79ccd98ce6514d5624596caf2e9aef9cef"
+      "sha256": "c57e0224c66ae837b9249aa1b9e0935ebe52945e4a9687699837402286245152"
     },
     "ready-set.json": {
-      "sha256": "f9bc254c5326e152bc21c3060ea669d3b0102b90d31e866fb366144507b4eed6"
+      "sha256": "e201d255bcccdbeda1395dfbeb9bd7ad894e472878987232ca84db4953a854ae"
     },
     "snapshot.json": {
-      "sha256": "cdbf27c5fb9c52a8c4ecc54cff48e0e8e899647dd1cee58c04e0810383195145"
+      "sha256": "dfc1c65de673880b66bb2a312810620c86fd664e635fd8c0df3bf372964a3e29"
     }
   },
   "kind": "RoadmapPublication",
   "manifests": [
+    {
+      "epic": {
+        "goal": "A governed capability can declare a price, and an authenticated agent can consume it under identity, tenant authorization, policy, exact-action approval and atomic budget enforcement, with durable invocation and economic state. First milestone: Paid Capabilities with simulated credits.",
+        "lifecycle": "active",
+        "name": "agent-commerce",
+        "title": "Agent Commerce"
+      },
+      "path": "roadmap/epics/agent-commerce.yaml",
+      "sha256": "94d900ce06cbd26eaa73fe486c6f0890e0ce9d50896a8b2e3ebe43a95c4f06a1"
+    },
     {
       "epic": {
         "goal": "Make model usage and cost attributable to exact mctl executions and DevLoop stages through a backend-neutral, durable and replay-safe usage ledger.",
@@ -144,7 +154,7 @@
         "title": "Vendor-neutral execution tracing for agents and DevLoop"
       },
       "path": "roadmap/epics/observability.yaml",
-      "sha256": "8c909efd3249f781627af97a5ffb2e88c2faf4f611347143d7a301ff7c94f760"
+      "sha256": "78476d3f98929d1c7d0117cca8563dcea0d5045ecb417b7253230b21c3903dac"
     },
     {
       "epic": {
@@ -189,12 +199,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-11T07:53:06Z",
+    "capturedAt": "2026-10-11T08:48:13Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "c0308c37bd1746fb9345a6ee0e317faad2bde989"
+    "revision": "db3498869b2104880e1de7817ead311877581384"
   }
 }

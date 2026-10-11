@@ -4,6 +4,433 @@
     {
       "apiVersion": "roadmap.mctl.ai/v1alpha1",
       "completion": {
+        "blocking": [
+          "budget-authorizer",
+          "commerce-contract",
+          "governed-invocation",
+          "invocation-ledger",
+          "paid-capabilities-proof"
+        ],
+        "items": [
+          {
+            "id": "budget-authorizer",
+            "issue": {
+              "number": 548,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "commerce-contract",
+            "issue": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "governed-invocation",
+            "issue": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "invocation-ledger",
+            "issue": {
+              "number": 547,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "paid-capabilities-proof",
+            "issue": {
+              "number": 620,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "payment-interop",
+            "issue": {
+              "number": 549,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 0,
+          "incomplete": 5,
+          "total": 5,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner commerce-contract): blocked=mctlhq/mctl-api#546, blocker=mctlhq/mctl-agents#242",
+          "subject": {
+            "blocked": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 242,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "commerce-contract"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner commerce-contract): blocked=mctlhq/mctl-api#546, blocker=mctlhq/mctl-api#266",
+          "subject": {
+            "blocked": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 266,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "commerce-contract"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner commerce-contract): blocked=mctlhq/mctl-api#546, blocker=mctlhq/mctl-api#373",
+          "subject": {
+            "blocked": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 373,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "commerce-contract"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner commerce-contract): blocked=mctlhq/mctl-api#546, blocker=mctlhq/mctl-api#428",
+          "subject": {
+            "blocked": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 428,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "commerce-contract"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner invocation-ledger): blocked=mctlhq/mctl-api#547, blocker=mctlhq/mctl-api#546",
+          "subject": {
+            "blocked": {
+              "number": 547,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "invocation-ledger"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner budget-authorizer): blocked=mctlhq/mctl-api#548, blocker=mctlhq/mctl-api#547",
+          "subject": {
+            "blocked": {
+              "number": 548,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 547,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "budget-authorizer"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner payment-interop): blocked=mctlhq/mctl-api#549, blocker=mctlhq/mctl-agents#620",
+          "subject": {
+            "blocked": {
+              "number": 549,
+              "repository": "mctlhq/mctl-api"
+            },
+            "blocker": {
+              "number": 620,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "payment-interop"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner governed-invocation): blocked=mctlhq/mctl-agents#619, blocker=mctlhq/mctl-agents#197",
+          "subject": {
+            "blocked": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 197,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "governed-invocation"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner governed-invocation): blocked=mctlhq/mctl-agents#619, blocker=mctlhq/mctl-agents#198",
+          "subject": {
+            "blocked": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 198,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "governed-invocation"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner governed-invocation): blocked=mctlhq/mctl-agents#619, blocker=mctlhq/mctl-api#366",
+          "subject": {
+            "blocked": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 366,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "governed-invocation"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner governed-invocation): blocked=mctlhq/mctl-agents#619, blocker=mctlhq/mctl-api#548",
+          "subject": {
+            "blocked": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 548,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "governed-invocation"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner paid-capabilities-proof): blocked=mctlhq/mctl-agents#620, blocker=mctlhq/mctl-api#377",
+          "subject": {
+            "blocked": {
+              "number": 620,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 377,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "paid-capabilities-proof"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner paid-capabilities-proof): blocked=mctlhq/mctl-agents#620, blocker=mctlhq/mctl-api#489",
+          "subject": {
+            "blocked": {
+              "number": 620,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 489,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "paid-capabilities-proof"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner paid-capabilities-proof): blocked=mctlhq/mctl-agents#620, blocker=mctlhq/mctl-agents#619",
+          "subject": {
+            "blocked": {
+              "number": 620,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "paid-capabilities-proof"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner commerce-contract): child=mctlhq/mctl-api#546, expectedParent=mctlhq/.github#173",
+          "subject": {
+            "child": {
+              "number": 546,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 173,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "commerce-contract"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner invocation-ledger): child=mctlhq/mctl-api#547, expectedParent=mctlhq/.github#173",
+          "subject": {
+            "child": {
+              "number": 547,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 173,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "invocation-ledger"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner budget-authorizer): child=mctlhq/mctl-api#548, expectedParent=mctlhq/.github#173",
+          "subject": {
+            "child": {
+              "number": 548,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 173,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "budget-authorizer"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner payment-interop): child=mctlhq/mctl-api#549, expectedParent=mctlhq/.github#173",
+          "subject": {
+            "child": {
+              "number": 549,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 173,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "payment-interop"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner governed-invocation): child=mctlhq/mctl-agents#619, expectedParent=mctlhq/.github#173",
+          "subject": {
+            "child": {
+              "number": 619,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 173,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "governed-invocation"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner paid-capabilities-proof): child=mctlhq/mctl-agents#620, expectedParent=mctlhq/.github#173",
+          "subject": {
+            "child": {
+              "number": 620,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 173,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "paid-capabilities-proof"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 173,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/agent-commerce.yaml",
+          "sha256": "94d900ce06cbd26eaa73fe486c6f0890e0ce9d50896a8b2e3ebe43a95c4f06a1"
+        },
+        "name": "agent-commerce"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-10-11T08:48:13Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 20,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
         "blocking": [],
         "items": [
           {
@@ -61,7 +488,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -286,7 +713,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -396,7 +823,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -545,7 +972,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -818,7 +1245,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -938,7 +1365,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1093,7 +1520,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1173,7 +1600,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1245,7 +1672,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1545,7 +1972,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1655,7 +2082,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1755,7 +2182,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1900,6 +2327,22 @@
         {
           "code": "DependencyUnexpected",
           "level": "drift",
+          "message": "DependencyUnexpected (owner devloop-traces): blocked=mctlhq/mctl-agents#195, blocker=mctlhq/mctl-gitops#1280",
+          "subject": {
+            "blocked": {
+              "number": 195,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 1280,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "owner": "devloop-traces"
+          }
+        },
+        {
+          "code": "DependencyUnexpected",
+          "level": "drift",
           "message": "DependencyUnexpected (owner mcp-span-context): blocked=mctlhq/mctl-api#285, blocker=mctlhq/mctl-agents#195",
           "subject": {
             "blocked": {
@@ -1937,19 +2380,19 @@
         },
         "manifest": {
           "path": "roadmap/epics/observability.yaml",
-          "sha256": "8c909efd3249f781627af97a5ffb2e88c2faf4f611347143d7a301ff7c94f760"
+          "sha256": "78476d3f98929d1c7d0117cca8563dcea0d5045ecb417b7253230b21c3903dac"
         },
         "name": "observability"
       },
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "drift",
       "summary": {
-        "drift": 3,
+        "drift": 4,
         "error": 0,
         "info": 1
       }
@@ -2064,7 +2507,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2204,7 +2647,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2284,7 +2727,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2449,7 +2892,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T07:53:06Z",
+        "capturedAt": "2026-10-11T08:48:13Z",
         "mode": "live-capture"
       },
       "state": "healthy",
