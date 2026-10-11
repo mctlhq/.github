@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "446aa3878c8320cf465407cefaa3eca77f6e6454"
+    "revision": "dfd3f496fd8146b044d3e4ba5e61867d1d3ee8dd"
   },
   "files": {
     "health.json": {
-      "sha256": "d949010acb7785bbd9e930b7d623a57ef4a1b5932b4ad31c5e189e6e21f3a3a9"
+      "sha256": "a55865f75da538a27e9ba626570d19bb4b7b754ad70f52017a5b6a2ac6361b9a"
     },
     "ready-set.json": {
-      "sha256": "1224a2bc734be92c5766c3b7a5971e2d862b54e985beceaf095a4468d0391cde"
+      "sha256": "a1c880aee2a4caab1f5d999ff0286a80248a2938657b1754e1f20fc765d40caa"
     },
     "snapshot.json": {
-      "sha256": "02983c5da85358f64e7ff71d4dae9484e468a43bebc24038a24002d3e3992760"
+      "sha256": "6747c70f56c18d5a35663b4b14a4010be7fe7b5cc3b4dff43461c835c6834a1a"
     }
   },
   "kind": "RoadmapPublication",
@@ -188,23 +188,23 @@
     },
     {
       "epic": {
-        "goal": "Decouple MCTL principals from GitHub identity by introducing stable canonical identities for humans, agents and services, with linked external identities, swappable federation, CIMD-aware MCP OAuth and delegated agent identity.",
+        "goal": "Complete MCTL's canonical principal and authorization model on top of the already deployed ZITADEL human identity provider, keeping external provider identities, MCP client identity and delegated agent identity distinct and auditable while removing GitHub-login coupling from tenant authorization.",
         "lifecycle": "active",
         "name": "unified-identity",
-        "title": "MCTL Unified Identity and Agent Identity Broker"
+        "title": "MCTL Unified Identity on ZITADEL and Agent Identity"
       },
       "path": "roadmap/epics/unified-identity.yaml",
-      "sha256": "5950b182b628d60090e7cb8d5f5418f86523f1302f55e73e2711350340cd80c6"
+      "sha256": "4d43f33fc190ebcdf97f0aecaccf061266641291a04ea7d8d6b6bb17154dbfce"
     }
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-11T17:50:37Z",
+    "capturedAt": "2026-10-11T19:33:47Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "446aa3878c8320cf465407cefaa3eca77f6e6454"
+    "revision": "dfd3f496fd8146b044d3e4ba5e61867d1d3ee8dd"
   }
 }

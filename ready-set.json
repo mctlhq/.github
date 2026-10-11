@@ -224,7 +224,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -316,7 +316,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -585,7 +585,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -756,7 +756,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -909,7 +909,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1177,7 +1177,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1339,7 +1339,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1470,7 +1470,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1579,7 +1579,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1644,7 +1644,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1938,7 +1938,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2126,7 +2126,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2281,7 +2281,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2376,14 +2376,7 @@
           "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "devloop-traces",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
             "reason": "open",
             "status": "incomplete"
@@ -2401,13 +2394,13 @@
           },
           "phase": "correlation",
           "required": true,
-          "state": "blocked"
+          "state": "ready"
         },
         {
           "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "telemetry-gateway"
@@ -2429,7 +2422,7 @@
           },
           "phase": "tracing",
           "required": true,
-          "state": "ready"
+          "state": "complete"
         },
         {
           "blockers": [],
@@ -2490,24 +2483,24 @@
       ],
       "kind": "RoadmapReadySet",
       "ready": [
-        "devloop-traces",
+        "cross-system-correlation",
         "live-bakeoff"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 1,
-          "complete": 5,
+          "blocked": 0,
+          "complete": 6,
           "ready": 2,
           "unknown": 0
         },
         "required": {
-          "blocked": 1,
-          "complete": 5,
+          "blocked": 0,
+          "complete": 6,
           "ready": 2,
           "unknown": 0
         }
@@ -2688,7 +2681,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2944,7 +2937,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3058,7 +3051,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3085,7 +3078,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/unified-identity.yaml",
-          "sha256": "5950b182b628d60090e7cb8d5f5418f86523f1302f55e73e2711350340cd80c6"
+          "sha256": "4d43f33fc190ebcdf97f0aecaccf061266641291a04ea7d8d6b6bb17154dbfce"
         },
         "name": "unified-identity"
       },
@@ -3110,34 +3103,14 @@
           "state": "ready"
         },
         {
-          "blockers": [
-            {
-              "id": "delegated-agent-identity",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "identity-federation",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "mcp-oauth-cimd",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
             "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
+            "principal-model",
             "identity-federation",
-            "mcp-oauth-cimd",
-            "delegated-agent-identity",
             "zitadel-identity-linking"
           ],
           "externalDependsOn": [],
@@ -3148,13 +3121,32 @@
           },
           "phase": "migration",
           "required": true,
-          "state": "blocked"
+          "state": "ready"
         },
         {
           "blockers": [],
           "completion": {
             "reason": "open",
             "status": "incomplete"
+          },
+          "dependsOn": [
+            "identity-federation"
+          ],
+          "externalDependsOn": [],
+          "id": "github-local-oauth-ghid",
+          "issue": {
+            "number": 422,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "migration",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "principal-model"
@@ -3167,17 +3159,10 @@
           },
           "phase": "federation",
           "required": true,
-          "state": "ready"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "identity-federation",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
             "reason": "open",
             "status": "incomplete"
@@ -3194,7 +3179,7 @@
           },
           "phase": "mcp",
           "required": true,
-          "state": "blocked"
+          "state": "ready"
         },
         {
           "blockers": [],
@@ -3357,25 +3342,27 @@
       "kind": "RoadmapReadySet",
       "ready": [
         "delegated-agent-identity",
-        "identity-federation",
+        "github-decoupling",
+        "github-local-oauth-ghid",
+        "mcp-oauth-cimd",
         "tenant-domain-separation"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-11T17:50:37Z",
+        "capturedAt": "2026-10-11T19:33:47Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 3,
-          "complete": 6,
-          "ready": 3,
+          "blocked": 1,
+          "complete": 7,
+          "ready": 5,
           "unknown": 0
         },
         "required": {
-          "blocked": 2,
-          "complete": 5,
-          "ready": 2,
+          "blocked": 0,
+          "complete": 6,
+          "ready": 3,
           "unknown": 0
         }
       }
