@@ -1149,6 +1149,10 @@
         {
           "number": 620,
           "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 631,
+          "repository": "mctlhq/mctl-agents"
         }
       ],
       "updatedAt": "2026-10-11T08:24:25Z"
@@ -2016,14 +2020,6 @@
     {
       "blockedBy": [
         {
-          "number": 377,
-          "repository": "mctlhq/mctl-api"
-        },
-        {
-          "number": 489,
-          "repository": "mctlhq/mctl-api"
-        },
-        {
           "number": 619,
           "repository": "mctlhq/mctl-agents"
         }
@@ -2046,9 +2042,25 @@
       "updatedAt": "2026-10-11T17:24:08Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 377,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 489,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 620,
+          "repository": "mctlhq/mctl-agents"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 173,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 631,
         "repository": "mctlhq/mctl-agents"
@@ -4449,7 +4461,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-11T17:33:52Z",
+    "capturedAt": "2026-10-11T17:50:37Z",
     "mode": "live-capture"
   }
 }
