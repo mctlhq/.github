@@ -89,8 +89,9 @@ spec:
         - repository: mctlhq/mctl-api
           number: 366
 
-    # Local simulation work does not wait for the whole Unified Identity epic;
-    # shared-tenant enablement waits for these two concrete gates.
+    # The single-tenant proof on simulated credits. Shared-tenant enablement
+    # was split out (owner, 2026-10-11) so the epic does not wait for the
+    # whole Unified Identity epic.
     - id: paid-capabilities-proof
       title: Expose commerce discovery and prove Paid Capabilities
       owner: mctl-agents
@@ -101,6 +102,20 @@ spec:
         number: 620
       dependsOn:
         - governed-invocation
+
+    # Optional: turns the proven runtime on for shared tenants once tenant
+    # membership is keyed on a canonical principal (#377) and the approval
+    # role decision (#489) is implemented. Never blocks completion.
+    - id: paid-capabilities-shared-tenant
+      title: Enable Paid Capabilities on shared tenants
+      owner: mctl-agents
+      phase: execution
+      required: false
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 631
+      dependsOn:
+        - paid-capabilities-proof
       externalDependsOn:
         - repository: mctlhq/mctl-api
           number: 377
