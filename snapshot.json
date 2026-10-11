@@ -1200,10 +1200,6 @@
           "repository": "mctlhq/mctl-gitops"
         },
         {
-          "number": 1280,
-          "repository": "mctlhq/mctl-gitops"
-        },
-        {
           "number": 1332,
           "repository": "mctlhq/mctl-gitops"
         }
@@ -2117,8 +2113,12 @@
     {
       "blockedBy": [
         {
-          "number": 195,
-          "repository": "mctlhq/mctl-agents"
+          "number": 116,
+          "repository": "mctlhq/mctl-docs"
+        },
+        {
+          "number": 902,
+          "repository": "mctlhq/mctl-gitops"
         }
       ],
       "found": true,
@@ -2670,7 +2670,24 @@
       "updatedAt": "2026-10-06T19:53:15Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 242,
+          "repository": "mctlhq/mctl-agents"
+        },
+        {
+          "number": 266,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 373,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 428,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
       "parent": null,
       "requested": {
@@ -2686,7 +2703,12 @@
       "updatedAt": "2026-10-11T08:24:02Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 546,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
       "parent": null,
       "requested": {
@@ -2702,7 +2724,12 @@
       "updatedAt": "2026-10-11T08:24:05Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 547,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
       "parent": null,
       "requested": {
@@ -2718,7 +2745,12 @@
       "updatedAt": "2026-10-11T08:24:07Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 620,
+          "repository": "mctlhq/mctl-agents"
+        }
+      ],
       "found": true,
       "parent": null,
       "requested": {
@@ -4320,7 +4352,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-11T08:48:13Z",
+    "capturedAt": "2026-10-11T08:53:13Z",
     "mode": "live-capture"
   }
 }
