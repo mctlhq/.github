@@ -11,7 +11,7 @@ spec:
     Provide an enterprise MCP entry point where Cloudflare supplies the outer
     access and portal layer while mctl remains authoritative for identity,
     authorization, consent, durable execution and audit evidence.
-  lifecycle: active
+  lifecycle: paused
   github:
     issue:
       repository: mctlhq/.github
