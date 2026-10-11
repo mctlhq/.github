@@ -342,9 +342,10 @@ Acceptance:
 ### C5 — Expose commerce discovery and prove Paid Capabilities
 
 Repository: mctl-agents (cross-repo API/GitOps changes referenced from this issue).
-ID: `paid-capabilities-proof`. Required. Depends on C4 plus mctl-api#377/#489 for
-shared-tenant rollout. Local simulation development does not wait for the entire
-Unified Identity epic; shared-tenant enablement does wait for these concrete gates.
+ID: `paid-capabilities-proof`. Required. Depends on C4. Scope is the single-tenant
+proof on simulated credits; shared-tenant enablement is C5b below (split
+2026-10-11, owner decision), so the epic does not wait for the whole Unified
+Identity epic.
 
 Acceptance:
 - Existing authorized search/describe exposes versioned price, currency/unit,
@@ -363,6 +364,20 @@ Acceptance:
 - Pin tested repo versions and provider contract, attach reproducible evidence,
   document rollout/disable procedure; disablement stops new paid requests while
   allowing reconciliation. No outstanding unexplained liability in the demo.
+
+### C5b — Enable Paid Capabilities on shared tenants
+
+Repository: mctl-agents (cross-repo API changes referenced from the issue). ID:
+`paid-capabilities-shared-tenant`. Optional. Depends on C5 plus mctl-api#377
+(membership keyed on a canonical principal) and mctl-api#489 (tenant roles for
+work items and approvals, decided 2026-10-11).
+
+Acceptance: action approvals carry a tenant and a paid-capability approval is
+decided only by the named approver holding at least `owner` on it; roles resolve
+from a canonical principal; mctl-api binds `approval_id` to the requesting
+principal, execution and tenant at accept; commerce reads are visible to every
+tenant member and nobody else; per-tenant rollout behind the C5 disable
+procedure; the C5 demo re-run on a shared tenant with two human principals.
 
 ### C6 — Evaluate x402/MPP adapter compatibility
 
@@ -392,7 +407,8 @@ tooling does not reconcile issue types.
 | `invocation-ledger` | [mctl-api#547](https://github.com/mctlhq/mctl-api/issues/547) | yes | `commerce-contract` |
 | `budget-authorizer` | [mctl-api#548](https://github.com/mctlhq/mctl-api/issues/548) | yes | `invocation-ledger` |
 | `governed-invocation` | [mctl-agents#619](https://github.com/mctlhq/mctl-agents/issues/619) | yes | `budget-authorizer`; external mctl-agents#197, #198, mctl-api#366 |
-| `paid-capabilities-proof` | [mctl-agents#620](https://github.com/mctlhq/mctl-agents/issues/620) | yes | `governed-invocation`; external mctl-api#377, #489 |
+| `paid-capabilities-proof` | [mctl-agents#620](https://github.com/mctlhq/mctl-agents/issues/620) | yes | `governed-invocation` |
+| `paid-capabilities-shared-tenant` | [mctl-agents#631](https://github.com/mctlhq/mctl-agents/issues/631) | no | `paid-capabilities-proof`; external mctl-api#377, #489 |
 | `payment-interop` | [mctl-api#549](https://github.com/mctlhq/mctl-api/issues/549) | no | `paid-capabilities-proof` |
 
 ## Materialization and review gate
