@@ -59,13 +59,15 @@ spec:
         repository: mctlhq/mctl-agents
         number: 195
       # The producer code is merged (#466); what remains is live evidence: one
-      # real DevLoop rendered end to end in a trace backend. That needs a
-      # running backend (live-bakeoff) and a collector that keeps the token
-      # counts (mctl-gitops#1332), so without these edges the graph reported
-      # this item as ready while no autonomous work on it was possible.
+      # organic real DevLoop rendered end to end in a queryable trace backend,
+      # with a collector that keeps the token counts (mctl-gitops#1332).
+      # Owner decision 2026-10-11: #195's issue acceptance criteria are
+      # authoritative and the #1280 Tempo eval backend counts as that backend,
+      # so the #1280 verdict and teardown are not prerequisites (aligned in
+      # mctl-agents#618). The soak continues independently; #195 closes on
+      # organic evidence alone.
       dependsOn:
         - telemetry-gateway
-        - live-bakeoff
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 196
