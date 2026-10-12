@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "0cd05fee465c3888ae27f4cd8e9eb887a92f70ed"
+    "revision": "f000b2f845415af803347bd7f80f97792a33e78d"
   },
   "files": {
     "health.json": {
-      "sha256": "7d518b7754a435d1d6f43d31c77f627b1161e4d0f2e992f328449ed1e0d05e0b"
+      "sha256": "7580fef302c8ef2c3a255fc04316758fb8e50011033a7333a559192017695cdb"
     },
     "ready-set.json": {
-      "sha256": "b25a7b015f9289a8a961e4b634724e21b934df5db26dba7a7bd9b67a68fe80a2"
+      "sha256": "657cc0d71ca8e69ff08db81229399ee49c8e1e244d3c9266459b3bc553cd85f7"
     },
     "snapshot.json": {
-      "sha256": "48acde886435a42c6ea450c40aee3e238cf913156ddae98fe88c616817d3e76f"
+      "sha256": "4afe4582da29e992cd32746ee0cb585849307dbf6affb59b38336938c7362dc1"
     }
   },
   "kind": "RoadmapPublication",
@@ -19,12 +19,12 @@
     {
       "epic": {
         "goal": "A governed capability can declare a price, and an authenticated agent can consume it under identity, tenant authorization, policy, exact-action approval and atomic budget enforcement, with durable invocation and economic state. First milestone: Paid Capabilities with simulated credits.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "agent-commerce",
         "title": "Agent Commerce"
       },
       "path": "roadmap/epics/agent-commerce.yaml",
-      "sha256": "0488f8d1383eb2bcd6f84cde7b19c0d38da1649cbf802a92ec35a799d40e5e16"
+      "sha256": "34ec686f202a916e7dfaecade0095c657629a3c7f9c728d2b8085438fd4514e4"
     },
     {
       "epic": {
@@ -199,12 +199,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-12T16:32:28Z",
+    "capturedAt": "2026-10-12T16:36:20Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "0cd05fee465c3888ae27f4cd8e9eb887a92f70ed"
+    "revision": "f000b2f845415af803347bd7f80f97792a33e78d"
   }
 }
