@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "dfd3f496fd8146b044d3e4ba5e61867d1d3ee8dd"
+    "revision": "0cd05fee465c3888ae27f4cd8e9eb887a92f70ed"
   },
   "files": {
     "health.json": {
-      "sha256": "bfda9b5d2e4e57a5417a9ff7dddd8a062595ab9a20e66b50c52fcae64cbd1daa"
+      "sha256": "7d518b7754a435d1d6f43d31c77f627b1161e4d0f2e992f328449ed1e0d05e0b"
     },
     "ready-set.json": {
-      "sha256": "420f0756f2adb1ec4df15d856b2c66e3adb5cdc754ffd68a97e4b0d4dab49523"
+      "sha256": "b25a7b015f9289a8a961e4b634724e21b934df5db26dba7a7bd9b67a68fe80a2"
     },
     "snapshot.json": {
-      "sha256": "ecb5e64744ceabec165a9eed7466241904f8003cf3172a99d37ec0e70f7d871a"
+      "sha256": "48acde886435a42c6ea450c40aee3e238cf913156ddae98fe88c616817d3e76f"
     }
   },
   "kind": "RoadmapPublication",
@@ -119,12 +119,12 @@
     {
       "epic": {
         "goal": "Provide an enterprise MCP entry point where Cloudflare supplies the outer access and portal layer while mctl remains authoritative for identity, authorization, consent, durable execution and audit evidence.",
-        "lifecycle": "active",
+        "lifecycle": "paused",
         "name": "enterprise-mcp",
         "title": "Cloudflare MCP Portal and enterprise MCP boundary"
       },
       "path": "roadmap/epics/enterprise-mcp.yaml",
-      "sha256": "b6a10a2eaa6a28c9054cb3e7afa327cf4d47047ff44ddc6fc0393d09eb33a927"
+      "sha256": "becc3f96938ca17474d6a178dddaa81840fdf14bae8d54262946aef199ae5ed4"
     },
     {
       "epic": {
@@ -199,12 +199,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-12T09:22:49Z",
+    "capturedAt": "2026-10-12T16:32:28Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "dfd3f496fd8146b044d3e4ba5e61867d1d3ee8dd"
+    "revision": "0cd05fee465c3888ae27f4cd8e9eb887a92f70ed"
   }
 }

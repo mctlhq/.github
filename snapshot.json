@@ -2038,9 +2038,10 @@
         "number": 620,
         "repository": "mctlhq/mctl-agents"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-11T18:40:34Z"
+      "updatedAt": "2026-10-12T10:30:45Z"
     },
     {
       "blockedBy": [
@@ -4479,7 +4480,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-12T09:22:49Z",
+    "capturedAt": "2026-10-12T16:32:28Z",
     "mode": "live-capture"
   }
 }
