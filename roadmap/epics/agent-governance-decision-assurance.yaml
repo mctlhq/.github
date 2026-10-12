@@ -1,0 +1,53 @@
+# Priority: P1 (GitHub Project field is managed separately).
+# Identity/AuthZ is a non-blocking audit input; intentionally no externalDependsOn.
+# Discovery-only graph; revise required work or archive before epic completion.
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "kind": "EpicDefinition",
+  "metadata": {
+    "name": "agent-governance-decision-assurance",
+    "owner": "mctl-api",
+    "labels": [
+      "roadmap"
+    ]
+  },
+  "spec": {
+    "title": "Agent Governance & Decision Assurance",
+    "goal": "Evaluate and establish end-to-end decision assurance by composing existing identity, policy, approval, execution and audit controls. Discovery first; implementation ownership follows evidence.",
+    "lifecycle": "proposed",
+    "github": {
+      "issue": {
+        "repository": "mctlhq/.github",
+        "number": 181
+      }
+    },
+    "phases": [
+      {
+        "id": "discovery",
+        "title": "Current-state audit and architecture disposition"
+      }
+    ],
+    "workItems": [
+      {
+        "id": "decision-assurance-spike",
+        "title": "Evaluate MCTL governance beyond human-in-the-loop approvals",
+        "owner": "mctl-api",
+        "phase": "discovery",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/.github",
+          "number": 182
+        }
+      }
+    ],
+    "completion": {
+      "mode": "allRequired"
+    },
+    "successCriteria": [
+      "D1-D5 establish the current state, capability matrix, F1-F10 failure analysis, candidate envelope and architecture recommendation.",
+      "Every gap has an evidence-backed owner; existing identity, execution, observability and runtime-assurance components are reused.",
+      "Unified Identity/AuthZ informs the audit without blocking its start.",
+      "Before epic completion, either archive the discovery container after routing work or revise the manifest with required remediation and proof items; spike closure alone is not evidence of delivered runtime guarantees."
+    ]
+  }
+}
