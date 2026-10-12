@@ -12,13 +12,11 @@ spec:
     consume it under identity, tenant authorization, policy, exact-action
     approval and atomic budget enforcement, with durable invocation and economic
     state. First milestone: Paid Capabilities with simulated credits.
-  # Active because the owner asked for Commerce on the roadmap (2026-10-11).
-  # Active schedules planning; it does not authorize real money, wallets,
-  # payouts, marketplace behavior or production x402/MPP, and no child carries
-  # an implementation-triggering label. Architecture and acceptance rationale
-  # stay in docs/plans/agent-commerce.md; this manifest owns the graph. The org
-  # has no Epic issue type, so issueType is not declared.
-  lifecycle: active
+  # Completed 2026-10-12 after all five required work items closed with live
+  # Paid Capabilities evidence. Optional shared-tenant enablement (#631) and
+  # payment interop (#549) remain available as follow-ups and do not block
+  # completion.
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
