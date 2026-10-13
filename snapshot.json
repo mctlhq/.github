@@ -2668,9 +2668,10 @@
         "number": 377,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-11T19:32:32Z"
+      "updatedAt": "2026-10-12T21:07:15Z"
     },
     {
       "blockedBy": [],
@@ -2781,7 +2782,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-11T17:23:32Z"
+      "updatedAt": "2026-10-12T20:01:16Z"
     },
     {
       "blockedBy": [
@@ -4481,7 +4482,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-12T19:52:13Z",
+    "capturedAt": "2026-10-13T02:06:02Z",
     "mode": "live-capture"
   }
 }
