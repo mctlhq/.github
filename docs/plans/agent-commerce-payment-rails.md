@@ -20,19 +20,21 @@ Do **not** reopen the completed Agent Commerce foundation and do **not** create 
 Proposed optional ladder:
 
 ```text
-Paid Capabilities proof (#620)
-          |
-          +--> x402 MCP Check testnet pilot (#616)
-          |          |
-          +----------+--> payment interoperability decision (#549)
-                                   |
-                                   v
-                    governed external-payment proof
-                                   |
-                        later production rail decision
-                                   |
-                      marketplace / payouts much later
+                         +--> x402 MCP Check testnet pilot (#616)
+                         |       (contributes concrete evidence)
+Paid Capabilities (#620)+
+                         |       (runs in parallel)
+                         +--> payment interoperability decision (#549)
+                                      |
+                                      v
+                       governed external-payment proof
+                                      |
+                           later production rail decision
+                                      |
+                         marketplace / payouts much later
 ```
+
+The manifest deliberately does not make #549 depend on #616: protocol/MPP/account-funded analysis can proceed in parallel. #616 is concrete x402 evidence that #549 should consume before a final x402 adopt/defer conclusion.
 
 ## #616 — isolated x402 MCP Check pilot
 
@@ -44,7 +46,7 @@ The pilot intentionally stays isolated and testnet-only. Its value is to prove c
 
 Keep one `PaymentAuthorizer`/commerce core and compare economic rails instead of making x402 the architecture.
 
-The issue should consume #616 evidence and compare at least these shapes:
+The issue should consume #616 evidence when concluding on x402 and compare at least these shapes:
 
 - **enterprise/internal rail** — existing simulated/chargeback semantics, with no external settlement;
 - **account-funded allowance rail** — payment/top-up/invoice funds an allowance consumed by usage; design comparison only, no stored-value implementation authorized here;
