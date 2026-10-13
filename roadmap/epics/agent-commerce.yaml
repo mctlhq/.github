@@ -12,10 +12,10 @@ spec:
     consume it under identity, tenant authorization, policy, exact-action
     approval and atomic budget enforcement, with durable invocation and economic
     state. First milestone: Paid Capabilities with simulated credits.
-  # Completed 2026-10-12 after all five required work items closed with live
-  # Paid Capabilities evidence. Optional shared-tenant enablement (#631) and
-  # payment interop (#549) remain available as follow-ups and do not block
-  # completion.
+  # Foundation completed 2026-10-12 after all five required work items closed
+  # with live Paid Capabilities evidence. Optional shared-tenant enablement and
+  # payment-rail interoperability/proof work remain follow-ups and do not block
+  # completion or authorize production real-money behavior.
   lifecycle: completed
   github:
     issue:
@@ -27,7 +27,7 @@ spec:
     - id: execution
       title: Governed Paid Capabilities with simulated credits
     - id: interoperability
-      title: External payment compatibility
+      title: External payment rails and governed proof
   workItems:
     - id: commerce-contract
       title: Define capability commerce terms and execution contract
@@ -120,9 +120,25 @@ spec:
         - repository: mctlhq/mctl-api
           number: 489
 
-    # Optional: may close with a reasoned defer; never blocks completion.
+    # Optional bounded x402 testnet experiment. It proves challenge/payment/
+    # receipt and reconciliation mechanics on one read-only MCP Check without
+    # changing the production commerce ledger or authorizing mainnet funds.
+    - id: x402-mcp-check-pilot
+      title: Prove an isolated x402 testnet MCP Check capability
+      owner: mctl-api
+      phase: interoperability
+      required: false
+      issue:
+        repository: mctlhq/mctl-api
+        number: 616
+      dependsOn:
+        - paid-capabilities-proof
+
+    # Optional protocol/rail decision. The x402 pilot is evidence for this
+    # comparison, while the decision must still cover MPP and enterprise
+    # chargeback/account-funded semantics against the same commerce contract.
     - id: payment-interop
-      title: Evaluate x402 and MPP adapter compatibility
+      title: Evaluate x402, MPP and account-funded payment interoperability
       owner: mctl-api
       phase: interoperability
       required: false
@@ -131,6 +147,19 @@ spec:
         number: 549
       dependsOn:
         - paid-capabilities-proof
+        - x402-mcp-check-pilot
+
+    # Optional future work, deliberately left unbound for human review. This is
+    # the missing bridge between an isolated payment experiment and canonical
+    # MCTL Agent Commerce: one selected external rail must pass through the same
+    # identity, policy, budget, approval, ledger and reconciliation path.
+    - id: governed-external-payment-proof
+      title: Integrate one external payment rail into governed Agent Commerce
+      owner: mctl-api
+      phase: interoperability
+      required: false
+      dependsOn:
+        - payment-interop
 
   completion:
     mode: allRequired
