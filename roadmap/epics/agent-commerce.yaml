@@ -134,8 +134,8 @@ spec:
       dependsOn:
         - paid-capabilities-proof
 
-    # Optional protocol/rail decision. The x402 pilot is evidence for this
-    # comparison, while the decision must still cover MPP and enterprise
+    # Optional protocol/rail decision. The x402 pilot runs in parallel and
+    # contributes evidence, while this decision also covers MPP and enterprise
     # chargeback/account-funded semantics against the same commerce contract.
     - id: payment-interop
       title: Evaluate x402, MPP and account-funded payment interoperability
@@ -147,11 +147,10 @@ spec:
         number: 549
       dependsOn:
         - paid-capabilities-proof
-        - x402-mcp-check-pilot
 
     # Optional future work, deliberately left unbound for human review. This is
-    # the missing bridge between an isolated payment experiment and canonical
-    # MCTL Agent Commerce: one selected external rail must pass through the same
+    # the missing bridge between isolated payment experiments and canonical MCTL
+    # Agent Commerce: one selected external rail must pass through the same
     # identity, policy, budget, approval, ledger and reconciliation path.
     - id: governed-external-payment-proof
       title: Integrate one external payment rail into governed Agent Commerce
