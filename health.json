@@ -101,7 +101,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -171,7 +171,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -396,7 +396,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -506,7 +506,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -655,7 +655,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -928,7 +928,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1048,7 +1048,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1203,7 +1203,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1283,7 +1283,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1355,7 +1355,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1655,7 +1655,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1765,7 +1765,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1865,7 +1865,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1879,7 +1879,6 @@
       "apiVersion": "roadmap.mctl.ai/v1alpha1",
       "completion": {
         "blocking": [
-          "cross-system-correlation",
           "live-bakeoff"
         ],
         "items": [
@@ -1919,9 +1918,9 @@
               "number": 97,
               "repository": "mctlhq/mctl-agent"
             },
-            "reason": "open",
+            "reason": "closed",
             "required": true,
-            "status": "incomplete"
+            "status": "complete"
           },
           {
             "id": "devloop-traces",
@@ -1966,8 +1965,8 @@
         ],
         "mode": "allRequired",
         "required": {
-          "complete": 6,
-          "incomplete": 2,
+          "complete": 7,
+          "incomplete": 1,
           "total": 8,
           "unknown": 0
         },
@@ -2021,7 +2020,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2141,7 +2140,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2281,7 +2280,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2361,7 +2360,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2376,6 +2375,7 @@
       "completion": {
         "blocking": [
           "delegated-agent-identity",
+          "github-decoupling",
           "mcp-oauth-cimd"
         ],
         "items": [
@@ -2395,9 +2395,9 @@
               "number": 377,
               "repository": "mctlhq/mctl-api"
             },
-            "reason": "closed",
+            "reason": "open",
             "required": true,
-            "status": "complete"
+            "status": "incomplete"
           },
           {
             "id": "github-local-oauth-ghid",
@@ -2512,8 +2512,8 @@
         ],
         "mode": "allRequired",
         "required": {
-          "complete": 7,
-          "incomplete": 2,
+          "complete": 6,
+          "incomplete": 3,
           "total": 9,
           "unknown": 0
         },
@@ -2615,7 +2615,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "state": "drift",

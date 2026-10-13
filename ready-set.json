@@ -142,6 +142,15 @@
           "blockers": [
             {
               "issue": {
+                "number": 377,
+                "repository": "mctlhq/mctl-api"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "issue": {
                 "number": 489,
                 "repository": "mctlhq/mctl-api"
               },
@@ -202,7 +211,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -294,7 +303,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -563,7 +572,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -734,7 +743,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -887,7 +896,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1155,7 +1164,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1317,7 +1326,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1448,7 +1457,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1557,7 +1566,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1622,7 +1631,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1916,7 +1925,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2104,7 +2113,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2259,7 +2268,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2356,8 +2365,8 @@
         {
           "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "devloop-traces",
@@ -2372,7 +2381,7 @@
           },
           "phase": "correlation",
           "required": true,
-          "state": "ready"
+          "state": "complete"
         },
         {
           "blockers": [],
@@ -2461,25 +2470,24 @@
       ],
       "kind": "RoadmapReadySet",
       "ready": [
-        "cross-system-correlation",
         "live-bakeoff"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
           "blocked": 0,
-          "complete": 6,
-          "ready": 2,
+          "complete": 7,
+          "ready": 1,
           "unknown": 0
         },
         "required": {
           "blocked": 0,
-          "complete": 6,
-          "ready": 2,
+          "complete": 7,
+          "ready": 1,
           "unknown": 0
         }
       }
@@ -2659,7 +2667,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2915,7 +2923,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3029,7 +3037,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3083,8 +3091,8 @@
         {
           "blockers": [],
           "completion": {
-            "reason": "closed",
-            "status": "complete"
+            "reason": "open",
+            "status": "incomplete"
           },
           "dependsOn": [
             "principal-model",
@@ -3099,7 +3107,7 @@
           },
           "phase": "migration",
           "required": true,
-          "state": "complete"
+          "state": "ready"
         },
         {
           "blockers": [],
@@ -3320,26 +3328,27 @@
       "kind": "RoadmapReadySet",
       "ready": [
         "delegated-agent-identity",
+        "github-decoupling",
         "github-local-oauth-ghid",
         "mcp-oauth-cimd",
         "tenant-domain-separation"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-13T02:06:02Z",
+        "capturedAt": "2026-10-13T09:32:32Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
           "blocked": 1,
-          "complete": 8,
-          "ready": 4,
+          "complete": 7,
+          "ready": 5,
           "unknown": 0
         },
         "required": {
           "blocked": 0,
-          "complete": 7,
-          "ready": 2,
+          "complete": 6,
+          "ready": 3,
           "unknown": 0
         }
       }
