@@ -11,7 +11,8 @@ name: agy canary
 # an issue in this repository; the next passing run closes it.
 #
 # Worst case the probe takes 3 x 60 s listings + 2 x 30 s pauses, then per
-# account 2 x 120 s prompts + 30 s pause: about 13 min, inside the 15 min job.
+# account 2 x 120 s prompts + 30 s pause: about 13 min, inside the probe
+# step's 15 min timeout.
 #
 # Three failure states are kept apart, because "could not observe" is not
 # "observed absent":
@@ -46,7 +47,10 @@ concurrency:
 jobs:
   probe:
     runs-on: [self-hosted, agy-reviewer]
-    timeout-minutes: 15
+    # The bound that matters is the probe step's own timeout below: a job
+    # timeout cancels the job, and the alert step must not depend on
+    # always() surviving that. The job limit only leaves the alert room.
+    timeout-minutes: 20
     permissions:
       contents: read
       issues: write
@@ -62,6 +66,7 @@ jobs:
 
       - name: Probe agy
         id: probe
+        timeout-minutes: 15
         shell: bash
         run: |
           set -u
