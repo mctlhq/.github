@@ -35,21 +35,21 @@ name: Agy PR review (reusable)
 on:
   workflow_call:
     inputs:
-      # Defaulted to gemini-3.8-flash-medium with effort: medium to reduce
-      # individual review latency from ~11-14 min to ~2-4 min, accelerating
-      # queue drainage across the shared 2-slot runner pool and mitigating
-      # token quota exhaustion. Repositories requiring deeper reasoning can
-      # override with `with: effort: high`.
-      # Model identifier and effort flags verified live on 2026-09-13/14
-      # against agy 1.1.27.
+      # Defaulted to gemini-3.8-flash-high with effort: high (2026-10-14) for
+      # deeper reviews. medium (2026-09-13 to 2026-10-14) cut per-review
+      # latency from ~11-14 min to ~2-4 min on the shared 2-slot runner pool
+      # and used less quota; repositories that need that back can override
+      # with `with: effort: medium` (the model tier is reconciled to match).
+      # Model identifier verified with `agy models` against agy 1.3.4 on
+      # 2026-10-14.
       model:
         description: Gemini model to use with agy.
         type: string
-        default: 'gemini-3.8-flash-medium'
+        default: 'gemini-3.8-flash-high'
       effort:
         description: Reasoning effort level for agy (low, medium, high).
         type: string
-        default: 'medium'
+        default: 'high'
       conventions:
         description: >
           Extra repository-specific guidance appended to the review prompt.
