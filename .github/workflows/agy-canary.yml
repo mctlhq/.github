@@ -10,14 +10,18 @@ name: agy canary
 # reviewer runner and actually answers. Any other outcome opens (or updates)
 # an issue in this repository; the next passing run closes it.
 #
+# Worst case the probe takes 3 x 60 s listings + 2 x 30 s pauses, then per
+# account 2 x 120 s prompts + 30 s pause: about 13 min, inside the 15 min job.
+#
 # Three failure states are kept apart, because "could not observe" is not
 # "observed absent":
 #   absent      - `agy models` answered and the model is not in its list
 #   run-failed  - the model is listed, but a one-line prompt did not succeed
 #                 on either account
-#   unknown     - `agy models` itself never answered (e.g. the transient
-#                 UNAVAILABLE 503 seen on 2026-09-23); nothing is known about
-#                 the model, and that is reported as such, never as healthy
+#   unknown     - `agy models` never answered (e.g. the transient
+#                 UNAVAILABLE 503 seen on 2026-09-23), the defaults could not
+#                 be read, or the probe died; nothing is known about the
+#                 model, and that is reported as such, never as healthy
 
 on:
   schedule:
@@ -74,6 +78,19 @@ jobs:
           }
           model="${INPUT_MODEL:-$(default_of model)}"
           effort="${INPUT_EFFORT:-$(default_of effort)}"
+          # Same tier reconciliation as agy-review.yml, so an `effort`-only
+          # override probes what a review with that input would send.
+          case "$model" in
+            gemini-*-high|gemini-*-medium|gemini-*-low)
+              [ -n "$effort" ] && model="${model%-*}-$(printf '%s' "$effort" | tr '[:upper:]' '[:lower:]')" ;;
+          esac
+          # agy has no time bound of its own on `models`; macOS ships no
+          # timeout(1), so perl's alarm stands in for it.
+          bounded() { local secs=$1; shift; perl -e 'alarm shift; exec @ARGV' "$secs" "$@"; }
+          if [ ! -d "$AGY_HOME_PRIMARY" ]; then
+            echo "::warning::$AGY_HOME_PRIMARY missing - probing with the runner's default HOME, as agy-review.yml does"
+            AGY_HOME_PRIMARY="$HOME"
+          fi
           if [ -z "$model" ] || [ -z "$effort" ]; then
             echo "::error::could not read the model/effort defaults from agy-review.yml"
             state=unknown detail="defaults not readable from agy-review.yml"
@@ -82,17 +99,24 @@ jobs:
             scratch=$(mktemp -d)
             cd "$scratch"
             for attempt in 1 2 3; do
-              if listing=$(HOME="$AGY_HOME_PRIMARY" agy models 2>&1); then
+              if listing=$(HOME="$AGY_HOME_PRIMARY" bounded 60 agy models 2>&1); then
                 if printf '%s\n' "$listing" | awk '{print $1}' | grep -qxF -- "$model"; then
                   state=run-failed detail=""
                   for home in "$AGY_HOME_PRIMARY" "$AGY_HOME_FALLBACK"; do
                     [ -d "$home" ] || continue
-                    HOME="$home" agy -p "Reply with exactly one word: ok" \
-                      --model "$model" --effort "$effort" \
-                      --output-format json --print-timeout 180s \
-                      --sandbox --dangerously-skip-permissions \
-                      > result.json 2> err.txt
-                    status=$(jq -r '.status // empty' result.json 2>/dev/null)
+                    # One same-account retry: agy-review.yml retries the
+                    # transient 503 UNAVAILABLE the same way, and a one-minute
+                    # blip should not open an issue that stays open a day.
+                    for try in 1 2; do
+                      HOME="$home" bounded 120 agy -p "Reply with exactly one word: ok" \
+                        --model "$model" --effort "$effort" \
+                        --output-format json --print-timeout 90s \
+                        --sandbox --dangerously-skip-permissions \
+                        > result.json 2> err.txt
+                      status=$(jq -r '.status // empty' result.json 2>/dev/null)
+                      [ "$status" = "SUCCESS" ] && break
+                      [ "$try" = 1 ] && sleep 30
+                    done
                     if [ "$status" = "SUCCESS" ]; then
                       state=ok detail="answered on $(basename "$home")"
                       break
@@ -108,7 +132,7 @@ jobs:
                 break
               fi
               detail="agy models failed: $(printf '%s' "$listing" | tail -c 400)"
-              [ "$attempt" -lt 3 ] && sleep 60
+              [ "$attempt" -lt 3 ] && sleep 30
             done
           fi
           version=$(agy --version 2>/dev/null || echo unknown)
@@ -124,17 +148,20 @@ jobs:
             echo "CANARY_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      # always(): a probe that hangs into the job timeout or crashes must
+      # still alert - that is the silent failure this workflow exists for.
       - name: Open, update or close the canary issue
+        if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          STATE: ${{ steps.probe.outputs.state }}
+          STATE: ${{ steps.probe.outputs.state || 'unknown' }}
           MODEL: ${{ steps.probe.outputs.model }}
           EFFORT: ${{ steps.probe.outputs.effort }}
           VERSION: ${{ steps.probe.outputs.version }}
-          DETAIL: ${{ steps.probe.outputs.detail }}
+          DETAIL: ${{ steps.probe.outputs.detail || 'the probe step did not finish (crash or timeout); see the run log' }}
         run: |
           set -euo pipefail
           title="agy canary: reviewer model is not working"
@@ -153,7 +180,7 @@ jobs:
               ;;
             absent)  what="\`$MODEL\` is no longer offered by agy on the reviewer runner, so every agy review fails." ;;
             run-failed) what="\`$MODEL\` is listed, but a one-line prompt with \`--effort $EFFORT\` failed on both accounts." ;;
-            *)       what="The canary could not determine whether \`$MODEL\` works: agy did not answer. This is an unknown, not a pass." ;;
+            *)       what="The canary could not determine whether \`${MODEL:-the default model}\` works (see detail). This is an unknown, not a pass." ;;
           esac
           body=$(printf '%s\n\n- state: `%s`\n- model / effort: `%s` / `%s`\n- agy version: `%s`\n- detail: %s\n- run: %s\n\nagy-review.yml stays green while agy fails, so pull requests in every caller repository are currently getting "agy failed" instead of a review. Pick a model from `agy models` on the Mac mini and update the defaults in agy-review.yml. This issue closes itself on the next passing canary run.\n' \
             "$what" "$STATE" "$MODEL" "$EFFORT" "$VERSION" "$DETAIL" "$RUN_URL")
