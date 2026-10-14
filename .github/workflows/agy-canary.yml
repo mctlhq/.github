@@ -1,0 +1,166 @@
+name: agy canary
+
+# agy-review.yml is informational: when agy fails, the review job still ends
+# green and the pull request only gets an "agy failed" comment. That is how
+# the removal of gemini-3.1-pro-high from the agy CLI went unnoticed in
+# Livri-app for three days (2026-10-12..14, 23 pull requests in a row).
+#
+# This canary checks, once a day and independent of pull request traffic,
+# that the model agy-review.yml defaults to is still offered by agy on the
+# reviewer runner and actually answers. Any other outcome opens (or updates)
+# an issue in this repository; the next passing run closes it.
+#
+# Three failure states are kept apart, because "could not observe" is not
+# "observed absent":
+#   absent      - `agy models` answered and the model is not in its list
+#   run-failed  - the model is listed, but a one-line prompt did not succeed
+#                 on either account
+#   unknown     - `agy models` itself never answered (e.g. the transient
+#                 UNAVAILABLE 503 seen on 2026-09-23); nothing is known about
+#                 the model, and that is reported as such, never as healthy
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Override the model to probe (default - read from agy-review.yml).
+        type: string
+        default: ''
+      effort:
+        description: Override the effort to probe (default - read from agy-review.yml).
+        type: string
+        default: ''
+
+permissions: {}
+
+concurrency:
+  group: agy-canary
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: [self-hosted, agy-reviewer]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    env:
+      PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      AGY_HOME_PRIMARY: /Users/ghrunner/agy/primary
+      AGY_HOME_FALLBACK: /Users/ghrunner/agy/fallback
+      INPUT_MODEL: ${{ inputs.model }}
+      INPUT_EFFORT: ${{ inputs.effort }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - name: Probe agy
+        id: probe
+        shell: bash
+        run: |
+          set -u
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # The defaults callers actually get, read from the reusable
+          # workflow rather than restated here, so the two cannot drift.
+          default_of() {
+            awk -v key="      $1:" '
+              $0 == key { f = 1; next }
+              f && /^        default:/ { gsub(/^[^:]*: *|'"'"'/, ""); print; exit }
+              f && /^      [a-z]/ { exit }
+            ' .github/workflows/agy-review.yml
+          }
+          model="${INPUT_MODEL:-$(default_of model)}"
+          effort="${INPUT_EFFORT:-$(default_of effort)}"
+          if [ -z "$model" ] || [ -z "$effort" ]; then
+            echo "::error::could not read the model/effort defaults from agy-review.yml"
+            state=unknown detail="defaults not readable from agy-review.yml"
+          else
+            state=unknown detail="agy models never answered"
+            scratch=$(mktemp -d)
+            cd "$scratch"
+            for attempt in 1 2 3; do
+              if listing=$(HOME="$AGY_HOME_PRIMARY" agy models 2>&1); then
+                if printf '%s\n' "$listing" | awk '{print $1}' | grep -qxF -- "$model"; then
+                  state=run-failed detail=""
+                  for home in "$AGY_HOME_PRIMARY" "$AGY_HOME_FALLBACK"; do
+                    [ -d "$home" ] || continue
+                    HOME="$home" agy -p "Reply with exactly one word: ok" \
+                      --model "$model" --effort "$effort" \
+                      --output-format json --print-timeout 180s \
+                      --sandbox --dangerously-skip-permissions \
+                      > result.json 2> err.txt
+                    status=$(jq -r '.status // empty' result.json 2>/dev/null)
+                    if [ "$status" = "SUCCESS" ]; then
+                      state=ok detail="answered on $(basename "$home")"
+                      break
+                    fi
+                    err=$(jq -r '.error // empty' result.json 2>/dev/null)
+                    [ -n "$err" ] || err=$(tail -c 400 err.txt)
+                    detail="$detail$(basename "$home"): ${err:-no output}; "
+                  done
+                else
+                  state=absent
+                  detail="not in \`agy models\`: $(printf '%s\n' "$listing" | awk 'NF && $1 != "Fetching" {print $1}' | paste -sd, -)"
+                fi
+                break
+              fi
+              detail="agy models failed: $(printf '%s' "$listing" | tail -c 400)"
+              [ "$attempt" -lt 3 ] && sleep 60
+            done
+          fi
+          version=$(agy --version 2>/dev/null || echo unknown)
+          echo "state=$state model=$model effort=$effort agy=$version"
+          echo "detail: $detail"
+          {
+            echo "state=$state"
+            echo "model=$model"
+            echo "effort=$effort"
+            echo "version=$version"
+            echo "detail<<CANARY_EOF"
+            printf '%s\n' "$detail" | tr -d '`' | cut -c1-1500
+            echo "CANARY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open, update or close the canary issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATE: ${{ steps.probe.outputs.state }}
+          MODEL: ${{ steps.probe.outputs.model }}
+          EFFORT: ${{ steps.probe.outputs.effort }}
+          VERSION: ${{ steps.probe.outputs.version }}
+          DETAIL: ${{ steps.probe.outputs.detail }}
+        run: |
+          set -euo pipefail
+          title="agy canary: reviewer model is not working"
+          # A failed listing is a failed read, not "no open issue": let it
+          # fail the step instead of opening a duplicate.
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" \
+            --json number,title --jq "map(select(.title == \"$title\"))[0].number // empty")
+          case "$STATE" in
+            ok)
+              if [ -n "$open" ]; then
+                gh issue close "$open" --repo "$REPO" \
+                  --comment "Recovered: \`$MODEL\` / \`$EFFORT\` answers again on agy $VERSION. $RUN_URL"
+              fi
+              echo "agy canary: ok ($MODEL / $EFFORT, agy $VERSION)"
+              exit 0
+              ;;
+            absent)  what="\`$MODEL\` is no longer offered by agy on the reviewer runner, so every agy review fails." ;;
+            run-failed) what="\`$MODEL\` is listed, but a one-line prompt with \`--effort $EFFORT\` failed on both accounts." ;;
+            *)       what="The canary could not determine whether \`$MODEL\` works: agy did not answer. This is an unknown, not a pass." ;;
+          esac
+          body=$(printf '%s\n\n- state: `%s`\n- model / effort: `%s` / `%s`\n- agy version: `%s`\n- detail: %s\n- run: %s\n\nagy-review.yml stays green while agy fails, so pull requests in every caller repository are currently getting "agy failed" instead of a review. Pick a model from `agy models` on the Mac mini and update the defaults in agy-review.yml. This issue closes itself on the next passing canary run.\n' \
+            "$what" "$STATE" "$MODEL" "$EFFORT" "$VERSION" "$DETAIL" "$RUN_URL")
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --body "$body"
+          fi
+          echo "::error::agy canary: $STATE ($MODEL / $EFFORT)"
+          exit 1
