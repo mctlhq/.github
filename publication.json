@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "04a281616fc658ad2c71ec3028f0b53eef2c252c"
+    "revision": "5363ed13661dc1bb3e45770029360bc4d3ff54de"
   },
   "files": {
     "health.json": {
-      "sha256": "239233c94e21bbb3eb33ebc5bedcc9ae37ce57480fbe70e570a3c66b0c6c5b91"
+      "sha256": "176ea690acd4cfce5b21fdddbdaa83a3a9216f6fce57b2fde3ea070f08e321fc"
     },
     "ready-set.json": {
-      "sha256": "a54480c1a74220db194f6e6764506431780dee9aff12ad36dd7268d7e68490b2"
+      "sha256": "f9fa88fb4121e8b3d8a7fc4761d059922c16822046199d2dadbf89f84a6c5dd1"
     },
     "snapshot.json": {
-      "sha256": "61e796374218bb547d921c0ef06854cda8eeb8c1784ca84d81ed9f5a295d1ed0"
+      "sha256": "b0bb7ac2deaa9a322420d202439184b768732131a754347c2d54032dab6c7114"
     }
   },
   "kind": "RoadmapPublication",
@@ -35,6 +35,16 @@
       },
       "path": "roadmap/epics/agent-finops.yaml",
       "sha256": "c63774ff1f99ce8bf807cc513242cd15f12bf9f20cd72ba1adf322ae35daa149"
+    },
+    {
+      "epic": {
+        "goal": "Evaluate and establish end-to-end decision assurance by composing existing identity, policy, approval, execution and audit controls. Discovery first; implementation ownership follows evidence.",
+        "lifecycle": "proposed",
+        "name": "agent-governance-decision-assurance",
+        "title": "Agent Governance & Decision Assurance"
+      },
+      "path": "roadmap/epics/agent-governance-decision-assurance.yaml",
+      "sha256": "cc2831d5869d1118bdff4645256424b1f382ace8d8193385996a2d5d31b6fe1d"
     },
     {
       "epic": {
@@ -199,12 +209,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-15T23:04:57Z",
+    "capturedAt": "2026-10-15T23:32:09Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "04a281616fc658ad2c71ec3028f0b53eef2c252c"
+    "revision": "5363ed13661dc1bb3e45770029360bc4d3ff54de"
   }
 }
