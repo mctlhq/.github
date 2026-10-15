@@ -31,6 +31,8 @@ spec:
       title: Governed agent authoring
     - id: admission
       title: Execution admission and capacity
+    - id: routing
+      title: Policy-aware model routing and execution affinity
   workItems:
     - id: agent-contract
       phase: contract
@@ -131,6 +133,26 @@ spec:
         repository: mctlhq/mctl-agents
         number: 395
 
+    - id: model-routing-policy
+      title: Resolve allowed models through policy, budget and execution affinity before delegating optimization to a router
+      owner: mctl-agents
+      phase: routing
+      required: false
+      dependsOn:
+        - runtime-resolver
+        - runtime-policy
+        - execution-admission
+
+    - id: governed-simulation
+      title: Add dry-run and simulation execution modes for consequential capabilities without bypassing policy or approval
+      owner: mctl-agents
+      phase: governance
+      required: false
+      dependsOn:
+        - runtime-policy
+        - human-approval
+        - execution-evidence
+
     - id: governed-agent-authoring
       title: Propose, validate and publish a new agent through reviewed GitOps changes
       owner: mctl-agents
@@ -155,6 +177,8 @@ spec:
     - Execution identity, policy, approval and evidence are pinned to exact resource versions.
     - Existing agents can propose a new agent through a reviewable GitOps change but cannot activate it directly.
     - Implementation capacity is bounded by policy, and waiting for capacity never consumes an execution budget.
+    - Optional model routing preserves mctl policy, budget and execution/session affinity instead of turning provider routing into a second control plane.
+    - Optional simulation modes produce reviewable predicted effects without granting a capability that live execution would deny.
     - An implementation attempt begins when the implementer actually starts, not when work is approved, admitted or submitted.
     - Temporal remains the orchestration authority and Argo the execution authority;
       admission and capacity decisions happen before Argo submission and do not
