@@ -1121,6 +1121,22 @@
       "found": true,
       "parent": null,
       "requested": {
+        "number": 151,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 151,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-10-01T00:29:07Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
         "number": 173,
         "repository": "mctlhq/.github"
       },
@@ -4519,7 +4535,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-15T23:32:09Z",
+    "capturedAt": "2026-10-15T23:36:52Z",
     "mode": "live-capture"
   }
 }

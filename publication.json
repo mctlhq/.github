@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "5363ed13661dc1bb3e45770029360bc4d3ff54de"
+    "revision": "1e0bc271732bc52207ddd99984af56fe5e5fa567"
   },
   "files": {
     "health.json": {
-      "sha256": "176ea690acd4cfce5b21fdddbdaa83a3a9216f6fce57b2fde3ea070f08e321fc"
+      "sha256": "d8bcbca589a3dde56c6a737d483080fc0490e0afa60ea3d42f3bce6817047a81"
     },
     "ready-set.json": {
-      "sha256": "f9fa88fb4121e8b3d8a7fc4761d059922c16822046199d2dadbf89f84a6c5dd1"
+      "sha256": "0519f611810249f1f8d4825035649e385fc1bfd0f6f5f284530fa1e146c8757b"
     },
     "snapshot.json": {
-      "sha256": "b0bb7ac2deaa9a322420d202439184b768732131a754347c2d54032dab6c7114"
+      "sha256": "89f501cbe8e3d8e67db4da3cb449267cf207e4bf416be811194f8791e972c0b9"
     }
   },
   "kind": "RoadmapPublication",
@@ -54,7 +54,17 @@
         "title": "Agent definitions, execution profiles and governed agent creation"
       },
       "path": "roadmap/epics/agent-platform.yaml",
-      "sha256": "a243661d4f9fd02371540fbb6cae74ff1563759226e93949f91f5ada3af9f1a8"
+      "sha256": "ac22c0bba581a41136968c7261a6b901b3d0b474f48402329011b2ee1bf87e42"
+    },
+    {
+      "epic": {
+        "goal": "Continuously probe agent, MCP and tool execution boundaries with adaptive adversarial scenarios while keeping execution deterministic, bounded, reproducible and promotable into regression coverage.",
+        "lifecycle": "active",
+        "name": "agent-runtime-assurance",
+        "title": "Adaptive runtime assurance for governed agents"
+      },
+      "path": "roadmap/epics/agent-runtime-assurance.yaml",
+      "sha256": "3f53b7545b0434c4c08d404d0f8af2ec088f6d3fc55bdd225a5ac63b966873d8"
     },
     {
       "epic": {
@@ -209,12 +219,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-15T23:32:09Z",
+    "capturedAt": "2026-10-15T23:36:52Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "5363ed13661dc1bb3e45770029360bc4d3ff54de"
+    "revision": "1e0bc271732bc52207ddd99984af56fe5e5fa567"
   }
 }
