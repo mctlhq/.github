@@ -10,8 +10,10 @@ metadata:
 spec:
   title: Edge AI on Android
   goal: >-
-    Evaluate whether Android devices can provide a governed local execution surface for
-    mctl agents without weakening identity, policy, evidence or remote fallback semantics.
+    Evaluate whether an Android phone can be the execution device for a governed mctl agent
+    without weakening identity, policy, evidence or remote fallback semantics. The device
+    holds the TDLib session, the on-device model and the local policy gate itself, with no
+    Local Bridge and no hosted agent in the loop, so private chats never leave the phone.
   lifecycle: paused
   github:
     issue:
@@ -27,10 +29,13 @@ spec:
       title: Governed local execution contract
   workItems:
     - id: feasibility-spike
-      title: Evaluate Android local inference and bridge feasibility
+      title: Evaluate on-device tool-calling loop over Telegram tool schemas on a Pixel 10 Pro
       owner: mctlhq/mctl-agents
       phase: feasibility
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 652
     - id: local-execution-contract
       title: Define identity, capability, policy and evidence boundary for local execution
       owner: mctlhq/mctl-agents
