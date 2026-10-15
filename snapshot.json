@@ -1014,6 +1014,10 @@
         {
           "number": 629,
           "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 422,
+          "repository": "mctlhq/mctl-api"
         }
       ],
       "updatedAt": "2026-10-15T07:06:16Z"
@@ -1191,13 +1195,21 @@
         "repository": "mctlhq/.github"
       },
       "state": "open",
-      "subIssues": [],
+      "subIssues": [
+        {
+          "number": 182,
+          "repository": "mctlhq/.github"
+        }
+      ],
       "updatedAt": "2026-10-12T21:32:02Z"
     },
     {
       "blockedBy": [],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 181,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 182,
         "repository": "mctlhq/.github"
@@ -1285,10 +1297,6 @@
         {
           "number": 1332,
           "repository": "mctlhq/mctl-gitops"
-        },
-        {
-          "number": 623,
-          "repository": "mctlhq/mctl-agents"
         }
       ],
       "found": true,
@@ -2696,15 +2704,11 @@
           "repository": "mctlhq/mctl-api"
         },
         {
-          "number": 375,
-          "repository": "mctlhq/mctl-api"
-        },
-        {
-          "number": 376,
-          "repository": "mctlhq/mctl-api"
-        },
-        {
           "number": 435,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 373,
           "repository": "mctlhq/mctl-api"
         }
       ],
@@ -2727,9 +2731,17 @@
       "updatedAt": "2026-10-15T07:05:58Z"
     },
     {
-      "blockedBy": [],
+      "blockedBy": [
+        {
+          "number": 374,
+          "repository": "mctlhq/mctl-api"
+        }
+      ],
       "found": true,
-      "parent": null,
+      "parent": {
+        "number": 91,
+        "repository": "mctlhq/.github"
+      },
       "requested": {
         "number": 422,
         "repository": "mctlhq/mctl-api"
@@ -4535,7 +4547,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-15T23:36:52Z",
+    "capturedAt": "2026-10-15T23:52:33Z",
     "mode": "live-capture"
   }
 }
