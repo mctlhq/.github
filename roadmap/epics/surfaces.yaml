@@ -11,7 +11,7 @@ spec:
     Keep durable work state in the platform so a WorkItem can be inspected and
     resumed across Telegram, MCP, CLI and web surfaces without replaying raw
     conversation history or inheriting privileges across surfaces.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github

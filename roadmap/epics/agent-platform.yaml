@@ -11,7 +11,7 @@ spec:
     Make agents first-class declarative platform resources whose immutable
     definitions and execution profiles determine model, skills, capabilities,
     policy, runtime, budget and evidence, with governed publication and creation.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github

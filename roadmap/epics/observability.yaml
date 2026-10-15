@@ -20,7 +20,7 @@ spec:
     - id: gateway
       title: Telemetry gateway
     - id: backend
-      title: Backend bake-off
+      title: Backend selection and validation
     - id: tracing
       title: End-to-end execution tracing
     - id: correlation
@@ -43,6 +43,7 @@ spec:
         - telemetry-gateway
 
     - id: backend-bakeoff
+      title: Evaluate tracing backends on paper and define the live validation rubric
       phase: backend
       required: true
       issue:
@@ -58,13 +59,15 @@ spec:
         repository: mctlhq/mctl-agents
         number: 195
       # The producer code is merged (#466); what remains is live evidence: one
-      # real DevLoop rendered end to end in a trace backend. That needs a
-      # running backend (live-bakeoff) and a collector that keeps the token
-      # counts (mctl-gitops#1332), so without these edges the graph reported
-      # this item as ready while no autonomous work on it was possible.
+      # organic real DevLoop rendered end to end in a queryable trace backend,
+      # with a collector that keeps the token counts (mctl-gitops#1332).
+      # Owner decision 2026-10-11: #195's issue acceptance criteria are
+      # authoritative and the #1280 Tempo eval backend counts as that backend,
+      # so the #1280 verdict and teardown are not prerequisites (aligned in
+      # mctl-agents#618). The soak continues independently; #195 closes on
+      # organic evidence alone.
       dependsOn:
         - telemetry-gateway
-        - live-bakeoff
       externalDependsOn:
         - repository: mctlhq/mctl-agents
           number: 196
@@ -91,8 +94,12 @@ spec:
       issue:
         repository: mctlhq/mctl-api
         number: 285
+      # Span-context propagation is independently testable against the
+      # Collector debug exporter. Do not serialize it behind the full DevLoop
+      # live trace; both branches converge at cross-system-correlation.
       dependsOn:
-        - devloop-traces
+        - telemetry-gateway
+        - attribute-catalog
 
     - id: cross-system-correlation
       phase: correlation
@@ -105,9 +112,13 @@ spec:
         - agent-traces
         - mcp-span-context
 
-    # Everything that needs candidates actually running: the sandbox, the
-    # deployments, the soak, the measured rubric, the verdict and the teardown.
+    # Owner decision 2026-10-10: the live evaluation is Tempo-only. The paper
+    # screen already found no reason to spend scarce cluster memory running five
+    # backends, and the ADR's fallback rule selects Tempo when there is no clear
+    # alternative winner. Keep the historical id for roadmap stability; this
+    # item is now the live Tempo proof/soak, not a multi-vendor bake-off.
     - id: live-bakeoff
+      title: Validate Tempo monolithic on live traffic and record the backend decision
       phase: backend
       required: true
       issue:
@@ -123,6 +134,6 @@ spec:
     - One complete DevLoop is visible as a single correlated trace.
     - One mctl-agent diagnosis links alert, Loki evidence and execution trace.
     - Span attributes reuse canonical execution identity and documented mctl conventions.
-    - Backend selection is recorded in an ADR backed by live comparison evidence.
+    - Backend selection is recorded in an ADR backed by live Tempo validation evidence.
     - Private prompts, completions and Telegram message bodies remain out of traces by default.
     - Replacing the backend requires Collector configuration rather than producer code changes.

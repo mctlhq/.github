@@ -6,11 +6,12 @@ metadata:
   labels:
     - roadmap
 spec:
-  title: MCTL Unified Identity and Agent Identity Broker
+  title: MCTL Unified Identity on ZITADEL and Agent Identity
   goal: >-
-    Decouple MCTL principals from GitHub identity by introducing stable canonical
-    identities for humans, agents and services, with linked external identities,
-    swappable federation, CIMD-aware MCP OAuth and delegated agent identity.
+    Complete MCTL's canonical principal and authorization model on top of the
+    already deployed ZITADEL human identity provider, keeping external provider
+    identities, MCP client identity and delegated agent identity distinct and
+    auditable while removing GitHub-login coupling from tenant authorization.
   lifecycle: active
   github:
     issue:
@@ -20,13 +21,13 @@ spec:
     - id: principal
       title: Canonical principal model
     - id: federation
-      title: Identity federation and broker
+      title: Human identity and authentication boundary
     - id: mcp
       title: MCP OAuth and CIMD integration
     - id: delegation
       title: Agent and delegated identity
     - id: migration
-      title: GitHub identity decoupling
+      title: Canonical authorization migration
   workItems:
     - id: principal-model
       title: Define canonical human, agent and service principals plus linked external identities
@@ -38,7 +39,7 @@ spec:
         number: 373
 
     - id: identity-federation
-      title: Introduce a swappable OIDC federation and broker boundary
+      title: Provide a provider-agnostic authentication boundary for ZITADEL and legacy credentials
       owner: mctl-api
       phase: federation
       required: true
@@ -49,7 +50,7 @@ spec:
         - principal-model
 
     - id: mcp-oauth-cimd
-      title: Separate MCP client identity from user principal identity and integrate CIMD
+      title: Add CIMD while keeping MCP client identity separate from ZITADEL user identity
       owner: mctl-api
       phase: mcp
       required: true
@@ -61,7 +62,7 @@ spec:
         - identity-federation
 
     - id: delegated-agent-identity
-      title: Represent agent actor and on-behalf-of subject distinctly for policy and audit
+      title: Finish canonical agent actor and on-behalf-of identity for policy and audit
       owner: mctl-agents
       phase: delegation
       required: true
@@ -71,8 +72,12 @@ spec:
       dependsOn:
         - principal-model
 
+    # Human tenant membership does not depend on MCP client registration or on
+    # delegated-agent rollout. Once canonical principals, the authentication
+    # boundary and verified ZITADEL linking exist, the authorization cut-over
+    # can run in parallel with CIMD and agent identity.
     - id: github-decoupling
-      title: Migrate tenant membership and authorization away from canonical GitHub identity
+      title: Authorize tenant membership by canonical principal instead of GitHub login
       owner: mctl-api
       phase: migration
       required: true
@@ -80,18 +85,15 @@ spec:
         repository: mctlhq/mctl-api
         number: 377
       dependsOn:
+        - principal-model
         - identity-federation
-        - mcp-oauth-cimd
-        - delegated-agent-identity
         - zitadel-identity-linking
 
-    # Identity provider decision (owner, 2026-10-03): the human identity
-    # provider is self-hosted ZITADEL. It is one more OIDC entry in the
-    # federation registry (MCTL_OIDC_PROVIDERS, mctl-api#374 slice A), not a
-    # broker in front of every request, so the #374 design rationale stands:
-    # static service tokens, local MCP OAuth JWTs and GitHub PATs stay
-    # verified by mctl-api itself. ZITADEL replaces Argo CD's embedded Dex
-    # (ops.mctl.ai/api/dex) as the source of human sign-in.
+    # Owner decision (2026-10-03): self-hosted ZITADEL is the platform human
+    # identity provider. It is an OIDC provider in mctl-api's federation
+    # registry, not a broker in front of every credential. Static service
+    # tokens, MCTL local OAuth JWTs and supported legacy GitHub credentials
+    # continue to terminate in mctl-api through the authentication boundary.
     - id: zitadel-deployment
       title: Run self-hosted ZITADEL as the MCTL human identity provider (Postgres, Vault-held secrets, backups, alerting)
       owner: mctl-gitops
@@ -114,9 +116,9 @@ spec:
         - zitadel-deployment
         - platform-host-reservation
 
-    # Linking is an explicit action, never by spelling (#373 decision,
-    # 2026-09-24): an existing GitHub or Dex principal gains a ZITADEL
-    # identity only through a verified link, not a name match.
+    # Linking is explicit and verified, never inferred from matching username or
+    # e-mail: a GitHub/Dex and ZITADEL identity share authority only when both
+    # are linked to the same canonical principal.
     - id: zitadel-identity-linking
       title: Link existing GitHub and Dex principals to their ZITADEL identities through an explicit, verified flow
       owner: mctl-api
@@ -152,10 +154,6 @@ spec:
         - zitadel-deployment
         - tenant-domain-separation
 
-    # auth.mctl.ai shares the registrable domain mctl.ai with tenant
-    # applications, so browsers treat them as one site (cookie tossing,
-    # SameSite gives no separation). Accepted for ZITADEL phase 1 only while
-    # nothing signs in through it (mctl-gitops docs/runbooks/zitadel.md).
     - id: platform-host-reservation
       title: Reserve platform hostnames on *.mctl.ai at admission so no tenant can claim auth.mctl.ai
       owner: mctl-gitops
@@ -175,15 +173,28 @@ spec:
         number: 1504
       dependsOn:
         - platform-host-reservation
+
+    # Legacy GitHub local-OAuth compatibility/efficiency follow-up. This is not
+    # needed for ZITADEL, CIMD or the canonical authorization cut-over.
+    - id: github-local-oauth-ghid
+      title: Carry numeric GitHub id in legacy local OAuth JWTs
+      owner: mctl-api
+      phase: migration
+      required: false
+      issue:
+        repository: mctlhq/mctl-api
+        number: 422
+      dependsOn:
+        - identity-federation
   completion:
     mode: allRequired
   successCriteria:
-    - MCTL principal identity is independent of GitHub username and email.
-    - Human, agent and service principals use stable canonical subjects.
-    - External identities are linked by issuer and subject.
+    - Human authentication uses self-hosted ZITADEL while MCTL authorization is keyed by stable canonical principals.
+    - Human, agent and service principals use stable canonical subjects independent of usernames and e-mails.
+    - External identities are linked by provider, issuer and subject and do not become authorization keys by themselves.
+    - A linked ZITADEL and GitHub identity for the same human resolve to the same tenant authorization.
     - GitHub is an integration and capability provider rather than canonical platform identity.
-    - MCP OAuth keeps CIMD client identity distinct from the human or service principal.
-    - Tenant membership and authorization resolve against canonical MCTL principals.
-    - Agent actions distinguish the acting agent from the on-behalf-of subject.
-    - The federation provider can change without changing the MCTL authorization model.
-    - Human sign-in to MCTL goes through self-hosted ZITADEL; GitHub and Google are linked upstream identities.
+    - MCP OAuth keeps CIMD/DCR client identity distinct from the human or service principal.
+    - Tenant membership and authorization resolve against canonical MCTL principals and fail closed when required identity cannot be resolved.
+    - Agent actions distinguish the acting agent from a server-derived on-behalf-of subject.
+    - Replacing the human IdP in the future does not require changing the MCTL authorization model.
