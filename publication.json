@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "1e0bc271732bc52207ddd99984af56fe5e5fa567"
+    "revision": "33af5ff1d4f2eb3da8253a08a9b68b3902dac0a0"
   },
   "files": {
     "health.json": {
-      "sha256": "133867a510b161d936fcb9db027b2ef20e8f5d602b90a96d8861b29391eac454"
+      "sha256": "24ed97a05edf6f18378143134f0eee49ae6eb5c46b8643567399531cafd93076"
     },
     "ready-set.json": {
-      "sha256": "366d90e733c961a7a93521f7a36b1c20dd915a25886085fbca32f90ce17941a6"
+      "sha256": "4a646e3d7060dff0e3922d85ca30f400ff2897a5c6f9572e1b0f73615e8691d3"
     },
     "snapshot.json": {
-      "sha256": "6ad5c3894f83be395a15afac40267efc442f6f34b028be8c8112ebec26571ad8"
+      "sha256": "c504de889099377408db2d2181eb5f43e8ceda2220bb448843c2ff557a2728e0"
     }
   },
   "kind": "RoadmapPublication",
@@ -128,13 +128,13 @@
     },
     {
       "epic": {
-        "goal": "Evaluate whether Android devices can provide a governed local execution surface for mctl agents without weakening identity, policy, evidence or remote fallback semantics.",
+        "goal": "Evaluate whether an Android phone can be the execution device for a governed mctl agent without weakening identity, policy, evidence or remote fallback semantics. The device holds the TDLib session, the on-device model and the local policy gate itself, with no Local Bridge and no hosted agent in the loop, so private chats never leave the phone.",
         "lifecycle": "paused",
         "name": "edge-ai-android",
         "title": "Edge AI on Android"
       },
       "path": "roadmap/epics/edge-ai-android.yaml",
-      "sha256": "f29c77722186ed861ff6bbb767f03ce1b07440eb07f7d5af2f25572a83624f29"
+      "sha256": "27a0b48ed2ebb4084bdf44fafd4330d0617b17c2144f4a7c529b9aa5440235de"
     },
     {
       "epic": {
@@ -219,12 +219,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-15T23:52:33Z",
+    "capturedAt": "2026-10-16T00:02:38Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "1e0bc271732bc52207ddd99984af56fe5e5fa567"
+    "revision": "33af5ff1d4f2eb3da8253a08a9b68b3902dac0a0"
   }
 }
