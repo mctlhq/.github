@@ -153,7 +153,7 @@ The validator is intentionally offline and read-only. It does not query or mutat
 GitHub.
 
 `scripts/lifecycle_guard.py` is a diff-aware companion check. CI compares the head
-manifests with the merge base on pull requests and with `github.event.before` on
+manifests with the pull request base sha on pull requests and with `github.event.before` on
 pushes, and fails when an epic that is `completed` in head gained required work:
 `RequiredItemAdded` (a new required id), `RequiredFlagRaised` (optional became
 required) or `BornCompletedUnverified` (a brand-new manifest is already `completed`

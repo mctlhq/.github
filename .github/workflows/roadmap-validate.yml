@@ -36,10 +36,8 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
-          python3 roadmap/scripts/lifecycle_guard.py --base-ref "$base"
+        # The checkout is the PR merge commit, whose first parent is the base sha.
+        run: python3 roadmap/scripts/lifecycle_guard.py --base-ref "$BASE_SHA"
 
       - name: Lifecycle guard has no base (push)
         if: github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000'
