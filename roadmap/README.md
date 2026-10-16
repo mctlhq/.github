@@ -63,6 +63,7 @@ roadmap/
       converged-fixture.json
   scripts/
     validate.py
+    lifecycle_guard.py    diff-aware completed-epic guard
     github_graph.py       read-only observation
     reconcile.py          desired vs observed
     health.py
@@ -78,6 +79,7 @@ roadmap/
     README.md             copied onto roadmap-state as its README
   tests/
     test_validate.py
+    test_lifecycle_guard.py
     test_reconcile.py
     test_health.py
     test_completion.py
@@ -120,6 +122,19 @@ The validator has three layers:
 
 The validator is intentionally offline and read-only. It does not query or mutate
 GitHub.
+
+`scripts/lifecycle_guard.py` is a diff-aware companion check. CI compares the head
+manifests with the merge base on pull requests and with `github.event.before` on
+pushes, and fails when an epic that is `completed` in head gained required work:
+`RequiredItemAdded` (a new required id), `RequiredFlagRaised` (optional became
+required) or `BornCompletedUnverified` (a brand-new manifest is already `completed`
+and holds required work; closure cannot be observed offline, so land it `active` or
+`paused` first and complete it later through the normal evidence path). To extend
+completed work legitimately, add the item as `required: false`, or reopen the epic to
+`active`/`paused` in the same change. If the base or head cannot be evaluated the guard
+exits 2 (`base-unresolvable:`, `base-unreadable:`, `base-malformed:`, `head-invalid:`)
+rather than passing. A push with an all-zero `before` emits a warning and skips the
+guard step; it is never reported as passed.
 
 ## v1alpha1 model
 
