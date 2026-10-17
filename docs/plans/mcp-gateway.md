@@ -1,8 +1,9 @@
 # MCP Gateway
 
-Status: proposal, 2026-10-17. Nothing here is implemented or authorized for
-implementation. The open decisions at the end need an owner answer before any
-issue is materialized.
+Status: proposal, 2026-10-17. Decisions D1-D5 were accepted by the owner on
+2026-10-17 as recommended (see "Decisions"). Nothing here is implemented yet;
+implementation starts from the epic and issues materialized after this
+document merges.
 
 ## Goal
 
@@ -255,7 +256,7 @@ be tested, not relied on.
 Cloudflare cannot enforce tool policy (mctl-gitops#1181), and its open
 endpoint decision (.github#128) is exactly the question this proposal answers
 for the platform: an mctl-owned gateway, with Cloudflare as the outer proxy
-only. See decision D4.
+only. Decision D4 settles how the two relate.
 
 ## Risks
 
@@ -271,18 +272,20 @@ only. See decision D4.
   stateless transport, so new methods pass through; only the list/call paths
   are interpreted.
 
-## Open decisions
+## Decisions
 
-- **D1 — Separate service or inside mctl-api.** Recommendation: separate
+Accepted by the owner on 2026-10-17, each as recommended.
+
+- **D1 — Separate service or inside mctl-api.** Decision: separate
   service, for blast radius and because mctl-api is itself a downstream.
-- **D2 — Who issues the caller's token.** Recommendation: mctl-api's
+- **D2 — Who issues the caller's token.** Decision: mctl-api's
   authorization server, made verifiable via JWKS; ZITADEL stays the IdP behind
   it. ZITADEL directly would need hand-registered clients.
-- **D3 — Where grants live.** Recommendation: mctl-api Postgres, with the
+- **D3 — Where grants live.** Decision: mctl-api Postgres, with the
   ceiling in gitops. Gitops-only grants would publish principals and tenants
   in a public repo.
-- **D4 — Epic.** Recommendation: a new `mcp-gateway` epic that supersedes the
+- **D4 — Epic.** Decision: a new `mcp-gateway` epic that supersedes the
   gateway phase of `enterprise-mcp` and answers .github#128, rather than
   resuming the paused epic as it stands.
-- **D5 — Who gets access first.** Recommendation: platform admins only until
+- **D5 — Who gets access first.** Decision: platform admins only until
   G5, then tenant owners, then tenant members.
