@@ -139,17 +139,7 @@
           "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "issue": {
-                "number": 489,
-                "repository": "mctlhq/mctl-api"
-              },
-              "kind": "external",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
             "reason": "open",
             "status": "incomplete"
@@ -174,7 +164,7 @@
           },
           "phase": "execution",
           "required": false,
-          "state": "blocked"
+          "state": "ready"
         },
         {
           "blockers": [],
@@ -198,18 +188,19 @@
       ],
       "kind": "RoadmapReadySet",
       "ready": [
+        "paid-capabilities-shared-tenant",
         "payment-interop"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 1,
+          "blocked": 0,
           "complete": 5,
-          "ready": 1,
+          "ready": 2,
           "unknown": 0
         },
         "required": {
@@ -294,7 +285,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -350,7 +341,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -653,7 +644,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -798,7 +789,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -969,7 +960,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1122,7 +1113,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1390,7 +1381,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1552,7 +1543,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1683,7 +1674,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1792,7 +1783,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1863,7 +1854,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2157,7 +2148,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2345,7 +2336,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2500,7 +2491,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2706,7 +2697,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2899,7 +2890,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3155,7 +3146,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3269,7 +3260,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3572,7 +3563,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-17T20:43:13Z",
+        "capturedAt": "2026-10-17T23:12:31Z",
         "mode": "live-capture"
       },
       "summary": {
