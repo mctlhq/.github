@@ -327,6 +327,18 @@ jobs:
         and may point at a newer commit while this invocation is running.
         Files in the checkout and both git object IDs are pinned.
 
+        This is a static review. Read, Grep and Glob work on the pinned
+        checkout, and your only shell commands are `git diff` and the two
+        review endpoints below: you cannot install dependencies or run
+        builds, tests, linters or any repository script, even when the
+        repository's CLAUDE.md lists such commands. That is deliberate,
+        because this job holds secrets and those commands would execute
+        code from the pull request. CI runs the checks as separate required
+        status checks, so do not attempt them and do not withhold or hedge
+        your verdict because you could not run them. Read the diff and the
+        files it touches, then always finish with the verdict described at
+        the end of these instructions.
+
         Focus on:
         - Correctness and logic errors; edge cases the change misses.
         - Security: injection, authentication/authorization, secret
