@@ -12,7 +12,7 @@ spec:
     already deployed ZITADEL human identity provider, keeping external provider
     identities, MCP client identity and delegated agent identity distinct and
     auditable while removing GitHub-login coupling from tenant authorization.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
