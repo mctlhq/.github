@@ -1020,7 +1020,7 @@
           "repository": "mctlhq/mctl-api"
         }
       ],
-      "updatedAt": "2026-10-15T07:06:16Z"
+      "updatedAt": "2026-10-18T09:54:37Z"
     },
     {
       "blockedBy": [
@@ -4567,7 +4567,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-18T09:49:09Z",
+    "capturedAt": "2026-10-18T09:58:00Z",
     "mode": "live-capture"
   }
 }
