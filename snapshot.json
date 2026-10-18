@@ -1134,7 +1134,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-01T00:29:07Z"
+      "updatedAt": "2026-10-18T09:21:08Z"
     },
     {
       "blockedBy": [],
@@ -2685,9 +2685,10 @@
         "number": 375,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-15T07:05:40Z"
+      "updatedAt": "2026-10-18T09:43:24Z"
     },
     {
       "blockedBy": [
@@ -2709,9 +2710,10 @@
         "number": 376,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-15T07:05:27Z"
+      "updatedAt": "2026-10-18T09:35:05Z"
     },
     {
       "blockedBy": [
@@ -4565,7 +4567,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-18T06:01:30Z",
+    "capturedAt": "2026-10-18T09:49:09Z",
     "mode": "live-capture"
   }
 }
