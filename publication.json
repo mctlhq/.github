@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "6f35424f140a15557c3405ebed6d08851eb496b2"
+    "revision": "5c1ef2f8d6e72877f002004780bdf4f4e65c55a5"
   },
   "files": {
     "health.json": {
-      "sha256": "28495ce38131da1ea4019aae161053221cccc6f682d0f3b1292f17e6c3ec0c7e"
+      "sha256": "4c3068def78e73a195114e113d5fb680ad5086a0812ca8e60d82fe104d0db0ac"
     },
     "ready-set.json": {
-      "sha256": "7b8f0a4b00627966df4e245226652b32e6e8a4de0aaa2e91d27523807f5adf8a"
+      "sha256": "9fa8a0b0a8dbec9e13e32621fe2a91b8d716182815d3095dcd4c792987277f24"
     },
     "snapshot.json": {
-      "sha256": "3c11f449b668a8f2772cbf4be705659d4ff9c7bdbe4c7cd63562362d20e037b1"
+      "sha256": "576e60bfa2753384970837196abdc69a21eae2bb1385ed416032d1fff3edd26b"
     }
   },
   "kind": "RoadmapPublication",
@@ -38,13 +38,13 @@
     },
     {
       "epic": {
-        "goal": "Evaluate and establish end-to-end decision assurance by composing existing identity, policy, approval, execution and audit controls. Discovery first; implementation ownership follows evidence.",
-        "lifecycle": "proposed",
+        "goal": "Establish end-to-end decision assurance by composing canonical identity, policy, approval and execution controls so governed actions have exact binding, consistent authorization and a durable reconstructable decision-to-result chain.",
+        "lifecycle": "active",
         "name": "agent-governance-decision-assurance",
         "title": "Agent Governance & Decision Assurance"
       },
       "path": "roadmap/epics/agent-governance-decision-assurance.yaml",
-      "sha256": "cc2831d5869d1118bdff4645256424b1f382ace8d8193385996a2d5d31b6fe1d"
+      "sha256": "8b4484f126a2729fb5ace2ea8d533c34c2e21eb1277e187053bf4754d31bc3d0"
     },
     {
       "epic": {
@@ -219,12 +219,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-18T12:19:53Z",
+    "capturedAt": "2026-10-18T15:29:06Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "6f35424f140a15557c3405ebed6d08851eb496b2"
+    "revision": "5c1ef2f8d6e72877f002004780bdf4f4e65c55a5"
   }
 }

@@ -101,7 +101,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -171,7 +171,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -185,14 +185,90 @@
       "apiVersion": "roadmap.mctl.ai/v1alpha1",
       "completion": {
         "blocking": [
-          "decision-assurance-spike"
+          "approval-lifecycle-atomicity",
+          "approval-terminal-semantics",
+          "authority-context-contract",
+          "direct-approval-binding",
+          "durable-decision-record",
+          "execution-authorization",
+          "policy-checkpoint-productionization"
         ],
         "items": [
+          {
+            "id": "approval-lifecycle-atomicity",
+            "issue": {
+              "number": 701,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "approval-terminal-semantics",
+            "issue": {
+              "number": 702,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "authority-context-contract",
+            "issue": {
+              "number": 700,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
           {
             "id": "decision-assurance-spike",
             "issue": {
               "number": 182,
               "repository": "mctlhq/.github"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "direct-approval-binding",
+            "issue": {
+              "number": 1979,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "durable-decision-record",
+            "issue": {
+              "number": 701,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "execution-authorization",
+            "issue": {
+              "number": 703,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "policy-checkpoint-productionization",
+            "issue": {
+              "number": 1980,
+              "repository": "mctlhq/mctl-gitops"
             },
             "reason": "open",
             "required": true,
@@ -201,14 +277,127 @@
         ],
         "mode": "allRequired",
         "required": {
-          "complete": 0,
-          "incomplete": 1,
-          "total": 1,
+          "complete": 1,
+          "incomplete": 7,
+          "total": 8,
           "unknown": 0
         },
         "status": "incomplete"
       },
-      "diagnostics": [],
+      "diagnostics": [
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner direct-approval-binding): child=mctlhq/mctl-gitops#1979, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 1979,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "direct-approval-binding"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner policy-checkpoint-productionization): child=mctlhq/mctl-gitops#1980, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 1980,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "policy-checkpoint-productionization"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner authority-context-contract): child=mctlhq/mctl-api#700, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 700,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "authority-context-contract"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner approval-lifecycle-atomicity): child=mctlhq/mctl-agents#701, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 701,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "approval-lifecycle-atomicity"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner durable-decision-record): child=mctlhq/mctl-api#701, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 701,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "durable-decision-record"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner approval-terminal-semantics): child=mctlhq/mctl-agents#702, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 702,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "approval-terminal-semantics"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner execution-authorization): child=mctlhq/mctl-agents#703, expectedParent=mctlhq/.github#181",
+          "subject": {
+            "child": {
+              "number": 703,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 181,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "execution-authorization"
+          }
+        }
+      ],
       "epic": {
         "issue": {
           "number": 181,
@@ -216,19 +405,19 @@
         },
         "manifest": {
           "path": "roadmap/epics/agent-governance-decision-assurance.yaml",
-          "sha256": "cc2831d5869d1118bdff4645256424b1f382ace8d8193385996a2d5d31b6fe1d"
+          "sha256": "8b4484f126a2729fb5ace2ea8d533c34c2e21eb1277e187053bf4754d31bc3d0"
         },
         "name": "agent-governance-decision-assurance"
       },
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
-      "state": "healthy",
+      "state": "drift",
       "summary": {
-        "drift": 0,
+        "drift": 7,
         "error": 0,
         "info": 0
       }
@@ -476,7 +665,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -623,7 +812,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -733,7 +922,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -882,7 +1071,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1155,7 +1344,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1275,7 +1464,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1430,7 +1619,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1510,7 +1699,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1594,7 +1783,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -1894,7 +2083,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2004,7 +2193,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2104,7 +2293,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2243,7 +2432,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2363,7 +2552,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2503,7 +2692,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2583,7 +2772,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2753,7 +2942,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-18T12:19:53Z",
+        "capturedAt": "2026-10-18T15:29:06Z",
         "mode": "live-capture"
       },
       "state": "healthy",
