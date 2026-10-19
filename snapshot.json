@@ -3857,9 +3857,10 @@
         "number": 1979,
         "repository": "mctlhq/mctl-gitops"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-19T11:49:32Z"
+      "updatedAt": "2026-10-19T21:42:56Z"
     },
     {
       "blockedBy": [],
@@ -4680,7 +4681,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-19T17:33:39Z",
+    "capturedAt": "2026-10-19T22:27:48Z",
     "mode": "live-capture"
   }
 }
