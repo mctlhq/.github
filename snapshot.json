@@ -2163,9 +2163,10 @@
         "number": 701,
         "repository": "mctlhq/mctl-agents"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-18T17:29:41Z"
+      "updatedAt": "2026-10-18T22:13:34Z"
     },
     {
       "blockedBy": [],
@@ -2179,9 +2180,10 @@
         "number": 702,
         "repository": "mctlhq/mctl-agents"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-18T14:45:06Z"
+      "updatedAt": "2026-10-18T23:29:57Z"
     },
     {
       "blockedBy": [],
@@ -4677,7 +4679,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-18T21:34:16Z",
+    "capturedAt": "2026-10-19T00:14:40Z",
     "mode": "live-capture"
   }
 }
