@@ -193,7 +193,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -285,7 +285,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -354,8 +354,8 @@
         {
           "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [],
           "externalDependsOn": [],
@@ -366,7 +366,7 @@
           },
           "phase": "decision-record",
           "required": true,
-          "state": "ready"
+          "state": "complete"
         },
         {
           "blockers": [],
@@ -456,7 +456,6 @@
       ],
       "kind": "RoadmapReadySet",
       "ready": [
-        "authority-context-contract",
         "direct-approval-binding",
         "durable-decision-record",
         "execution-authorization",
@@ -464,20 +463,20 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
           "blocked": 0,
-          "complete": 3,
-          "ready": 5,
+          "complete": 4,
+          "ready": 4,
           "unknown": 0
         },
         "required": {
           "blocked": 0,
-          "complete": 3,
-          "ready": 5,
+          "complete": 4,
+          "ready": 4,
           "unknown": 0
         }
       }
@@ -767,7 +766,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -912,7 +911,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1083,7 +1082,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1236,7 +1235,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1504,7 +1503,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1666,7 +1665,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1797,7 +1796,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1906,7 +1905,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1977,7 +1976,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2262,7 +2261,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2450,7 +2449,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2605,7 +2604,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2811,7 +2810,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3004,7 +3003,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3260,7 +3259,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3374,7 +3373,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3675,7 +3674,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-19T04:54:58Z",
+        "capturedAt": "2026-10-19T10:53:34Z",
         "mode": "live-capture"
       },
       "summary": {
