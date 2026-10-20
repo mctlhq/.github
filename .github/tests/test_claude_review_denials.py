@@ -71,10 +71,19 @@ class DenialsLogTest(unittest.TestCase):
             f'echo "{SECRET}" | gh pr review 12 --approve --body-file -',
             f"gh pr comment 12 --body {SECRET} {SECRET} {SECRET}",
             " ".join(["gh"] + ["x"] * 20 + [SECRET]),
+            f"gh pr review 12 --approve\t--body\t{SECRET}",
+            f"gh pr review 12 --approve -b{SECRET}",
+            f"gh pr create --title {SECRET}",
+            f"gh pr review 12 --approve {SECRET}" + "x" * 80,
+            f"gh pr review 12 --approve {SECRET}!",
         ]
         out = self.run_script(result([denial(c) for c in commands]))
         self.assertIn(f"{len(commands)} permission denial(s)", out)
         self.assertNotIn(SECRET, out)
+
+    def test_cut_head_is_marked(self) -> None:
+        out = self.run_script(result([denial(" ".join(["gh"] + ["x"] * 20))]))
+        self.assertIn("denied Bash: gh " + "x " * 11 + "...", out)
 
     def test_non_bash_tool_prints_only_its_name(self) -> None:
         out = self.run_script(result([{"tool_name": "Write", "tool_input": {"content": SECRET}}]))

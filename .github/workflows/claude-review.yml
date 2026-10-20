@@ -507,13 +507,15 @@ jobs:
         fi
         if ! lines=$(jq -r '
             def head:
-              split("\n")[0] | split(" ") | map(select(. != ""))
+              split("\n")[0] | [splits("[[:space:]]+")] | map(select(. != ""))
               | reduce .[] as $t ({out: [], stop: false};
-                  if .stop or (.out | length) >= 12 then .stop = true
-                  elif ($t | test("^[\"'"'"'$(<]")) then .out += ["..."] | .stop = true
-                  elif ($t | test("^(-f|-F|--field|--raw-field|-b|--body|--body-file|--input)$")) then .out += [$t, "..."] | .stop = true
-                  elif ($t | test("=")) then .out += [($t | sub("=.*"; "=..."))] | .stop = true
-                  else .out += [$t] end)
+                  if .stop then .
+                  elif (.out | length) >= 12 then .out += ["..."] | .stop = true
+                  elif ($t | test("^(-f|-F|--field|--raw-field|-b|--body|--body-file|--input|-t|--title|-m|--message|-n|--notes)$")) then .out += [$t, "..."] | .stop = true
+                  elif ($t | test("^-[A-Za-z]..")) then .out += [($t[0:2] + "...")] | .stop = true
+                  elif ($t | test("=")) and ($t | test("^[A-Za-z0-9_./:@-]+=")) then .out += [($t | sub("=.*"; "=..."))] | .stop = true
+                  elif ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t]
+                  else .out += ["..."] | .stop = true end)
               | .out | join(" ");
             if type != "array" then error("not an array") else . end
             | [.[] | select(.type == "result")] | last // {}
