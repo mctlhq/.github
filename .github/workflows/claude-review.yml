@@ -492,6 +492,40 @@ jobs:
         if [ "$(jq length "$dest")" = "0" ]; then
           echo "::warning::Reviewer attempt $USAGE_ATTEMPT has no result entry with model usage; its spend was not measured."
         fi
+      # The action summarises a run only as `permission_denials_count: N`,
+      # which is how .github#204 went undiagnosed: the reviewer said it would
+      # APPROVE, nothing was submitted, and the log could not say which call
+      # the allowlist refused. This prints each denied tool and the head of
+      # its command -- enough to see the prefix that missed the allowlist --
+      # and cuts the command off at the first flag or quoted word that can
+      # carry review or PR text, so none of it reaches the public log.
+      DENIALS_LOG_SH: |
+        out="$RUNNER_TEMP/claude-execution-output.json"
+        if [ ! -f "$out" ]; then
+          echo "Reviewer attempt $DENIALS_ATTEMPT wrote no execution output; no denials to report."
+          exit 0
+        fi
+        if ! lines=$(jq -r '
+            def head:
+              split("\n")[0] | split(" ") | map(select(. != ""))
+              | reduce .[] as $t ({out: [], stop: false};
+                  if .stop or (.out | length) >= 12 then .stop = true
+                  elif ($t | test("^[\"'"'"'$(<]")) then .out += ["..."] | .stop = true
+                  elif ($t | test("^(-f|-F|--field|--raw-field|-b|--body|--body-file|--input)$")) then .out += [$t, "..."] | .stop = true
+                  elif ($t | test("=")) then .out += [($t | sub("=.*"; "=..."))] | .stop = true
+                  else .out += [$t] end)
+              | .out | join(" ");
+            if type != "array" then error("not an array") else . end
+            | [.[] | select(.type == "result")] | last // {}
+            | (.permission_denials // [])
+            | "Reviewer attempt \(env.DENIALS_ATTEMPT): \(length) permission denial(s)",
+              (.[] | "::warning::Reviewer attempt \(env.DENIALS_ATTEMPT) was denied \(.tool_name // "?")"
+                + (if (.tool_input.command? | type) == "string" then ": " + (.tool_input.command | head) else "" end))
+          ' "$out" 2>/dev/null); then
+          echo "::warning::Reviewer attempt $DENIALS_ATTEMPT left an unreadable execution output; its permission denials are unknown."
+          exit 0
+        fi
+        printf '%s\n' "$lines"
     steps:
       # A push already auto-triggers a review for its own commit via the
       # pull_request/synchronize path — a manual '@claude review' comment
@@ -1062,6 +1096,13 @@ jobs:
           USAGE_ATTEMPT: 0
         run: bash -c "$USAGE_CAPTURE_SH"
 
+      - name: Log primary reviewer permission denials
+        if: always() && contains(fromJSON('["success","failure","cancelled"]'), steps.review.outcome)
+        continue-on-error: true
+        env:
+          DENIALS_ATTEMPT: 0
+        run: bash -c "$DENIALS_LOG_SH"
+
       # Fallback retry on a SECOND token. An earlier revision of the donor
       # workflow refused to do this, on a 2026-07-22 observation that
       # CLAUDE_CODE_OAUTH_TOKEN and CLAUDE_CODE_OAUTH_TOKEN_2 failed
@@ -1093,6 +1134,13 @@ jobs:
         env:
           USAGE_ATTEMPT: 1
         run: bash -c "$USAGE_CAPTURE_SH"
+
+      - name: Log fallback reviewer permission denials
+        if: always() && contains(fromJSON('["success","failure","cancelled"]'), steps.review2.outcome)
+        continue-on-error: true
+        env:
+          DENIALS_ATTEMPT: 1
+        run: bash -c "$DENIALS_LOG_SH"
 
       # The primary and the fallback write the same execution-output file, so
       # re-read it here: after a fallback run it holds the FALLBACK result.
