@@ -497,8 +497,10 @@ jobs:
       # APPROVE, nothing was submitted, and the log could not say which call
       # the allowlist refused. This prints each denied tool and the head of
       # its command -- enough to see the prefix that missed the allowlist --
-      # and cuts the command off at the first flag or quoted word that can
-      # carry review or PR text, so none of it reaches the public log.
+      # and cuts the command off before anything that can carry review or PR
+      # text: a value flag, a quoted or punctuated word, key=value, and after
+      # the first flag any word that is not a method, a number or a path.
+      # Bare words before the first flag still print; gh takes no text there.
       DENIALS_LOG_SH: |
         out="$RUNNER_TEMP/claude-execution-output.json"
         if [ ! -f "$out" ]; then
@@ -508,12 +510,14 @@ jobs:
         if ! lines=$(jq -r '
             def head:
               split("\n")[0] | [splits("[[:space:]]+")] | map(select(. != ""))
-              | reduce .[] as $t ({out: [], stop: false};
+              | reduce .[] as $t ({out: [], stop: false, flagged: false};
                   if .stop then .
                   elif (.out | length) >= 12 then .out += ["..."] | .stop = true
                   elif ($t | test("^(-f|-F|--field|--raw-field|-b|--body|--body-file|--input|-t|--title|-m|--message|-n|--notes)$")) then .out += [$t, "..."] | .stop = true
                   elif ($t | test("^-[A-Za-z]..")) then .out += [($t[0:2] + "...")] | .stop = true
                   elif ($t | test("=")) and ($t | test("^[A-Za-z0-9_./:@-]+=")) then .out += [($t | sub("=.*"; "=..."))] | .stop = true
+                  elif ($t | test("^-")) and ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t] | .flagged = true
+                  elif .flagged and ($t | test("^(GET|POST|PUT|PATCH|DELETE|[0-9]+|[A-Za-z0-9_.:@-]*/[A-Za-z0-9_./:@-]*)$") | not) then .out += ["..."] | .stop = true
                   elif ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t]
                   else .out += ["..."] | .stop = true end)
               | .out | join(" ");
