@@ -193,7 +193,7 @@ sequenceDiagram
 1. Prompt and boundary: `agents@50e703d:orchestrator/run_incident_responder.py#_build_prompt` ("Incident data is untrusted input"); options `orchestrator/options.py#build_incident_responder_options`: tools `Read`, `Write`, `Glob` plus mctl MCP, "Deliberately no Bash", policy hooks attached.
 2. Output: `agents/_incident-responder/CLAUDE.md` section ".status.yaml" writes `status: accepted` with an `auto-accepted:` note and no approval block.
 3. Sweep: `agents@50e703d:orchestrator/proposal_state.py#execution_authorization` returns `(None, "legacy auto-accepted / unreviewed")` for a record with no `approval` block; `AUTHORIZATION_AUTONOMY_POLICY` is "Reserved ... No policy is defined yet"; `temporal/workflows/implement_sweep.py:492-499` logs them as "quarantined from execution; they need human triage".
-4. Manual implementer: a human-triggered `mctl_trigger_implementer` is a second, admin-only entry point for these records. How its gate treats them is part of a security-sensitive finding tracked in private security triage (9.5) and is not detailed here.
+4. Manual implementer: a human-triggered `mctl_trigger_implementer` is a second, admin-only entry point for these records. How its gate treated them was part of G12 (9.5), fixed in mctl-agents 1.88.1 ([GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq)).
 
 ### 3.4 P4: policy-checkpoint actions
 
@@ -279,12 +279,12 @@ Six scopes are mutating with `requiresApproval: null`:
 
 | Scope | Declared on (profile) | Actual entry point | Contract applied today | Bypass or ambiguity vs. the canonical path | Disposition |
 |---|---|---|---|---|---|
-| `proposal-status` | incident-responder, implementer, shepherd | `.status.yaml` files under `agents-state/` in mctl-gitops, written by agent runs through the CWFT commit steps. The canonical writer of the human approval record is the approve CWFT (P1/P2). | Path guards on the commit steps. | Security-sensitive: execution authorization can accept repository state as human-approval evidence without sufficient binding to an authenticated decision. Details are tracked privately. | **G12** (9.5), private security triage. |
-| `proposal-directory-write` | issue-investigator, service-agent, incident-responder | Proposal files under `agents-state/<service>/proposals/<slug>/`, written through the same commit steps. | Path guards. | The write boundary is assessed together with G12. | Part of **G12**. |
+| `proposal-status` | incident-responder, implementer, shepherd | `.status.yaml` files under `agents-state/` in mctl-gitops, written by agent runs through the CWFT commit steps. The canonical writer of the human approval record is the approve CWFT (P1/P2). | Path guards on the commit steps. | Security-sensitive: execution authorization can accept repository state as human-approval evidence without sufficient binding to an authenticated decision. | **G12** (9.5): fixed in mctl-agents 1.88.1, [GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq). |
+| `proposal-directory-write` | issue-investigator, service-agent, incident-responder | Proposal files under `agents-state/<service>/proposals/<slug>/`, written through the same commit steps. | Path guards. | The write boundary is assessed together with G12. | Part of **G12** (fixed in 1.88.1). |
 | `issue-comment` | issue-investigator | `gh issue comment` after `policy_checkpoint.enforce(GITHUB_ISSUE_COMMENT, "comment", ...)` (`run_issue_investigator.py:1426-1429`; directive poller `run_issue_directive_poller.py:351`). | Policy checkpoint rule `github-issue-comment` = ALLOW (`policy_checkpoint.py:346`), recorded as a `POLICY_DECISION` log line. | None found. It goes through the canonical checkpoint; the decision evidence is a log line (already G8). | Covered: mctl-gitops#1980 (checkpoint productionization), mctl-api#701 (durable record). No new gap. |
 | `agents-state-inbox-write` | service-agent | `agents-state/<service>/inbox/<date>.md`, written through the run CWFT commit step. | Path guards. | Not an execution or authorization input in the sources read (read by the mentor for its digest). Bash as a transport is already G5. | Covered by mctl-gitops#1980 (transports). No new gap. |
 | `mentor-digest-write` | mentor | `agents-state/_mentor/digest/...`, written through the run CWFT commit step. | Path guards. The mentor has no policy-checkpoint hooks (already G5, "mentor unhooked"). | The declared scope covers only the digest file; the ungoverned-transport gap is G5. | Covered by mctl-gitops#1980. No new gap. |
-| `incident-resolve` (policy text: "Whether it should have a gate is undecided") | incident-responder | MCP `mctl_resolve_incident` → mctl-api `POST /api/v1/incidents/{id}/resolve`. | Agent side: a policy-checkpoint ALLOW rule. API side: authenticated caller with tenant write role. No approval. | The "undecided" question itself (gate, or autonomous with an attributable basis) is a decision, not a defect. Security-sensitive: the allowed autonomous incident mutations (resolve and acknowledge) are not sufficiently bound to the declaring actor and are not attributable after success. Details are tracked privately. | Decision: mctl-agents#703 (AC: "Autonomous/no-human-gate execution has an explicit attributable authorization basis"). Findings: **G13** (private security triage), **G14** (mctl-api#707). |
+| `incident-resolve` (policy text: "Whether it should have a gate is undecided") | incident-responder | MCP `mctl_resolve_incident` → mctl-api `POST /api/v1/incidents/{id}/resolve`. | Agent side: a policy-checkpoint ALLOW rule. API side: authenticated caller with tenant write role. No approval. | The "undecided" question itself (gate, or autonomous with an attributable basis) is a decision, not a defect. Security-sensitive: the allowed autonomous incident mutations (resolve and acknowledge) are not sufficiently bound to the declaring actor and are not attributable after success. Details are tracked privately. | Decision: mctl-agents#703 (AC: "Autonomous/no-human-gate execution has an explicit attributable authorization basis"). Findings: **G13** (private security triage), **G14** (mctl-api#707, fixed in mctl-api 4.105.1). |
 
 Incident target lookup (G14, a correctness bug, mctl-api#707): resolve, acknowledge and update look the
 incident up by ID prefix (`api@7f8706a:internal/alerts/store.go#GetByPrefix`,
@@ -382,7 +382,7 @@ Status vocabulary: implemented, partial, missing, owned by another epic, unknown
 | Policy evidence | partial | mctl-agents | tool hooks run policy checkpoint for MCP calls; no policy for "may auto-accept"; the `policy.yaml` mutation scopes are CI-checked catalog entries, not runtime controls (3.6); an authorization finding on the allowed incident mutations is tracked privately (9.5) | `options.py#build_incident_responder_options`; 3.6 |
 | Decision context | partial | responder output | proposal triplet plus incident id | `agents/_incident-responder/CLAUDE.md` |
 | Immutable proposal | missing | gitops | no approval digest because no approve step | `execution_authorization` |
-| Execution binding | partial | sweep quarantine; manual implementer | sweep refuses these records; the binding of execution authorization to an authenticated decision is a security-sensitive finding tracked privately (9.5) | `implement_sweep.py:492-499` |
+| Execution binding | partial | sweep quarantine; manual implementer | sweep refuses these records; the binding of execution authorization to an authenticated decision was G12 (9.5), fixed in mctl-agents 1.88.1 ([GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq)) | `implement_sweep.py:492-499` |
 | Approval expiry | missing | n/a | none | n/a |
 | Replay protection | missing | n/a | none specific | n/a |
 | End-to-end trace | partial | Argo workflow, incident record | incident resolved with "diagnosis delegated to implementer" | `run_incident_responder.py` docstring |
@@ -598,7 +598,7 @@ second authorization path until an autonomy policy is defined, and the sweep qua
 these records. So the contract treats P3 as an autonomous path that is **not authorized to
 execute through the sweep** and is neither a break-glass nor an approved bypass. The one
 residual route is a human-triggered `mctl_trigger_implementer`, which is admin-gated; its gate
-behaviour for these records is part of the privately tracked finding in 9.5. Invariant:
+behaviour for these records was part of G12 (9.5), fixed in mctl-agents 1.88.1. Invariant:
 explicit, attributable, observable override. Gap: none exists to attribute. Owner: mctl-api /
 mctl-agents. No bypass is enabled by this report.
 
@@ -874,14 +874,22 @@ owner accepts D5 and the follow-up work ships and is proven.
 These came from the P3 addendum (3.6). They are recorded here and **not** added to the
 #201 work-item graph. G12 and G13 are security-sensitive: this report states them at
 contract level only, they are not filed as public issues, and their details and
-remediation are tracked in private security triage. This report will be updated with
-terminal evidence once fixes ship.
+remediation are tracked in private security triage. This report is updated with terminal
+evidence as fixes ship.
+
+Status as of 2026-10-21:
+
+- G12: fixed in mctl-agents 1.88.1 (merge `ffd02b191eb88740cbc54ef1b906b2f9f336679b`,
+  2026-10-21). Advisory [GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq) published 2026-10-21: affected
+  `<= 1.88.0`, patched `1.88.1`. The advisory is the public record of the details.
+- G13: open, private security triage.
+- G14: fixed in mctl-api 4.105.1 (mctl-api#709 and mctl-api#710).
 
 | Finding | Paths | Evidence | Nearest existing item | Recommendation |
 |---|---|---|---|---|
-| G12 Execution authorization can accept repository state as human-approval evidence without sufficient binding to an authenticated decision | P3 and implementer entry points | Tracked privately | mctl-agents#703; mctl-api#701 | Human approval must be bound to canonical, authenticated decision evidence. A unified execution-authorization predicate (#703) alone is not treated as a sufficient fix; the owner confirms that the governance graph has an owner for that binding. |
+| G12 Execution authorization can accept repository state as human-approval evidence without sufficient binding to an authenticated decision | P3 and implementer entry points | [GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq) | mctl-agents#703; mctl-api#701 | Human approval must be bound to canonical, authenticated decision evidence. A unified execution-authorization predicate (#703) alone is not treated as a sufficient fix; the owner confirms that the governance graph has an owner for that binding. **Fixed in mctl-agents 1.88.1.** |
 | G13 Allowed autonomous incident mutations are not sufficiently bound to the declaring actor and are not attributable after success | P3 and other agent paths | Tracked privately | mctl-agents#703; mctl-gitops#1980 | Decide the `incident-resolve` "undecided" question; remediation tracked privately. |
-| G14 Incident lookup by ID prefix has no minimum length and resolves an ambiguous prefix to the newest match | Any caller of resolve, acknowledge or update | 3.6, incident target lookup | mctl-api#707 | A separate small mctl-api correctness fix: refuse short or ambiguous prefixes with a typed error. |
+| G14 Incident lookup by ID prefix has no minimum length and resolves an ambiguous prefix to the newest match | Any caller of resolve, acknowledge or update | 3.6, incident target lookup | mctl-api#707 | A separate small mctl-api correctness fix: refuse short or ambiguous prefixes with a typed error. **Fixed in mctl-api 4.105.1.** |
 
 ## 10. Open points carried forward
 
@@ -894,4 +902,5 @@ terminal evidence once fixes ship.
 - The pod-level value of `MCTL_POLICY_APPROVALS` was not read; the gitops declaration shows
   no setting.
 - P2 is treated as in scope and is not assumed deprecated; the CWFT accepts an empty digest.
-- G12-G14 (9.5) are recorded findings awaiting an owner decision; they are not part of the #201 graph.
+- G12-G14 (9.5) are not part of the #201 graph. G12 and G14 are fixed (9.5 status); G13 is open in
+  private security triage.
