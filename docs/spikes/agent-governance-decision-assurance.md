@@ -284,7 +284,7 @@ Six scopes are mutating with `requiresApproval: null`:
 | `issue-comment` | issue-investigator | `gh issue comment` after `policy_checkpoint.enforce(GITHUB_ISSUE_COMMENT, "comment", ...)` (`run_issue_investigator.py:1426-1429`; directive poller `run_issue_directive_poller.py:351`). | Policy checkpoint rule `github-issue-comment` = ALLOW (`policy_checkpoint.py:346`), recorded as a `POLICY_DECISION` log line. | None found. It goes through the canonical checkpoint; the decision evidence is a log line (already G8). | Covered: mctl-gitops#1980 (checkpoint productionization), mctl-api#701 (durable record). No new gap. |
 | `agents-state-inbox-write` | service-agent | `agents-state/<service>/inbox/<date>.md`, written through the run CWFT commit step. | Path guards. | Not an execution or authorization input in the sources read (read by the mentor for its digest). Bash as a transport is already G5. | Covered by mctl-gitops#1980 (transports). No new gap. |
 | `mentor-digest-write` | mentor | `agents-state/_mentor/digest/...`, written through the run CWFT commit step. | Path guards. The mentor has no policy-checkpoint hooks (already G5, "mentor unhooked"). | The declared scope covers only the digest file; the ungoverned-transport gap is G5. | Covered by mctl-gitops#1980. No new gap. |
-| `incident-resolve` (policy text: "Whether it should have a gate is undecided") | incident-responder | MCP `mctl_resolve_incident` → mctl-api `POST /api/v1/incidents/{id}/resolve`. | Agent side: a policy-checkpoint ALLOW rule. API side: authenticated caller with tenant write role. No approval. | The "undecided" question itself (gate, or autonomous with an attributable basis) is a decision, not a defect. Security-sensitive: the allowed autonomous incident mutations (resolve and acknowledge) are not sufficiently bound to the declaring actor and are not attributable after success. Details are tracked privately. | Decision: mctl-agents#703 (AC: "Autonomous/no-human-gate execution has an explicit attributable authorization basis"). Findings: **G13** (private security triage), **G14** (mctl-api#707, fixed in mctl-api 4.105.1). |
+| `incident-resolve` (policy text: "Whether it should have a gate is undecided") | incident-responder | MCP `mctl_resolve_incident` → mctl-api `POST /api/v1/incidents/{id}/resolve`. | Agent side: a policy-checkpoint ALLOW rule. API side: authenticated caller with tenant write role. No approval. | The "undecided" question itself (gate, or autonomous with an attributable basis) is a decision, not a defect. Security-sensitive: the allowed autonomous incident mutations (resolve and acknowledge) are not sufficiently bound to the declaring actor and are not attributable after success. | Decision: mctl-agents#703 (AC: "Autonomous/no-human-gate execution has an explicit attributable authorization basis"); decided 2026-10-21: autonomous, incident responder only, attributable through the audit trail. Findings: **G13** (fixed in mctl-agents 1.88.3 and mctl-api 4.114.0, [GHSA-x7vf-q75q-9467](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-x7vf-q75q-9467)), **G14** (mctl-api#707, fixed in mctl-api 4.105.1). |
 
 Incident target lookup (G14, a correctness bug, mctl-api#707): resolve, acknowledge and update look the
 incident up by ID prefix (`api@7f8706a:internal/alerts/store.go#GetByPrefix`,
@@ -379,7 +379,7 @@ Status vocabulary: implemented, partial, missing, owned by another epic, unknown
 | Intent provenance | partial | responder, incident record | proposal names the incident id; incident data is untrusted | `run_incident_responder.py#_build_prompt` |
 | Unified identity | unknown (not observed) | mctl-agents | identity the responder run acts under was not read | n/a |
 | Approval authority | missing | mctl-agents | no approver; sweep treats the record as unauthorized | `proposal_state.py#execution_authorization` |
-| Policy evidence | partial | mctl-agents | tool hooks run policy checkpoint for MCP calls; no policy for "may auto-accept"; the `policy.yaml` mutation scopes are CI-checked catalog entries, not runtime controls (3.6); an authorization finding on the allowed incident mutations is tracked privately (9.5) | `options.py#build_incident_responder_options`; 3.6 |
+| Policy evidence | partial | mctl-agents | tool hooks run policy checkpoint for MCP calls; no policy for "may auto-accept"; the `policy.yaml` mutation scopes are CI-checked catalog entries, not runtime controls (3.6); the authorization of the allowed incident mutations was G13 (9.5), fixed in mctl-agents 1.88.3 and mctl-api 4.114.0 ([GHSA-x7vf-q75q-9467](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-x7vf-q75q-9467)) | `options.py#build_incident_responder_options`; 3.6 |
 | Decision context | partial | responder output | proposal triplet plus incident id | `agents/_incident-responder/CLAUDE.md` |
 | Immutable proposal | missing | gitops | no approval digest because no approve step | `execution_authorization` |
 | Execution binding | partial | sweep quarantine; manual implementer | sweep refuses these records; the binding of execution authorization to an authenticated decision was G12 (9.5), fixed in mctl-agents 1.88.1 ([GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq)) | `implement_sweep.py:492-499` |
@@ -882,13 +882,16 @@ Status as of 2026-10-21:
 - G12: fixed in mctl-agents 1.88.1 (merge `ffd02b191eb88740cbc54ef1b906b2f9f336679b`,
   2026-10-21). Advisory [GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq) published 2026-10-21: affected
   `<= 1.88.0`, patched `1.88.1`. The advisory is the public record of the details.
-- G13: open, private security triage.
+- G13: fixed in mctl-agents 1.88.3 (merge `5a02e32906ea58406f7780772eac05573e95cee6`) and
+  mctl-api 4.114.0 (mctl-api#746), 2026-10-21. Advisory [GHSA-x7vf-q75q-9467](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-x7vf-q75q-9467) published
+  2026-10-21: affected `<= 1.88.2`, patched `1.88.3`. One invariant remains open: the workers
+  still call mctl-api with the static admin service token (mctl-agents#737).
 - G14: fixed in mctl-api 4.105.1 (mctl-api#709 and mctl-api#710).
 
 | Finding | Paths | Evidence | Nearest existing item | Recommendation |
 |---|---|---|---|---|
 | G12 Execution authorization can accept repository state as human-approval evidence without sufficient binding to an authenticated decision | P3 and implementer entry points | [GHSA-46f3-7ffh-3xwq](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-46f3-7ffh-3xwq) | mctl-agents#703; mctl-api#701 | Human approval must be bound to canonical, authenticated decision evidence. A unified execution-authorization predicate (#703) alone is not treated as a sufficient fix; the owner confirms that the governance graph has an owner for that binding. **Fixed in mctl-agents 1.88.1.** |
-| G13 Allowed autonomous incident mutations are not sufficiently bound to the declaring actor and are not attributable after success | P3 and other agent paths | Tracked privately | mctl-agents#703; mctl-gitops#1980 | Decide the `incident-resolve` "undecided" question; remediation tracked privately. |
+| G13 Allowed autonomous incident mutations are not sufficiently bound to the declaring actor and are not attributable after success | P3 and other agent paths | [GHSA-x7vf-q75q-9467](https://github.com/mctlhq/mctl-agents/security/advisories/GHSA-x7vf-q75q-9467) | mctl-agents#703; mctl-gitops#1980; mctl-agents#737 | Decide the `incident-resolve` "undecided" question: decided autonomous, responder only, attributable. **Fixed in mctl-agents 1.88.3 and mctl-api 4.114.0**; per-execution API identity remains (mctl-agents#737). |
 | G14 Incident lookup by ID prefix has no minimum length and resolves an ambiguous prefix to the newest match | Any caller of resolve, acknowledge or update | 3.6, incident target lookup | mctl-api#707 | A separate small mctl-api correctness fix: refuse short or ambiguous prefixes with a typed error. **Fixed in mctl-api 4.105.1.** |
 
 ## 10. Open points carried forward
@@ -902,5 +905,5 @@ Status as of 2026-10-21:
 - The pod-level value of `MCTL_POLICY_APPROVALS` was not read; the gitops declaration shows
   no setting.
 - P2 is treated as in scope and is not assumed deprecated; the CWFT accepts an empty digest.
-- G12-G14 (9.5) are not part of the #201 graph. G12 and G14 are fixed (9.5 status); G13 is open in
-  private security triage.
+- G12-G14 (9.5) are not part of the #201 graph. All three are fixed (9.5 status); G13's
+  per-execution API identity is carried forward as mctl-agents#737.
