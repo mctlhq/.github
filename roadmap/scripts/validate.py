@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Validate declarative mctl EpicDefinition manifests.
+"""Validate declarative mctl roadmap manifests (EpicDefinition, SpikeDefinition).
 
-The JSON Schema owns structural validation. This module adds graph invariants that
+The manifest `kind` selects the schema. The JSON Schema owns structural validation. This module adds graph invariants that
 JSON Schema cannot express cleanly: unique local ids, valid references, acyclic
-hierarchy/dependency graphs, and unique GitHub issue bindings.
+hierarchy/dependency graphs, and unique GitHub issue bindings. For SpikeDefinition it adds verdict membership,
+calendar dates, follow-up identity, and cross-kind invariants against epics.
 
 It intentionally performs no GitHub reads or writes. Live reconciliation is a
 separate phase of the roadmap control-plane initiative.
@@ -14,17 +15,41 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import date, datetime
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import yaml
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SCHEMA = ROOT / "schemas" / "epic-definition.schema.json"
 DEFAULT_EPICS = ROOT / "epics"
+SPIKE_SCHEMA = ROOT / "schemas" / "spike-definition.schema.json"
+DEFAULT_SPIKES = ROOT / "spikes"
+SCHEMAS_DIR = ROOT / "schemas"
+KINDS = ("EpicDefinition", "SpikeDefinition")
+
+
+def _build_registry() -> Registry:
+    registry: Registry = Registry()
+    for path in sorted(SCHEMAS_DIR.glob("*.schema.json")):
+        with path.open(encoding="utf-8") as handle:
+            contents = json.load(handle)
+        schema_id = contents.get("$id") if isinstance(contents, dict) else None
+        if isinstance(schema_id, str):
+            registry = registry.with_resource(
+                schema_id, Resource.from_contents(contents, default_specification=DRAFT202012)
+            )
+    return registry
+
+
+# Cross-file $refs (shared issueRef / localId) resolve through this registry.
+SCHEMA_REGISTRY = _build_registry()
 
 
 def _load_schema(path: Path) -> dict[str, Any]:
@@ -34,12 +59,29 @@ def _load_schema(path: Path) -> dict[str, Any]:
     return schema
 
 
+def _normalise_dates(value: Any) -> Any:
+    """Turn YAML-parsed calendar dates back into ISO strings.
+
+    yaml.safe_load turns an unquoted 2026-12-01 into datetime.date, which JSON
+    Schema would reject as a non-string. datetime.datetime is left alone so it
+    fails the date pattern.
+    """
+
+    if isinstance(value, dict):
+        return {key: _normalise_dates(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalise_dates(item) for item in value]
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value.isoformat()
+    return value
+
+
 def _load_manifest(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as handle:
         document = yaml.safe_load(handle)
     if not isinstance(document, dict):
         raise ValueError("document root must be a mapping")
-    return document
+    return _normalise_dates(document)
 
 
 def _json_path(parts: Iterable[Any]) -> str:
@@ -53,7 +95,7 @@ def _json_path(parts: Iterable[Any]) -> str:
 
 
 def schema_errors(document: dict[str, Any], schema: dict[str, Any]) -> list[str]:
-    validator = Draft202012Validator(schema)
+    validator = Draft202012Validator(schema, registry=SCHEMA_REGISTRY)
     failures = sorted(
         validator.iter_errors(document),
         key=lambda error: (list(error.absolute_path), error.message),
@@ -330,10 +372,217 @@ def validate_document(
     return semantic_errors(document)
 
 
-def corpus_errors(
-    documents: list[tuple[Path, dict[str, Any]]]
+def kind_error(document: dict[str, Any]) -> str | None:
+    kind = document.get("kind")
+    if isinstance(kind, str) and kind in KINDS:
+        return None
+    return f"$.kind: unsupported kind {kind!r}; expected one of {', '.join(KINDS)}"
+
+
+def spike_semantic_errors(document: dict[str, Any]) -> list[str]:
+    """Validate invariants over a schema-valid SpikeDefinition document."""
+
+    errors: list[str] = []
+    spec = document.get("spec", {})
+
+    decision = spec.get("decision")
+    if isinstance(decision, dict):
+        verdict = decision.get("verdict")
+        outcomes = spec.get("outcomes", [])
+        if verdict not in outcomes:
+            errors.append(
+                f"$.spec.decision.verdict: {verdict!r} is not one of "
+                f"spec.outcomes [{', '.join(outcomes)}]"
+            )
+
+    for path, container, field in (
+        ("$.spec.activation.reviewBy", spec.get("activation"), "reviewBy"),
+        ("$.spec.timebox.decisionBy", spec.get("timebox"), "decisionBy"),
+        ("$.spec.decision.decidedAt", decision, "decidedAt"),
+    ):
+        if isinstance(container, dict) and isinstance(container.get(field), str):
+            try:
+                date.fromisoformat(container[field])
+            except ValueError:
+                errors.append(f"{path}: {container[field]!r} is not a calendar date")
+
+    if isinstance(decision, dict):
+        own_key = issue_key(spec.get("github", {}).get("issue"))
+        seen: set[tuple[str, int]] = set()
+        for index, follow_up in enumerate(decision.get("followUps", [])):
+            key = issue_key(follow_up)
+            if key is None:
+                continue
+            where = f"$.spec.decision.followUps[{index}]"
+            if key == own_key:
+                errors.append(f"{where}: {issue_label(follow_up)} is the spike's own issue")
+            elif key in seen:
+                errors.append(f"{where}: {issue_label(follow_up)} is listed more than once")
+            seen.add(key)
+
+    return sorted(errors)
+
+
+def validate_spike_document(
+    document: dict[str, Any], schema: dict[str, Any]
+) -> list[str]:
+    structural = schema_errors(document, schema)
+    if structural:
+        return structural
+    return spike_semantic_errors(document)
+
+
+def validate_manifest(
+    document: dict[str, Any], schemas: dict[str, dict[str, Any]]
+) -> list[str]:
+    """Validate one manifest, dispatching on its kind."""
+
+    problem = kind_error(document)
+    if problem is not None:
+        return [problem]
+    if document["kind"] == "SpikeDefinition":
+        return validate_spike_document(document, schemas["SpikeDefinition"])
+    return validate_document(document, schemas["EpicDefinition"])
+
+
+def _spike_corpus_errors(
+    epics: list[tuple[Path, dict[str, Any]]],
+    spikes: list[tuple[Path, dict[str, Any]]],
+    invalid_epic_names: set[str],
 ) -> dict[Path, list[str]]:
-    """Validate invariants that span all EpicDefinition manifests."""
+    failures: dict[Path, list[str]] = {path: [] for path, _ in spikes}
+    names: dict[str, Path] = {}
+    issues: dict[tuple[str, int], tuple[Path, str]] = {}
+
+    epics_by_name: dict[str, tuple[Path, dict[str, Any]]] = {}
+    root_issues: dict[tuple[str, int], tuple[str, Path]] = {}
+    item_bindings: dict[tuple[str, int], tuple[str, str, Path]] = {}
+    for path, document in sorted(epics, key=lambda item: str(item[0])):
+        name = document["metadata"]["name"]
+        epics_by_name.setdefault(name, (path, document))
+        spec = document.get("spec", {})
+        root_key = issue_key(spec.get("github", {}).get("issue"))
+        if root_key is not None:
+            root_issues.setdefault(root_key, (name, path))
+        for item in spec.get("workItems", []):
+            if isinstance(item, dict):
+                key = issue_key(item.get("issue"))
+                if key is not None:
+                    item_bindings.setdefault(key, (name, item.get("id", ""), path))
+
+    for path, document in sorted(spikes, key=lambda item: str(item[0])):
+        name = document["metadata"]["name"]
+        existing_path = names.get(name)
+        if existing_path is not None:
+            message = (
+                f"spike metadata.name {name!r} is duplicated across "
+                f"{existing_path} and {path}"
+            )
+            failures[existing_path].append(message)
+            failures[path].append(message)
+        else:
+            names[name] = path
+
+        spec = document.get("spec", {})
+        issue = spec.get("github", {}).get("issue")
+        key = issue_key(issue)
+        if key is None:
+            continue
+        label = issue_label(issue)
+
+        existing = issues.get(key)
+        if existing is not None:
+            message = (
+                f"GitHub issue {label} is bound by more than one SpikeDefinition: "
+                f"{existing[0]}, {path}"
+            )
+            failures[existing[0]].append(message)
+            failures[path].append(message)
+        else:
+            issues[key] = (path, label)
+
+        declared = spec.get("epic")
+        declared_pair = (
+            (declared.get("name"), declared.get("workItem"))
+            if isinstance(declared, dict)
+            else None
+        )
+
+        if key in root_issues:
+            epic_name, epic_path = root_issues[key]
+            failures[path].append(
+                f"$.spec.github.issue: {label} is the root issue of "
+                f"EpicDefinition {epic_name} ({epic_path})"
+            )
+        if key in item_bindings:
+            epic_name, item_id, epic_path = item_bindings[key]
+            if declared_pair != (epic_name, item_id):
+                failures[path].append(
+                    f"$.spec.epic: {label} is bound by EpicDefinition {epic_name} "
+                    f"work item {item_id} ({epic_path}); declare spec.epic "
+                    f"{{name: {epic_name}, workItem: {item_id}}}"
+                )
+
+        if declared_pair is None:
+            continue
+        epic_name, item_id = declared_pair
+        if epic_name not in epics_by_name:
+            if epic_name in invalid_epic_names:
+                failures[path].append(
+                    f"$.spec.epic.name: EpicDefinition {epic_name!r} failed validation"
+                )
+            else:
+                failures[path].append(
+                    f"$.spec.epic.name: unknown EpicDefinition {epic_name!r}"
+                )
+            continue
+        epic_path, epic_document = epics_by_name[epic_name]
+        item = next(
+            (
+                candidate
+                for candidate in epic_document.get("spec", {}).get("workItems", [])
+                if isinstance(candidate, dict) and candidate.get("id") == item_id
+            ),
+            None,
+        )
+        if item is None:
+            failures[path].append(
+                f"$.spec.epic.workItem: EpicDefinition {epic_name} ({epic_path}) "
+                f"has no work item {item_id!r}"
+            )
+            continue
+        item_key = issue_key(item.get("issue"))
+        if item_key is None:
+            failures[path].append(
+                f"$.spec.epic.workItem: work item {item_id!r} of EpicDefinition "
+                f"{epic_name} is not bound to a GitHub issue"
+            )
+        elif item_key != key:
+            failures[path].append(
+                f"$.spec.epic.workItem: work item {item_id!r} of EpicDefinition "
+                f"{epic_name} is bound to {issue_label(item['issue'])}, "
+                f"not {label}"
+            )
+
+    return failures
+
+
+def corpus_errors(
+    documents: list[tuple[Path, dict[str, Any]]],
+    invalid_epic_names: set[str] | None = None,
+) -> dict[Path, list[str]]:
+    """Validate invariants that span all manifests.
+
+    EpicDefinition checks are unchanged; SpikeDefinition checks are additive.
+    """
+
+    spike_documents = [
+        item for item in documents if item[1].get("kind") == "SpikeDefinition"
+    ]
+    epic_documents = [
+        item for item in documents if item[1].get("kind") != "SpikeDefinition"
+    ]
+    documents = epic_documents
 
     failures: dict[Path, list[str]] = {path: [] for path, _ in documents}
     names: dict[str, Path] = {}
@@ -365,6 +614,13 @@ def corpus_errors(
             else:
                 bindings[key] = (path, local_owner)
 
+    if spike_documents:
+        failures.update(
+            _spike_corpus_errors(
+                epic_documents, spike_documents, invalid_epic_names or set()
+            )
+        )
+
     return {
         path: sorted(set(messages))
         for path, messages in failures.items()
@@ -389,44 +645,60 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "paths",
         nargs="*",
-        default=[str(DEFAULT_EPICS)],
-        help="EpicDefinition YAML file(s) or directories (default: roadmap/epics)",
+        default=[str(DEFAULT_EPICS), str(DEFAULT_SPIKES)],
+        help="manifest YAML file(s) or directories (default: roadmap/epics roadmap/spikes)",
     )
     parser.add_argument(
         "--schema",
         default=str(DEFAULT_SCHEMA),
-        help="JSON Schema path",
+        help="EpicDefinition JSON Schema path",
+    )
+    parser.add_argument(
+        "--spike-schema",
+        default=str(SPIKE_SCHEMA),
+        help="SpikeDefinition JSON Schema path",
     )
     args = parser.parse_args(argv)
 
     try:
-        schema = _load_schema(Path(args.schema))
+        schemas = {
+            "EpicDefinition": _load_schema(Path(args.schema)),
+            "SpikeDefinition": _load_schema(Path(args.spike_schema)),
+        }
     except (OSError, json.JSONDecodeError, SchemaError) as exc:
         print(f"schema: ERROR: {exc}", file=sys.stderr)
         return 2
 
     manifests = _manifest_paths(args.paths)
     if not manifests:
-        print("no EpicDefinition manifests found", file=sys.stderr)
+        print("no roadmap manifests found", file=sys.stderr)
         return 2
 
     failures_by_path: dict[Path, list[str]] = {}
     valid_documents: list[tuple[Path, dict[str, Any]]] = []
+    invalid_epic_names: set[str] = set()
 
     for path in manifests:
         try:
             document = _load_manifest(path)
-            failures = validate_document(document, schema)
+            failures = validate_manifest(document, schemas)
         except (OSError, yaml.YAMLError, ValueError) as exc:
             failures = [str(exc)]
             document = None
 
         if failures:
+            if (
+                isinstance(document, dict)
+                and document.get("kind") == "EpicDefinition"
+                and isinstance(document.get("metadata"), dict)
+                and isinstance(document["metadata"].get("name"), str)
+            ):
+                invalid_epic_names.add(document["metadata"]["name"])
             failures_by_path[path] = failures
         elif document is not None:
             valid_documents.append((path, document))
 
-    for path, failures in corpus_errors(valid_documents).items():
+    for path, failures in corpus_errors(valid_documents, invalid_epic_names).items():
         failures_by_path.setdefault(path, []).extend(failures)
 
     failed = False

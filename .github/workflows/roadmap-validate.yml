@@ -24,8 +24,8 @@ jobs:
       - name: Install roadmap validator dependencies
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
 
-      - name: Validate EpicDefinition manifests
-        run: python3 roadmap/scripts/validate.py roadmap/epics
+      - name: Validate roadmap manifests
+        run: python3 roadmap/scripts/validate.py roadmap/epics roadmap/spikes
 
       # Offline fixture replay only. Live mode needs a token and external
       # state, so it stays a deliberate manual step and never runs here.

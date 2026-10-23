@@ -1,0 +1,26 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: openspec-contract
+  owner: mctlhq/mctl-agents
+spec:
+  title: OpenSpec as the proposal contract
+  question: >-
+    Should MCTL adopt the OpenSpec contract for proposals, or keep an adapter
+    over its own format?
+  lifecycle: decided
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 655
+  outcomes:
+    - ADAPTER_ONLY
+    - ADOPT_CONTRACT
+  evidence:
+    report: docs/spikes/655-openspec-contract.md
+  execution:
+    devloop: true
+  decision:
+    verdict: ADAPTER_ONLY
+    decidedAt: "2026-10-17"
+    decidedBy: mashkovd

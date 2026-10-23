@@ -1,0 +1,20 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: duet-sessions
+  owner: mctlhq/mctl-agents
+spec:
+  title: Persistent proactive agent sessions and attention routing
+  question: >-
+    Does MCTL need a first-class persistent proactive agent session contract, or
+    do existing Temporal, policy, approval and event primitives suffice?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 757
+  outcomes:
+    - NO_NEW_CONTRACT
+    - EXTEND_DEVLOOP_SESSION
+    - ADD_AGENT_SESSION_CONTRACT
+    - CREATE_PROACTIVE_AGENT_EPIC
