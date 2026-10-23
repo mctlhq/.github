@@ -27,6 +27,8 @@ spec:
       title: Temporal health
     - id: waves
       title: Dependency-aware wave planning and launch
+    - id: kinds
+      title: Further resource kinds on the same discipline
   workItems:
     - id: reconciler
       phase: detect
@@ -108,6 +110,19 @@ spec:
       dependsOn:
         - ready-work-items
         - epic-status-api
+
+    # SpikeDefinition reuses the validator, the reconciler and the health model;
+    # it is a second kind, not a second control plane. Optional: the epic's own
+    # completion is about EpicDefinition, and a further kind must not reopen it.
+    - id: spike-definition
+      phase: kinds
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 210
+      dependsOn:
+        - reconciler
+        - roadmap-health
   completion:
     mode: allRequired
   successCriteria:
