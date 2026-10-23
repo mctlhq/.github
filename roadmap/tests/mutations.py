@@ -317,3 +317,40 @@ def synthetic_snapshot(
         "issues": issues,
     }
 
+
+
+# ---------------------------------------------------------------------------
+# SpikeDefinition manifest mutators (validator tests; not snapshot mutators).
+# Same discipline: pure, deep-copying, one break per call.
+# ---------------------------------------------------------------------------
+
+
+def set_lifecycle(manifest: dict[str, Any], lifecycle: str) -> dict[str, Any]:
+    result = copy.deepcopy(manifest)
+    result["spec"]["lifecycle"] = lifecycle
+    return result
+
+
+def drop_path(manifest: dict[str, Any], *path: str) -> dict[str, Any]:
+    """Remove the key at the given path, e.g. drop_path(m, "spec", "timebox")."""
+
+    result = copy.deepcopy(manifest)
+    node = result
+    for part in path[:-1]:
+        node = node[part]
+    del node[path[-1]]
+    return result
+
+
+def set_verdict(manifest: dict[str, Any], verdict: str) -> dict[str, Any]:
+    result = copy.deepcopy(manifest)
+    result["spec"]["decision"]["verdict"] = verdict
+    return result
+
+
+def bind_spike_epic(
+    manifest: dict[str, Any], name: str, work_item: str
+) -> dict[str, Any]:
+    result = copy.deepcopy(manifest)
+    result["spec"]["epic"] = {"name": name, "workItem": work_item}
+    return result

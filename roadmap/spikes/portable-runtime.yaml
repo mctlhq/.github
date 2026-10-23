@@ -1,0 +1,24 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: portable-runtime
+  owner: mctlhq/mctl-agents
+spec:
+  title: Portable agent-side MCTL runtime
+  question: >-
+    Does MCTL need a small portable runtime installed next to an external agent
+    host, and if so what is the smallest durable boundary?
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 746
+  outcomes:
+    - NO_RUNTIME
+    - THIN_ADAPTER
+    - PORTABLE_RUNTIME_RUST
+    - PORTABLE_RUNTIME_OTHER
+  timebox:
+    decisionBy: "2026-11-30"
+  execution:
+    devloop: true

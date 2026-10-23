@@ -48,7 +48,9 @@ roadmap/
   README.md
   requirements.txt
   schemas/
+    common.schema.json
     epic-definition.schema.json
+    spike-definition.schema.json
     github-graph-snapshot.schema.json
     roadmap-diff.schema.json
     roadmap-health.schema.json
@@ -56,6 +58,8 @@ roadmap/
     roadmap-apply-plan.schema.json
     roadmap-apply-result.schema.json
     roadmap-publication.schema.json
+  spikes/
+    *.yaml
   epics/
     human-input.yaml
   fixtures/
@@ -100,7 +104,7 @@ Create a virtual environment and run:
 
 ```bash
 python -m pip install -r roadmap/requirements.txt
-python roadmap/scripts/validate.py roadmap/epics
+python roadmap/scripts/validate.py roadmap/epics roadmap/spikes
 python -m unittest discover -s roadmap/tests -p 'test_*.py'
 ```
 
@@ -115,11 +119,43 @@ The validator has three layers:
    express cleanly: unique phase/work-item IDs, valid local references, acyclic parent
    and dependency graphs, unique local GitHub bindings, external dependencies that
    truly point outside the epic, and enough metadata for unbound future work.
-3. Corpus validation checks invariants across all `roadmap/epics/*` manifests,
-   including unique epic names and globally unique GitHub issue bindings.
+3. Corpus validation checks invariants across all `roadmap/epics/*` and
+   `roadmap/spikes/*` manifests, including unique epic names, globally unique GitHub
+   issue bindings, and the cross-kind spike rules below.
 
 The validator is intentionally offline and read-only. It does not query or mutate
 GitHub.
+
+## SpikeDefinition v1alpha1
+
+`kind: SpikeDefinition` (`roadmap/schemas/spike-definition.schema.json`, manifests in
+`roadmap/spikes/`) records a spike's question, lifecycle, allowed outcomes and
+timebox in Git before the result is known. `issueRef` and `localId` are shared with
+the epic schema through `roadmap/schemas/common.schema.json`. The manifest `kind`
+selects the schema; an unknown or missing kind fails with a `$.kind:` message.
+
+Fields: `metadata.{name,owner}`; `spec.{title,question,lifecycle,github.issue,outcomes}`
+(at least two unique `UPPER_SNAKE` outcomes); optional `epic {name, workItem}`,
+`activation {trigger, reviewBy}`, `timebox {decisionBy}`, `evidence.report`
+(relative path in the owner repository), `execution.devloop`, and `decision
+{verdict, decidedAt, decidedBy, followUps}`. Observed state (issue state, PRs,
+comments) has no field and is rejected.
+
+Lifecycle: `proposed`, `parked` (requires `activation.trigger`), `active` (requires
+`timebox.decisionBy`), `decided` (requires `decision`; the only lifecycle that may
+carry one) and `archived` (the question stopped mattering without a verdict).
+
+Rules beyond the schema: `decision.verdict` must be one of `spec.outcomes`; dates are
+`YYYY-MM-DD` real calendar dates (quoted or unquoted in YAML); `followUps` may not
+repeat an issue or list the spike's own issue.
+
+Cross-kind invariants: spike names and spike issue bindings are unique among spikes;
+a spike issue may not be an epic root; a spike issue bound as an epic work item must
+declare `spec.epic` naming exactly that epic and work item, and a declared
+`spec.epic` must resolve to an existing epic, work item and the same issue.
+
+Drift detection for spikes (the `spike` diff family in reconcile/health) is a later
+slice; spikes are not part of the RoadmapPublication yet.
 
 ## v1alpha1 model
 

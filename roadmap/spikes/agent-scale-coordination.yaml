@@ -1,0 +1,26 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: agent-scale-coordination
+  owner: mctlhq/mctl-agents
+spec:
+  title: Agent-scale coordination and immutable execution state
+  question: >-
+    Does DevLoop coordinate at boundaries broader than necessary, and should
+    execution evidence become immutable with narrow CAS-style coordination keys?
+  lifecycle: parked
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 747
+  outcomes:
+    - NO_CHANGE
+    - NARROW_EXISTING_COORDINATION
+    - ADD_RESOURCE_COORDINATION_CONTRACT
+    - ADD_IMMUTABLE_EXECUTION_STATE_CONTRACT
+    - ADD_BOTH
+  activation:
+    trigger: >-
+      The next GitHub article in the agent-scale Git infrastructure series is
+      published and reviewed against the issue.
+    reviewBy: "2026-12-15"

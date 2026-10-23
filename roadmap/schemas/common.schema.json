@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/common-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 shared definitions",
+  "$defs": {
+    "issueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "number"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "localId": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 63
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+      "minLength": 1,
+      "maxLength": 63
+    }
+  }
+}
