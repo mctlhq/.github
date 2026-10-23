@@ -8,7 +8,7 @@ spec:
   question: >-
     Can MCTL be the governed control plane that turns findings from several
     security providers into verified, regression-tracked remediation?
-  lifecycle: active
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/.github
@@ -22,3 +22,7 @@ spec:
     decisionBy: "2026-11-15"
   evidence:
     report: docs/spikes/security-finding-lifecycle.md
+  decision:
+    verdict: ADD_SECURITY_FINDING_CONTRACT
+    decidedAt: "2026-10-23"
+    decidedBy: mashkovd
