@@ -78,6 +78,7 @@ class DenialsLogTest(unittest.TestCase):
             f"gh pr review 12 --approve {SECRET}!",
             f"gh pr review 12 --approve {SECRET}",
             f"gh pr review 12 --approve LGTM {SECRET}",
+            f"gh pr review 12 --approve and/{SECRET}",
         ]
         out = self.run_script(result([denial(c) for c in commands]))
         self.assertIn(f"{len(commands)} permission denial(s)", out)
@@ -86,6 +87,12 @@ class DenialsLogTest(unittest.TestCase):
     def test_keeps_method_and_path_after_flags(self) -> None:
         out = self.run_script(result([denial("gh api -X POST repos/o/r/pulls/12/reviews --paginate 3")]))
         self.assertIn("denied Bash: gh api -X POST repos/o/r/pulls/12/reviews --paginate 3\n", out)
+        out = self.run_script(result([denial("gh api -X GET /repos/o/r/pulls/12/comments")]))
+        self.assertIn("denied Bash: gh api -X GET /repos/o/r/pulls/12/comments\n", out)
+
+    def test_cuts_slashed_prose_after_flags(self) -> None:
+        out = self.run_script(result([denial("gh pr review 12 --approve and/or ok")]))
+        self.assertIn("denied Bash: gh pr review 12 --approve ...\n", out)
 
     def test_cut_head_is_marked(self) -> None:
         out = self.run_script(result([denial(" ".join(["gh"] + ["x"] * 20))]))
