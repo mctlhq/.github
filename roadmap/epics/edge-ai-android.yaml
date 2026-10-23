@@ -14,7 +14,13 @@ spec:
     without weakening identity, policy, evidence or remote fallback semantics. The device
     holds the TDLib session, the on-device model and the local policy gate itself, with no
     Local Bridge and no hosted agent in the loop, so private chats never leave the phone.
-  lifecycle: paused
+  # Archived 2026-10-23 on the feasibility-spike verdict (mctl-agents#652):
+  # criterion 1 (tool-call correctness under injection) failed on every
+  # runtime measured (Gemma 4 E2B TPU, E4B GPU, Pixel 7 E2B GPU, Qwen3.5-4B
+  # CPU), and criteria 2 and 3 (latency, memory) were far outside bounds.
+  # The decision rule in #652 says any failed criterion archives the epic
+  # with the measurements kept. Reopen by a new spike, not by flipping this.
+  lifecycle: archived
   github:
     issue:
       repository: mctlhq/.github
