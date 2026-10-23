@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "e034241ce5f3d10cedbf43622c57e405ada31510"
+    "revision": "3c9b1b044ed2decbfc7d2721340898003c7e2861"
   },
   "files": {
     "health.json": {
-      "sha256": "70adec2092bd6b87e324b7e38e585192f354574632ab2c9c0e629e8825a5ed1d"
+      "sha256": "2f68b58b04c47ec700d53504ec854c3f3f90091341eaed34def1824ec7bc1dbf"
     },
     "ready-set.json": {
-      "sha256": "8f3daf9e46df603217a7c152e2a2ade069d3b0ce9216731ffb76786f205765bb"
+      "sha256": "593191f8d98bbb95a973e79dbd97148557c946d5c1bb91b52f7d7854faaea433"
     },
     "snapshot.json": {
-      "sha256": "ce57408079842fcefdfff428b87f624d7aae6a2b639467736e0e460e745081d6"
+      "sha256": "d557152506cebb4fb5b5053e6348f9c33cb41c10dd000afc0201b1428165d6fc"
     }
   },
   "kind": "RoadmapPublication",
@@ -219,12 +219,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-23T13:34:08Z",
+    "capturedAt": "2026-10-23T13:49:02Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "e034241ce5f3d10cedbf43622c57e405ada31510"
+    "revision": "3c9b1b044ed2decbfc7d2721340898003c7e2861"
   }
 }
