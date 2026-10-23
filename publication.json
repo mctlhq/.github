@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "7210e360d40b341e2d76c8a9a49710ac92c1f987"
+    "revision": "6bc591be90ac421e07f5c67dace7029722cfe5a3"
   },
   "files": {
     "health.json": {
-      "sha256": "bb86040367ab8ae4a466ee9536f0c470bcf9e5f599a7be9ee6443425386346e8"
+      "sha256": "d17f05cd7f85111c41bb3c7fd085b334e211db3774020f874a14558c3d1c0fb3"
     },
     "ready-set.json": {
-      "sha256": "910fb368246f561cba6a511c5cb6861bb0e217766ee784d4ead29cdc6f7674ce"
+      "sha256": "2049c4b0ced753e8a0017ac91ce6620bd970bb3a9810ab98f04f1994b057d398"
     },
     "snapshot.json": {
-      "sha256": "94b738ca8d59d6e5a83ec4fdc29bdfb19d43194c7ed551873ccb799f84795b5a"
+      "sha256": "e2ba82cba893c73e8cb1c12409f0d25c4031de1bbf0439b32ef5ffd9c5776fdf"
     }
   },
   "kind": "RoadmapPublication",
@@ -129,12 +129,12 @@
     {
       "epic": {
         "goal": "Evaluate whether an Android phone can be the execution device for a governed mctl agent without weakening identity, policy, evidence or remote fallback semantics. The device holds the TDLib session, the on-device model and the local policy gate itself, with no Local Bridge and no hosted agent in the loop, so private chats never leave the phone.",
-        "lifecycle": "paused",
+        "lifecycle": "archived",
         "name": "edge-ai-android",
         "title": "Edge AI on Android"
       },
       "path": "roadmap/epics/edge-ai-android.yaml",
-      "sha256": "27a0b48ed2ebb4084bdf44fafd4330d0617b17c2144f4a7c529b9aa5440235de"
+      "sha256": "9c977d96f4c3f40bdce058365a3fe168bd676a5ad397ab0b447366f7b8a07a68"
     },
     {
       "epic": {
@@ -219,12 +219,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-23T01:37:04Z",
+    "capturedAt": "2026-10-23T07:28:53Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "7210e360d40b341e2d76c8a9a49710ac92c1f987"
+    "revision": "6bc591be90ac421e07f5c67dace7029722cfe5a3"
   }
 }
