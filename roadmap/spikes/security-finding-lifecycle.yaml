@@ -26,3 +26,10 @@ spec:
     verdict: ADD_SECURITY_FINDING_CONTRACT
     decidedAt: "2026-10-23"
     decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-api
+        number: 774
+      - repository: mctlhq/mctl-agents
+        number: 778
+      - repository: mctlhq/mctl-gitops
+        number: 2103
