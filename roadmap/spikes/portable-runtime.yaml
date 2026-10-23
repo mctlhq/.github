@@ -8,7 +8,7 @@ spec:
   question: >-
     Does MCTL need a small portable runtime installed next to an external agent
     host, and if so what is the smallest durable boundary?
-  lifecycle: active
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -22,3 +22,9 @@ spec:
     decisionBy: "2026-11-30"
   execution:
     devloop: true
+  evidence:
+    report: docs/spikes/746-portable-runtime.md
+  decision:
+    verdict: THIN_ADAPTER
+    decidedAt: "2026-10-24"
+    decidedBy: mashkovd
