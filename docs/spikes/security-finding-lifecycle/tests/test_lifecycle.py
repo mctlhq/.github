@@ -20,7 +20,7 @@ def fx(name, **over):
 
 
 def regression(n):
-    return fx("trivy-cve-observation.json", delivery_id="trivy-reg-%d" % n, revision=DESC_SHA)
+    return fx("trivy-cve-observation.json", delivery_id="trivy-reg-%d" % n, revision=str(n + 2) * 40)
 
 
 class Lifecycle(unittest.TestCase):
@@ -55,6 +55,21 @@ class Lifecycle(unittest.TestCase):
         self.m.ingest(regression(2))
         self.assertEqual(self.f.state, "reopened")
         self.assertEqual(self.f.id, fid)
+        self.m.link_remediation(self.k, "wi_1")  # reuses the single WorkItem
+        self.assertEqual(self.f.state, "fixing")
+        self.m.record_merge(self.k, "5" * 40)
+        self.assertEqual(self.f.state, "awaiting_verification")
+        self.m.record_verification(self.k, "5" * 40, "scanner_rerun_exact_revision", "absent")
+        self.assertEqual(self.f.state, "resolved")
+
+    def test_stale_observations_do_not_reopen(self):
+        self.to_resolved()
+        for n in (1, 2):
+            self.m.ingest(fx("trivy-cve-observation.json", delivery_id="stale-%d" % n, revision="1" * 40))
+        self.assertEqual(self.f.state, "resolved")
+        for n in (3, 4):  # same descendant revision twice counts once
+            self.m.ingest(fx("trivy-cve-observation.json", delivery_id="stale-%d" % n, revision=DESC_SHA))
+        self.assertEqual(self.f.state, "resolved")
 
     def test_t2_duplicate_delivery(self):
         for _ in range(3):
@@ -120,7 +135,7 @@ class Lifecycle(unittest.TestCase):
         self.m.ingest(fx("assurance-confirmed-replay.json"))  # different key, no effect
         self.assertEqual(self.f.state, "resolved")
         self.m.ingest(fx("assurance-confirmed-replay.json", vuln_class_id="CVE-2025-54236",
-                         component="github.com/example/pgx", delivery_id="afd-x"))
+                         component="github.com/example/pgx", delivery_id="afd-x", revision=DESC_SHA))
         self.assertEqual(self.f.state, "reopened")
 
     def test_t8_untrusted_text(self):

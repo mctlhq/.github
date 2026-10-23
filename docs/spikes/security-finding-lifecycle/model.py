@@ -50,7 +50,7 @@ class Model:
         """Add a provider observation. Returns the canonical finding."""
         repo = obs["repository"]["full_name"]
         key = canonical_key(obs["vuln_class_id"], repo, obs["component"])
-        dkey = (obs["provider"], obs["delivery_id"])
+        dkey = (key, obs["provider"], obs["delivery_id"])  # per finding: a batch delivery carries many
         f = self.findings.get(key)
         if dkey in self.deliveries:
             return f
@@ -74,7 +74,13 @@ class Model:
         return f
 
     def _regression(self, f, rev, deterministic):
-        f.regressions.append(rev)
+        # Ancestry is not modelled: any revision other than the vulnerable one is treated as a
+        # descendant. A stale rescan of the pre-fix revision must not reopen a resolved finding,
+        # and repeat deliveries for one revision count once.
+        if rev == f.vulnerable_rev:
+            return
+        if rev not in f.regressions:
+            f.regressions.append(rev)
         if deterministic or len(f.regressions) >= CONFIRM_N:
             f.state = "reopened"
             f.fixed_rev = None
@@ -90,6 +96,9 @@ class Model:
         f = self._find(key)
         if f.state == "dismissed":
             raise LifecycleError("dismissed finding")
+        if f.state == "reopened" and f.remediation is not None:
+            f.state = "fixing"  # one WorkItem per canonical key: reuse it
+            return
         if f.remediation is not None:
             raise LifecycleError("execution_request_open: remediation already linked")
         f.remediation = work_item_ref
@@ -119,7 +128,6 @@ class Model:
         elif result == "present":
             f.state = "fixing"
             f.fixed_rev = None
-            f.remediation = f.remediation  # the single remediation stays open
         # a weaker-than-policy result changes nothing
 
     def dismiss(self, key, actor, authority, reason):
