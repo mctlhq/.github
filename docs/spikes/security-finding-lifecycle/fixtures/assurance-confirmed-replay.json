@@ -1,0 +1,4 @@
+{"_note":"Synthetic, shaped from mctl-agents tests/fixtures/assurance/finding-confirmed.json.",
+ "delivery_id":"afd-5ee36190c30accf9","provider":"mctl-assurance","action":"confirmed",
+ "repository":{"full_name":"example-org/example-repo"},"vuln_class_id":"assurance:asc-ab8e10452d92006b","component":"no-secret-in-comment",
+ "revision":"1111111111111111111111111111111111111111"}
