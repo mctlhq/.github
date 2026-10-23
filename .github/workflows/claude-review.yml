@@ -499,7 +499,8 @@ jobs:
       # its command -- enough to see the prefix that missed the allowlist --
       # and cuts the command off before anything that can carry review or PR
       # text: a value flag, a quoted or punctuated word, key=value, and after
-      # the first flag any word that is not a method, a number or a path.
+      # the first flag any word that is not a method, a number or an API path
+      # (starting with /, repos/ or orgs/, so prose like and/or is cut).
       # Bare words before the first flag still print; gh takes no text there.
       DENIALS_LOG_SH: |
         out="$RUNNER_TEMP/claude-execution-output.json"
@@ -517,7 +518,7 @@ jobs:
                   elif ($t | test("^-[A-Za-z]..")) then .out += [($t[0:2] + "...")] | .stop = true
                   elif ($t | test("=")) and ($t | test("^[A-Za-z0-9_./:@-]+=")) then .out += [($t | sub("=.*"; "=..."))] | .stop = true
                   elif ($t | test("^-")) and ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t] | .flagged = true
-                  elif .flagged and ($t | test("^(GET|POST|PUT|PATCH|DELETE|[0-9]+|[A-Za-z0-9_.:@-]*/[A-Za-z0-9_./:@-]*)$") | not) then .out += ["..."] | .stop = true
+                  elif .flagged and ($t | test("^(GET|POST|PUT|PATCH|DELETE|[0-9]+|(/|repos/|orgs/)[A-Za-z0-9_./:@-]*)$") | not) then .out += ["..."] | .stop = true
                   elif ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t]
                   else .out += ["..."] | .stop = true end)
               | .out | join(" ");
