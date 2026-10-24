@@ -8,7 +8,7 @@ spec:
   question: >-
     Does MCTL need a first-class persistent proactive agent session contract, or
     do existing Temporal, policy, approval and event primitives suffice?
-  lifecycle: active
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -24,3 +24,10 @@ spec:
     devloop: true
   evidence:
     report: docs/spikes/757-duet-sessions.md
+  decision:
+    verdict: EXTEND_DEVLOOP_SESSION
+    decidedAt: "2026-10-24"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-claude-remote
+        number: 89
