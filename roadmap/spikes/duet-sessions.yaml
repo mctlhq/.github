@@ -8,7 +8,7 @@ spec:
   question: >-
     Does MCTL need a first-class persistent proactive agent session contract, or
     do existing Temporal, policy, approval and event primitives suffice?
-  lifecycle: parked
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -18,9 +18,9 @@ spec:
     - EXTEND_DEVLOOP_SESSION
     - ADD_AGENT_SESSION_CONTRACT
     - CREATE_PROACTIVE_AGENT_EPIC
-  activation:
-    trigger: >-
-      mctlhq/mctl-agents#746 (portable runtime) records its decision verdict;
-      both spikes touch the agent-runtime boundary. First slice, once
-      activated: AttentionDecision v1 on the claude-remote channel.
-    reviewBy: "2026-11-30"
+  timebox:
+    decisionBy: "2026-11-30"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/757-duet-sessions.md
