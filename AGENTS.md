@@ -10,3 +10,5 @@
   current-state audit report for mctlhq/.github#182 (carrier #199).
 - [Security finding lifecycle](docs/spikes/security-finding-lifecycle.md):
   spike report and reference model for mctlhq/.github#209.
+- [CVE advisory to affected-service PR](docs/spikes/cve-advisory-impact.md):
+  spike report and reference model for mctlhq/.github#222.
