@@ -15,6 +15,7 @@ on:
       - '.github/tests/**'
       - 'docs/spikes/security-finding-lifecycle/**'
       - 'docs/spikes/cve-advisory-impact/**'
+      - 'docs/spikes/mcp-gateway-g0/**'
   push:
     branches:
       - main
@@ -25,6 +26,7 @@ on:
       - '.github/tests/**'
       - 'docs/spikes/security-finding-lifecycle/**'
       - 'docs/spikes/cve-advisory-impact/**'
+      - 'docs/spikes/mcp-gateway-g0/**'
 
 permissions: {}
 
@@ -46,3 +48,12 @@ jobs:
 
       - name: CVE advisory impact reference model (mctlhq/.github#222)
         run: python3 -m unittest discover -s docs/spikes/cve-advisory-impact/tests -v
+
+      - name: Set up Go for the MCP gateway G0 reference model
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: docs/spikes/mcp-gateway-g0/go.mod
+
+      - name: MCP gateway G0 reference model (mctlhq/.github#195)
+        working-directory: docs/spikes/mcp-gateway-g0
+        run: go vet ./... && go test ./...

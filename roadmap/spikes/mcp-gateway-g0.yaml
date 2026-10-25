@@ -1,7 +1,7 @@
 # Name, outcomes, report path and decisionBy follow the approved DevLoop
-# proposal for .github#195 (task 11; decisionBy is its stated default,
-# 2026-11-15). Added before the implementation PR so the register shows the
-# spike while it runs; that PR updates this file instead of creating it.
+# proposal for .github#195 (decisionBy is its stated default, 2026-11-15).
+# The report and reference model now exist; the owner records the verdict in
+# a decision block, which this file deliberately does not carry.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:

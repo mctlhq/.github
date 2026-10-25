@@ -12,3 +12,6 @@
   spike report and reference model for mctlhq/.github#209.
 - [CVE advisory to affected-service PR](docs/spikes/cve-advisory-impact.md):
   spike report and reference model for mctlhq/.github#222.
+- [MCP gateway G0](docs/spikes/mcp-gateway-g0.md): identity, per-tool policy and
+  tenant isolation decision spike for mctlhq/.github#195, with a Go reference
+  model in `docs/spikes/mcp-gateway-g0/`.
