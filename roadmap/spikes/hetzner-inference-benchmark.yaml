@@ -1,0 +1,30 @@
+# decisionBy is the owner's 2026-10-27 deadline. The end of Hetzner's free
+# experimental window was not confirmed when this manifest was written
+# (2026-10-25): experiments.hetzner.com states no date that could be read.
+# If a confirmed end date turns out earlier, move decisionBy to it.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: hetzner-inference-benchmark
+  owner: mctlhq/mctl-agents
+spec:
+  title: Hetzner experimental inference on current MCTL agent workloads
+  question: >-
+    Can Hetzner's free experimental inference models run the current MCTL
+    investigation, implementation, review and tool-use workloads through the
+    existing SDK path and policy hooks, measured against the active baseline?
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 791
+  outcomes:
+    - ADOPT_EXPERIMENTAL_PROVIDER
+    - LIMITED_BENCH_ONLY
+    - REJECT
+  timebox:
+    decisionBy: "2026-10-27"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/791-hetzner-inference.md
