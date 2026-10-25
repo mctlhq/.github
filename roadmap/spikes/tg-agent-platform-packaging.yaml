@@ -1,0 +1,20 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: tg-agent-platform-packaging
+  owner: mctlhq/mctl-telegram
+spec:
+  title: Package tg.mctl.ai as the Telegram capability layer for agent platforms
+  question: >-
+    Which packaging of tg.mctl.ai measurably shortens integration for
+    external agent platforms: the MCP server alone, MCP plus skills, or MCP
+    plus a CLI and skills?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 784
+  outcomes:
+    - MCP_ONLY
+    - MCP_PLUS_SKILLS
+    - MCP_PLUS_CLI_AND_SKILLS
