@@ -1,0 +1,36 @@
+# Factual history, 2026-10-23 to 2026-10-25, from GitHub and gitops records:
+# - 2026-10-23: owner decisions on mctl-agents#760 (no double handling; cold
+#   `claude -p` plus database context; conversation-bound job token).
+# - 2026-10-23: slice 1 merged as mctlhq/mctl-telegram#862, slice 2 as
+#   mctlhq/mctl-telegram#876; both ship in mctl-telegram 0.94.0.
+# - 2026-10-23 23:08Z: coalescing, worker pool and unclaimed routing turned
+#   on for labs/mctl-telegram-preview and agent-worker-preview only
+#   (mctlhq/mctl-gitops#2116). Production runs 0.94.0 with AGENT_ENABLED
+#   unset and no agent worker, so the conversation plane is inert there.
+# No timebox and no verdict have been set by the owner, so the lifecycle stays
+# `proposed`. Moving to `active` needs an owner-set decisionBy; recording a
+# verdict moves it to `decided`.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: conversation-sessions
+  owner: mctlhq/mctl-agents
+spec:
+  title: Per-conversation sessions with bounded execution and burst coalescing
+  question: >-
+    Can each Telegram conversation get an isolated, durable logical agent
+    session under a small global execution bound, with burst coalescing,
+    without one process per chat and without disturbing the Claude Remote
+    operator session?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 760
+  outcomes:
+    - REUSE_CURRENT_RUNTIME_WITH_SESSION_ROUTER
+    - ADD_SHARED_CONVERSATION_SESSION_RUNTIME
+    - TEMPORAL_ONLY_COMPOSITION
+    - DO_NOT_IMPLEMENT_SESSION_PER_CONVERSATION
+  execution:
+    devloop: true
