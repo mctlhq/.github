@@ -1,0 +1,30 @@
+# Name, outcomes, report path and decisionBy follow the approved DevLoop
+# proposal for .github#195 (task 11; decisionBy is its stated default,
+# 2026-11-15). Added before the implementation PR so the register shows the
+# spike while it runs; that PR updates this file instead of creating it.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: mcp-gateway-g0
+  owner: mctlhq/.github
+spec:
+  title: MCP gateway G0 - identity, per-tool policy and tenant isolation
+  question: >-
+    Can a gateway in front of mcp.mctl.ai carry caller identity through a
+    token exchange, enforce per-tool policy and keep tenants isolated, with
+    downstream services checking independently, before any migration starts?
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 195
+  outcomes:
+    - GO
+    - REVISE
+    - NO_GO
+  timebox:
+    decisionBy: "2026-11-15"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/mcp-gateway-g0.md
