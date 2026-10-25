@@ -1,0 +1,26 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: portal-local-bridge-custody
+  owner: mctlhq/mctl-telegram
+spec:
+  title: Local Bridge session custody through mcp.mctl.ai
+  question: >-
+    Does a Local Bridge user reaching tg through the mcp.mctl.ai portal keep
+    Telegram session custody on the local device?
+  lifecycle: parked
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 615
+  epic:
+    name: enterprise-mcp
+    workItem: local-bridge-proof
+  outcomes:
+    - CONFIRMED
+    - REFUTED
+  activation:
+    trigger: >-
+      The enterprise-mcp epic is resumed and an operator session with a
+      throwaway test identity is scheduled.
+    reviewBy: "2026-12-31"

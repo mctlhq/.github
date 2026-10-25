@@ -1,0 +1,25 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: cf-portal-auto-oauth-sync
+  owner: mctlhq/mctl-api
+spec:
+  title: Cloudflare automatic OAuth registration without weakening the allowlist
+  question: >-
+    Does the portal's default_disabled allowlist survive an automatic
+    capability sync, with token expiry monitored, so that the manual OAuth
+    re-snapshot can be retired?
+  lifecycle: parked
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 76
+  outcomes:
+    - MIGRATE_TO_AUTO_OAUTH
+    - KEEP_MANUAL_RESNAPSHOT
+  activation:
+    trigger: >-
+      .github#195 records NO-GO, or a REVISE that keeps the Cloudflare MCP
+      portal. If it records GO, the gateway owns the catalogue and this spike
+      is archived instead.
+    reviewBy: "2026-12-15"

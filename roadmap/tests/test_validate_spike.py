@@ -285,7 +285,9 @@ class SpikeCliTest(unittest.TestCase):
         code, out = self.run_main(str(ROADMAP / "epics"), str(ROADMAP / "spikes"))
         self.assertEqual(code, 0, out)
         spikes = sorted((ROADMAP / "spikes").glob("*.yaml"))
-        self.assertEqual(len(spikes), 5)
+        # Not pinned to an exact count: every new manifest would otherwise
+        # have to edit this line. The PASS check below covers each file.
+        self.assertGreaterEqual(len(spikes), 5)
         for path in spikes:
             self.assertIn(f"PASS {path}", out)
         decided = yaml.safe_load((ROADMAP / "spikes" / "openspec-contract.yaml").read_text())

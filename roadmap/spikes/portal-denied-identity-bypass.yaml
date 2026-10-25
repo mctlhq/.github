@@ -1,0 +1,27 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: portal-denied-identity-bypass
+  owner: mctlhq/mctl-telegram
+spec:
+  title: Denied Access identity through the portal and the direct tg.mctl.ai path
+  question: >-
+    Is an identity denied by Cloudflare Access refused at the portal, and is
+    the direct tg.mctl.ai path a documented, audited bypass rather than a
+    leak?
+  lifecycle: parked
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 616
+  epic:
+    name: enterprise-mcp
+    workItem: denied-user-and-bypass
+  outcomes:
+    - CONFIRMED
+    - REFUTED
+  activation:
+    trigger: >-
+      The enterprise-mcp epic is resumed and an operator session with a
+      throwaway test identity is scheduled.
+    reviewBy: "2026-12-31"

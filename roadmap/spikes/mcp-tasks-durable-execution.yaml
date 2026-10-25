@@ -1,0 +1,26 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: mcp-tasks-durable-execution
+  owner: mctlhq/mctl-agents
+spec:
+  title: MCP Tasks over durable Temporal executions
+  question: >-
+    What is the thinnest MCP Tasks adapter over existing Temporal/Argo
+    executions, and does the MCP portal preserve it end to end? The
+    executable pilot is mctl-api#284, which stays the enterprise-mcp work
+    item; this manifest carries the single decision for both issues.
+  lifecycle: parked
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 41
+  outcomes:
+    - GO_ADAPTER_IN_MCTL_API
+    - GO_UPSTREAM_ONLY
+    - NO_GO
+  activation:
+    trigger: >-
+      The enterprise-mcp epic is resumed, or a target client (Claude or
+      ChatGPT) ships support for io.modelcontextprotocol/tasks.
+    reviewBy: "2026-12-31"

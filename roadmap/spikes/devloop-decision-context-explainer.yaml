@@ -1,0 +1,22 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: devloop-decision-context-explainer
+  owner: mctlhq/mctl-agents
+spec:
+  title: Decision-context explainer before human approval
+  question: >-
+    Does a grounded explainer artifact at the DevLoop human gate improve
+    reviewer understanding and effort without weakening the gates? The
+    authority and decision-context contract itself is already defined by
+    mctl-api#700; this spike covers only the reviewer-facing artifact and
+    its measured effect.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 670
+  outcomes:
+    - GO
+    - LIMITED_GO
+    - NO_GO
