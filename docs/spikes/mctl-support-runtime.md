@@ -22,6 +22,10 @@ checked only as a compatibility gate of the TypeScript prototype?
   isolation, duplicate-message idempotency, terminal-task rule.
 - Gate: `gate/gate.py` (standard library only), run against two replicas of
   each candidate sharing one `postgres:17-alpine`. Output recorded verbatim.
+  The outputs below were re-recorded on 2026-10-27 after review: step 7c
+  used to check about 13 s after the send, before the 20 s slow tool could
+  overwrite a state it ignored the cancel for; it now waits past 22 s. All
+  four runs still pass 17/17.
 - The gate is offline: no model, no network beyond the two replicas. The real
   Anthropic call is a separate smoke per candidate (`smoke_anthropic.*`) and
   never affects the choice.
@@ -77,20 +81,20 @@ Gate output, verbatim (replicas on 8001/8002, database `spike_python`):
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (python spike)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='082bcb03-8c3e-50ce-99d5-9619bdec9871'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='fb15dfeb-4299-58d5-a79b-2caa336ba13e'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=c9109499-7330-4eab-993c-36020a5526ba
+PASS  4d contextId stable across replicas  -- ctx=6735385d-d378-4600-8a8c-f6f3a6a0f8b9
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 200, state=rejected, text=unknown context
 PASS  7a slow task is working, seen via B  -- state=working
-PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.6s
+PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.3s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
-PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"stopped_on": "a", "loop_stopped": true, "reason": "remote-cancel-requested"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 266f1e01-c908-578e-8b15-b3636878a28b vs 266f1e01-c908-578e-8b15-b3636878a28b (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 082bcb03-8c3e-50ce-99d5-9619bdec9871 is in ter
+PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"loop_stopped": true, "reason": "remote-cancel-requested", "stopped_on": "a"}
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 913ac437-76ad-5812-9554-c6475c84aeb3 vs 913ac437-76ad-5812-9554-c6475c84aeb3 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task fb15dfeb-4299-58d5-a79b-2caa336ba13e is in ter
 
 all steps passed
 ```
@@ -133,11 +137,11 @@ Gate output, verbatim (replicas on 8011/8012, database `spike_go`):
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (go spike)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 403
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='01a17a60-ea77-7cdc-943a-38d52130807e'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='01a17a87-39b9-762e-b144-37658c56d773'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=01a17a60-ea77-7e92-b573-2260872275f6
+PASS  4d contextId stable across replicas  -- ctx=01a17a87-39b9-777d-9d90-18b2e4441d40
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -145,7 +149,7 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"loop_stopped": true}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 01a17a61-21fd-78fc-9c82-11b8d0f2d32a vs 01a17a61-21fd-78fc-9c82-11b8d0f2d32a (HTTP 200/200)
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 01a17a87-963d-73eb-9b4e-bb3c7fcc6dab vs 01a17a87-963d-73eb-9b4e-bb3c7fcc6dab (HTTP 200/200)
 PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "executor setup failed: failed to load exec ctx: tas
 
 all steps passed
@@ -190,7 +194,9 @@ the prototype as evidence, not fixed:
   does not own gets one answer whether it exists or not.
 - `pgStore.List` applies `LIMIT` in SQL and the status filter in Go, so a
   page whose first rows have another status comes back empty.
-- The bearer scheme match is case-sensitive (`Bearer ` only).
+- The bearer scheme is not enforced: `TrimPrefix` leaves a header without
+  `Bearer ` unchanged, so `Authorization: spike-namax66` authenticates; and
+  where the prefix is present it is matched case-sensitively.
 
 Footprint: 21.3 MB distroless non-root image, 16.8 MB static binary, 14-15 MB
 RSS, 0.4 s cold start, three direct dependencies, no interpreter. This is the
@@ -209,11 +215,11 @@ Gate output on Node 24.22.1, verbatim (database `spike_ts`):
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (spike, typescript)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='aa9bc481-01b6-469c-890f-9951218a9b86'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='476958ef-b7dd-40c4-9487-5d3c7e13426e'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=d7474586-86ca-49fe-b6a9-f71c6e7dc6a9
+PASS  4d contextId stable across replicas  -- ctx=83eaa2d8-a98b-4dba-9c0a-1a4da0d2caaf
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -221,8 +227,8 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"replica": "a", "loop_stopped": true, "stopped_on": "a"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 191e968d-c689-4937-a5c3-9dabaa9f0858 vs 191e968d-c689-4937-a5c3-9dabaa9f0858 (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task aa9bc481-01b6-469c-890f-9951218a9b86 is in a t
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- db21bb65-9ebd-4364-acb2-d2c5e1b342e3 vs db21bb65-9ebd-4364-acb2-d2c5e1b342e3 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 476958ef-b7dd-40c4-9487-5d3c7e13426e is in a t
 
 all steps passed
 ```
@@ -234,11 +240,11 @@ changes, no flags, no polyfills, no `bunfig.toml`):
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (spike, typescript)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='86292661-6cef-498a-845e-d7e162976290'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='1b554f47-e99b-4a00-abdd-96064a22408a'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=05ddec56-2da6-46cd-a23d-d79006ba0aa4
+PASS  4d contextId stable across replicas  -- ctx=979c96a4-ba8b-44ea-af5a-0cee17fc4c01
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -246,8 +252,8 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"replica": "a", "loop_stopped": true, "stopped_on": "a"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 892fe7e0-f421-4793-a25c-93e5b7d4902d vs 892fe7e0-f421-4793-a25c-93e5b7d4902d (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 86292661-6cef-498a-845e-d7e162976290 is in a t
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 94529512-5ea5-4c92-9fa7-f6c90de94687 vs 94529512-5ea5-4c92-9fa7-f6c90de94687 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 1b554f47-e99b-4a00-abdd-96064a22408a is in a t
 
 all steps passed
 ```

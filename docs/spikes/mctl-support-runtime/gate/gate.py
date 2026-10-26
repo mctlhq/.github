@@ -151,6 +151,7 @@ def main():
         "6 other tenant cannot continue the context", f"HTTP {code}, state={state(d6) if d6 else '-'}, text={texts(d6)[:80] if d6 else ''}")
 
     # 7. cancel an in-flight tool loop from the other replica
+    sent7 = time.time()
     code, resp = send(A, tok, "slow svc-y")
     t7 = (resp or {}).get("task") if isinstance(resp, dict) else None
     w = wait_for(B, tok, t7["id"], {"working"}, 10) if t7 else None
@@ -160,7 +161,9 @@ def main():
     c = wait_for(A, tok, t7["id"], {"canceled"}, 10) if t7 else None
     say(code == 200 and c is not None and state(c) == "canceled", "7b cancel via B, canceled seen via A within 10s",
         f"HTTP {code}, state={state(c) if c else '-'}, after {time.time() - t0:.1f}s")
-    time.sleep(12)  # the fake slow tool runs 20s; a loop that ignored the cancel would now overwrite the state
+    # The fake slow tool runs 20s from the send. Wait past that window, so a
+    # loop that ignored the cancel has had its chance to overwrite the state.
+    time.sleep(max(0.0, 22 - (time.time() - sent7)))
     code, late = get(A, tok, t7["id"])
     say(state(late) == "canceled", "7c state still canceled after the slow tool would have finished", f"state={state(late)}")
     say("loop_stopped" in json.dumps(late.get("metadata") or {}) if isinstance(late, dict) else False,
@@ -175,7 +178,6 @@ def main():
     say(id1 and id2 and id1 == id2, "8 duplicate messageId across replicas returns the same task (idempotency)", f"{id1} vs {id2} (HTTP {code1}/{code2})")
 
     # 9. terminal task is not resumable
-    code, resp = send(A, tok, "again", context_id=ctx)
     msg = {"messageId": str(uuid.uuid4()), "role": "ROLE_USER", "parts": [{"text": "resume?"}], "taskId": tid, "contextId": ctx}
     code, resp = http("POST", f"{A}/message:send", {"message": msg, "configuration": {"returnImmediately": True}}, tok)
     say(code >= 400 or (isinstance(resp, dict) and resp.get("task", {}).get("id") != tid),

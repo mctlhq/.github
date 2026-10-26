@@ -70,17 +70,17 @@ be run against an external implementation.
 
 ## Measurements
 
-### Gate output (verbatim, 2026-10-26)
+### Gate output (verbatim, re-run 2026-10-27 with the fixed step 7c)
 
 ```
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (go spike)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 403
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='01a17a60-ea77-7cdc-943a-38d52130807e'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='01a17a87-39b9-762e-b144-37658c56d773'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=01a17a60-ea77-7e92-b573-2260872275f6
+PASS  4d contextId stable across replicas  -- ctx=01a17a87-39b9-777d-9d90-18b2e4441d40
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -88,7 +88,7 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"loop_stopped": true}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 01a17a61-21fd-78fc-9c82-11b8d0f2d32a vs 01a17a61-21fd-78fc-9c82-11b8d0f2d32a (HTTP 200/200)
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 01a17a87-963d-73eb-9b4e-bb3c7fcc6dab vs 01a17a87-963d-73eb-9b4e-bb3c7fcc6dab (HTTP 200/200)
 PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "executor setup failed: failed to load exec ctx: tas
 
 all steps passed
@@ -235,6 +235,9 @@ produced them.
 3. **`pgStore.List` filters status after `LIMIT`.** The SQL query pages, the
    status filter runs in Go, so a page can come back short or empty while
    matching tasks exist further on.
-4. **Bearer scheme is case-sensitive.** Only `Bearer ` is accepted; RFC 6750
-   treats the scheme name case-insensitively.
+4. **Bearer scheme is not enforced.** `strings.TrimPrefix(values[0], "Bearer ")`
+   returns the header unchanged when the prefix is missing, so a bare
+   `Authorization: spike-namax66` authenticates. Where the prefix is present
+   it is matched case-sensitively, while RFC 6750 treats the scheme name
+   case-insensitively.
 5. **No tests for `pgStore`.** Only the gate exercises it.

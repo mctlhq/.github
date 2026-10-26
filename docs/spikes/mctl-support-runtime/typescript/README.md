@@ -53,17 +53,17 @@ B on 8022 for both gate runs below; nothing else differs from the commands above
 
 ## Measurements
 
-### Gate, Node 24.22.1 (verbatim; A on 8023, B on 8022, see note above)
+### Gate, Node 24.22.1 (verbatim, re-run 2026-10-27 with the fixed step 7c; A on 8023, B on 8022, see note above)
 
 ```
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (spike, typescript)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='aa9bc481-01b6-469c-890f-9951218a9b86'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='476958ef-b7dd-40c4-9487-5d3c7e13426e'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=d7474586-86ca-49fe-b6a9-f71c6e7dc6a9
+PASS  4d contextId stable across replicas  -- ctx=83eaa2d8-a98b-4dba-9c0a-1a4da0d2caaf
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -71,23 +71,23 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"replica": "a", "loop_stopped": true, "stopped_on": "a"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 191e968d-c689-4937-a5c3-9dabaa9f0858 vs 191e968d-c689-4937-a5c3-9dabaa9f0858 (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task aa9bc481-01b6-469c-890f-9951218a9b86 is in a t
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- db21bb65-9ebd-4364-acb2-d2c5e1b342e3 vs db21bb65-9ebd-4364-acb2-d2c5e1b342e3 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 476958ef-b7dd-40c4-9487-5d3c7e13426e is in a t
 
 all steps passed
 ```
 
-### Gate, Bun 1.3.14 (verbatim; identical source, `bun run src/server.ts`)
+### Gate, Bun 1.3.14 (verbatim, re-run 2026-10-27; identical source, `bun run src/server.ts`)
 
 ```
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (spike, typescript)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='86292661-6cef-498a-845e-d7e162976290'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='1b554f47-e99b-4a00-abdd-96064a22408a'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=05ddec56-2da6-46cd-a23d-d79006ba0aa4
+PASS  4d contextId stable across replicas  -- ctx=979c96a4-ba8b-44ea-af5a-0cee17fc4c01
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -95,8 +95,8 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"replica": "a", "loop_stopped": true, "stopped_on": "a"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 892fe7e0-f421-4793-a25c-93e5b7d4902d vs 892fe7e0-f421-4793-a25c-93e5b7d4902d (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 86292661-6cef-498a-845e-d7e162976290 is in a t
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 94529512-5ea5-4c92-9fa7-f6c90de94687 vs 94529512-5ea5-4c92-9fa7-f6c90de94687 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 1b554f47-e99b-4a00-abdd-96064a22408a is in a t
 
 all steps passed
 ```

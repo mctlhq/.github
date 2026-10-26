@@ -46,27 +46,27 @@ store, owner scoping, event log, streaming) is the SDK's.
 
 ## Measurements
 
-Gate output, verbatim (2026-10-26, first run after the previous builder's
-code; no changes were needed):
+Gate output, verbatim (re-run 2026-10-27 with the fixed step 7c; the first
+run on 2026-10-26 passed the same 17 steps with no code changes):
 
 ```
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (python spike)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='082bcb03-8c3e-50ce-99d5-9619bdec9871'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='fb15dfeb-4299-58d5-a79b-2caa336ba13e'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=c9109499-7330-4eab-993c-36020a5526ba
+PASS  4d contextId stable across replicas  -- ctx=6735385d-d378-4600-8a8c-f6f3a6a0f8b9
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 200, state=rejected, text=unknown context
 PASS  7a slow task is working, seen via B  -- state=working
-PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.6s
+PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.3s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
-PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"stopped_on": "a", "loop_stopped": true, "reason": "remote-cancel-requested"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 266f1e01-c908-578e-8b15-b3636878a28b vs 266f1e01-c908-578e-8b15-b3636878a28b (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 082bcb03-8c3e-50ce-99d5-9619bdec9871 is in ter
+PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"loop_stopped": true, "reason": "remote-cancel-requested", "stopped_on": "a"}
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 913ac437-76ad-5812-9554-c6475c84aeb3 vs 913ac437-76ad-5812-9554-c6475c84aeb3 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task fb15dfeb-4299-58d5-a79b-2caa336ba13e is in ter
 
 all steps passed
 ```
