@@ -1,7 +1,9 @@
-# decisionBy is the owner's 2026-10-27 deadline. The end of Hetzner's free
-# experimental window was not confirmed when this manifest was written
-# (2026-10-25): experiments.hetzner.com states no date that could be read.
-# If a confirmed end date turns out earlier, move decisionBy to it.
+# Decided 2026-10-26 by the owner from the live run and report merged in
+# mctlhq/mctl-agents#822: Hetzner serves Anthropic Messages directly (tools,
+# thinking, SSE), and Qwen3.6-35B-A3B-FP8 passed implementation 3/3 and tool
+# use 2/3 with 0 provider errors. Adoption is experimental and gated on the
+# follow-ups: a provider seam in the model policy (#824), per-model reasoning
+# effort with a Qwen3.8-27B re-bench (#825), and honest usage records (#826).
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -13,7 +15,7 @@ spec:
     Can Hetzner's free experimental inference models run the current MCTL
     investigation, implementation, review and tool-use workloads through the
     existing SDK path and policy hooks, measured against the active baseline?
-  lifecycle: active
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -28,3 +30,14 @@ spec:
     devloop: true
   evidence:
     report: docs/spikes/791-hetzner-inference.md
+  decision:
+    verdict: ADOPT_EXPERIMENTAL_PROVIDER
+    decidedAt: "2026-10-26"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-agents
+        number: 824
+      - repository: mctlhq/mctl-agents
+        number: 825
+      - repository: mctlhq/mctl-agents
+        number: 826
