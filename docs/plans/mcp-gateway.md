@@ -202,9 +202,13 @@ renaming arguments across servers, the ceiling declares it: each
 tenant-scoped tool's ceiling entry names the argument that carries the tenant
 slug (`tenant_arg: team_name`). The gateway reads only that argument.
 
-- A tool with no `tenant_arg`, or a call where that argument is absent,
-  names no tenant and falls under the union rule above. It is never treated
-  as "no tenant restriction".
+- Every ceiling entry must declare either `tenant_arg` or
+  `tenant_scoped: false`; the gateway refuses to start on an entry that
+  declares neither, so a typo or omission cannot silently widen a
+  tenant-scoped tool to the union rule.
+- A call to a tool with `tenant_arg` where that argument is absent names no
+  tenant and falls under the union rule above. It is never treated as "no
+  tenant restriction".
 - A `tenant_arg` that is not a string, or a value that is not a tenant
   slug, is refused at the gateway.
 - Whether every tenant-scoped tool can be described this way, for example
@@ -213,6 +217,16 @@ slug (`tenant_arg: team_name`). The gateway reads only that argument.
   first routes that server's tenant-scoped tools: G1 for `api`, G2/G3 for
   the others.
 
+Where policy lives and how the gateway reads it:
+
+- Grants live in mctl-api, not in gitops: mctl-gitops is public and a grant
+  names principals and tenants.
+- The ceiling lives in gitops and is the reviewed, user-independent part. It
+  replaces today's `infrastructure/cloudflare/portal/allowlists/` and keeps
+  its fail-closed rule: a new downstream tool is not grantable until it is
+  listed.
+- mctl-api's existing `ownerOnlyToolFilter` becomes the first set of grants
+  expressed in this model, and the code filter stays as defense in depth.
 - Decision endpoint (mctl-api):
   `GET /api/v1/mcp/effective-tools?principal=prn_...` returns one policy
   document: the principal's tenant-role memberships (tenant → role), the
