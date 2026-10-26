@@ -1,8 +1,9 @@
 # Drafted after the owner's GO with amendments on .github#243 (2026-10-26).
 # Design: the issue itself. S-1 is the runtime-selection spike
-# (roadmap/spikes/mctl-support-runtime.yaml); the mctl-support repository and
-# the transfer of the S1 issues into it follow its verdict, so the S1 bindings
-# below point at mctlhq/.github until then. S2 and later phases are not bound.
+# (roadmap/spikes/mctl-support-runtime.yaml), decided GO_PYTHON on 2026-10-27;
+# mctlhq/mctl-support was created on that verdict and the S1 issues were
+# transferred into it (.github#245-#248 -> mctl-support#2-#5). S2 and later
+# phases are not bound.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -81,8 +82,8 @@ spec:
       phase: core
       required: true
       issue:
-        repository: mctlhq/.github
-        number: 245
+        repository: mctlhq/mctl-support
+        number: 2
       dependsOn:
         - s-1-runtime
         - s0a-authority
@@ -91,8 +92,8 @@ spec:
       phase: agent-loop
       required: true
       issue:
-        repository: mctlhq/.github
-        number: 246
+        repository: mctlhq/mctl-support
+        number: 3
       dependsOn:
         - s0a-authority
         - s0b-diagnostics
@@ -102,8 +103,8 @@ spec:
       phase: governance
       required: true
       issue:
-        repository: mctlhq/.github
-        number: 247
+        repository: mctlhq/mctl-support
+        number: 4
       dependsOn:
         - s1b-agent-loop
 
@@ -122,8 +123,8 @@ spec:
       phase: acceptance
       required: true
       issue:
-        repository: mctlhq/.github
-        number: 248
+        repository: mctlhq/mctl-support
+        number: 5
       dependsOn:
         - s1b-agent-loop
         - s1c-governance
