@@ -1,6 +1,6 @@
 # Drafted after the owner's GO with amendments on .github#243 (2026-10-26).
 # Design: the issue itself. S-1 is the runtime-selection spike
-# (roadmap/spikes/mctl-support-runtime.yaml), decided GO_PYTHON on 2026-10-27;
+# (roadmap/spikes/mctl-support-runtime.yaml), decided GO_PYTHON on 2026-10-26;
 # mctlhq/mctl-support was created on that verdict and the S1 issues were
 # transferred into it (.github#245-#248 -> mctl-support#2-#5). S2 and later
 # phases are not bound.

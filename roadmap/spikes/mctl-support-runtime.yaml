@@ -34,7 +34,7 @@ spec:
     report: docs/spikes/mctl-support-runtime.md
   decision:
     verdict: GO_PYTHON
-    decidedAt: "2026-10-27"
+    decidedAt: "2026-10-26"
     decidedBy: mashkovd
     followUps:
       - repository: mctlhq/mctl-support
