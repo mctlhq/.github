@@ -5,6 +5,26 @@ Status: proposal, 2026-10-17. Decisions D1-D5 were accepted by the owner on
 implementation starts from the epic and issues materialized after this
 document merges.
 
+Revised 2026-10-26 after the G0 spike (.github#195, verdict `REVISE`, report
+`docs/spikes/mcp-gateway-g0.md`). The spike met every GO criterion or met it
+with a condition, but contradicted this text in four places; each is fixed
+below and cites the report section it answers:
+
+1. G0 is split: the production signing/JWKS/audience work is its own mctl-api
+   deliverable (mctl-api#805) that precedes G1 ("Migration"; report GO
+   criteria item 1).
+2. The G1 revocation acceptance states the cache bound
+   `R_max = hard_ttl + refresh_timeout` instead of "within one cache TTL"
+   ("Policy cache"; report D3, revocation bound).
+3. The policy model carries the tenant: `effective(P, T, S)`, tenant-role
+   membership in the policy document, and a tenant-naming convention
+   ("Policy model", D3; report D3).
+4. The audience-before-mint ordering is stated ("Identity at the gateway";
+   report D2).
+
+The gateway epic and its G1-G5 children are still not drafted; they wait for a
+re-check of this revision against the GO criteria.
+
 ## Goal
 
 Replace the user-blind Cloudflare MCP Portal at `mcp.mctl.ai` with an
@@ -144,6 +164,14 @@ The caller presents an access token whose audience is the gateway
 
 Either way the token carries a stable principal id (`prn_...`), never a login.
 
+**Ordering constraint** (report D2). mctl-api's `verifyJWT` checks the HMAC,
+`iss` and `exp` but not `aud`, so today any token from the same issuer is a
+valid API bearer, whatever its audience. Audience enforcement at
+`api.mctl.ai` must therefore be deployed (with a grace rule only for
+aud-less tokens, until their 1 h TTL drains) **before** any token with
+another audience, `aud=https://mcp.mctl.ai` included, is minted. Otherwise
+the first gateway token is also an API token. This is mctl-api#805.
+
 ### Policy model
 
 A grant says: subject × server × tool → allow. Subjects are a principal, a
@@ -152,30 +180,57 @@ tenant role (`owner`, `developer`, `viewer` of tenant T) or a platform group
 particular no deny rules: the effective set is the union of grants, capped by
 the ceiling, which keeps every decision explainable.
 
+Because a tenant-role grant only applies inside its tenant, the effective set
+is keyed by tenant as well (report D3):
+
 ```
-effective(P, S) = ceiling(S) ∩ ( ⋃ grants matching P, S )
+effective(P, T, S) = ceiling(S) ∩ ( ⋃ grants matching P on S:
+                                      P's role in T, P itself, P's groups )
 ```
 
-- Grants live in mctl-api, not in gitops: mctl-gitops is public and a grant
-  names principals and tenants.
-- The ceiling lives in gitops and is the reviewed, user-independent part. It
-  replaces today's `infrastructure/cloudflare/portal/allowlists/` and keeps
-  its fail-closed rule: a new downstream tool is not grantable until it is
-  listed.
-- mctl-api's existing `ownerOnlyToolFilter` becomes the first set of grants
-  expressed in this model, and the code filter stays as defense in depth.
+- `tools/list` shows the union over every tenant P belongs to.
+- `tools/call` is evaluated with the call's tenant T. A call that names no
+  tenant is authorized by the union of P's roles across tenants, and the
+  downstream then applies its own `needs_tenant` and role checks.
+- Tools outside the ceiling, or not published by the downstream, are inert.
+
+**Tenant naming convention.** The gateway can only key a call by tenant if it
+can read the tenant from the call, and downstreams do not name it uniformly:
+mctl-api's own tools alone use `team`, `team_name`, `tenant` and
+`tenant_name` (`internal/mcp/server.go` on main, 2026-10-26). Rather than
+renaming arguments across servers, the ceiling declares it: each
+tenant-scoped tool's ceiling entry names the argument that carries the tenant
+slug (`tenant_arg: team_name`). The gateway reads only that argument.
+
+- A tool with no `tenant_arg`, or a call where that argument is absent,
+  names no tenant and falls under the union rule above. It is never treated
+  as "no tenant restriction".
+- A `tenant_arg` that is not a string, or a value that is not a tenant
+  slug, is refused at the gateway.
+- Whether every tenant-scoped tool can be described this way, for example
+  tools that take the tenant inside a nested object, is unknown (not
+  observed in G0). It is established server by server in the phase that
+  first routes that server's tenant-scoped tools: G1 for `api`, G2/G3 for
+  the others.
+
 - Decision endpoint (mctl-api):
-  `GET /api/v1/mcp/effective-tools?principal=prn_...` returns, per server, the
-  allowed tool names plus a policy version. The gateway authenticates as a
-  service principal; the endpoint is not callable by end users for others.
+  `GET /api/v1/mcp/effective-tools?principal=prn_...` returns one policy
+  document: the principal's tenant-role memberships (tenant → role), the
+  grants that apply to it per server (principal, group and tenant-role
+  grants, each with its tenant where it has one), and a policy version. The
+  gateway computes `effective(P, T, S)` from that document per call, so it
+  needs no second round-trip to learn the call's tenant role. It
+  authenticates as a service principal; the endpoint is not callable by end
+  users for others.
 
 ### Request handling
 
 - `tools/list`: fan out to the servers the principal has any grant on, merge,
   drop every tool not in `effective`, prefix names with the server id
   (`tg_send_message`), as the portal does today so clients keep working.
-- `tools/call`: resolve the prefix, check `effective` again (a list result is
-  never trusted as permission), then forward. A denied call returns the same
+- `tools/call`: resolve the prefix, read the call's tenant by the convention
+  above, check `effective(P, T, S)` again (a list result is never trusted as
+  permission), then forward. A denied call returns the same
   error as an unknown tool, so hidden tools are not enumerable.
 - Prompts and resources follow the same rule as tools.
 - Pass-through, not interpretation: the request and response bodies are
@@ -194,6 +249,29 @@ absent":
 | One downstream fails during `tools/list` | the response omits it **and** says so (`_meta` with the failed server ids); the gateway's own health turns not-ready |
 | Ceiling file missing or unparsable at start | the gateway does not start |
 | Downstream token mint fails | that call fails; no fallback credential |
+
+### Policy cache
+
+The gateway caches each principal's policy document with `version`,
+`fetched_at`, `soft_ttl` (refresh after this, keep serving on refresh
+failure), `hard_ttl` (never decide from an older snapshot) and
+`refresh_timeout` (a slower fetch counts as failed). A newer version replaces
+the snapshot at once, an older one is ignored, and an observed newer version
+forces a refetch that fails closed if it cannot complete.
+
+Revocation bound (report D3): a removed grant stops being honoured no later
+than
+
+```
+R_max = hard_ttl + refresh_timeout
+```
+
+after the change is visible in mctl-api, and by the next soft refresh
+(`soft_ttl`) while mctl-api is reachable. This is a designed bound, not an
+SLA, and it applies to tool grants only: token revocation is bounded by the
+access-token TTL and is a separate matter. Production values for the three
+durations are set in G1; G0 tested the logic with 30 s / 120 s / 5 s
+(`R_max` 125 s) as test parameters only.
 
 ### Downstream credentials
 
@@ -240,15 +318,17 @@ last phase.
 
 | Phase | Delivers | Done when |
 | --- | --- | --- |
-| G0 — spike | mctl-api JWKS signing and per-resource audience behind a flag; gateway prototype in front of `api` only | a token for `aud=mcp.mctl.ai` reaches mctl-api tools through the gateway; a token for another audience is refused |
-| G1 — policy | grants table, ceiling in gitops, decision endpoint, `ownerOnlyToolFilter` expressed as grants | two test principals see different tool lists from the same server; removing a grant hides the tool within one cache TTL; mutation-verified |
+| G0 — spike (done) | reference proof in `.github` (.github#195): token contract, exchange, policy model, revocation bound, cross-tenant check | report `docs/spikes/mcp-gateway-g0.md`; verdict `REVISE` on 2026-10-26, answered by this revision |
+| G0a — mctl-api token hardening (mctl-api#805) | asymmetric signing (EdDSA, ES256 fallback) with a published JWKS and `kid` rotation; `aud`, `kid` claims; `aud=https://api.mctl.ai` enforced with a drain rule for aud-less tokens | a token with a foreign `aud` is refused by the API (substitution test fails without the fix); a removed `kid` is refused; `alg` pinned; deployed before any non-API audience is minted |
+| G1 — policy (after G0a) | grants table, ceiling in gitops, decision endpoint returning the policy document, `ownerOnlyToolFilter` expressed as grants, `tenant_arg` declared for every tenant-scoped `api` tool | two test principals see different tool lists from the same server; a tenant-red owner who is a tenant-blue viewer can mutate red but not blue; a removed grant is refused no later than `R_max` (and by `soft_ttl` with the source reachable), tested under a fake clock; mutation-verified |
 | G2 — tier A for api and coolify | token exchange at mctl-api, coolify accepts mctl audience | calls reach both as the real user; downstream audit shows the edge route |
 | G3 — tg, seerrsense, projects | principal links and mctl-token acceptance in each | each server reached through the gateway as the user; its direct OAuth door narrowed or closed |
 | G4 — alice as tier B; cut-over | `mcp.mctl.ai` points at the gateway | all current portal users work; portal Access apps and allowlists deleted in a follow-up PR |
 | G5 — non-admin users | tenant members get grants | a tenant owner sees only their tenant's tools; the denied-user check of mctl-telegram#616 passes |
 
 G1 needs mctl-api#377 enforced (principal mode); before that, policy can only
-be tested, not relied on.
+be tested, not relied on. G1 also needs G0a deployed: the gateway's own
+audience must not be mintable while the API still ignores `aud`.
 
 ## Relationship to the enterprise-mcp epic
 
@@ -283,7 +363,10 @@ Accepted by the owner on 2026-10-17, each as recommended.
   it. ZITADEL directly would need hand-registered clients.
 - **D3 — Where grants live.** Decision: mctl-api Postgres, with the
   ceiling in gitops. Gitops-only grants would publish principals and tenants
-  in a public repo.
+  in a public repo. Amended 2026-10-26 (G0 `REVISE`): the effective set is
+  `effective(P, T, S)`, the decision endpoint returns a policy document with
+  the principal's tenant-role memberships, and tools name their tenant by the
+  convention in "Policy model".
 - **D4 — Epic.** Decision: a new `mcp-gateway` epic that supersedes the
   gateway phase of `enterprise-mcp` and answers .github#128, rather than
   resuming the paused epic as it stands.
