@@ -101,7 +101,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -171,7 +171,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -406,7 +406,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -659,7 +659,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -806,7 +806,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -916,7 +916,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1065,7 +1065,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1338,7 +1338,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1458,7 +1458,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1613,7 +1613,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1693,7 +1693,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1776,7 +1776,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2076,7 +2076,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2186,7 +2186,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2286,12 +2286,215 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
       "summary": {
         "drift": 0,
+        "error": 0,
+        "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "g1-policy",
+          "g2-tier-a-core",
+          "g3-tier-a-downstreams",
+          "g4-cutover",
+          "g5-non-admin"
+        ],
+        "items": [
+          {
+            "id": "g0a-token-hardening",
+            "issue": {
+              "number": 805,
+              "repository": "mctlhq/mctl-api"
+            },
+            "reason": "closed",
+            "required": true,
+            "status": "complete"
+          },
+          {
+            "id": "g1-policy",
+            "issue": {
+              "number": 237,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "g2-tier-a-core",
+            "issue": {
+              "number": 238,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "g3-tier-a-downstreams",
+            "issue": {
+              "number": 239,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "g4-cutover",
+            "issue": {
+              "number": 240,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "g5-non-admin",
+            "issue": {
+              "number": 241,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 1,
+          "incomplete": 5,
+          "total": 6,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner g1-policy): blocked=mctlhq/.github#237, blocker=mctlhq/mctl-api#805",
+          "subject": {
+            "blocked": {
+              "number": 237,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 805,
+              "repository": "mctlhq/mctl-api"
+            },
+            "owner": "g1-policy"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner g2-tier-a-core): blocked=mctlhq/.github#238, blocker=mctlhq/.github#237",
+          "subject": {
+            "blocked": {
+              "number": 238,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 237,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "g2-tier-a-core"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner g3-tier-a-downstreams): blocked=mctlhq/.github#239, blocker=mctlhq/.github#238",
+          "subject": {
+            "blocked": {
+              "number": 239,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 238,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "g3-tier-a-downstreams"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner g4-cutover): blocked=mctlhq/.github#240, blocker=mctlhq/.github#239",
+          "subject": {
+            "blocked": {
+              "number": 240,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 239,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "g4-cutover"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner g5-non-admin): blocked=mctlhq/.github#241, blocker=mctlhq/.github#240",
+          "subject": {
+            "blocked": {
+              "number": 241,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 240,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "g5-non-admin"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner g0a-token-hardening): child=mctlhq/mctl-api#805, expectedParent=mctlhq/.github#236",
+          "subject": {
+            "child": {
+              "number": 805,
+              "repository": "mctlhq/mctl-api"
+            },
+            "expectedParent": {
+              "number": 236,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "g0a-token-hardening"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 236,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/mcp-gateway.yaml",
+          "sha256": "74f07633be12bd629beea97cb3485191337ae8e1dce0e943f0998eb8d65621b9"
+        },
+        "name": "mcp-gateway"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-10-26T20:11:59Z",
+        "mode": "live-capture"
+      },
+      "state": "drift",
+      "summary": {
+        "drift": 6,
         "error": 0,
         "info": 0
       }
@@ -2423,7 +2626,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2543,7 +2746,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2683,7 +2886,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2763,7 +2966,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2933,7 +3136,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T15:16:38Z",
+        "capturedAt": "2026-10-26T20:11:59Z",
         "mode": "live-capture"
       },
       "state": "healthy",

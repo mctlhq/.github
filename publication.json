@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "da248823728f4817ddaf3ccb4dd567b78d823dbb"
+    "revision": "a4ab4f6009692d0a1fa64ad6ec13994b9df4e0b1"
   },
   "files": {
     "health.json": {
-      "sha256": "a60ec7a17caa5c44f72c6ab3a3bbf6bfb64af3e15b7f3509a54d34718a08d0a7"
+      "sha256": "416b58dbfd689c6c56f15fc648483a191767d946b7f25a1aab144d60e6b91b23"
     },
     "ready-set.json": {
-      "sha256": "165d6a2a18e29abad1cd327bb059860bfce3baf8d51298bdd1491b5de52f2726"
+      "sha256": "99ee570b3f213017b1a04da2401f41dd5bf162cddc16fc116db5348ef2523b32"
     },
     "snapshot.json": {
-      "sha256": "d8f6e05b83c2cecfd361f1b9b105502df8006da668e9d7752095059efd40c42f"
+      "sha256": "30d494a1ade28e0686dc66f4ca6596f427e385836f6731d42cbb5c4419b4001c"
     }
   },
   "kind": "RoadmapPublication",
@@ -168,6 +168,16 @@
     },
     {
       "epic": {
+        "goal": "Replace the user-blind Cloudflare MCP Portal at mcp.mctl.ai with an mctl-owned gateway that decides per principal and per tenant which downstream MCP servers and tools a caller can see and call, while every downstream keeps its own authorization.",
+        "lifecycle": "proposed",
+        "name": "mcp-gateway",
+        "title": "mctl-owned MCP gateway with per-principal, per-tenant tool policy"
+      },
+      "path": "roadmap/epics/mcp-gateway.yaml",
+      "sha256": "74f07633be12bd629beea97cb3485191337ae8e1dce0e943f0998eb8d65621b9"
+    },
+    {
+      "epic": {
         "goal": "Make mctl executions observable as correlated OpenTelemetry traces through a vendor-neutral OTLP boundary, with canonical execution identity, backend portability and no private payload recording by default.",
         "lifecycle": "active",
         "name": "observability",
@@ -219,12 +229,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-26T15:16:38Z",
+    "capturedAt": "2026-10-26T20:11:59Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "da248823728f4817ddaf3ccb4dd567b78d823dbb"
+    "revision": "a4ab4f6009692d0a1fa64ad6ec13994b9df4e0b1"
   }
 }
