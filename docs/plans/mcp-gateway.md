@@ -189,9 +189,12 @@ effective(P, T, S) = ceiling(S) ∩ ( ⋃ grants matching P on S:
 ```
 
 - `tools/list` shows the union over every tenant P belongs to.
-- `tools/call` is evaluated with the call's tenant T. A call that names no
-  tenant is authorized by the union of P's roles across tenants, and the
-  downstream then applies its own `needs_tenant` and role checks.
+- `tools/call` on a tenant-scoped tool is evaluated with the call's tenant
+  T only, and a call that names no tenant is refused (see the convention
+  below). Only tools declared `tenant_scoped: false` are authorized by the
+  union of P's grants across tenants. This is narrower than the G0 reference
+  model, which let a tenant-less call fall back to the union and relied on
+  the downstream's `needs_tenant` check: not every downstream has one.
 - Tools outside the ceiling, or not published by the downstream, are inert.
 
 **Tenant naming convention.** The gateway can only key a call by tenant if it
@@ -200,17 +203,23 @@ mctl-api's own tools alone use `team`, `team_name`, `tenant` and
 `tenant_name` (`internal/mcp/server.go` on main, 2026-10-26). Rather than
 renaming arguments across servers, the ceiling declares it: each
 tenant-scoped tool's ceiling entry names the argument that carries the tenant
-slug (`tenant_arg: team_name`). The gateway reads only that argument.
+slug (`tenant_arg: team_name`), and lists every other argument name the
+downstream would also accept as the tenant (`tenant_aliases: [team]`).
 
 - Every ceiling entry must declare either `tenant_arg` or
   `tenant_scoped: false`; the gateway refuses to start on an entry that
   declares neither, so a typo or omission cannot silently widen a
   tenant-scoped tool to the union rule.
-- A call to a tool with `tenant_arg` where that argument is absent names no
-  tenant and falls under the union rule above. It is never treated as "no
-  tenant restriction".
-- A `tenant_arg` that is not a string, or a value that is not a tenant
-  slug, is refused at the gateway.
+- A call to a tenant-scoped tool must name its tenant in `tenant_arg` or
+  an alias. If none is present or the value is empty, the call is refused at
+  the gateway. It never falls back to the union rule.
+- If several of `tenant_arg` and its aliases are present, they must all
+  carry the same tenant; otherwise the call is refused. A downstream that
+  accepts a tenant argument the ceiling does not list is a ceiling defect,
+  and G1 tests each tenant-scoped `api` tool against its input schema for it.
+- A tenant value that is not a string, or not a tenant slug, is refused.
+- Every refusal here returns the same error as an unknown tool, so that a
+  missing tenant does not reveal which tools exist.
 - Whether every tenant-scoped tool can be described this way, for example
   tools that take the tenant inside a nested object, is unknown (not
   observed in G0). It is established server by server in the phase that
