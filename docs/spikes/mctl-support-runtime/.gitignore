@@ -1,0 +1,8 @@
+python/.venv/
+python/__pycache__/
+python/**/__pycache__/
+typescript/node_modules/
+typescript/dist/
+go/bin/
+go/spike-support-go
+*.log
