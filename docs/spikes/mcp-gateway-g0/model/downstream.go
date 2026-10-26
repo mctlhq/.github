@@ -87,9 +87,18 @@ func (d *Downstream) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
-		} else if len(d.Membership[claims.Pid]) == 0 {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
+		} else {
+			// No tenant named: same union-of-roles rule as the gateway.
+			allowed := false
+			for _, role := range d.Membership[claims.Pid] {
+				for _, ro := range spec.Roles {
+					allowed = allowed || ro == role
+				}
+			}
+			if !allowed {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
 		}
 		json.NewEncoder(w).Encode(map[string]any{"result": "RESULT-BODY-MARKER", "audit_id": auditID})
 	default:
