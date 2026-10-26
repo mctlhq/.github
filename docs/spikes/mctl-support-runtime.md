@@ -327,25 +327,47 @@ user message and refuses it. The Go SDK 1.84.0 runner has no thread mode and
 resends the history. So a provider switch for the support agent is a
 one-line `thread=False` in Python or TypeScript, and the smoke scripts now
 accept `ANTHROPIC_AUTH_TOKEN` next to `ANTHROPIC_API_KEY` for that reason.
-Whether Hetzner is allowed for a tenant-facing agent at all is a separate
-decision gated on mctl-agents#824 (provider in model policy) and #826 (usage
-accounting), as #791's verdict states; nothing here changes that.
+In S1b that switch belongs to a provider capability (`server_thread:
+true|false` next to the base URL and model in the provider config), not to
+a condition on the provider's name, so Anthropic, Hetzner or any other
+Messages-compatible backend swap cleanly. S1 still ships with Anthropic as
+the production provider; whether Hetzner is allowed for a tenant-facing
+agent at all is a separate decision gated on mctl-agents#824 (provider in
+model policy) and #826 (usage accounting), as #791's verdict states, and
+the support MVP does not take on multi-provider logic for it.
 
 ## Recommendation
 
 **GO_PYTHON**, by a narrow margin, with Go as the named runner-up.
 
 - Python's `a2a-sdk` is the only one of the three that carries the
-  multi-replica task store itself (versioned, owner-scoped, with an event
-  log), which is the 30 % criterion the service cannot afford to get wrong
-  and the one where hand-written code is hardest to prove. The hand-written
-  parts that remain (bearer backend, trace middleware, idempotency, foreign
-  context rejection, cooperative cancel) are about 150 lines of policy, each
-  a few lines and testable offline. The prototype's cancel path and turn
-  counting show the two SDK behaviours S1a must design around: a cancel from
-  another replica is a forced store write, so the loop must watch the event
-  stream; and per-context writes are not serialised, so transcript counting
-  needs its own lock or a per-context version.
+  multi-replica task store itself (versioned, with CAS and an event log).
+  That store is about the consistency of A2A tasks across replicas, the
+  30 % criterion, and it is the part where hand-written code is hardest to
+  prove; tenant isolation is not what it buys. Isolation of the support
+  agent is enforced independently by mctl-api's `BoundTenant` support
+  authority (S0a, mctl-api#811) on every read the agent makes, whatever
+  runtime the agent runs on. The hand-written parts that remain in Python
+  (bearer backend, trace middleware, idempotency, foreign context rejection,
+  cooperative cancel) are about 150 lines of policy, each a few lines and
+  testable offline. The prototype's cancel path and turn counting show the
+  two SDK behaviours S1a must design around: a cancel from another replica
+  is a forced store write, so the loop must watch the event stream; and
+  per-context writes are not serialised, so transcript counting needs its
+  own lock or a per-context version.
+- The footprint gap (397 MB against 21 MB, 2.2 s against 0.4 s) is real
+  but not operational for this service: two Python replicas are well under
+  a gigabyte and mctl-support is not a service that scales to many replicas.
+  It becomes a reason to revisit only if that changes.
+
+Suggested wording for the `decision` block, for the owner to adopt or edit:
+
+> GO_PYTHON. Python wins narrowly because the official A2A SDK provides the
+> strongest built-in persistent multi-replica task semantics (versioning,
+> CAS, event history), reducing correctness-critical custom code in the
+> support service. Go remains the preferred fallback if Python's runtime
+> footprint becomes operationally significant. Tenant isolation remains
+> enforced independently by mctl-api's BoundTenant support authority.
 - Go is the better runtime on every operational axis (21 MB image, 15 MB RSS,
   0.4 s start, three direct dependencies) and has the cleanest auth edge, but
   the SDK ships no SQL store and its cluster mode is experimental without a
