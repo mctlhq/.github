@@ -1,6 +1,6 @@
 # Phase S-1 of the tenant-support-agent epic (.github#243): the runtime for
 # mctl-support is chosen by a measured spike, not assumed. decisionBy is the
-# proposed timebox; the owner records the verdict in `decision` and on #249.
+# proposed timebox; the owner's verdict is recorded in `decision` and on #249.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -14,7 +14,7 @@ spec:
     tool loop and a mature SDK, measured on one identical vertical slice per
     candidate, with Bun checked only as a compatibility gate of the
     TypeScript prototype?
-  lifecycle: active
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/.github
@@ -32,3 +32,10 @@ spec:
     devloop: false
   evidence:
     report: docs/spikes/mctl-support-runtime.md
+  decision:
+    verdict: GO_PYTHON
+    decidedAt: "2026-10-26"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-support
+        number: 2
