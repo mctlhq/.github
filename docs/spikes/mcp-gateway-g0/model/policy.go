@@ -37,13 +37,17 @@ type Snapshot struct {
 // Effective implements effective(P,T,S) = ceiling(S) ∩ ⋃{grants matching P,T,S}.
 // An empty tenant means "any tenant the principal belongs to" (tools/list).
 func (s Snapshot) Effective(pid, tenant, server string) map[string]bool {
+	return s.effective(pid, tenant, server, true)
+}
+
+func (s Snapshot) effective(pid, tenant, server string, anyTenant bool) map[string]bool {
 	ceiling := map[string]bool{}
 	for _, t := range s.Ceiling[server] {
 		ceiling[t] = true
 	}
 	roles := map[string]bool{}
 	for t, r := range s.Membership[pid] {
-		if tenant == "" || t == tenant {
+		if (tenant == "" && anyTenant) || (tenant != "" && t == tenant) {
 			roles[r] = true
 		}
 	}
@@ -99,6 +103,7 @@ type PolicyCache struct {
 	cur       *Snapshot
 	fetchedAt time.Time
 	stale     bool
+	minVer    int64 // newest version observed; never serve below it
 }
 
 // RMax is the designed bound between a change becoming visible at the policy
@@ -111,6 +116,9 @@ func (c *PolicyCache) refresh() bool {
 	snap, err := c.Source.Fetch()
 	if err != nil || c.Clock.Now().Sub(start) > c.RefreshTimeout {
 		return false
+	}
+	if snap.Version < c.minVer {
+		return false // source still lags an observed newer version
 	}
 	if c.cur != nil && snap.Version < c.cur.Version {
 		return false // regression: never trust an older version
@@ -156,5 +164,8 @@ func (c *PolicyCache) Observe(version int64) {
 	defer c.mu.Unlock()
 	if c.cur != nil && version > c.cur.Version {
 		c.stale = true
+		if version > c.minVer {
+			c.minVer = version
+		}
 	}
 }

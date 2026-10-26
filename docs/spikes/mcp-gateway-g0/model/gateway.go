@@ -208,6 +208,9 @@ func (g *Gateway) CallTool(authHeader, name string, args map[string]any) (res Ca
 	if !found {
 		return res, ErrUnknownTool
 	}
+	// A missing or non-string tenant is "" and is authorized by the union of
+	// the caller's roles across tenants (documented in report D3); the
+	// downstream enforces needs_tenant and its own role check.
 	tenant, _ := args["tenant"].(string)
 	rec.Tenant, rec.Server, rec.Tool = tenant, server, tool
 	snap, perr := g.Policy.Get()

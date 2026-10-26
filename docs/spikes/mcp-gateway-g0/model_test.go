@@ -454,6 +454,15 @@ func TestT11_RevocationBound(t *testing.T) {
 		}
 	})
 
+	t.Run("observed newer version, source lagging, fails closed", func(t *testing.T) {
+		e := newEnv(t)
+		e.gw.CallTool(tok(e), "api_list_services", nil)
+		e.cache.Observe(e.source.snap.Version + 1)
+		if _, err := e.gw.CallTool(tok(e), "api_list_services", nil); err != model.ErrPolicyDown {
+			t.Fatalf("source below observed version must fail closed: %v", err)
+		}
+	})
+
 	t.Run("token lifetime does not extend a grant", func(t *testing.T) {
 		e := newEnv(t)
 		long := bearerOf(e.mint(model.Claims{Aud: model.Audience{audGW}, Sub: pidB, Pid: pidB, Scope: "tools"}, 10*time.Hour))

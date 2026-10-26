@@ -101,7 +101,7 @@ gateway is ever built.
 `effective(P, T, S) = ceiling(S) ∩ ⋃ {grants matching P (role in T, principal, group) on S}`;
 tools outside the ceiling or unpublished by the downstream are inert (T7).
 `tools/list` uses the union over the principal's tenants; `tools/call`
-evaluates with the call's tenant and re-evaluates every time (T9, counter on
+evaluates with the call's tenant (a call that names none is authorized by the union of the caller's roles across tenants, then the downstream applies needs_tenant and its own role check) and re-evaluates every time (T9, counter on
 policy evaluations). Hidden and unknown tools return the identical error (T7).
 Golden catalogues (T6) `[REF]`: A = `api_list_services`, `api_get_service_status`,
 `api_deploy_service`, `api_delete_service`, `tg_send_message`; B =
@@ -163,7 +163,7 @@ is a post-G0 implementation acceptance criterion and is not claimed here.
 | Experiment | Tests | Outcome `[REF]` |
 | --- | --- | --- |
 | E1 identity/audience | T1-T5 | substitution refused both ways; exchange preserves `sub`/`pid`, adds `act`, bounded `exp`, no widening |
-| E2 tenant/tool | T6-T9 | different catalogues; hidden = unknown; inert grants; cross-tenant refused twice |
+| E2 tenant/tool | T6-T9 | different catalogues; hidden = unknown; inert grants; cross-tenant calls that name a tenant refused twice |
 | E3 bypass | T10 | gateway token refused directly, exchanged accepted, legacy state accepts (hazard shown) |
 | E4 revocation | T11 | refused no later than R_max; newer version immediate |
 | E5 failures | T12 | matrix below |
