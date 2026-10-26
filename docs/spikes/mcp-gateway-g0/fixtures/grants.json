@@ -1,0 +1,11 @@
+{
+  "version": 7,
+  "grants": [
+    {"subject": {"kind": "role", "role": "viewer"}, "server": "api", "tools": ["list_services", "get_service_status"]},
+    {"subject": {"kind": "role", "role": "developer"}, "server": "api", "tools": ["list_services", "get_service_status", "deploy_service"]},
+    {"subject": {"kind": "role", "role": "owner"}, "server": "api", "tools": ["*"]},
+    {"subject": {"kind": "role", "role": "owner"}, "server": "api", "tools": ["internal_debug"]},
+    {"subject": {"kind": "role", "role": "owner"}, "server": "tg", "tools": ["send_message"]},
+    {"subject": {"kind": "principal", "id": "prn_fixture_b"}, "server": "tg", "tools": ["list_chats", "unpublished_tool"]}
+  ]
+}

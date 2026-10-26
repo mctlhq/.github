@@ -1,0 +1,7 @@
+{"tools": [
+  {"name": "list_services", "description": "List services"},
+  {"name": "get_service_status", "description": "Service status"},
+  {"name": "deploy_service", "description": "Deploy a service"},
+  {"name": "delete_service", "description": "Delete a service"},
+  {"name": "internal_debug", "description": "Published by the downstream but absent from the ceiling"}
+]}
