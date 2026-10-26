@@ -41,6 +41,30 @@ The v1alpha1 completion rule is intentionally small: `allRequired` means every
 `workItem.required: true` must reach its terminal completion condition in the
 observed GitHub/read model. Optional items do not block epic completion.
 
+## Tracking an epic
+
+Every multi-phase epic with 3+ implementation issues MUST have an
+`EpicDefinition` manifest here. A dashboard MAY provide a live human-readable
+view, but it MUST derive lifecycle state from GitHub/DevLoop rather than becoming
+a second source of truth.
+
+Who holds what:
+
+| layer | holds | lives in |
+| --- | --- | --- |
+| epic manifest | phase order, work items, `dependsOn`, success criteria | `roadmap/epics/<name>.yaml` (reviewed, versioned) |
+| GitHub | issue and PR state, transfers, closes | the bound issues and their PRs |
+| DevLoop | proposal and execution state (`proposed`, `accepted`, running) | mctl-api / `agents-state` in mctl-gitops |
+| tracker metadata | only what no system holds: the next step, a short why, whether an owner decision is needed | a small file attached to the dashboard |
+| dashboard | a derived view of all of the above | an artifact the owner opens |
+
+Status is never written twice. A tracker file that carried its own `status` or
+`order` would drift from GitHub within a few epics; it may carry commentary only.
+The dashboard is refreshed in the same turn an item moves (issue edited, proposal
+approved, PR merged, release live), and a spike phase reads its `SpikeDefinition`
+lifecycle and `decision` the same way. First instance: `tenant-support-agent`
+(.github#243) with its spike `mctl-support-runtime`.
+
 ## Layout
 
 ```text
