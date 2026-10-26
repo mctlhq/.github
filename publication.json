@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "357ebd7119c29e43ad2472f36811269d7d29901e"
+    "revision": "89821a3b660813d5cab5ccd9fd530fbd30be26b5"
   },
   "files": {
     "health.json": {
-      "sha256": "a96871499950b87e01aaa55cb71ae341cc75c599f90e959af01298d700bd759f"
+      "sha256": "7a685fa4a19582d0d188dd6b814bfdfe7fd14f986edc7721d3567d0205c7cbc2"
     },
     "ready-set.json": {
-      "sha256": "11a3bc3d8a31e59e3e8983e218bff0d586399ad36f9a24d00a219d108b7babfa"
+      "sha256": "488c063741e1ad5cddc3766e11d5c6cec5f64968c5cb7c3d0443968e886f692f"
     },
     "snapshot.json": {
-      "sha256": "e5964465502827645c1fd8e493c5915c4cd7bd9457493221a8b5e826a01f89d4"
+      "sha256": "f5e83bee10e490d7f3d5f98a26b07040f211ee702528cb9e1e117e0f8dce3f91"
     }
   },
   "kind": "RoadmapPublication",
@@ -218,6 +218,16 @@
     },
     {
       "epic": {
+        "goal": "A tenant, or the tenant's own agent, asks an mctl-side Claude agent why a service, rollout, workflow or onboarding is failing. The agent investigates only that tenant's resources, read-only, through a tenant-bound support run token, answers with evidence, and escalates to the platform owner only what the tenant cannot fix themselves, as a tenant-local incident.",
+        "lifecycle": "active",
+        "name": "tenant-support-agent",
+        "title": "Tenant support agent reachable over A2A (mctl-support)"
+      },
+      "path": "roadmap/epics/tenant-support-agent.yaml",
+      "sha256": "7e12aa399fbf8282a09dc382d1fff3c765ad95795e5947478d18f712c7a7c1a0"
+    },
+    {
+      "epic": {
         "goal": "Complete MCTL's canonical principal and authorization model on top of the already deployed ZITADEL human identity provider, keeping external provider identities, MCP client identity and delegated agent identity distinct and auditable while removing GitHub-login coupling from tenant authorization.",
         "lifecycle": "completed",
         "name": "unified-identity",
@@ -229,12 +239,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-26T22:18:58Z",
+    "capturedAt": "2026-10-26T22:24:01Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "357ebd7119c29e43ad2472f36811269d7d29901e"
+    "revision": "89821a3b660813d5cab5ccd9fd530fbd30be26b5"
   }
 }
