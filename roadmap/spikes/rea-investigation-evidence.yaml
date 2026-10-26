@@ -1,7 +1,8 @@
-# The issue marks this spike ACTIVE but sets no decision date, so the
-# lifecycle stays `proposed` until the owner sets decisionBy. The approved
-# DevLoop proposal (mctl-agents#796) is in implementation since 2026-10-25;
-# measurements come from an operator run after the implementation PR.
+# The approved DevLoop proposal (mctl-agents#796) is in implementation since
+# 2026-10-25; tooling merged in mctl-agents#802. Measurements come from an
+# operator run against the Hetzner inference endpoint that mctl-agents#791
+# provisioned. The owner set decisionBy 2026-11-15 on 2026-10-26, which makes
+# the spike active.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -13,7 +14,7 @@ spec:
     Does REA make DevLoop investigations of source-owned binaries more
     accurate and better evidenced, and at which stage, if any, do current
     Claude workflows refuse or fail?
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -23,6 +24,8 @@ spec:
     - ADOPT_REA_CLI_ADAPTER_ONLY
     - RESEARCH_ONLY
     - REJECT
+  timebox:
+    decisionBy: "2026-11-15"
   execution:
     devloop: true
   evidence:
