@@ -215,11 +215,11 @@ Gate output on Node 24.22.1, verbatim (database `spike_ts`):
 PASS  1 agent card served  -- HTTP 200, name='mctl-support (spike, typescript)', interfaces=['HTTP+JSON']
 PASS  2a message:send without bearer refused  -- HTTP 401
 PASS  2b message:send with foreign bearer refused  -- HTTP 401
-PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='476958ef-b7dd-40c4-9487-5d3c7e13426e'
+PASS  3 send to A returns a task  -- HTTP 200, state=submitted, id='10ee15ff-98b4-4891-b407-3a8948bb4e20'
 PASS  4a task completes, read via B  -- state=completed
 PASS  4b answer carries the fake tool's evidence  -- svc-x is degraded (1 replica); principal=namax66; turn 1
 PASS  4c executor saw the bearer's principal
-PASS  4d contextId stable across replicas  -- ctx=83eaa2d8-a98b-4dba-9c0a-1a4da0d2caaf
+PASS  4d contextId stable across replicas  -- ctx=6fb23dbc-ee22-43c4-b416-d76001d72657
 PASS  5a context continued on B sees turn 1 (written by A)  -- turn 2; principal=namax66
 PASS  5b context continued on A sees turns 1-2 (one written by B)  -- turn 3; principal=namax66
 PASS  6 other tenant cannot continue the context  -- HTTP 404, state=-, text=
@@ -227,8 +227,8 @@ PASS  7a slow task is working, seen via B  -- state=working
 PASS  7b cancel via B, canceled seen via A within 10s  -- HTTP 200, state=canceled, after 0.0s
 PASS  7c state still canceled after the slow tool would have finished  -- state=canceled
 PASS  7d executor recorded that the loop observed the cancel (metadata.loop_stopped)  -- {"replica": "a", "loop_stopped": true, "stopped_on": "a"}
-PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- db21bb65-9ebd-4364-acb2-d2c5e1b342e3 vs db21bb65-9ebd-4364-acb2-d2c5e1b342e3 (HTTP 200/200)
-PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 476958ef-b7dd-40c4-9487-5d3c7e13426e is in a t
+PASS  8 duplicate messageId across replicas returns the same task (idempotency)  -- 0aa84b66-f68b-441e-8f5b-7d46bbf639e7 vs 0aa84b66-f68b-441e-8f5b-7d46bbf639e7 (HTTP 200/200)
+PASS  9 a message addressed to a completed task is refused or opens a new task  -- HTTP 400, body={"error": {"code": 400, "status": "FAILED_PRECONDITION", "message": "Task 10ee15ff-98b4-4891-b407-3a8948bb4e20 is in a t
 
 all steps passed
 ```
