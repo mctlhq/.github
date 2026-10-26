@@ -1,0 +1,34 @@
+# Phase S-1 of the tenant-support-agent epic (.github#243): the runtime for
+# mctl-support is chosen by a measured spike, not assumed. decisionBy is the
+# proposed timebox; the owner records the verdict in `decision` and on #249.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: mctl-support-runtime
+  owner: mctlhq/.github
+spec:
+  title: mctl-support runtime - Python, Go or TypeScript on the official A2A 1.0 SDKs
+  question: >-
+    Which runtime gives mctl-support correct auth hooks, correct A2A task
+    handling across two replicas on a shared Postgres, a usable Anthropic
+    tool loop and a mature SDK, measured on one identical vertical slice per
+    candidate, with Bun checked only as a compatibility gate of the
+    TypeScript prototype?
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 249
+  outcomes:
+    - GO_PYTHON
+    - GO_GO
+    - GO_TYPESCRIPT
+  epic:
+    name: tenant-support-agent
+    workItem: s-1-runtime
+  timebox:
+    decisionBy: "2026-11-02"
+  execution:
+    devloop: false
+  evidence:
+    report: docs/spikes/mctl-support-runtime.md

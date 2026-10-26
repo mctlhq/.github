@@ -1,0 +1,144 @@
+# Drafted after the owner's GO with amendments on .github#243 (2026-10-26).
+# Design: the issue itself. S-1 is the runtime-selection spike
+# (roadmap/spikes/mctl-support-runtime.yaml); the mctl-support repository and
+# the transfer of the S1 issues into it follow its verdict, so the S1 bindings
+# below point at mctlhq/.github until then. S2 and later phases are not bound.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: tenant-support-agent
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: Tenant support agent reachable over A2A (mctl-support)
+  goal: >-
+    A tenant, or the tenant's own agent, asks an mctl-side Claude agent why a
+    service, rollout, workflow or onboarding is failing. The agent investigates
+    only that tenant's resources, read-only, through a tenant-bound support run
+    token, answers with evidence, and escalates to the platform owner only what
+    the tenant cannot fix themselves, as a tenant-local incident.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 243
+  phases:
+    - id: runtime
+      title: S-1 runtime-selection spike
+    - id: authority
+      title: S0a tenant-bound support scope
+    - id: diagnostics
+      title: S0b pod state, events and workflow isolation
+    - id: audit
+      title: S0c audit of reads under the support scope
+    - id: core
+      title: S1a mctl-support core (A2A, admission, task store)
+    - id: agent-loop
+      title: S1b read-only agent loop with a strict tool registry
+    - id: governance
+      title: S1c budgets, rate limits and per-tenant escalation
+    - id: mcp
+      title: S1d MCP wrapper in mctl-api
+    - id: acceptance
+      title: S1e acceptance replay, security suite and pilot
+    - id: pilot
+      title: S2 pilot with the tenant's own agent
+  workItems:
+    - id: s-1-runtime
+      phase: runtime
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 249
+
+    - id: s0a-authority
+      phase: authority
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 811
+
+    - id: s0b-diagnostics
+      phase: diagnostics
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 812
+      dependsOn:
+        - s0a-authority
+
+    - id: s0c-audit
+      phase: audit
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 813
+      dependsOn:
+        - s0a-authority
+
+    - id: s1a-core
+      phase: core
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 245
+      dependsOn:
+        - s-1-runtime
+        - s0a-authority
+
+    - id: s1b-agent-loop
+      phase: agent-loop
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 246
+      dependsOn:
+        - s0a-authority
+        - s0b-diagnostics
+        - s1a-core
+
+    - id: s1c-governance
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 247
+      dependsOn:
+        - s1b-agent-loop
+
+    - id: s1d-mcp
+      phase: mcp
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 814
+      dependsOn:
+        - s1a-core
+        - s1b-agent-loop
+        - s1c-governance
+
+    - id: s1e-acceptance
+      phase: acceptance
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 248
+      dependsOn:
+        - s1b-agent-loop
+        - s1c-governance
+
+    - id: s2-pilot
+      title: S2 pilot over A2A with the pilot tenant's own agent (message:stream, contextId follow-ups, Grafana owner view, hard audience check)
+      owner: mctlhq/.github
+      phase: pilot
+      required: false
+      dependsOn:
+        - s1e-acceptance
+  completion:
+    mode: allRequired
+  successCriteria:
+    - An external tenant agent obtains a useful, evidence-backed MCTL diagnosis over A2A while the model holds no capability to read another tenant or mutate the platform; a cross-tenant read with the support run token is refused by mctl-api, and the test goes red when the BoundTenant check is removed.
+    - All nine sanitized namax66 fixture cases land on their expected classification, with no cross-tenant read and no non-allowlisted tool call in any path.
+    - A platform defect found by the agent becomes a tenant-local support incident with evidence and an owner alert, never a cross-tenant incident record.
+    - No admin credential, Kubernetes identity, Loki access or shell is present in the mctl-support pod; every read is audited in mctl-api with the caller and the support task id.
