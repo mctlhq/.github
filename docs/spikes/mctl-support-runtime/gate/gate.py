@@ -118,7 +118,10 @@ def main():
     ok = code == 200 and task and task.get("id")
     say(ok, "3 send to A returns a task", f"HTTP {code}, state={state(task)}, id={task.get('id') if task else resp!r}")
     if not ok:
-        return
+        # Nothing after this step can run without a task; exit with the
+        # failures so far rather than returning into a clean exit 0.
+        print(f"\n{len(FAILS)} failed: {FAILS}", flush=True)
+        sys.exit(len(FAILS))
     tid, ctx = task["id"], task.get("contextId")
 
     # 4. poll via B until completed; answer carries tool evidence and the principal

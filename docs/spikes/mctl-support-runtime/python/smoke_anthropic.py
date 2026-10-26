@@ -31,7 +31,12 @@ def main() -> int:
 
     client = Anthropic()  # key from ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN
     model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+    # ANTHROPIC_THREAD=0 sends the full history every turn instead of the SDK's
+    # default server-side thread; Anthropic-compatible endpoints without
+    # threads (Hetzner inference) answer 400 otherwise.
+    extra = {"thread": False} if os.environ.get("ANTHROPIC_THREAD") == "0" else {}
     runner = client.beta.messages.tool_runner(
+        **extra,
         model=model,
         max_tokens=512,
         max_iterations=4,

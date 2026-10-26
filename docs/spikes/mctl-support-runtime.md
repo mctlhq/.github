@@ -174,6 +174,24 @@ is hand-written (task ownership masking is the SDK's). The REST surface moved
 in 2.7.0 (`a2a+json` content type, `A2A-Version` rejection), so minor
 releases are not drop-in.
 
+Review of the prototype (PR .github#252) found four more gaps in that
+hand-written layer, which the gate cannot see because it sends requests one
+after another; they bound what "roughly 400 lines" covers and are left in
+the prototype as evidence, not fixed:
+
+- `messageId` idempotency is check-then-act (lookup in the interceptor, index
+  row written after the task with `ON CONFLICT DO NOTHING`): two concurrent
+  sends with one `messageId` on two replicas create two tasks. Python avoids
+  this by construction (`uuid5(owner, messageId)` task id plus the primary
+  key), TypeScript with a reservation row.
+- The context ownership guard answers 404 for a context owned by someone
+  else and 200 (new task) for a context that does not exist, an existence
+  oracle. The rule for S1a, on any runtime: a named `contextId` the caller
+  does not own gets one answer whether it exists or not.
+- `pgStore.List` applies `LIMIT` in SQL and the status filter in Go, so a
+  page whose first rows have another status comes back empty.
+- The bearer scheme match is case-sensitive (`Bearer ` only).
+
 Footprint: 21.3 MB distroless non-root image, 16.8 MB static binary, 14-15 MB
 RSS, 0.4 s cold start, three direct dependencies, no interpreter. This is the
 smallest attack and supply-chain surface of the three by a wide margin.
@@ -281,9 +299,10 @@ sensitivities decide it: Python wins because the SDK owns the shared-state
 problem (store, versioning, event log) that the other two leave to the
 service; Go would win if footprint or supply-chain surface weighed 20 %
 instead of 10 %, or if the team is ready to own and prove a Postgres task
-store. TypeScript does not lead on any weighted criterion despite the cleanest
-auth hook, and Bun adds nothing to the score: it is a confirmed option, not a
-reason.
+store. TypeScript leads on one criterion only, the auth hook (8 against 7.5
+on the 35 % row), and loses the multi-replica, maturity and footprint rows,
+which is why its total is last; Bun adds nothing to the score: it is a
+confirmed option, not a reason.
 
 ## Real-Anthropic smoke
 
@@ -325,8 +344,10 @@ Finding worth carrying into S1b: `anthropic` 2.3.0 and `@anthropic-ai/sdk`
 API holds that state; a compatible endpoint sees a second request with no
 user message and refuses it. The Go SDK 1.84.0 runner has no thread mode and
 resends the history. So a provider switch for the support agent is a
-one-line `thread=False` in Python or TypeScript, and the smoke scripts now
-accept `ANTHROPIC_AUTH_TOKEN` next to `ANTHROPIC_API_KEY` for that reason.
+one-line `thread=False` in Python or TypeScript. The smoke scripts accept
+`ANTHROPIC_AUTH_TOKEN` next to `ANTHROPIC_API_KEY` for that reason, and the
+Python and TypeScript ones take `ANTHROPIC_THREAD=0` to switch the thread
+off, which is how the two Hetzner runs above are reproduced.
 In S1b that switch belongs to a provider capability (`server_thread:
 true|false` next to the base URL and model in the provider config), not to
 a condition on the provider's name, so Anthropic, Hetzner or any other
@@ -376,8 +397,8 @@ Suggested wording for the `decision` block, for the owner to adopt or edit:
   without the SDK's own conformance suite. That is a reasonable choice if the
   owner weighs footprint higher than the stated 10 %, and the prototype in
   `go/` is a working starting point.
-- TypeScript is a credible third, not a recommendation: it leads on no
-  weighted criterion, its SDK is the youngest, and its footprint is the
+- TypeScript is a credible third, not a recommendation: it leads only on
+  the auth hook row, its SDK is the youngest, and its footprint is the
   largest. Bun runs it unchanged, which is recorded as a fact for any future
   TypeScript decision in the org, not as an input to this one.
 

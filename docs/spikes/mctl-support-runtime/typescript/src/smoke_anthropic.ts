@@ -28,7 +28,11 @@ async function main(): Promise<number> {
     run: async ({ service }) => JSON.stringify(await getServiceStatus(service)),
   });
 
+  // ANTHROPIC_THREAD=0 sends the full history every turn instead of the SDK's
+  // default server-side thread; Anthropic-compatible endpoints without
+  // threads (Hetzner inference) answer 400 otherwise.
   const runner = client.beta.messages.toolRunner({
+    ...(process.env.ANTHROPIC_THREAD === '0' ? { thread: false } : {}),
     model,
     max_tokens: 300,
     max_iterations: 4,

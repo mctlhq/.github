@@ -213,3 +213,28 @@ contract on the store, UUIDv7 task ids, the terminal-task refusal in step 9
 (`FAILED_PRECONDITION`, from `a2a.ErrUnsupportedOperation` at
 `a2asrv/agentexec.go:239`), and the iterator-based executor that
 needs no channels or goroutine plumbing in user code.
+
+## Gaps in the hand-written layer (found in review, PR .github#252)
+
+These are defects of this prototype's own code, not of the SDK. The gate runs
+its requests one after another and cannot see them. They are recorded rather
+than fixed so the measured LOC and gate output stay those of the code that
+produced them.
+
+1. **`messageId` idempotency is check-then-act.** `contextOwnerGuard` looks the
+   `messageId` up, the task is created, and only then does `indexMessages`
+   write the index row with `ON CONFLICT DO NOTHING`. Two concurrent sends with
+   one `messageId` on two replicas both miss the lookup and create two tasks.
+   A correct version reserves the `messageId` first (insert, then read back the
+   winner), as the TypeScript prototype does, or derives the task id from it,
+   as the Python one does.
+2. **Context existence oracle.** A named `contextId` owned by another principal
+   gets 404; a `contextId` that does not exist starts a new task (200). A
+   caller can therefore probe which context ids exist. Both cases should get
+   the same answer.
+3. **`pgStore.List` filters status after `LIMIT`.** The SQL query pages, the
+   status filter runs in Go, so a page can come back short or empty while
+   matching tasks exist further on.
+4. **Bearer scheme is case-sensitive.** Only `Bearer ` is accepted; RFC 6750
+   treats the scheme name case-insensitively.
+5. **No tests for `pgStore`.** Only the gate exercises it.
