@@ -20,5 +20,6 @@ spec:
   activation:
     trigger: >-
       A recorded incident where agent-generated YAML coerced a scalar type or
-      produced a noisy diff, or the pinned kubectl gains a stable -o kyaml.
+      produced a noisy diff, or the kubectl pinned in mctl-workflow-tools
+      (v1.33.12 on 2026-10-27) reaches v1.37, where -o kyaml is stable.
     reviewBy: "2027-01-31"

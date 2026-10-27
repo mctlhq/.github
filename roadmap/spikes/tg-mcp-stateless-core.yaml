@@ -20,6 +20,8 @@ spec:
     - SESSION_OWNER_RUNTIME_REQUIRED
   activation:
     trigger: >-
-      A request to raise replicaCount above 1, or protocol_version telemetry
-      in the audit log shows legacy traffic only from our own clients.
+      A request to raise replicaCount above 1, protocol_version telemetry in
+      the audit log (recorded since mctl-telegram#631) shows legacy traffic
+      only from our own clients, or mcp-gateway G3 (.github#239) starts and
+      puts tg behind the gateway's stateless Streamable HTTP.
     reviewBy: "2027-01-31"
