@@ -1,0 +1,145 @@
+# Drafted after the owner's GO on the "Agent-native MCTL" investigation spike
+# (2026-10-27). Shape: a typed deploy intent compiled onto existing Service
+# values, operations registry, WorkItem/ExecutionRequest and #181 grants; no
+# Destination resource and no second control plane. Work items stay unbound
+# until each starts; per-repository issues are created then.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: agent-deploy
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: Agent-native deploy from repository to running system
+  goal: >-
+    Give an AI session a governed path from a repository to a running system
+    on mctl in which the agent never holds production power: a server-held
+    approval bound to the plan digest, promotion of the exact digest verified
+    in preview, a git audit trail separating agent and human, and rollback by
+    revision as a tool.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 254
+  phases:
+    - id: preconditions
+      title: Build sandbox and egress default before third-party repos
+    - id: contract
+      title: Deploy intent schema, analysis and plan
+    - id: authorize
+      title: Digest-bound human grants for deploy operations
+    - id: run
+      title: Digest-tracked build, health gate and deployment record
+    - id: lifecycle
+      title: Preview before onboarding, promote and rollback by revision
+  workItems:
+    # Until this lands the slice runs only on tenant-owned repositories.
+    # mctl-gitops#2159 covers mctl-agents pods only; the tenant egress
+    # default has no issue yet.
+    - id: preconditions
+      title: Build sandbox with credentials split out; new tenants default to allowInternetEgress false
+      owner: mctl-gitops
+      phase: preconditions
+      required: true
+      externalDependsOn:
+        - repository: mctlhq/mctl-gitops
+          number: 1029
+        - repository: mctlhq/mctl-gitops
+          number: 764
+
+    - id: intent-schema
+      title: Deploy intent JSON Schema v1 denying escape hatches, validated in CI
+      owner: mctl-gitops
+      phase: contract
+      required: true
+
+    - id: analyze
+      title: deploy_analyze (Tier 0) and a repo to service binding readable by MCP and DevLoop
+      owner: mctl-api
+      phase: contract
+      required: true
+      dependsOn:
+        - intent-schema
+
+    - id: plan
+      title: deploy_plan stores the plan digest as an ExecutionRequest and enforces RequiresConfirm
+      owner: mctl-api
+      phase: contract
+      required: true
+      dependsOn:
+        - analyze
+
+    - id: grants
+      title: Generalize action_approvals grants to deploy operations and remove confirm="yes"
+      owner: mctl-api
+      phase: authorize
+      required: true
+      dependsOn:
+        - plan
+
+    - id: digest
+      title: Record the image digest in build-image and promote by digest
+      owner: mctl-gitops
+      phase: run
+      required: true
+
+    - id: health-gate
+      title: Post-sync health gate returning the URL, no skip_health_check on prod
+      owner: mctl-gitops
+      phase: run
+      required: true
+
+    - id: deploy-record
+      title: DeployRecord and get_deployment covering intent to Argo revision
+      owner: mctl-api
+      phase: run
+      required: true
+      dependsOn:
+        - grants
+        - digest
+        - health-gate
+
+    - id: rollback-revision
+      title: Rollback by revision (digest and values) replacing the sed rollback
+      owner: mctl-api
+      phase: lifecycle
+      required: true
+      dependsOn:
+        - deploy-record
+      externalDependsOn:
+        - repository: mctlhq/mctl-api
+          number: 479
+
+    - id: preview-onboard
+      title: Preview before onboarding from ephemeral values compiled from the intent
+      owner: mctl-gitops
+      phase: lifecycle
+      required: true
+      dependsOn:
+        - deploy-record
+        - preconditions
+      externalDependsOn:
+        - repository: mctlhq/mctl-gitops
+          number: 1977
+
+    - id: promote-rollback-tools
+      title: promote_deployment and rollback_deployment MCP tools gated through the MCP gateway
+      owner: mctl-api
+      phase: lifecycle
+      required: true
+      dependsOn:
+        - rollback-revision
+        - preview-onboard
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 237
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A fresh AI session on a non-admins tenant authenticates through OAuth and gets a Tier 0 result for one repo and a reasoned Unsupported for another.
+    - The preview is healthy as verified by the platform, and a self-approval attempt is refused and audited.
+    - Prod runs the same image digest as the preview and passes the health gate.
+    - Rollback restores the previous digest and values and the health gate passes again.
+    - get_deployment shows intent, operation, git revision, deploy and result for all three changes, and no secret value appears in any tool response.
