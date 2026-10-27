@@ -1,0 +1,29 @@
+# Name, outcomes, report path and decisionBy follow the approved DevLoop
+# proposal for .github#258 (decisionBy 2026-11-30 is the proposal default;
+# the owner may change it). No epic binding; the owner adds `decision` later.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: agent-ui-ag-ui
+  owner: mctlhq/.github
+spec:
+  title: AG-UI 1.0 as MCTL's northbound agent-to-user protocol
+  question: >-
+    Should AG-UI 1.0 be the standard northbound presentation and event adapter
+    between user-facing applications and MCTL agent executions, without
+    creating a second approval, tool or authentication path?
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 258
+  outcomes:
+    - ADOPT_AG_UI_ADAPTER
+    - ADOPT_LIMITED_EVENT_SUBSET
+    - REJECT_KEEP_CUSTOM
+  timebox:
+    decisionBy: "2026-11-30"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/agent-ui-ag-ui.md
