@@ -8,6 +8,7 @@
 #   raised on #709, and its pointers matched the changed code. Reviewer time
 #   is unobserved and n = 1, so the verdict is LIMITED_GO: an opt-in, advisory
 #   explainer for high-risk proposals, outside the approved-content digest.
+#   The owner accepted the verdict on 2026-10-27.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -40,3 +41,12 @@ spec:
     verdict: LIMITED_GO
     decidedAt: "2026-10-27"
     decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-agents
+        number: 846
+      - repository: mctlhq/mctl-agents
+        number: 847
+      - repository: mctlhq/mctl-api
+        number: 840
+      - repository: mctlhq/mctl-agents
+        number: 848
