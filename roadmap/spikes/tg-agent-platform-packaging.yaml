@@ -1,3 +1,6 @@
+# Activated 2026-10-27 by the owner. Evidence: a measured integration
+# walkthrough (E1), a with/without skill comparison in one host (E2), and a
+# CLI probe only if E1/E2 show a gap MCP plus skills cannot close (E3).
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -9,7 +12,7 @@ spec:
     Which packaging of tg.mctl.ai measurably shortens integration for
     external agent platforms: the MCP server alone, MCP plus skills, or MCP
     plus a CLI and skills?
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/mctl-telegram
@@ -18,3 +21,7 @@ spec:
     - MCP_ONLY
     - MCP_PLUS_SKILLS
     - MCP_PLUS_CLI_AND_SKILLS
+  timebox:
+    decisionBy: "2026-11-06"
+  execution:
+    devloop: true
