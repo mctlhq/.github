@@ -1,26 +1,33 @@
+# Re-scoped 2026-10-27 (owner triage of parked spikes). The trigger fired:
+# .github#195 closed and its re-check (.github#235) gave GO to the mcp-gateway
+# epic, which replaces the Cloudflare portal, so the portal-mode outcomes no
+# longer exist. The question moves to the gateway's merged catalogue, which is
+# where tool-schema size now accumulates, and waits until that catalogue
+# serves real traffic.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
   name: mcp-context-efficient-exposure
   owner: mctlhq/mctl-agents
 spec:
-  title: Benchmark context-efficient tool exposure on real workloads
+  title: Benchmark context-efficient tool exposure through the MCP gateway
   question: >-
-    Does progressive capability discovery cut end-to-end cost on real
-    mcp.mctl.ai tasks while keeping success rate, authorization and audit
-    intact?
+    Does progressive capability discovery in the mcp-gateway's merged
+    catalogue cut end-to-end cost on real mcp.mctl.ai tasks, compared with
+    eager exposure, while keeping success rate, per-principal authorization
+    and audit intact?
   lifecycle: parked
   github:
     issue:
       repository: mctlhq/mctl-agents
       number: 597
   outcomes:
-    - ADOPT_MCTL_NATIVE
-    - ADOPT_PORTAL_MODE
+    - ADOPT_PROGRESSIVE_DISCOVERY
+    - KEEP_EAGER_EXPOSURE
     - HYBRID
     - DEFER
   activation:
     trigger: >-
-      .github#195 records its verdict (it decides whether a portal mode still
-      exists), or the enterprise-mcp epic is resumed.
-    reviewBy: "2026-12-15"
+      mcp-gateway G2 (.github#238) serves api and coolify through the gateway
+      in production, so the benchmark measures the real merged catalogue.
+    reviewBy: "2027-01-31"
