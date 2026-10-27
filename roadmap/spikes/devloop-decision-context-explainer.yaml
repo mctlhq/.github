@@ -1,3 +1,8 @@
+# The owner set decisionBy 2026-11-17 on 2026-10-27, which makes the spike
+# active. The decision-context contract shipped in mctl-api#700; the spike
+# runs through DevLoop and measures a reviewer-facing explainer on real
+# proposals, at least one of them high-risk. Recording a verdict moves the
+# lifecycle to `decided`.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -11,7 +16,7 @@ spec:
     authority and decision-context contract itself is already defined by
     mctl-api#700; this spike covers only the reviewer-facing artifact and
     its measured effect.
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -20,3 +25,7 @@ spec:
     - GO
     - LIMITED_GO
     - NO_GO
+  timebox:
+    decisionBy: "2026-11-17"
+  execution:
+    devloop: true
