@@ -57,10 +57,11 @@ spec:
         number: 2186
 
     - id: analyze
-      title: deploy_analyze (Tier 0) and a repo to service binding readable by MCP and DevLoop
-      owner: mctl-api
       phase: contract
       required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 826
       dependsOn:
         - intent-schema
 
