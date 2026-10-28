@@ -2,8 +2,8 @@
 # Design: the issue itself. S-1 is the runtime-selection spike
 # (roadmap/spikes/mctl-support-runtime.yaml), decided GO_PYTHON on 2026-10-26;
 # mctlhq/mctl-support was created on that verdict and the S1 issues were
-# transferred into it (.github#245-#248 -> mctl-support#2-#5). S2 and later
-# phases are not bound.
+# transferred into it (.github#245-#248 -> mctl-support#2-#5). S2 is bound
+# to #270 and its slices (2026-10-28); S3 and later phases are not bound.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -44,7 +44,7 @@ spec:
     - id: acceptance
       title: S1e acceptance replay, security suite and pilot
     - id: pilot
-      title: S2 pilot with the tenant's own agent
+      title: S2 pilot with the tenant's own agent (karabu)
   workItems:
     - id: s-1-runtime
       phase: runtime
@@ -129,13 +129,54 @@ spec:
         - s1b-agent-loop
         - s1c-governance
 
-    - id: s2-pilot
-      title: S2 pilot over A2A with the pilot tenant's own agent (message:stream, contextId follow-ups, Grafana owner view, hard audience check)
-      owner: mctlhq/.github
+    # S2 is optional for epic completion, as it was when unbound. The pilot
+    # tenant is karabu (D9 amended by the owner on 2026-10-28, see #270).
+    - id: s2a-audience
       phase: pilot
       required: false
+      issue:
+        repository: mctlhq/mctl-api
+        number: 849
       dependsOn:
         - s1e-acceptance
+
+    - id: s2b-audience-enforcement
+      phase: pilot
+      required: false
+      issue:
+        repository: mctlhq/mctl-support
+        number: 22
+      dependsOn:
+        - s2a-audience
+
+    - id: s2c-stream
+      phase: pilot
+      required: false
+      issue:
+        repository: mctlhq/mctl-support
+        number: 23
+      dependsOn:
+        - s1e-acceptance
+
+    - id: s2d-grafana
+      phase: pilot
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2228
+      dependsOn:
+        - s1e-acceptance
+
+    - id: s2-pilot
+      phase: pilot
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 270
+      dependsOn:
+        - s2b-audience-enforcement
+        - s2c-stream
+        - s2d-grafana
   completion:
     mode: allRequired
   successCriteria:
