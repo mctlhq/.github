@@ -1,8 +1,10 @@
-# The approved DevLoop proposal (mctl-agents#796) is in implementation since
-# 2026-10-25; tooling merged in mctl-agents#802. Measurements come from an
-# operator run against the Hetzner inference endpoint that mctl-agents#791
-# provisioned. The owner set decisionBy 2026-11-15 on 2026-10-26, which makes
-# the spike active.
+# Decided 2026-10-27 by the owner from the live runs and report in
+# mctlhq/mctl-agents#851: with REA as MCP or CLI, claude-opus-5-5 recovered the
+# same oracle facts as the baseline, made zero REA calls in the scored
+# investigations and cited REA nowhere, while the MCP schema (229 tools,
+# 121 KB) added up to 48% input tokens. The corpus sat at the ceiling, so a
+# re-open needs a harder target. Follow-ups: classifier-interruption detection
+# (#849) and removal of the spike harness (#850).
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -14,7 +16,7 @@ spec:
     Does REA make DevLoop investigations of source-owned binaries more
     accurate and better evidenced, and at which stage, if any, do current
     Claude workflows refuse or fail?
-  lifecycle: active
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -30,3 +32,12 @@ spec:
     devloop: true
   evidence:
     report: docs/spikes/796-rea-investigation-evidence.md
+  decision:
+    verdict: REJECT
+    decidedAt: "2026-10-27"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-agents
+        number: 849
+      - repository: mctlhq/mctl-agents
+        number: 850
