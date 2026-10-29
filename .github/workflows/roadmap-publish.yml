@@ -127,6 +127,18 @@ jobs:
       # so the installed evaluator packages never hold a write credential.
       # Its rate limit is the installation's, which is what the budget check
       # below has to read.
+      #
+      # This token is minted once and can expire while the wait below still
+      # polls (an installation token lives one hour, BUDGET_WAIT_SECONDS is
+      # longer). Accepted, not fixed (mctlhq/.github#274): the installation's
+      # core budget is several times one capture, so the first read after a
+      # reset already says capture, and only a reset landing in the token's
+      # last seconds, or another consumer draining the shared budget after a
+      # reset, keeps it polling. An expired token then reads as an unreadable
+      # budget, BUDGET_READ_ATTEMPTS ends the run as a failure and nothing is
+      # pushed; the next scheduled run mints a fresh token. Re-minting inside
+      # the loop would put the private key in a step that runs after the
+      # pip install, which is the worse trade.
       - name: Mint the read token for the budget check
         id: budget-token
         if: steps.due.outputs.capture == 'true'
