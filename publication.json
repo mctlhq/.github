@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "89821a3b660813d5cab5ccd9fd530fbd30be26b5"
+    "revision": "116f6ea2483eb0c642412538f4e08eeffb73e606"
   },
   "files": {
     "health.json": {
-      "sha256": "7a685fa4a19582d0d188dd6b814bfdfe7fd14f986edc7721d3567d0205c7cbc2"
+      "sha256": "1b1813a2b4e6e39aff095c7a2abc3089849f3b191fe046055043be52b5a0f28c"
     },
     "ready-set.json": {
-      "sha256": "488c063741e1ad5cddc3766e11d5c6cec5f64968c5cb7c3d0443968e886f692f"
+      "sha256": "00d09d1797c7968d54aa79001993e41200533ea1c3e5f73266c5ade3047fb211"
     },
     "snapshot.json": {
-      "sha256": "f5e83bee10e490d7f3d5f98a26b07040f211ee702528cb9e1e117e0f8dce3f91"
+      "sha256": "5bf25b9eabb6f54575fbc07f2799aa3a07a051b933db52f7cfa8a7a869a198af"
     }
   },
   "kind": "RoadmapPublication",
@@ -25,6 +25,16 @@
       },
       "path": "roadmap/epics/agent-commerce.yaml",
       "sha256": "34ec686f202a916e7dfaecade0095c657629a3c7f9c728d2b8085438fd4514e4"
+    },
+    {
+      "epic": {
+        "goal": "Give an AI session a governed path from a repository to a running system on mctl in which the agent never holds production power: a server-held approval bound to the plan digest, promotion of the exact digest verified in preview, a git audit trail separating agent and human, and rollback by revision as a tool.",
+        "lifecycle": "proposed",
+        "name": "agent-deploy",
+        "title": "Agent-native deploy from repository to running system"
+      },
+      "path": "roadmap/epics/agent-deploy.yaml",
+      "sha256": "8e40ef80e674a3986e4f0608109e1e0d2ae1bfeaeb255a3bfeaded730cca66ff"
     },
     {
       "epic": {
@@ -64,7 +74,7 @@
         "title": "Adaptive runtime assurance for governed agents"
       },
       "path": "roadmap/epics/agent-runtime-assurance.yaml",
-      "sha256": "3f53b7545b0434c4c08d404d0f8af2ec088f6d3fc55bdd225a5ac63b966873d8"
+      "sha256": "89fb6d2a214bc93a0318008518cb08f44c885383ae72dbba519765f6b4e34bf7"
     },
     {
       "epic": {
@@ -144,7 +154,7 @@
         "title": "Cloudflare MCP Portal and enterprise MCP boundary"
       },
       "path": "roadmap/epics/enterprise-mcp.yaml",
-      "sha256": "becc3f96938ca17474d6a178dddaa81840fdf14bae8d54262946aef199ae5ed4"
+      "sha256": "4c81bd03b757c1d2312994dfe5c98142713ab0e116fd1b0bd9e4df3fc036bd09"
     },
     {
       "epic": {
@@ -224,7 +234,7 @@
         "title": "Tenant support agent reachable over A2A (mctl-support)"
       },
       "path": "roadmap/epics/tenant-support-agent.yaml",
-      "sha256": "7e12aa399fbf8282a09dc382d1fff3c765ad95795e5947478d18f712c7a7c1a0"
+      "sha256": "59b987d53b47ef32fe0eb0a0540af3b026c9d9a961bd72cb271c9e40623ebe48"
     },
     {
       "epic": {
@@ -239,12 +249,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-26T22:24:01Z",
+    "capturedAt": "2026-10-29T20:15:49Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "89821a3b660813d5cab5ccd9fd530fbd30be26b5"
+    "revision": "116f6ea2483eb0c642412538f4e08eeffb73e606"
   }
 }

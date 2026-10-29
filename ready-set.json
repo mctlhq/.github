@@ -193,7 +193,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -208,6 +208,236 @@
           "complete": 5,
           "ready": 0,
           "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 254,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/agent-deploy.yaml",
+          "sha256": "8e40ef80e674a3986e4f0608109e1e0d2ae1bfeaeb255a3bfeaded730cca66ff"
+        },
+        "name": "agent-deploy"
+      },
+      "items": [
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "intent-schema"
+          ],
+          "externalDependsOn": [],
+          "id": "analyze",
+          "issue": {
+            "number": 826,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "grants",
+            "digest",
+            "health-gate"
+          ],
+          "externalDependsOn": [],
+          "id": "deploy-record",
+          "phase": "run",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "digest",
+          "phase": "run",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "plan"
+          ],
+          "externalDependsOn": [],
+          "id": "grants",
+          "phase": "authorize",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "health-gate",
+          "phase": "run",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "intent-schema",
+          "issue": {
+            "number": 2186,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "contract",
+          "required": true,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "analyze"
+          ],
+          "externalDependsOn": [],
+          "id": "plan",
+          "phase": "contract",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [
+            {
+              "number": 1029,
+              "repository": "mctlhq/mctl-gitops"
+            },
+            {
+              "number": 764,
+              "repository": "mctlhq/mctl-gitops"
+            }
+          ],
+          "id": "preconditions",
+          "phase": "preconditions",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "deploy-record",
+            "preconditions"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 1977,
+              "repository": "mctlhq/mctl-gitops"
+            }
+          ],
+          "id": "preview-onboard",
+          "phase": "lifecycle",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "rollback-revision",
+            "preview-onboard"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 237,
+              "repository": "mctlhq/.github"
+            }
+          ],
+          "id": "promote-rollback-tools",
+          "phase": "lifecycle",
+          "required": true,
+          "state": "unknown"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "unbound",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "deploy-record"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 479,
+              "repository": "mctlhq/mctl-api"
+            }
+          ],
+          "id": "rollback-revision",
+          "phase": "lifecycle",
+          "required": true,
+          "state": "unknown"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-10-29T20:15:49Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 0,
+          "complete": 2,
+          "ready": 0,
+          "unknown": 9
+        },
+        "required": {
+          "blocked": 0,
+          "complete": 2,
+          "ready": 0,
+          "unknown": 9
         }
       }
     },
@@ -285,7 +515,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -460,7 +690,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -763,7 +993,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -790,15 +1020,22 @@
         },
         "manifest": {
           "path": "roadmap/epics/agent-runtime-assurance.yaml",
-          "sha256": "3f53b7545b0434c4c08d404d0f8af2ec088f6d3fc55bdd225a5ac63b966873d8"
+          "sha256": "89fb6d2a214bc93a0318008518cb08f44c885383ae72dbba519765f6b4e34bf7"
         },
         "name": "agent-runtime-assurance"
       },
       "items": [
         {
-          "blockers": [],
+          "blockers": [
+            {
+              "id": "adversarial-boundary-suite",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
           "completion": {
-            "reason": "unbound",
+            "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
@@ -806,14 +1043,18 @@
           ],
           "externalDependsOn": [],
           "id": "adaptive-probe-generation",
+          "issue": {
+            "number": 697,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "adaptation",
           "required": true,
-          "state": "unknown"
+          "state": "blocked"
         },
         {
           "blockers": [],
           "completion": {
-            "reason": "unbound",
+            "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
@@ -821,27 +1062,42 @@
           ],
           "externalDependsOn": [],
           "id": "adversarial-boundary-suite",
+          "issue": {
+            "number": 696,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "suites",
           "required": true,
-          "state": "unknown"
+          "state": "ready"
         },
         {
           "blockers": [],
           "completion": {
-            "reason": "unbound",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [],
           "externalDependsOn": [],
           "id": "assurance-contract",
+          "issue": {
+            "number": 694,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "contract",
           "required": true,
-          "state": "unknown"
+          "state": "complete"
         },
         {
-          "blockers": [],
+          "blockers": [
+            {
+              "id": "adaptive-probe-generation",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
           "completion": {
-            "reason": "unbound",
+            "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
@@ -854,14 +1110,25 @@
             }
           ],
           "id": "finding-replay-validation",
+          "issue": {
+            "number": 698,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "validation",
           "required": true,
-          "state": "unknown"
+          "state": "blocked"
         },
         {
-          "blockers": [],
+          "blockers": [
+            {
+              "id": "finding-replay-validation",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
           "completion": {
-            "reason": "unbound",
+            "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
@@ -869,29 +1136,44 @@
           ],
           "externalDependsOn": [],
           "id": "historical-proof",
+          "issue": {
+            "number": 699,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "integration",
           "required": true,
-          "state": "unknown"
+          "state": "blocked"
         },
         {
           "blockers": [],
           "completion": {
-            "reason": "unbound",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "assurance-contract"
           ],
           "externalDependsOn": [],
           "id": "probe-harness",
+          "issue": {
+            "number": 695,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "harness",
           "required": true,
-          "state": "unknown"
+          "state": "complete"
         },
         {
-          "blockers": [],
+          "blockers": [
+            {
+              "id": "historical-proof",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
           "completion": {
-            "reason": "unbound",
+            "reason": "open",
             "status": "incomplete"
           },
           "dependsOn": [
@@ -899,30 +1181,36 @@
           ],
           "externalDependsOn": [],
           "id": "regression-promotion",
+          "issue": {
+            "number": 700,
+            "repository": "mctlhq/mctl-agents"
+          },
           "phase": "integration",
           "required": true,
-          "state": "unknown"
+          "state": "blocked"
         }
       ],
       "kind": "RoadmapReadySet",
-      "ready": [],
+      "ready": [
+        "adversarial-boundary-suite"
+      ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 0,
-          "complete": 0,
-          "ready": 0,
-          "unknown": 7
+          "blocked": 4,
+          "complete": 2,
+          "ready": 1,
+          "unknown": 0
         },
         "required": {
-          "blocked": 0,
-          "complete": 0,
-          "ready": 0,
-          "unknown": 7
+          "blocked": 4,
+          "complete": 2,
+          "ready": 1,
+          "unknown": 0
         }
       }
     },
@@ -1079,7 +1367,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1232,7 +1520,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1500,7 +1788,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1662,7 +1950,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1793,7 +2081,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1902,7 +2190,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1971,7 +2259,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1998,11 +2286,37 @@
         },
         "manifest": {
           "path": "roadmap/epics/enterprise-mcp.yaml",
-          "sha256": "becc3f96938ca17474d6a178dddaa81840fdf14bae8d54262946aef199ae5ed4"
+          "sha256": "4c81bd03b757c1d2312994dfe5c98142713ab0e116fd1b0bd9e4df3fc036bd09"
         },
         "name": "enterprise-mcp"
       },
       "items": [
+        {
+          "blockers": [
+            {
+              "id": "tool-exposure-benchmark",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "tool-exposure-benchmark"
+          ],
+          "externalDependsOn": [],
+          "id": "adaptive-tool-exposure",
+          "issue": {
+            "number": 165,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "context-efficiency",
+          "required": false,
+          "state": "blocked"
+        },
         {
           "blockers": [],
           "completion": {
@@ -2245,6 +2559,25 @@
           "phase": "compatibility",
           "required": true,
           "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "correlation-contract"
+          ],
+          "externalDependsOn": [],
+          "id": "tool-exposure-benchmark",
+          "issue": {
+            "number": 597,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "context-efficiency",
+          "required": false,
+          "state": "ready"
         }
       ],
       "kind": "RoadmapReadySet",
@@ -2252,18 +2585,19 @@
         "denied-user-and-bypass",
         "gateway-hardening",
         "local-bridge-proof",
-        "mcp-apps-validation"
+        "mcp-apps-validation",
+        "tool-exposure-benchmark"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 2,
+          "blocked": 3,
           "complete": 5,
-          "ready": 4,
+          "ready": 5,
           "unknown": 0
         },
         "required": {
@@ -2444,7 +2778,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2599,7 +2933,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2778,7 +3112,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2982,7 +3316,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3175,7 +3509,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3431,7 +3765,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3545,7 +3879,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3572,7 +3906,7 @@
         },
         "manifest": {
           "path": "roadmap/epics/tenant-support-agent.yaml",
-          "sha256": "7e12aa399fbf8282a09dc382d1fff3c765ad95795e5947478d18f712c7a7c1a0"
+          "sha256": "59b987d53b47ef32fe0eb0a0540af3b026c9d9a961bd72cb271c9e40623ebe48"
         },
         "name": "tenant-support-agent"
       },
@@ -3597,8 +3931,8 @@
         {
           "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [],
           "externalDependsOn": [],
@@ -3609,20 +3943,13 @@
           },
           "phase": "authority",
           "required": true,
-          "state": "ready"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s0a-authority",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s0a-authority"
@@ -3635,20 +3962,13 @@
           },
           "phase": "diagnostics",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s0a-authority",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s0a-authority"
@@ -3661,26 +3981,13 @@
           },
           "phase": "audit",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s-1-runtime",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "s0a-authority",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s-1-runtime",
@@ -3689,37 +3996,18 @@
           "externalDependsOn": [],
           "id": "s1a-core",
           "issue": {
-            "number": 245,
-            "repository": "mctlhq/.github"
+            "number": 2,
+            "repository": "mctlhq/mctl-support"
           },
           "phase": "core",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s0a-authority",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "s0b-diagnostics",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "s1a-core",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s0a-authority",
@@ -3729,25 +4017,18 @@
           "externalDependsOn": [],
           "id": "s1b-agent-loop",
           "issue": {
-            "number": 246,
-            "repository": "mctlhq/.github"
+            "number": 3,
+            "repository": "mctlhq/mctl-support"
           },
           "phase": "agent-loop",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s1b-agent-loop",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s1b-agent-loop"
@@ -3755,37 +4036,18 @@
           "externalDependsOn": [],
           "id": "s1c-governance",
           "issue": {
-            "number": 247,
-            "repository": "mctlhq/.github"
+            "number": 4,
+            "repository": "mctlhq/mctl-support"
           },
           "phase": "governance",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s1a-core",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "s1b-agent-loop",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "s1c-governance",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s1a-core",
@@ -3800,26 +4062,13 @@
           },
           "phase": "mcp",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
-          "blockers": [
-            {
-              "id": "s1b-agent-loop",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            },
-            {
-              "id": "s1c-governance",
-              "kind": "workItem",
-              "reason": "open",
-              "status": "incomplete"
-            }
-          ],
+          "blockers": [],
           "completion": {
-            "reason": "open",
-            "status": "incomplete"
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s1b-agent-loop",
@@ -3828,50 +4077,132 @@
           "externalDependsOn": [],
           "id": "s1e-acceptance",
           "issue": {
-            "number": 248,
-            "repository": "mctlhq/.github"
+            "number": 5,
+            "repository": "mctlhq/mctl-support"
           },
           "phase": "acceptance",
           "required": true,
-          "state": "blocked"
+          "state": "complete"
         },
         {
           "blockers": [],
           "completion": {
-            "reason": "unbound",
+            "reason": "open",
             "status": "incomplete"
+          },
+          "dependsOn": [
+            "s2b-audience-enforcement",
+            "s2c-stream",
+            "s2d-grafana"
+          ],
+          "externalDependsOn": [],
+          "id": "s2-pilot",
+          "issue": {
+            "number": 270,
+            "repository": "mctlhq/.github"
+          },
+          "phase": "pilot",
+          "required": false,
+          "state": "ready"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
           },
           "dependsOn": [
             "s1e-acceptance"
           ],
           "externalDependsOn": [],
-          "id": "s2-pilot",
+          "id": "s2a-audience",
+          "issue": {
+            "number": 849,
+            "repository": "mctlhq/mctl-api"
+          },
           "phase": "pilot",
           "required": false,
-          "state": "unknown"
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "s2a-audience"
+          ],
+          "externalDependsOn": [],
+          "id": "s2b-audience-enforcement",
+          "issue": {
+            "number": 22,
+            "repository": "mctlhq/mctl-support"
+          },
+          "phase": "pilot",
+          "required": false,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "s1e-acceptance"
+          ],
+          "externalDependsOn": [],
+          "id": "s2c-stream",
+          "issue": {
+            "number": 23,
+            "repository": "mctlhq/mctl-support"
+          },
+          "phase": "pilot",
+          "required": false,
+          "state": "complete"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "closed",
+            "status": "complete"
+          },
+          "dependsOn": [
+            "s1e-acceptance"
+          ],
+          "externalDependsOn": [],
+          "id": "s2d-grafana",
+          "issue": {
+            "number": 2228,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "pilot",
+          "required": false,
+          "state": "complete"
         }
       ],
       "kind": "RoadmapReadySet",
       "ready": [
         "s-1-runtime",
-        "s0a-authority"
+        "s2-pilot"
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
         "items": {
-          "blocked": 7,
-          "complete": 0,
+          "blocked": 0,
+          "complete": 12,
           "ready": 2,
-          "unknown": 1
+          "unknown": 0
         },
         "required": {
-          "blocked": 7,
-          "complete": 0,
-          "ready": 2,
+          "blocked": 0,
+          "complete": 8,
+          "ready": 1,
           "unknown": 0
         }
       }
@@ -4159,7 +4490,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-26T22:24:01Z",
+        "capturedAt": "2026-10-29T20:15:49Z",
         "mode": "live-capture"
       },
       "summary": {
