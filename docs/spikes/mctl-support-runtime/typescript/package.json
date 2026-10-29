@@ -1,0 +1,31 @@
+{
+  "name": "mctl-support-spike-ts",
+  "version": "1.0.0",
+  "description": "mctl-support runtime spike, TypeScript candidate (.github#249)",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "replica:a": "PORT=8021 REPLICA=a tsx src/server.ts",
+    "replica:b": "PORT=8022 REPLICA=b tsx src/server.ts",
+    "smoke": "tsx src/smoke_anthropic.ts"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@a2a-js/sdk": "1.3.0",
+    "@anthropic-ai/sdk": "1.3.0",
+    "express": "5.3.0",
+    "kysely": "0.29.7",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "26.6.5",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  },
+  "private": true
+}

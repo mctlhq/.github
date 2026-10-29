@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/schemas/roadmap/spike-definition-v1alpha1.json",
+  "title": "roadmap.mctl.ai/v1alpha1 SpikeDefinition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {"const": "roadmap.mctl.ai/v1alpha1"},
+    "kind": {"const": "SpikeDefinition"},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "owner"],
+      "properties": {
+        "name": {"$ref": "common-v1alpha1.json#/$defs/name"},
+        "owner": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$"
+        },
+        "labels": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "question", "lifecycle", "github", "outcomes"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1},
+        "question": {"type": "string", "minLength": 1},
+        "lifecycle": {"enum": ["proposed", "parked", "active", "decided", "archived"]},
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issue"],
+          "properties": {
+            "issue": {"$ref": "common-v1alpha1.json#/$defs/issueRef"}
+          }
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/outcome"}
+        },
+        "epic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "workItem"],
+          "properties": {
+            "name": {"$ref": "common-v1alpha1.json#/$defs/name"},
+            "workItem": {"$ref": "common-v1alpha1.json#/$defs/localId"}
+          }
+        },
+        "activation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["trigger"],
+          "properties": {
+            "trigger": {"type": "string", "minLength": 1},
+            "reviewBy": {"$ref": "#/$defs/date"}
+          }
+        },
+        "timebox": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decisionBy"],
+          "properties": {
+            "decisionBy": {"$ref": "#/$defs/date"}
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "report": {
+              "type": "string",
+              "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$)).+$"
+            }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "devloop": {"type": "boolean"}
+          }
+        },
+        "decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["verdict", "decidedAt", "decidedBy"],
+          "properties": {
+            "verdict": {"$ref": "#/$defs/outcome"},
+            "decidedAt": {"$ref": "#/$defs/date"},
+            "decidedBy": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$"
+            },
+            "followUps": {
+              "type": "array",
+              "items": {"$ref": "common-v1alpha1.json#/$defs/issueRef"},
+              "uniqueItems": true
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"lifecycle": {"const": "parked"}}, "required": ["lifecycle"]},
+          "then": {"required": ["activation"]}
+        },
+        {
+          "if": {"properties": {"lifecycle": {"const": "active"}}, "required": ["lifecycle"]},
+          "then": {"required": ["timebox"]}
+        },
+        {
+          "if": {"properties": {"lifecycle": {"const": "decided"}}, "required": ["lifecycle"]},
+          "then": {"required": ["decision"]},
+          "else": {"not": {"required": ["decision"]}}
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "outcome": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "format": "date"
+    }
+  }
+}

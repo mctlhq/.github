@@ -1,0 +1,7 @@
+{"_note":"Synthetic, shaped from the public GitHub code_scanning_alert webhook docs. No code bodies.",
+ "delivery_id":"gh-delivery-0001","provider":"github-code-scanning","action":"created",
+ "alert":{"number":7,"state":"open","rule":{"id":"go/sql-injection","severity":"error"},
+  "most_recent_instance":{"ref":"refs/heads/main","commit_sha":"1111111111111111111111111111111111111111","location":{"path":"internal/db/query.go"}}},
+ "repository":{"full_name":"example-org/example-repo"},
+ "vuln_class_id":"CVE-2025-54236","component":"github.com/example/pgx",
+ "description":"synthetic","severity":"high"}

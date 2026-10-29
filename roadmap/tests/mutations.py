@@ -317,3 +317,73 @@ def synthetic_snapshot(
         "issues": issues,
     }
 
+
+
+# ---------------------------------------------------------------------------
+# SpikeDefinition manifest mutators (validator tests; not snapshot mutators).
+# Same discipline: pure, deep-copying, one break per call.
+# ---------------------------------------------------------------------------
+
+
+def set_lifecycle(manifest: dict[str, Any], lifecycle: str) -> dict[str, Any]:
+    result = copy.deepcopy(manifest)
+    result["spec"]["lifecycle"] = lifecycle
+    return result
+
+
+def drop_path(manifest: dict[str, Any], *path: str) -> dict[str, Any]:
+    """Remove the key at the given path, e.g. drop_path(m, "spec", "timebox")."""
+
+    result = copy.deepcopy(manifest)
+    node = result
+    for part in path[:-1]:
+        node = node[part]
+    del node[path[-1]]
+    return result
+
+
+def set_verdict(manifest: dict[str, Any], verdict: str) -> dict[str, Any]:
+    result = copy.deepcopy(manifest)
+    result["spec"]["decision"]["verdict"] = verdict
+    return result
+
+
+def bind_spike_epic(
+    manifest: dict[str, Any], name: str, work_item: str
+) -> dict[str, Any]:
+    result = copy.deepcopy(manifest)
+    result["spec"]["epic"] = {"name": name, "workItem": work_item}
+    return result
+
+
+# --- EpicDefinition manifest mutators (lifecycle guard) ---------------------
+
+
+def add_required_item(
+    document: dict[str, Any], item_id: str, *, required: bool = True,
+    phase: str | None = None, issue: str | None = None,
+) -> dict[str, Any]:
+    """Return a copy of an EpicDefinition with one extra work item."""
+
+    result = copy.deepcopy(document)
+    items = result["spec"]["workItems"]
+    item: dict[str, Any] = {
+        "id": item_id,
+        "phase": phase or items[0]["phase"],
+        "required": required,
+        "title": item_id,
+        "owner": "mctl-agents",
+    }
+    if issue is not None:
+        item["issue"] = ref(issue)
+    items.append(item)
+    return result
+
+
+def set_required(document: dict[str, Any], item_id: str, required: bool) -> dict[str, Any]:
+    result = copy.deepcopy(document)
+    for item in result["spec"]["workItems"]:
+        if item["id"] == item_id:
+            item["required"] = required
+            return result
+    raise KeyError(item_id)

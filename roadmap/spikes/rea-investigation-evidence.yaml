@@ -1,0 +1,43 @@
+# Decided 2026-10-27 by the owner from the live runs and report in
+# mctlhq/mctl-agents#851: with REA as MCP or CLI, claude-opus-5-5 recovered the
+# same oracle facts as the baseline, made zero REA calls in the scored
+# investigations and cited REA nowhere, while the MCP schema (229 tools,
+# 121 KB) added up to 48% input tokens. The corpus sat at the ceiling, so a
+# re-open needs a harder target. Follow-ups: classifier-interruption detection
+# (#849) and removal of the spike harness (#850).
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: rea-investigation-evidence
+  owner: mctlhq/mctl-agents
+spec:
+  title: REA as an investigation evidence provider
+  question: >-
+    Does REA make DevLoop investigations of source-owned binaries more
+    accurate and better evidenced, and at which stage, if any, do current
+    Claude workflows refuse or fail?
+  lifecycle: decided
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 796
+  outcomes:
+    - ADOPT_OPTIONAL_REA_CAPABILITY
+    - ADOPT_REA_CLI_ADAPTER_ONLY
+    - RESEARCH_ONLY
+    - REJECT
+  timebox:
+    decisionBy: "2026-11-15"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/796-rea-investigation-evidence.md
+  decision:
+    verdict: REJECT
+    decidedAt: "2026-10-27"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-agents
+        number: 849
+      - repository: mctlhq/mctl-agents
+        number: 850

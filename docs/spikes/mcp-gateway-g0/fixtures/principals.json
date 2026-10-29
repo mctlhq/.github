@@ -1,0 +1,20 @@
+{
+  "gateway_principal": "prn_fixture_gateway",
+  "principals": {
+    "prn_fixture_a": {"login": "fixture-a", "tenants": {"tenant-red": "owner", "tenant-blue": "viewer"}},
+    "prn_fixture_b": {"login": "fixture-b", "tenants": {"tenant-blue": "developer"}}
+  },
+  "downstream_tools": {
+    "api": {
+      "list_services": {"roles": ["viewer", "developer", "owner"], "needs_tenant": false},
+      "get_service_status": {"roles": ["viewer", "developer", "owner"], "needs_tenant": false},
+      "deploy_service": {"roles": ["developer", "owner"], "needs_tenant": true},
+      "delete_service": {"roles": ["owner"], "needs_tenant": true},
+      "internal_debug": {"roles": [], "needs_tenant": true}
+    },
+    "tg": {
+      "send_message": {"roles": ["owner"], "needs_tenant": false},
+      "list_chats": {"roles": ["viewer", "developer", "owner"], "needs_tenant": false}
+    }
+  }
+}

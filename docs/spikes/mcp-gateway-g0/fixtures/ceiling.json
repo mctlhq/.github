@@ -1,0 +1,4 @@
+{
+  "api": ["list_services", "get_service_status", "deploy_service", "delete_service"],
+  "tg": ["send_message", "list_chats", "unpublished_tool"]
+}

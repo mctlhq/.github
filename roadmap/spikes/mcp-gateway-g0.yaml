@@ -1,0 +1,39 @@
+# Name, outcomes, report path and decisionBy follow the approved DevLoop
+# proposal for .github#195 (decisionBy is its stated default, 2026-11-15).
+# The owner accepted the report's REVISE verdict on 2026-10-26; the follow-ups
+# are the two P1 items from report D6 (mctl-api signing/JWKS/aud, plan revision).
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: mcp-gateway-g0
+  owner: mctlhq/.github
+spec:
+  title: MCP gateway G0 - identity, per-tool policy and tenant isolation
+  question: >-
+    Can a gateway in front of mcp.mctl.ai carry caller identity through a
+    token exchange, enforce per-tool policy and keep tenants isolated, with
+    downstream services checking independently, before any migration starts?
+  lifecycle: decided
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 195
+  outcomes:
+    - GO
+    - REVISE
+    - NO_GO
+  timebox:
+    decisionBy: "2026-11-15"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/mcp-gateway-g0.md
+  decision:
+    verdict: REVISE
+    decidedAt: "2026-10-26"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-api
+        number: 805
+      - repository: mctlhq/.github
+        number: 231

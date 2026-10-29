@@ -1,0 +1,26 @@
+# Archived 2026-10-27 (owner triage of parked spikes). The portal this proof
+# runs through is replaced by the mcp-gateway epic (.github#236), whose plan
+# keeps Local Bridge session custody on the device as a stated non-goal. The
+# custody proof moves into the acceptance of G3 (.github#239), where tg
+# becomes a gateway downstream, so it is measured on the path that stays.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: portal-local-bridge-custody
+  owner: mctlhq/mctl-telegram
+spec:
+  title: Local Bridge session custody through mcp.mctl.ai
+  question: >-
+    Does a Local Bridge user reaching tg through the mcp.mctl.ai portal keep
+    Telegram session custody on the local device?
+  lifecycle: archived
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 615
+  epic:
+    name: enterprise-mcp
+    workItem: local-bridge-proof
+  outcomes:
+    - CONFIRMED
+    - REFUTED

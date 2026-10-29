@@ -3,6 +3,7 @@
   <h1>MCTL</h1>
   <h3>The AI-Native Kubernetes Platform</h3>
   <p>Your complete infrastructure stack unified: GitOps, secrets management, team isolation, and AI automation. Deploy services via a portal, REST API, or natural language.</p>
+  <p><a href="https://hub.xerj.org/contributors/mashkovd"><img src="https://hub.xerj.org/contributors/mashkovd/badge.svg" alt="XERJ Corpus Hub contributor" /></a></p>
 </div>
 
 <br>
@@ -103,6 +104,7 @@ graph LR
 
   subgraph controlplane ["  Control Plane  "]
     API(["mctl-api<br/>REST + MCP + skills"]):::ctrl
+    ZITADEL(["ZITADEL<br/>identity · OIDC"]):::ctrl
   end
 
   subgraph orchestration ["  Orchestration + agents  "]
@@ -123,12 +125,14 @@ graph LR
     Vault(["Vault<br/>+ External Secrets"]):::data
     PG(["CloudNativePG<br/>per-service databases"]):::data
     Obs(["Observability<br/>VictoriaMetrics · Grafana · Loki"]):::data
-    MinIO(["MinIO<br/>Loki object store"]):::data
   end
+
+  R2(["Cloudflare R2<br/>Loki object store"]):::data
 
   Portal -- REST --> API
   CLI -- REST --> API
   AI -- MCP --> API
+  API -. sign-in .-> ZITADEL
   Push -- git push --> Gitops
 
   API -- operations --> Argo
@@ -147,7 +151,7 @@ graph LR
   Vault -. secrets .-> Tenants
   Tenants --> PG
   Tenants -. metrics · logs .-> Obs
-  Obs --> MinIO
+  Obs --> R2
 
   style interfaces fill:#f0f5ff,stroke:#3b82f6,stroke-width:2px,color:#1e40af
   style controlplane fill:#fefce8,stroke:#f59e0b,stroke-width:2px,color:#92400e
@@ -254,7 +258,6 @@ graph LR
 ---
 
 ## Interaction Modes
-
 | Interface | Endpoint | Primary Use Case |
 |-----------|----------|------------------|
 | **AI / MCP** | `api.mctl.ai/mcp` | Natural language infrastructure management directly from your IDE or AI assistant. |
@@ -272,8 +275,8 @@ We stand on the shoulders of giants. mctl orchestrates best-in-class open source
 
 * **Infrastructure:** K3s, Terraform, Traefik
 * **Delivery:** ArgoCD, Argo Workflows, Argo Rollouts, Helm, GitHub Actions
-* **Security:** HashiCorp Vault, External Secrets, cert-manager, Dex (OIDC)
-* **Data:** CloudNativePG (PostgreSQL), Temporal, MinIO
+* **Security:** HashiCorp Vault, External Secrets, cert-manager, ZITADEL (OIDC)
+* **Data:** CloudNativePG (PostgreSQL), Temporal
 * **Observability:** VictoriaMetrics, Grafana, AlertManager, Loki
 * **Developer Experience:** Backstage, VitePress
 
