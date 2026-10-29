@@ -1,3 +1,9 @@
+# Archived 2026-10-27 (owner triage of parked spikes). The activation clause
+# said that if .github#195 ended in GO the gateway would own the catalogue and
+# this spike would be archived. G0 closed REVISE, and its re-check
+# (.github#235) recorded GO on 2026-10-26 for the mcp-gateway epic
+# (.github#236), whose G4 cut-over deletes the portal Access apps and
+# allowlists. The manual re-snapshot (mctl-gitops#1258) stays until then.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -9,7 +15,7 @@ spec:
     Does the portal's default_disabled allowlist survive an automatic
     capability sync, with token expiry monitored, so that the manual OAuth
     re-snapshot can be retired?
-  lifecycle: parked
+  lifecycle: archived
   github:
     issue:
       repository: mctlhq/.github
@@ -17,9 +23,3 @@ spec:
   outcomes:
     - MIGRATE_TO_AUTO_OAUTH
     - KEEP_MANUAL_RESNAPSHOT
-  activation:
-    trigger: >-
-      .github#195 records NO-GO, or a REVISE that keeps the Cloudflare MCP
-      portal. If it records GO, the gateway owns the catalogue and this spike
-      is archived instead.
-    reviewBy: "2026-12-15"

@@ -354,3 +354,36 @@ def bind_spike_epic(
     result = copy.deepcopy(manifest)
     result["spec"]["epic"] = {"name": name, "workItem": work_item}
     return result
+
+
+# --- EpicDefinition manifest mutators (lifecycle guard) ---------------------
+
+
+def add_required_item(
+    document: dict[str, Any], item_id: str, *, required: bool = True,
+    phase: str | None = None, issue: str | None = None,
+) -> dict[str, Any]:
+    """Return a copy of an EpicDefinition with one extra work item."""
+
+    result = copy.deepcopy(document)
+    items = result["spec"]["workItems"]
+    item: dict[str, Any] = {
+        "id": item_id,
+        "phase": phase or items[0]["phase"],
+        "required": required,
+        "title": item_id,
+        "owner": "mctl-agents",
+    }
+    if issue is not None:
+        item["issue"] = ref(issue)
+    items.append(item)
+    return result
+
+
+def set_required(document: dict[str, Any], item_id: str, required: bool) -> dict[str, Any]:
+    result = copy.deepcopy(document)
+    for item in result["spec"]["workItems"]:
+        if item["id"] == item_id:
+            item["required"] = required
+            return result
+    raise KeyError(item_id)

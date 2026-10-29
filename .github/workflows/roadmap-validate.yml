@@ -20,12 +20,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          # The lifecycle guard compares against a base commit, so it needs history.
+          fetch-depth: 0
 
       - name: Install roadmap validator dependencies
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
 
       - name: Validate roadmap manifests
         run: python3 roadmap/scripts/validate.py roadmap/epics roadmap/spikes
+
+      # Diff-aware, offline guard: no completed epic may gain required work.
+      # An unresolvable base fails the step (exit 2); it is never read as "no change".
+      - name: Guard completed epics against new required work (pull request)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        # The checkout is the PR merge commit, whose first parent is the base sha.
+        run: python3 roadmap/scripts/lifecycle_guard.py --base-ref "$BASE_SHA"
+
+      - name: Lifecycle guard has no base (push)
+        if: github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000'
+        run: |
+          echo "::warning::lifecycle guard: no base commit for this push; guard NOT evaluated"
+
+      - name: Guard completed epics against new required work (push)
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: python3 roadmap/scripts/lifecycle_guard.py --base-ref "$BEFORE"
 
       # Offline fixture replay only. Live mode needs a token and external
       # state, so it stays a deliberate manual step and never runs here.

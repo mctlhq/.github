@@ -40,12 +40,18 @@ spec:
       owner: mctl-agents
       phase: contract
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 694
 
     - id: probe-harness
       title: Implement a deterministic bounded probe executor with target allowlists, budgets and safe failure behavior
       owner: mctl-agents
       phase: harness
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 695
       dependsOn:
         - assurance-contract
 
@@ -54,6 +60,9 @@ spec:
       owner: mctl-agents
       phase: suites
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 696
       dependsOn:
         - probe-harness
 
@@ -62,6 +71,9 @@ spec:
       owner: mctl-agents
       phase: adaptation
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 697
       dependsOn:
         - adversarial-boundary-suite
 
@@ -70,6 +82,9 @@ spec:
       owner: mctl-agents
       phase: validation
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 698
       dependsOn:
         - adaptive-probe-generation
       externalDependsOn:
@@ -81,6 +96,9 @@ spec:
       owner: mctl-agents
       phase: integration
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 699
       dependsOn:
         - finding-replay-validation
 
@@ -89,6 +107,9 @@ spec:
       owner: mctl-agents
       phase: integration
       required: true
+      issue:
+        repository: mctlhq/mctl-agents
+        number: 700
       dependsOn:
         - historical-proof
   completion:
