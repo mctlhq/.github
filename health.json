@@ -101,7 +101,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -346,7 +346,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -416,7 +416,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -651,7 +651,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -904,7 +904,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1245,7 +1245,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -1355,7 +1355,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1504,7 +1504,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1777,7 +1777,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1897,7 +1897,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2052,7 +2052,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2132,7 +2132,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2215,7 +2215,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -2235,6 +2235,16 @@
           "mcp-tasks"
         ],
         "items": [
+          {
+            "id": "adaptive-tool-exposure",
+            "issue": {
+              "number": 165,
+              "repository": "mctlhq/.github"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
+          },
           {
             "id": "compatibility-spike",
             "issue": {
@@ -2344,6 +2354,16 @@
             "reason": "closed",
             "required": true,
             "status": "complete"
+          },
+          {
+            "id": "tool-exposure-benchmark",
+            "issue": {
+              "number": 597,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "reason": "open",
+            "required": false,
+            "status": "incomplete"
           }
         ],
         "mode": "allRequired",
@@ -2356,6 +2376,70 @@
         "status": "incomplete"
       },
       "diagnostics": [
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner adaptive-tool-exposure): blocked=mctlhq/.github#165, blocker=mctlhq/mctl-agents#597",
+          "subject": {
+            "blocked": {
+              "number": 165,
+              "repository": "mctlhq/.github"
+            },
+            "blocker": {
+              "number": 597,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "owner": "adaptive-tool-exposure"
+          }
+        },
+        {
+          "code": "DependencyMissing",
+          "level": "drift",
+          "message": "DependencyMissing (owner tool-exposure-benchmark): blocked=mctlhq/mctl-agents#597, blocker=mctlhq/mctl-telegram#617",
+          "subject": {
+            "blocked": {
+              "number": 597,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "blocker": {
+              "number": 617,
+              "repository": "mctlhq/mctl-telegram"
+            },
+            "owner": "tool-exposure-benchmark"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner adaptive-tool-exposure): child=mctlhq/.github#165, expectedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 165,
+              "repository": "mctlhq/.github"
+            },
+            "expectedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "adaptive-tool-exposure"
+          }
+        },
+        {
+          "code": "HierarchyMissingParent",
+          "level": "drift",
+          "message": "HierarchyMissingParent (owner tool-exposure-benchmark): child=mctlhq/mctl-agents#597, expectedParent=mctlhq/.github#35",
+          "subject": {
+            "child": {
+              "number": 597,
+              "repository": "mctlhq/mctl-agents"
+            },
+            "expectedParent": {
+              "number": 35,
+              "repository": "mctlhq/.github"
+            },
+            "owner": "tool-exposure-benchmark"
+          }
+        },
         {
           "code": "HierarchyUnexpectedChild",
           "level": "info",
@@ -2508,19 +2592,19 @@
         },
         "manifest": {
           "path": "roadmap/epics/enterprise-mcp.yaml",
-          "sha256": "becc3f96938ca17474d6a178dddaa81840fdf14bae8d54262946aef199ae5ed4"
+          "sha256": "4c81bd03b757c1d2312994dfe5c98142713ab0e116fd1b0bd9e4df3fc036bd09"
         },
         "name": "enterprise-mcp"
       },
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
-      "state": "healthy",
+      "state": "drift",
       "summary": {
-        "drift": 0,
+        "drift": 4,
         "error": 0,
         "info": 9
       }
@@ -2625,7 +2709,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2725,7 +2809,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2928,7 +3012,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3065,7 +3149,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3185,7 +3269,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3325,7 +3409,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3405,7 +3489,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -4004,7 +4088,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -4174,7 +4258,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-29T20:51:03Z",
+        "capturedAt": "2026-10-29T21:00:29Z",
         "mode": "live-capture"
       },
       "state": "healthy",

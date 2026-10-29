@@ -1138,6 +1138,22 @@
       "found": true,
       "parent": null,
       "requested": {
+        "number": 165,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 165,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-10-06T12:28:22Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
         "number": 173,
         "repository": "mctlhq/.github"
       },
@@ -2269,6 +2285,22 @@
       "stateReason": "completed",
       "subIssues": [],
       "updatedAt": "2026-10-04T11:15:26Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 597,
+        "repository": "mctlhq/mctl-agents"
+      },
+      "resolved": {
+        "number": 597,
+        "repository": "mctlhq/mctl-agents"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-10-23T12:09:05Z"
     },
     {
       "blockedBy": [
@@ -5307,7 +5339,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-29T20:51:03Z",
+    "capturedAt": "2026-10-29T21:00:29Z",
     "mode": "live-capture"
   }
 }

@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "7da00d10a199281d97fa6cf178b209352041198f"
+    "revision": "0948cff5ae1e14c87f58e2ae40fd106bed34ff49"
   },
   "files": {
     "health.json": {
-      "sha256": "65a0ef5303bb38d3da52379614df01e32bd2908dceb218c597c581cc89056246"
+      "sha256": "9485e4b6bf68c07b8732445d1e06371a06f4bf386e2423fc843b6e796115b313"
     },
     "ready-set.json": {
-      "sha256": "f6ebae463b28b3b257dfa4022dc97029e73695fb46d15736743df2cecebc0088"
+      "sha256": "0bf96f3967f7ccf100194eff88e0c8b7019803295104b61571301d2e545f7c2c"
     },
     "snapshot.json": {
-      "sha256": "aebea829f322d6e6cc915bc9ceea7879b7457e4451f91c7a09699661eac32d90"
+      "sha256": "71ef68b74ac99d0ef343615ccfa881dcd5102df6144e991e15d2044ac8749c90"
     }
   },
   "kind": "RoadmapPublication",
@@ -154,7 +154,7 @@
         "title": "Cloudflare MCP Portal and enterprise MCP boundary"
       },
       "path": "roadmap/epics/enterprise-mcp.yaml",
-      "sha256": "becc3f96938ca17474d6a178dddaa81840fdf14bae8d54262946aef199ae5ed4"
+      "sha256": "4c81bd03b757c1d2312994dfe5c98142713ab0e116fd1b0bd9e4df3fc036bd09"
     },
     {
       "epic": {
@@ -249,12 +249,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-29T20:51:03Z",
+    "capturedAt": "2026-10-29T21:00:29Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "7da00d10a199281d97fa6cf178b209352041198f"
+    "revision": "0948cff5ae1e14c87f58e2ae40fd106bed34ff49"
   }
 }
