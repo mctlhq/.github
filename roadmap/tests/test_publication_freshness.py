@@ -610,6 +610,8 @@ class BudgetStepTest(unittest.TestCase):
         self.assertEqual("${{ steps.capture-token.outputs.token }}", capture["env"]["GITHUB_TOKEN"])
         order = [s.get("id") for s in build["steps"]]
         self.assertLess(order.index("budget"), order.index("capture-token"))
+        # A run whose budget check skips mints no capture token.
+        self.assertEqual(capture["if"], steps["capture-token"]["if"])
 
     def test_the_window_starts_once_before_the_loop(self) -> None:
         # The deadline is --start + BUDGET_WAIT_SECONDS. If start were taken
