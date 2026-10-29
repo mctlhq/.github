@@ -120,6 +120,23 @@ jobs:
         if: steps.due.outputs.capture == 'true'
         run: python3 -m pip install --disable-pip-version-check -r roadmap/requirements.txt
 
+      # The capture reads issues in private repositories (mctl-support), which
+      # this repository's github.token cannot see: it answers 404. The token
+      # comes from the internal mctl-agents App (docs/runbooks/
+      # github-app-scope-audit.md in mctl-gitops), narrowed to issues:read,
+      # so the installed evaluator packages never hold a write credential.
+      # Its rate limit is the installation's, which is what the budget check
+      # below has to read.
+      - name: Mint the read token for the budget check
+        id: budget-token
+        if: steps.due.outputs.capture == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AGENTS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTS_APP_PRIVATE_KEY }}
+          owner: mctlhq
+          permission-issues: read
+
       # GET /rate_limit is free. A capture that runs out of budget part-way
       # publishes nothing and spends what the next run needs, so none starts
       # without the budget to finish. A scheduled run then skips: the next
@@ -133,7 +150,7 @@ jobs:
         if: steps.due.outputs.capture == 'true'
         env:
           EVENT: ${{ github.event_name }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.budget-token.outputs.token }}
         run: |
           cost="$(python3 roadmap/scripts/publish.py cost)"
           # Every decision, including whether a /rate_limit answer is a
@@ -156,12 +173,26 @@ jobs:
             esac
           done
 
+      # A fresh token right before the capture: an installation token lives
+      # one hour, and the budget wait above can outlast it
+      # (BUDGET_WAIT_SECONDS). Both tokens draw on the same installation
+      # budget.
+      - name: Mint the read token for the capture
+        id: capture-token
+        if: steps.budget.outputs.capture == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.AGENTS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AGENTS_APP_PRIVATE_KEY }}
+          owner: mctlhq
+          permission-issues: read
+
       # Manifests and evaluator come from the same checkout, so the source and
       # evaluator revisions are the same commit.
       - name: Capture and evaluate
         if: steps.budget.outputs.capture == 'true'
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.capture-token.outputs.token }}
         run: |
           revision="$(git rev-parse HEAD)"
           python3 roadmap/scripts/publish.py build --live \
@@ -174,7 +205,7 @@ jobs:
       - name: Report the API budget after the capture
         if: steps.budget.outputs.capture == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.capture-token.outputs.token }}
         run: gh api rate_limit --jq '.resources.core | "core budget \(.remaining)/\(.limit) left"'
 
       - name: Verify the publication reproduces from its own snapshot
