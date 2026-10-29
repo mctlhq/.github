@@ -593,6 +593,26 @@ class BudgetStepTest(unittest.TestCase):
         # The job timeout must leave room for the whole window plus a capture.
         self.assertGreater(build["timeout-minutes"] * 60, publication_order.BUDGET_WAIT_SECONDS + 15 * 60)
 
+    def test_private_repositories_are_read_with_a_read_only_app_token(self) -> None:
+        # github.token cannot see private repositories (mctl-support answered
+        # 404), so the budget check and the capture use mctl-agents App
+        # tokens. Each must stay narrowed to issues:read: the installed
+        # evaluator packages run with it in the environment.
+        build, _ = self._budget_step_run()
+        steps = {s.get("id"): s for s in build["steps"] if s.get("id")}
+        minted = [s for s in build["steps"] if "create-github-app-token" in s.get("uses", "")]
+        self.assertEqual(2, len(minted))
+        for step in minted:
+            permissions = {k: v for k, v in step["with"].items() if k.startswith("permission-")}
+            self.assertEqual({"permission-issues": "read"}, permissions)
+        self.assertEqual("${{ steps.budget-token.outputs.token }}", steps["budget"]["env"]["GH_TOKEN"])
+        capture = next(s for s in build["steps"] if s.get("name") == "Capture and evaluate")
+        self.assertEqual("${{ steps.capture-token.outputs.token }}", capture["env"]["GITHUB_TOKEN"])
+        order = [s.get("id") for s in build["steps"]]
+        self.assertLess(order.index("budget"), order.index("capture-token"))
+        # A run whose budget check skips mints no capture token.
+        self.assertEqual(capture["if"], steps["capture-token"]["if"])
+
     def test_the_window_starts_once_before_the_loop(self) -> None:
         # The deadline is --start + BUDGET_WAIT_SECONDS. If start were taken
         # inside the loop, every poll would push the deadline back and the
