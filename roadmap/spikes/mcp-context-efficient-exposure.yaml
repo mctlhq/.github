@@ -17,6 +17,12 @@ spec:
     eager exposure, while keeping success rate, per-principal authorization
     and audit intact?
   lifecycle: parked
+  # The issue is also work item tool-exposure-benchmark of the enterprise-mcp
+  # epic (roadmap/epics/enterprise-mcp.yaml, mctlhq/.github#166), so the spike
+  # declares that binding.
+  epic:
+    name: enterprise-mcp
+    workItem: tool-exposure-benchmark
   github:
     issue:
       repository: mctlhq/mctl-agents
