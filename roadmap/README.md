@@ -41,6 +41,30 @@ The v1alpha1 completion rule is intentionally small: `allRequired` means every
 `workItem.required: true` must reach its terminal completion condition in the
 observed GitHub/read model. Optional items do not block epic completion.
 
+## Tracking an epic
+
+Every multi-phase epic with 3+ implementation issues MUST have an
+`EpicDefinition` manifest here. A dashboard MAY provide a live human-readable
+view, but it MUST derive lifecycle state from GitHub/DevLoop rather than becoming
+a second source of truth.
+
+Who holds what:
+
+| layer | holds | lives in |
+| --- | --- | --- |
+| epic manifest | phase order, work items, `dependsOn`, success criteria | `roadmap/epics/<name>.yaml` (reviewed, versioned) |
+| GitHub | issue and PR state, transfers, closes | the bound issues and their PRs |
+| DevLoop | proposal and execution state (`proposed`, `accepted`, running) | mctl-api / `agents-state` in mctl-gitops |
+| tracker metadata | only what no system holds: the next step, a short why, whether an owner decision is needed | a small file attached to the dashboard |
+| dashboard | a derived view of all of the above | an artifact the owner opens |
+
+Status is never written twice. A tracker file that carried its own `status` or
+`order` would drift from GitHub within a few epics; it may carry commentary only.
+The dashboard is refreshed in the same turn an item moves (issue edited, proposal
+approved, PR merged, release live), and a spike phase reads its `SpikeDefinition`
+lifecycle and `decision` the same way. First instance: `tenant-support-agent`
+(.github#243) with its spike `mctl-support-runtime`.
+
 ## Layout
 
 ```text
@@ -67,6 +91,7 @@ roadmap/
       converged-fixture.json
   scripts/
     validate.py
+    lifecycle_guard.py    diff-aware completed-epic guard
     github_graph.py       read-only observation
     reconcile.py          desired vs observed
     health.py
@@ -82,6 +107,7 @@ roadmap/
     README.md             copied onto roadmap-state as its README
   tests/
     test_validate.py
+    test_lifecycle_guard.py
     test_reconcile.py
     test_health.py
     test_completion.py
@@ -125,6 +151,19 @@ The validator has three layers:
 
 The validator is intentionally offline and read-only. It does not query or mutate
 GitHub.
+
+`scripts/lifecycle_guard.py` is a diff-aware companion check. CI compares the head
+manifests with the pull request base sha on pull requests and with `github.event.before` on
+pushes, and fails when an epic that is `completed` in head gained required work:
+`RequiredItemAdded` (a new required id), `RequiredFlagRaised` (optional became
+required) or `BornCompletedUnverified` (a brand-new manifest is already `completed`
+and holds required work; closure cannot be observed offline, so land it `active` or
+`paused` first and complete it later through the normal evidence path). To extend
+completed work legitimately, add the item as `required: false`, or reopen the epic to
+`active`/`paused` in the same change. If the base or head cannot be evaluated the guard
+exits 2 (`base-unresolvable:`, `base-unreadable:`, `base-malformed:`, `head-invalid:`)
+rather than passing. A push with an all-zero `before` emits a warning and skips the
+guard step; it is never reported as passed.
 
 ## SpikeDefinition v1alpha1
 

@@ -1,3 +1,9 @@
+# Unparked 2026-10-27 (owner triage of parked spikes). The trigger fired:
+# Claude Code ships the io.modelcontextprotocol/tasks extension in public beta
+# from v2.1.304 (announced at AGNTCon + MCPCon, October 2026). The portal half
+# of the question is dropped: the mcp-gateway plan passes Tasks through
+# untouched, and that pass-through is checked in its G2 phase. The executable
+# pilot stays mctl-api#284. Started by the owner, not automatically.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -7,10 +13,10 @@ spec:
   title: MCP Tasks over durable Temporal executions
   question: >-
     What is the thinnest MCP Tasks adapter over existing Temporal/Argo
-    executions, and does the MCP portal preserve it end to end? The
-    executable pilot is mctl-api#284, which stays the enterprise-mcp work
-    item; this manifest carries the single decision for both issues.
-  lifecycle: parked
+    executions, proven end to end from Claude Code against api.mctl.ai/mcp
+    (create, get, input, cancel, reconnect)? The executable pilot is
+    mctl-api#284; this manifest carries the single decision for both issues.
+  lifecycle: proposed
   github:
     issue:
       repository: mctlhq/.github
@@ -19,8 +25,5 @@ spec:
     - GO_ADAPTER_IN_MCTL_API
     - GO_UPSTREAM_ONLY
     - NO_GO
-  activation:
-    trigger: >-
-      The enterprise-mcp epic is resumed, or a target client (Claude or
-      ChatGPT) ships support for io.modelcontextprotocol/tasks.
-    reviewBy: "2026-12-31"
+  timebox:
+    decisionBy: "2026-12-15"

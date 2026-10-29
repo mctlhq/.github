@@ -3,6 +3,7 @@
   <h1>MCTL</h1>
   <h3>The AI-Native Kubernetes Platform</h3>
   <p>Your complete infrastructure stack unified: GitOps, secrets management, team isolation, and AI automation. Deploy services via a portal, REST API, or natural language.</p>
+  <p><a href="https://hub.xerj.org/contributors/mashkovd"><img src="https://hub.xerj.org/contributors/mashkovd/badge.svg" alt="XERJ Corpus Hub contributor" /></a></p>
 </div>
 
 <br>
@@ -257,7 +258,6 @@ graph LR
 ---
 
 ## Interaction Modes
-
 | Interface | Endpoint | Primary Use Case |
 |-----------|----------|------------------|
 | **AI / MCP** | `api.mctl.ai/mcp` | Natural language infrastructure management directly from your IDE or AI assistant. |

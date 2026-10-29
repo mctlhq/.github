@@ -7,9 +7,13 @@
 #   on for labs/mctl-telegram-preview and agent-worker-preview only
 #   (mctlhq/mctl-gitops#2116). Production runs 0.94.0 with AGENT_ENABLED
 #   unset and no agent worker, so the conversation plane is inert there.
-# No timebox and no verdict have been set by the owner, so the lifecycle stays
-# `proposed`. Moving to `active` needs an owner-set decisionBy; recording a
-# verdict moves it to `decided`.
+# - 2026-10-26: the owner set decisionBy 2026-11-05, which makes the spike
+#   active. The decision follows a 72h soak on preview that starts after the
+#   preview Telegram account is re-logged; if the soak cannot finish by then,
+#   the date moves in its own PR. Production rollout is a separate decision.
+# - 2026-10-27: preview burst soak on a test account (mctl-agents#760
+#   comment 6450538942); the owner decided without the 72h soak, which moved
+#   into the production rollout gate (mctl-telegram#889).
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -22,7 +26,7 @@ spec:
     session under a small global execution bound, with burst coalescing,
     without one process per chat and without disturbing the Claude Remote
     operator session?
-  lifecycle: proposed
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/mctl-agents
@@ -32,5 +36,24 @@ spec:
     - ADD_SHARED_CONVERSATION_SESSION_RUNTIME
     - TEMPORAL_ONLY_COMPOSITION
     - DO_NOT_IMPLEMENT_SESSION_PER_CONVERSATION
+  timebox:
+    decisionBy: "2026-11-05"
   execution:
     devloop: true
+  decision:
+    verdict: REUSE_CURRENT_RUNTIME_WITH_SESSION_ROUTER
+    decidedAt: "2026-10-27"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-telegram
+        number: 885
+      - repository: mctlhq/mctl-telegram
+        number: 886
+      - repository: mctlhq/mctl-telegram
+        number: 889
+# Decided 2026-10-27 by the owner: ConversationTurn v1 on the existing
+# mctl-telegram runtime (agent_jobs queue, bounded worker, claim-time turn
+# coalescing, conversation-bound job token, cold `claude -p` per turn). The
+# preview soak showed burst coalescing (2->1, 4->1, 5->1) and zero overlapping
+# turns per conversation. Backlog coalescing (#885) is required before
+# production; the 72h stability soak is part of the rollout gate (#889).

@@ -1,0 +1,3 @@
+a2a-sdk[http-server,sql,postgresql]==1.2.3
+anthropic==2.3.0
+uvicorn==0.41.0

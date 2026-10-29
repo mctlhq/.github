@@ -1,3 +1,8 @@
+# Re-scoped 2026-10-27 (owner triage of parked spikes). The portal half moves
+# to the mcp-gateway epic (.github#236), and the dependency on
+# mctl-telegram#616 goes with it. What remains is the host matrix behind a
+# connector submission, which waits on the Telegram API position in
+# mctl-telegram#852.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -6,8 +11,9 @@ metadata:
 spec:
   title: Validate the Telegram MCP App live and set the connector-submission position
   question: >-
-    Do the supported hosts and the MCP portal render and safely execute the
-    Telegram MCP App well enough to support a connector submission?
+    Do the supported hosts render and safely execute the Telegram MCP App,
+    reached directly at tg.mctl.ai, well enough to support a connector
+    submission?
   lifecycle: parked
   github:
     issue:
@@ -22,6 +28,7 @@ spec:
     - NOT_READY
   activation:
     trigger: >-
-      An operator session is scheduled with a throwaway test identity, running
-      mctl-telegram#616 first.
+      mctl-telegram#852 closes with a stated AI and Telegram API position that
+      permits a submission, and an operator session with a throwaway test
+      identity is scheduled.
     reviewBy: "2026-11-30"

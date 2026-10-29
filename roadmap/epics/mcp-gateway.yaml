@@ -1,0 +1,96 @@
+# Drafted after the owner's GO on the G0 re-check (.github#235, 2026-10-26).
+# Design: docs/plans/mcp-gateway.md. Decision D4: supersedes the gateway
+# phase of the paused enterprise-mcp epic and answers .github#128, which
+# stays bound there. Phases G1-G5 are drafts; per-repository implementation
+# issues are added as work items when a phase starts.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: mcp-gateway
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: mctl-owned MCP gateway with per-principal, per-tenant tool policy
+  goal: >-
+    Replace the user-blind Cloudflare MCP Portal at mcp.mctl.ai with an
+    mctl-owned gateway that decides per principal and per tenant which
+    downstream MCP servers and tools a caller can see and call, while every
+    downstream keeps its own authorization.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 236
+  phases:
+    - id: token-hardening
+      title: G0a mctl-api token hardening
+    - id: policy
+      title: G1 policy and gateway in front of api
+    - id: tier-a-core
+      title: G2 Tier A for api and coolify
+    - id: tier-a-downstreams
+      title: G3 tg, seerrsense and projects as Tier A
+    - id: cutover
+      title: G4 alice as Tier B and cut-over
+    - id: non-admin
+      title: G5 non-admin users
+  workItems:
+    - id: g0a-token-hardening
+      phase: token-hardening
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 805
+
+    - id: g1-policy
+      phase: policy
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 237
+      dependsOn:
+        - g0a-token-hardening
+
+    - id: g2-tier-a-core
+      phase: tier-a-core
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 238
+      dependsOn:
+        - g1-policy
+
+    - id: g3-tier-a-downstreams
+      phase: tier-a-downstreams
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 239
+      dependsOn:
+        - g2-tier-a-core
+
+    - id: g4-cutover
+      phase: cutover
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 240
+      dependsOn:
+        - g3-tier-a-downstreams
+
+    - id: g5-non-admin
+      phase: non-admin
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 241
+      dependsOn:
+        - g4-cutover
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Two principals see different tool lists from the same server through the gateway, and a call outside a principal's grants is refused.
+    - A removed grant is refused no later than R_max = hard_ttl + refresh_timeout.
+    - Every Tier A downstream accepts only mctl-issued tokens for its own audience; the mctl-telegram#616 direct-door bypass is closed.
+    - mcp.mctl.ai serves all current portal users through the gateway and the portal Access apps are removed.
