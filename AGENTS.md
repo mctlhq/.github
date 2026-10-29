@@ -17,3 +17,5 @@
   model in `docs/spikes/mcp-gateway-g0/`.
 - [Agent UI: AG-UI 1.0](docs/spikes/agent-ui-ag-ui.md): Phase A evaluation of AG-UI
   as the northbound agent-to-user protocol, spike report for mctlhq/.github#258.
+- [Edge config: Workers KV Instant vs Valkey](docs/spikes/edge-config-kv-instant.md):
+  spike report for mctlhq/.github#272, proposed verdict KEEP_VALKEY.
