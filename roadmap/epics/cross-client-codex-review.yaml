@@ -32,7 +32,7 @@
     "workItems": [
       {
         "id": "mcp-intents",
-        "title": "feat(mcp): complete WorkItem create, intent append/read and intent-bound execution",
+        "title": "feat(mcp): create WorkItems and append/read intent for manual cross-client handoff",
         "phase": "foundation",
         "required": true,
         "issue": {
@@ -42,20 +42,23 @@
       },
       {
         "id": "mcp-context",
-        "title": "fix(work-context): accept MCP surface and preserve cross-client handoff provenance",
+        "title": "fix(work-context): accept MCP resume surface without inventing client identity",
         "phase": "foundation",
         "required": true,
         "issue": {
           "repository": "mctlhq/mctl-agents",
           "number": 904
         },
-        "dependsOn": [
-          "mcp-intents"
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 573
+          }
         ]
       },
       {
         "id": "review-contract",
-        "title": "feat(review): define independent spike and proposal review receipts",
+        "title": "feat(review): define version-bound independent review receipts and private evidence ingestion",
         "phase": "foundation",
         "required": true,
         "issue": {
@@ -87,15 +90,16 @@
       },
       {
         "id": "codex-host",
-        "title": "feat(mctl): integrate an opt-in Codex review host after the OAuth spike verdict",
+        "title": "feat(mctl): integrate an opt-in subscription review worker on an operator-controlled host",
         "phase": "automation",
-        "required": true,
+        "required": false,
         "issue": {
           "repository": "mctlhq/mctl-gitops",
           "number": 2278
         },
         "dependsOn": [
-          "review-contract"
+          "review-contract",
+          "subscription-admission"
         ],
         "externalDependsOn": [
           {
@@ -106,7 +110,7 @@
       },
       {
         "id": "review-remediation",
-        "title": "feat(devloop): bound the review–amendment–fresh-review cycle",
+        "title": "feat(devloop): bound amendment cycles and route disputed review findings to owner triage",
         "phase": "automation",
         "required": true,
         "issue": {
@@ -114,12 +118,19 @@
           "number": 906
         },
         "dependsOn": [
-          "review-contract"
+          "review-contract",
+          "owner-triage"
+        ],
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 773
+          }
         ]
       },
       {
         "id": "delegated-decisions",
-        "title": "feat(governance): authorize reviewer-driven proposal actions without impersonating human approval",
+        "title": "feat(governance): bind direct human decisions and separate delegated policy authorization",
         "phase": "automation",
         "required": true,
         "issue": {
@@ -141,12 +152,16 @@
           {
             "repository": "mctlhq/mctl-api",
             "number": 701
+          },
+          {
+            "repository": "mctlhq/mctl-gitops",
+            "number": 1980
           }
         ]
       },
       {
         "id": "owner-triage",
-        "title": "feat(triage): deliver actionable, version-bound spike and proposal decisions to the owner",
+        "title": "feat(triage): notify owner with version-bound cards and direct-session approval links",
         "phase": "automation",
         "required": true,
         "issue": {
@@ -156,38 +171,103 @@
         "dependsOn": [
           "review-contract",
           "delegated-decisions"
+        ],
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 557
+          },
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 773
+          },
+          {
+            "repository": "mctlhq/mctl-api",
+            "number": 840
+          }
         ]
       },
       {
-        "id": "acceptance-pilot",
-        "title": "test(devloop): prove cross-client continuity and gated Codex review pilot",
+        "id": "oauth-review-pilot",
+        "title": "test(devloop): validate optional subscription review pilot with explicit rollout and rollback gates",
         "phase": "pilot",
-        "required": true,
+        "required": false,
         "issue": {
           "repository": "mctlhq/mctl-agents",
           "number": 908
         },
         "dependsOn": [
-          "mcp-intents",
-          "mcp-context",
+          "manual-continuity",
+          "intent-bound-resume",
           "review-contract",
           "codex-host",
+          "subscription-admission",
           "review-remediation",
           "delegated-decisions",
           "owner-triage"
+        ],
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-gitops",
+            "number": 1980
+          }
         ]
+      },
+      {
+        "id": "manual-continuity",
+        "title": "Prove read-only Claude-to-Codex intent handoff",
+        "phase": "foundation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 909
+        },
+        "dependsOn": [
+          "mcp-intents"
+        ]
+      },
+      {
+        "id": "intent-bound-resume",
+        "title": "Bind execution to readable intent and prove cross-surface resume",
+        "phase": "foundation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-api",
+          "number": 871
+        },
+        "dependsOn": [
+          "mcp-intents",
+          "mcp-context"
+        ],
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 573
+          }
+        ]
+      },
+      {
+        "id": "subscription-admission",
+        "title": "Implement verdict and policy-matrix admission for subscription review",
+        "phase": "automation",
+        "required": false,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 910
+        }
       }
     ],
     "completion": {
       "mode": "allRequired"
     },
     "successCriteria": [
-      "Two authorized MCP clients continue one canonical WorkItem with intent-bound execution and tenant isolation; redacted context is explicit.",
-      "Independent spike/proposal review receipts bind actual reviewed content and evidence; amendments require fresh review.",
-      "Technical PASS cannot impersonate human approval; delegated actions require current scoped policy and exact-content authorization.",
-      "Owner triage survives delivery failure and rejects stale or unauthorized decisions without duplicate execution.",
-      "OAuth review host is enabled only after an accepted applicable #891 verdict, with measured limits, revocation and recovery.",
-      "Named pilot demonstrates off/observe/enforce behavior and records reviewer effort, findings, latency, usage and owner interruptions."
+      "Required milestone: two authenticated MCP clients share one WorkItem and read bounded intent without starting execution; viewer and tenant isolation are mutation-verified.",
+      "Required resume milestone: readable intent_id is pinned; MCP provenance is forwarded; unavailable/redacted context parks without running placeholder text.",
+      "Review uses existing proposal content digest and new versioned spike-report digest, private ADR 018 evidence and full SHAs; changes invalidate receipts.",
+      "Human-input is never approval; direct human decisions bind displayed aar_ and context_digest; policy authorization cannot decide/spend aar_ or impersonate a human.",
+      "Owner triage preserves privacy and handles stale cards, disputed findings, bounded retries and notification failure.",
+      "Optional OAuth host/pilot stays disabled unless #910 evaluates accepted #891 ADOPT verdict and applicable policy rows ALLOWED; issue closure alone grants nothing.",
+      "Optional pilot rollout is off by default, owner-approved per stage and mutation-verified including in-flight rollback. DEFER/REJECT does not block required completion."
     ]
   }
 }
