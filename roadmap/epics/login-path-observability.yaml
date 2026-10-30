@@ -44,6 +44,11 @@ spec:
       issue:
         repository: mctlhq/mctl-telegram
         number: 959
+      # The mcp_root step has one passing outcome, an MCP answer on "/",
+      # so it waits for the bare-origin fix to be merged and deployed.
+      externalDependsOn:
+        - repository: mctlhq/mctl-telegram
+          number: 957
 
     - id: funnel-signals
       title: Login funnel signals (token without first MCP call, callback rejections)
@@ -75,19 +80,34 @@ spec:
         repository: mctlhq/mctl-telegram
         number: 961
 
-    # Pre-existing issue; needs owner-provided test-DC secrets, so it does
-    # not block completion of the observability layers above.
+    # Infrastructure for the item below: test-DC switch and the opt-in CI
+    # job. Needs owner-provided test-DC secrets.
     - id: test-dc-login
       title: Run MTProto integration tests against the Telegram test DC
       owner: mctl-telegram
       phase: full-login
-      required: false
+      required: true
       issue:
         repository: mctlhq/mctl-telegram
         number: 854
+
+    # The user login flows themselves. #854 covers only the message tools,
+    # so without this item the epic could close without ever running a
+    # login end to end.
+    - id: full-login-e2e
+      title: Full Telegram login flows on the test DC (phone, code, 2FA, QR)
+      owner: mctl-telegram
+      phase: full-login
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 963
+      dependsOn:
+        - test-dc-login
   completion:
     mode: allRequired
   successCriteria:
     - Re-introducing an edge 403 for connector User-Agents, or refusing MCP on the bare origin, turns an alert red within 30 minutes, proven by a deliberate mutation on preview.
     - A connector that obtains a token but never completes a tool call is visible as a metric and alerts on a sustained rate.
+    - Phone, 2FA and QR login each run end to end on the Telegram test DC in CI and on every release tag, each proven red on a deliberate mutation.
     - Disconnecting the canary account requires an explicit confirmation naming it as the canary, in the web UI and through MCP tools.
