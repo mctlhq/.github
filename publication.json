@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "5c0079b99ea8ba8e8a46509b803d390479f5a094"
+    "revision": "939b2db8ee3fb45c694a0c548c206417f7f3f90a"
   },
   "files": {
     "health.json": {
-      "sha256": "3ca346256a6456427946f010004a004f85bcc65afcbec47b11e03ae5a78e7904"
+      "sha256": "9aef5c75b36133dde7fa39a34a43f0f4a31267a021c1090dc012e70b9fc3026d"
     },
     "ready-set.json": {
-      "sha256": "f9139adc7919ac3d4b3505d0a5a87c0b573f9879790d207ce84de805f7c6a64c"
+      "sha256": "557049f751da36ab831cbe133bd345b74a3861538a1c66fa7ed0d54d026bfa61"
     },
     "snapshot.json": {
-      "sha256": "49fdf8e4d28416b054bd9d6d8331d780f82f6de3eaa04a51f2633ead2be18496"
+      "sha256": "9983a56c5bc3209a9b7845e86c6e40e42978edff7f231dc5150bf8a64a30fd69"
     }
   },
   "kind": "RoadmapPublication",
@@ -24,7 +24,7 @@
         "title": "Agent Commerce"
       },
       "path": "roadmap/epics/agent-commerce.yaml",
-      "sha256": "34ec686f202a916e7dfaecade0095c657629a3c7f9c728d2b8085438fd4514e4"
+      "sha256": "c284c95f9c4cedeb235017a7ff9cf8a5e9d64fb2c81008dfa7da2b800ae6ecbb"
     },
     {
       "epic": {
@@ -259,12 +259,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-30T12:28:31Z",
+    "capturedAt": "2026-10-30T14:41:31Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "5c0079b99ea8ba8e8a46509b803d390479f5a094"
+    "revision": "939b2db8ee3fb45c694a0c548c206417f7f3f90a"
   }
 }
