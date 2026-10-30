@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "097f7bc152681856d4bca17f29d2cbdf1ade631d"
+    "revision": "5c0079b99ea8ba8e8a46509b803d390479f5a094"
   },
   "files": {
     "health.json": {
-      "sha256": "ef875803d66c9630ea36db90720dafa5937fb86f9aac2bcba01ea12f04c93a4c"
+      "sha256": "3ca346256a6456427946f010004a004f85bcc65afcbec47b11e03ae5a78e7904"
     },
     "ready-set.json": {
-      "sha256": "03992141e373768ec05dd793c9abaad81b71bd4f29de60648a7b3a1372661991"
+      "sha256": "f9139adc7919ac3d4b3505d0a5a87c0b573f9879790d207ce84de805f7c6a64c"
     },
     "snapshot.json": {
-      "sha256": "e1c80cecb6f01dbfafdc4839a3eb76cedf602409fe6c96f2279fc26c526b7d8e"
+      "sha256": "49fdf8e4d28416b054bd9d6d8331d780f82f6de3eaa04a51f2633ead2be18496"
     }
   },
   "kind": "RoadmapPublication",
@@ -178,6 +178,16 @@
     },
     {
       "epic": {
+        "goal": "Detect breakage anywhere on the path a new MCP connector takes into mctl-telegram (discovery, Telegram OIDC, phone or QR step, token grant, first MCP call, and the edge in front of it) within 30 minutes, without automated logins into real Telegram accounts, and stop the canary account from being broken by an accidental Disconnect.",
+        "lifecycle": "proposed",
+        "name": "login-path-observability",
+        "title": "Observe the connector login path, not only connected accounts"
+      },
+      "path": "roadmap/epics/login-path-observability.yaml",
+      "sha256": "26e4fe82c601ab3cff40012c69ff9c69a787cc59d9caf5b6102612628d40bae0"
+    },
+    {
+      "epic": {
         "goal": "Replace the user-blind Cloudflare MCP Portal at mcp.mctl.ai with an mctl-owned gateway that decides per principal and per tenant which downstream MCP servers and tools a caller can see and call, while every downstream keeps its own authorization.",
         "lifecycle": "proposed",
         "name": "mcp-gateway",
@@ -249,12 +259,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-30T07:36:02Z",
+    "capturedAt": "2026-10-30T12:28:31Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "097f7bc152681856d4bca17f29d2cbdf1ade631d"
+    "revision": "5c0079b99ea8ba8e8a46509b803d390479f5a094"
   }
 }
