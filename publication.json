@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "939b2db8ee3fb45c694a0c548c206417f7f3f90a"
+    "revision": "170b2f750348fb4bd21323d2413bd3947d595c88"
   },
   "files": {
     "health.json": {
-      "sha256": "2455f65e6b6dea9ea0ba2c43abf30f8b8496ebfb01c00a14cb3ccf93b6c0f985"
+      "sha256": "796ef2e499e267191a3e7ea9d0d884529f74de6321fa324d796c1091c9052751"
     },
     "ready-set.json": {
-      "sha256": "a0f0c314344f36521ee30776495f561cbe25a761ebae9c417882fea48128ba0f"
+      "sha256": "41f01f13eb8d4bcbab3282596bd4fed92b9280c8ea12fa609fdfd9062ecf36c6"
     },
     "snapshot.json": {
-      "sha256": "debd02bc44a72acd5e6e8c03df9c77e5e1af235e9cb3a0a8de79e9226c0fb18c"
+      "sha256": "5297b7c5170da80677fd2916c78ad413105872dce04a2e57505d3d9b42422b72"
     }
   },
   "kind": "RoadmapPublication",
@@ -125,6 +125,16 @@
       },
       "path": "roadmap/epics/context-platform.yaml",
       "sha256": "bd1dd001d8ac9c51222631ede19018a6bbca2ac7b22ece64422900a95bcaefae"
+    },
+    {
+      "epic": {
+        "goal": "Continue canonical work across MCP clients and independently review spike evidence and proposals, with bounded amendments, explicit delegated authority and durable owner triage.",
+        "lifecycle": "proposed",
+        "name": "cross-client-codex-review",
+        "title": "Cross-client work continuity and governed Codex review"
+      },
+      "path": "roadmap/epics/cross-client-codex-review.yaml",
+      "sha256": "366193cff73ba2ae9b127862af0c57e1ea3ea9a0e6fbf534b33242a740b433bc"
     },
     {
       "epic": {
@@ -259,12 +269,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-30T23:01:41Z",
+    "capturedAt": "2026-10-30T23:43:53Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "939b2db8ee3fb45c694a0c548c206417f7f3f90a"
+    "revision": "170b2f750348fb4bd21323d2413bd3947d595c88"
   }
 }

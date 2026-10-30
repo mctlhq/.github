@@ -228,7 +228,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -462,7 +462,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -554,7 +554,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -729,7 +729,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1032,7 +1032,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1235,7 +1235,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1406,7 +1406,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1559,7 +1559,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1827,7 +1827,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -1989,7 +1989,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2120,7 +2120,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2134,6 +2134,532 @@
           "blocked": 0,
           "complete": 5,
           "ready": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "epic": {
+        "issue": {
+          "number": 281,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/cross-client-codex-review.yaml",
+          "sha256": "366193cff73ba2ae9b127862af0c57e1ea3ea9a0e6fbf534b33242a740b433bc"
+        },
+        "name": "cross-client-codex-review"
+      },
+      "items": [
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 891,
+                "repository": "mctlhq/mctl-agents"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "review-contract",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "subscription-admission",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "review-contract",
+            "subscription-admission"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 891,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "codex-host",
+          "issue": {
+            "number": 2278,
+            "repository": "mctlhq/mctl-gitops"
+          },
+          "phase": "automation",
+          "required": false,
+          "state": "blocked"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 1980,
+                "repository": "mctlhq/mctl-gitops"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "review-contract",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "review-contract"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 703,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 700,
+              "repository": "mctlhq/mctl-api"
+            },
+            {
+              "number": 701,
+              "repository": "mctlhq/mctl-api"
+            },
+            {
+              "number": 1980,
+              "repository": "mctlhq/mctl-gitops"
+            }
+          ],
+          "id": "delegated-decisions",
+          "issue": {
+            "number": 869,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "automation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 573,
+                "repository": "mctlhq/mctl-agents"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "mcp-context",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "mcp-intents",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "mcp-intents",
+            "mcp-context"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 573,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "intent-bound-resume",
+          "issue": {
+            "number": 871,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "foundation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [
+            {
+              "id": "mcp-intents",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "mcp-intents"
+          ],
+          "externalDependsOn": [],
+          "id": "manual-continuity",
+          "issue": {
+            "number": 909,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "foundation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 573,
+                "repository": "mctlhq/mctl-agents"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [
+            {
+              "number": 573,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "mcp-context",
+          "issue": {
+            "number": 904,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "foundation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "mcp-intents",
+          "issue": {
+            "number": 868,
+            "repository": "mctlhq/mctl-api"
+          },
+          "phase": "foundation",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 1980,
+                "repository": "mctlhq/mctl-gitops"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "codex-host",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "delegated-decisions",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "intent-bound-resume",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "manual-continuity",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "owner-triage",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "review-contract",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "review-remediation",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "subscription-admission",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "manual-continuity",
+            "intent-bound-resume",
+            "review-contract",
+            "codex-host",
+            "subscription-admission",
+            "review-remediation",
+            "delegated-decisions",
+            "owner-triage"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 1980,
+              "repository": "mctlhq/mctl-gitops"
+            }
+          ],
+          "id": "oauth-review-pilot",
+          "issue": {
+            "number": 908,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "pilot",
+          "required": false,
+          "state": "blocked"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 557,
+                "repository": "mctlhq/mctl-agents"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "issue": {
+                "number": 773,
+                "repository": "mctlhq/mctl-agents"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "issue": {
+                "number": 840,
+                "repository": "mctlhq/mctl-api"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "delegated-decisions",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "review-contract",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "review-contract",
+            "delegated-decisions"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 557,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 773,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 840,
+              "repository": "mctlhq/mctl-api"
+            }
+          ],
+          "id": "owner-triage",
+          "issue": {
+            "number": 907,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "automation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [
+            {
+              "number": 701,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 702,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 703,
+              "repository": "mctlhq/mctl-agents"
+            },
+            {
+              "number": 700,
+              "repository": "mctlhq/mctl-api"
+            },
+            {
+              "number": 701,
+              "repository": "mctlhq/mctl-api"
+            }
+          ],
+          "id": "review-contract",
+          "issue": {
+            "number": 905,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "foundation",
+          "required": true,
+          "state": "ready"
+        },
+        {
+          "blockers": [
+            {
+              "issue": {
+                "number": 773,
+                "repository": "mctlhq/mctl-agents"
+              },
+              "kind": "external",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "owner-triage",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            },
+            {
+              "id": "review-contract",
+              "kind": "workItem",
+              "reason": "open",
+              "status": "incomplete"
+            }
+          ],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [
+            "review-contract",
+            "owner-triage"
+          ],
+          "externalDependsOn": [
+            {
+              "number": 773,
+              "repository": "mctlhq/mctl-agents"
+            }
+          ],
+          "id": "review-remediation",
+          "issue": {
+            "number": 906,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "automation",
+          "required": true,
+          "state": "blocked"
+        },
+        {
+          "blockers": [],
+          "completion": {
+            "reason": "open",
+            "status": "incomplete"
+          },
+          "dependsOn": [],
+          "externalDependsOn": [],
+          "id": "subscription-admission",
+          "issue": {
+            "number": 910,
+            "repository": "mctlhq/mctl-agents"
+          },
+          "phase": "automation",
+          "required": false,
+          "state": "ready"
+        }
+      ],
+      "kind": "RoadmapReadySet",
+      "ready": [
+        "mcp-intents",
+        "review-contract",
+        "subscription-admission"
+      ],
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-10-30T23:43:53Z",
+        "mode": "live-capture"
+      },
+      "summary": {
+        "items": {
+          "blocked": 8,
+          "complete": 0,
+          "ready": 3,
+          "unknown": 0
+        },
+        "required": {
+          "blocked": 6,
+          "complete": 0,
+          "ready": 2,
           "unknown": 0
         }
       }
@@ -2229,7 +2755,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2298,7 +2824,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2629,7 +3155,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2817,7 +3343,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -2972,7 +3498,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3138,7 +3664,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3317,7 +3843,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3521,7 +4047,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3714,7 +4240,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -3970,7 +4496,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -4084,7 +4610,7 @@
       "ready": [],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -4394,7 +4920,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
@@ -4695,7 +5221,7 @@
       ],
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-10-30T23:01:41Z",
+        "capturedAt": "2026-10-30T23:43:53Z",
         "mode": "live-capture"
       },
       "summary": {
