@@ -1,0 +1,29 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "kind": "SpikeDefinition",
+  "metadata": {
+    "name": "siwc-end-user-cli",
+    "owner": "mctlhq/mctl-agents"
+  },
+  "spec": {
+    "title": "Evaluate SIWC as end-user BYOS in the existing mctl CLI",
+    "question": "Can a normal user safely use their own ChatGPT plan through the existing mctl CLI, and which direct Responses, local Codex or thin-adapter shape is justified by measured runtime and sourced policy evidence?",
+    "lifecycle": "proposed",
+    "github": {
+      "issue": {
+        "repository": "mctlhq/mctl-agents",
+        "number": 891
+      }
+    },
+    "outcomes": [
+      "ADOPT_SIWC_MCTL_CLI",
+      "ADOPT_SIWC_CLI_PLUS_CODEX",
+      "ADOPT_SIWC_CLI_PLUS_THIN_ADAPTER",
+      "DEFER_COMMERCIAL_HOSTED_ACCESS",
+      "REJECT_SIWC_FOR_MCTL"
+    ],
+    "execution": {
+      "devloop": true
+    }
+  }
+}
