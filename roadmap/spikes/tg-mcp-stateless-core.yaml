@@ -1,0 +1,27 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: tg-mcp-stateless-core
+  owner: mctlhq/mctl-telegram
+spec:
+  title: Stateless 2026-07-28 core and replica safety on tg.mctl.ai
+  question: >-
+    What application state blocks retiring the legacy MCP protocol era or
+    running more than one replica of tg.mctl.ai, and in what order should it
+    be resolved? The modern core already serves on main.
+  lifecycle: parked
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 568
+  outcomes:
+    - KEEP_DUAL_ERA
+    - RETIRE_LEGACY
+    - SESSION_OWNER_RUNTIME_REQUIRED
+  activation:
+    trigger: >-
+      A request to raise replicaCount above 1, protocol_version telemetry in
+      the audit log (recorded since mctl-telegram#631) shows legacy traffic
+      only from our own clients, or mcp-gateway G3 (.github#239) starts and
+      puts tg behind the gateway's stateless Streamable HTTP.
+    reviewBy: "2027-01-31"

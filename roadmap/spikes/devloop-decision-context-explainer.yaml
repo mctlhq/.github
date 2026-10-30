@@ -1,0 +1,52 @@
+# The owner set decisionBy 2026-11-17 on 2026-10-27, which makes the spike
+# active. The decision-context contract shipped in mctl-api#700; the spike
+# runs through DevLoop and measures a reviewer-facing explainer on real
+# proposals, at least one of them high-risk. Recording a verdict moves the
+# lifecycle to `decided`.
+# - 2026-10-27: one measured run on the #702 proposal (mctl-agents#845). The
+#   explainer found from the proposal alone the defect that review later
+#   raised on #709, and its pointers matched the changed code. Reviewer time
+#   is unobserved and n = 1, so the verdict is LIMITED_GO: an opt-in, advisory
+#   explainer for high-risk proposals, outside the approved-content digest.
+#   The owner accepted the verdict on 2026-10-27.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: devloop-decision-context-explainer
+  owner: mctlhq/mctl-agents
+spec:
+  title: Decision-context explainer before human approval
+  question: >-
+    Does a grounded explainer artifact at the DevLoop human gate improve
+    reviewer understanding and effort without weakening the gates? The
+    authority and decision-context contract itself is already defined by
+    mctl-api#700; this spike covers only the reviewer-facing artifact and
+    its measured effect.
+  lifecycle: decided
+  github:
+    issue:
+      repository: mctlhq/mctl-agents
+      number: 670
+  outcomes:
+    - GO
+    - LIMITED_GO
+    - NO_GO
+  timebox:
+    decisionBy: "2026-11-17"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/670-decision-context.md
+  decision:
+    verdict: LIMITED_GO
+    decidedAt: "2026-10-27"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-agents
+        number: 846
+      - repository: mctlhq/mctl-agents
+        number: 847
+      - repository: mctlhq/mctl-api
+        number: 840
+      - repository: mctlhq/mctl-agents
+        number: 848

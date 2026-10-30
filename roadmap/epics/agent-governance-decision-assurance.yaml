@@ -1,0 +1,145 @@
+# Priority: P1 (GitHub Project field is managed separately).
+# Architecture disposition from #182: retain this epic and implement a coherent decision-assurance boundary.
+# Existing identity, observability and runtime-assurance capabilities are reused; no parallel frameworks.
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "kind": "EpicDefinition",
+  "metadata": {
+    "name": "agent-governance-decision-assurance",
+    "owner": "mctl-api",
+    "labels": [
+      "roadmap"
+    ]
+  },
+  "spec": {
+    "title": "Agent Governance & Decision Assurance",
+    "goal": "Establish end-to-end decision assurance by composing canonical identity, policy, approval and execution controls so governed actions have exact binding, consistent authorization and a durable reconstructable decision-to-result chain.",
+    "lifecycle": "active",
+    "github": {
+      "issue": {
+        "repository": "mctlhq/.github",
+        "number": 181
+      }
+    },
+    "phases": [
+      {
+        "id": "discovery",
+        "title": "Current-state audit and architecture disposition"
+      },
+      {
+        "id": "binding",
+        "title": "Approval lifecycle and exact reviewed-content binding"
+      },
+      {
+        "id": "authorization",
+        "title": "Unified execution authorization and policy checkpoint"
+      },
+      {
+        "id": "decision-record",
+        "title": "Authority context and durable decision trace"
+      }
+    ],
+    "workItems": [
+      {
+        "id": "decision-assurance-spike",
+        "title": "Evaluate MCTL governance beyond human-in-the-loop approvals",
+        "owner": "mctl-api",
+        "phase": "discovery",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/.github",
+          "number": 182
+        }
+      },
+      {
+        "id": "approval-lifecycle-atomicity",
+        "title": "Reinvestigate supersedes stale pending approval grant",
+        "owner": "mctl-agents",
+        "phase": "binding",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 701
+        }
+      },
+      {
+        "id": "approval-terminal-semantics",
+        "title": "Failed or refused approval must not project success",
+        "owner": "mctl-agents",
+        "phase": "binding",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 702
+        }
+      },
+      {
+        "id": "direct-approval-binding",
+        "title": "Require reviewed-content binding for direct proposal approval",
+        "owner": "mctl-gitops",
+        "phase": "binding",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-gitops",
+          "number": 1979
+        }
+      },
+      {
+        "id": "execution-authorization",
+        "title": "Unify execution authorization across manual and autonomous paths",
+        "owner": "mctl-agents",
+        "phase": "authorization",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 703
+        }
+      },
+      {
+        "id": "policy-checkpoint-productionization",
+        "title": "Productionize policy approval checkpoint coverage",
+        "owner": "mctl-gitops",
+        "phase": "authorization",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-gitops",
+          "number": 1980
+        }
+      },
+      {
+        "id": "authority-context-contract",
+        "title": "Define authority and decision-context contract with execution-time revalidation",
+        "owner": "mctl-api",
+        "phase": "decision-record",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-api",
+          "number": 700
+        }
+      },
+      {
+        "id": "durable-decision-record",
+        "title": "Persist durable decision and execution-attempt records",
+        "owner": "mctl-api",
+        "phase": "decision-record",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-api",
+          "number": 701
+        }
+      }
+    ],
+    "completion": {
+      "mode": "allRequired"
+    },
+    "successCriteria": [
+      "A proposal rewrite cannot leave a stale human-decidable approval grant, and approval refusal/failure has typed non-success terminal and retry semantics.",
+      "Every governed human approval, including direct GitOps approval, binds the exact content reviewed before the decision is recorded.",
+      "Manual, Temporal and autonomous execution entry points use one execution-authorization contract and cannot disagree about whether an action is authorized.",
+      "The canonical policy approval checkpoint is explicitly enabled or enforceably classified for every supported governed path; normal transports cannot bypass it.",
+      "Decision-time authority/context and execution-time freshness/revalidation semantics are explicit and tested for permission, expiry and policy drift.",
+      "A durable typed record reconstructs intent -> policy -> authority/approval -> exact action -> execution attempts -> terminal result without relying on sampled telemetry.",
+      "Existing Unified Identity/AuthZ, policy, observability and Runtime Assurance capabilities are reused; no second authorization, policy, audit or workflow framework is introduced."
+    ]
+  }
+}

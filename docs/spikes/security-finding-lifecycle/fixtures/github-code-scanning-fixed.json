@@ -1,0 +1,3 @@
+{"_note":"Synthetic provider 'fixed' claim.","delivery_id":"gh-delivery-0002","provider":"github-code-scanning","action":"fixed",
+ "alert":{"number":7,"state":"fixed"},"repository":{"full_name":"example-org/example-repo"},
+ "vuln_class_id":"CVE-2025-54236","component":"github.com/example/pgx"}

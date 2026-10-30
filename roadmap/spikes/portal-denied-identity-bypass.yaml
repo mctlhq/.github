@@ -1,0 +1,27 @@
+# Archived 2026-10-27 (owner triage of parked spikes). The enterprise-mcp
+# epic stays paused, and the mcp-gateway epic (.github#236) took this
+# question over: G3 (.github#239) makes tg a Tier A downstream that accepts
+# only mctl-issued tokens, and G5 (.github#241) carries the denied-user check
+# of mctl-telegram#616 in its acceptance.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: portal-denied-identity-bypass
+  owner: mctlhq/mctl-telegram
+spec:
+  title: Denied Access identity through the portal and the direct tg.mctl.ai path
+  question: >-
+    Is an identity denied by Cloudflare Access refused at the portal, and is
+    the direct tg.mctl.ai path a documented, audited bypass rather than a
+    leak?
+  lifecycle: archived
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 616
+  epic:
+    name: enterprise-mcp
+    workItem: denied-user-and-bypass
+  outcomes:
+    - CONFIRMED
+    - REFUTED

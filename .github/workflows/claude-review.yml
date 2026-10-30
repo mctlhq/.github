@@ -327,6 +327,18 @@ jobs:
         and may point at a newer commit while this invocation is running.
         Files in the checkout and both git object IDs are pinned.
 
+        This is a static review. Read, Grep and Glob work on the pinned
+        checkout, and your only shell commands are `git diff` and the two
+        review endpoints below: you cannot install dependencies or run
+        builds, tests, linters or any repository script, even when the
+        repository's CLAUDE.md lists such commands. That is deliberate,
+        because this job holds secrets and those commands would execute
+        code from the pull request. CI runs the checks as separate required
+        status checks, so do not attempt them and do not withhold or hedge
+        your verdict because you could not run them. Read the diff and the
+        files it touches, then always finish with the verdict described at
+        the end of these instructions.
+
         Focus on:
         - Correctness and logic errors; edge cases the change misses.
         - Security: injection, authentication/authorization, secret
@@ -480,6 +492,47 @@ jobs:
         if [ "$(jq length "$dest")" = "0" ]; then
           echo "::warning::Reviewer attempt $USAGE_ATTEMPT has no result entry with model usage; its spend was not measured."
         fi
+      # The action summarises a run only as `permission_denials_count: N`,
+      # which is how .github#204 went undiagnosed: the reviewer said it would
+      # APPROVE, nothing was submitted, and the log could not say which call
+      # the allowlist refused. This prints each denied tool and the head of
+      # its command -- enough to see the prefix that missed the allowlist --
+      # and cuts the command off before anything that can carry review or PR
+      # text: a value flag, a quoted or punctuated word, key=value, and after
+      # the first flag any word that is not a method, a number or an API path
+      # (starting with /, repos/ or orgs/, so prose like and/or is cut).
+      # Bare words before the first flag still print; gh takes no text there.
+      DENIALS_LOG_SH: |
+        out="$RUNNER_TEMP/claude-execution-output.json"
+        if [ ! -f "$out" ]; then
+          echo "Reviewer attempt $DENIALS_ATTEMPT wrote no execution output; no denials to report."
+          exit 0
+        fi
+        if ! lines=$(jq -r '
+            def head:
+              split("\n")[0] | [splits("[[:space:]]+")] | map(select(. != ""))
+              | reduce .[] as $t ({out: [], stop: false, flagged: false};
+                  if .stop then .
+                  elif (.out | length) >= 12 then .out += ["..."] | .stop = true
+                  elif ($t | test("^(-f|-F|--field|--raw-field|-b|--body|--body-file|--input|-t|--title|-m|--message|-n|--notes)$")) then .out += [$t, "..."] | .stop = true
+                  elif ($t | test("^-[A-Za-z]..")) then .out += [($t[0:2] + "...")] | .stop = true
+                  elif ($t | test("=")) and ($t | test("^[A-Za-z0-9_./:@-]+=")) then .out += [($t | sub("=.*"; "=..."))] | .stop = true
+                  elif ($t | test("^-")) and ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t] | .flagged = true
+                  elif .flagged and ($t | test("^(GET|POST|PUT|PATCH|DELETE|[0-9]+|(/|repos/|orgs/)[A-Za-z0-9_./:@-]*)$") | not) then .out += ["..."] | .stop = true
+                  elif ($t | test("^[A-Za-z0-9_./:@-]{1,64}$")) then .out += [$t]
+                  else .out += ["..."] | .stop = true end)
+              | .out | join(" ");
+            if type != "array" then error("not an array") else . end
+            | [.[] | select(.type == "result")] | last // {}
+            | (.permission_denials // [])
+            | "Reviewer attempt \(env.DENIALS_ATTEMPT): \(length) permission denial(s)",
+              (.[] | "::warning::Reviewer attempt \(env.DENIALS_ATTEMPT) was denied \(.tool_name // "?")"
+                + (if (.tool_input.command? | type) == "string" then ": " + (.tool_input.command | head) else "" end))
+          ' "$out" 2>/dev/null); then
+          echo "::warning::Reviewer attempt $DENIALS_ATTEMPT left an unreadable execution output; its permission denials are unknown."
+          exit 0
+        fi
+        printf '%s\n' "$lines"
     steps:
       # A push already auto-triggers a review for its own commit via the
       # pull_request/synchronize path — a manual '@claude review' comment
@@ -999,7 +1052,7 @@ jobs:
         id: review
         if: steps.dedup.outputs.already_reviewed != 'true' && steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true' && steps.selfedit.outputs.blocked != 'true'
         continue-on-error: true
-        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238 (CLI 2.1.286)
+        uses: anthropics/claude-code-action@16f9f71ab9c490faf367f94dd294897edc25be33 # v1.0.238 (CLI 2.1.286)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: ${{ inputs.allowed-bots }}
@@ -1050,6 +1103,13 @@ jobs:
           USAGE_ATTEMPT: 0
         run: bash -c "$USAGE_CAPTURE_SH"
 
+      - name: Log primary reviewer permission denials
+        if: always() && contains(fromJSON('["success","failure","cancelled"]'), steps.review.outcome)
+        continue-on-error: true
+        env:
+          DENIALS_ATTEMPT: 0
+        run: bash -c "$DENIALS_LOG_SH"
+
       # Fallback retry on a SECOND token. An earlier revision of the donor
       # workflow refused to do this, on a 2026-07-22 observation that
       # CLAUDE_CODE_OAUTH_TOKEN and CLAUDE_CODE_OAUTH_TOKEN_2 failed
@@ -1065,7 +1125,7 @@ jobs:
         id: review2
         if: steps.review-check.outputs.failed == 'true' && steps.token-check.outputs.has_fallback == 'true'
         continue-on-error: true
-        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238 (CLI 2.1.286)
+        uses: anthropics/claude-code-action@16f9f71ab9c490faf367f94dd294897edc25be33 # v1.0.238 (CLI 2.1.286)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
           allowed_bots: ${{ inputs.allowed-bots }}
@@ -1081,6 +1141,13 @@ jobs:
         env:
           USAGE_ATTEMPT: 1
         run: bash -c "$USAGE_CAPTURE_SH"
+
+      - name: Log fallback reviewer permission denials
+        if: always() && contains(fromJSON('["success","failure","cancelled"]'), steps.review2.outcome)
+        continue-on-error: true
+        env:
+          DENIALS_ATTEMPT: 1
+        run: bash -c "$DENIALS_LOG_SH"
 
       # The primary and the fallback write the same execution-output file, so
       # re-read it here: after a fallback run it holds the FALLBACK result.
@@ -1155,7 +1222,7 @@ jobs:
       - name: Upload reviewer model usage records
         if: always() && steps.usage.outputs.count != '' && steps.usage.outputs.count != '0'
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: model-usage-records
           path: ${{ runner.temp }}/model-usage/model-usage-records.json

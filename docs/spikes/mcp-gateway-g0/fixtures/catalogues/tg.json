@@ -1,0 +1,4 @@
+{"tools": [
+  {"name": "send_message", "description": "Send a message"},
+  {"name": "list_chats", "description": "List chats"}
+]}

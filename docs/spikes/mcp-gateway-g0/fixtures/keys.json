@@ -1,0 +1,7 @@
+{
+  "note": "FIXTURE-ONLY deterministic Ed25519 seeds for the non-normative G0 reference model. Not secrets; never used outside tests.",
+  "keys": [
+    {"kid": "fx-2026-a", "seed_hex": "e73035ca20bc0396f0dd6cf43ff35be9c74148f354ba55f974a82cb72cf250c7"},
+    {"kid": "fx-2026-b", "seed_hex": "24a9f2e557a74066fdfe53786bf6565dec15370825cf6fa6543be376f3a847af"}
+  ]
+}

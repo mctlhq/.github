@@ -1,0 +1,28 @@
+# Proposed verdict (KEEP_VALKEY) lives in the report only. The owner records
+# the decision block; an agent does not record its own approval.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: edge-config-kv-instant
+  owner: mctlhq/.github
+spec:
+  title: Workers KV Instant vs Valkey for global runtime configuration
+  question: >-
+    Does MCTL have a real, globally distributed, read-hot runtime
+    configuration path where Cloudflare Workers KV Instant materially beats
+    the existing in-cluster configuration path, without making Cloudflare a
+    policy authority?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 272
+  outcomes:
+    - KEEP_VALKEY
+    - HYBRID_EDGE_CONFIG
+    - ADOPT_KV_INSTANT_EDGE_CONFIG
+    - DEFER_PRIVATE_BETA
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/edge-config-kv-instant.md

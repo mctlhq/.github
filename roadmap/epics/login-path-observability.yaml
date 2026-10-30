@@ -1,0 +1,113 @@
+# Filed 2026-10-30 after two incidents on the connector login path that the
+# tool-path canary could not see: the Cloudflare connector-UA 403 (29.10,
+# mctl-gitops#2261) and MCP refused on the bare origin (30.10, fix in
+# mctl-telegram#957, a PR and therefore not a work item here). Nothing in
+# this epic logs into a real Telegram account automatically on prod; the
+# full login runs only on the Telegram test DC.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: login-path-observability
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Observe the connector login path, not only connected accounts
+  goal: >-
+    Detect breakage anywhere on the path a new MCP connector takes into
+    mctl-telegram (discovery, Telegram OIDC, phone or QR step, token grant,
+    first MCP call, and the edge in front of it) within 30 minutes, without
+    automated logins into real Telegram accounts, and stop the canary account
+    from being broken by an accidental Disconnect.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 279
+  phases:
+    - id: synthetic
+      title: Synthetic probes of every login hop up to the Telegram boundary
+    - id: funnel
+      title: Real-user login funnel signals
+    - id: alerting
+      title: Alerts and runbook for both
+    - id: hardening
+      title: Canary account guard
+    - id: full-login
+      title: Full MTProto login on the Telegram test DC
+  workItems:
+    - id: canary-login-path
+      title: Canary probes of the connector login path
+      owner: mctl-telegram
+      phase: synthetic
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 959
+      # The mcp_root step has one passing outcome, an MCP answer on "/",
+      # so it waits for the bare-origin fix to be merged and deployed.
+      externalDependsOn:
+        - repository: mctlhq/mctl-telegram
+          number: 957
+
+    - id: funnel-signals
+      title: Login funnel signals (token without first MCP call, callback rejections)
+      owner: mctl-telegram
+      phase: funnel
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 960
+
+    - id: alerts
+      title: Alerts and runbook for the login-path canary and funnel
+      owner: mctl-gitops
+      phase: alerting
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2276
+      dependsOn:
+        - canary-login-path
+        - funnel-signals
+
+    - id: canary-account-guard
+      title: Guard the canary account against accidental Disconnect
+      owner: mctl-telegram
+      phase: hardening
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 961
+
+    # Infrastructure for the item below: test-DC switch and the opt-in CI
+    # job. Needs owner-provided test-DC secrets.
+    - id: test-dc-login
+      title: Run MTProto integration tests against the Telegram test DC
+      owner: mctl-telegram
+      phase: full-login
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 854
+
+    # The user login flows themselves. #854 covers only the message tools,
+    # so without this item the epic could close without ever running a
+    # login end to end.
+    - id: full-login-e2e
+      title: Full Telegram login flows on the test DC (phone, code, 2FA, QR)
+      owner: mctl-telegram
+      phase: full-login
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 963
+      dependsOn:
+        - test-dc-login
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Re-introducing an edge 403 for connector User-Agents, or refusing MCP on the bare origin, turns an alert red within 30 minutes, proven by a deliberate mutation on preview.
+    - A connector that obtains a token but never completes a tool call is visible as a metric and alerts on a sustained rate.
+    - Phone, 2FA and QR login each run end to end on the Telegram test DC in CI and on every release tag, each proven red on a deliberate mutation.
+    - Disconnecting the canary account requires an explicit confirmation naming it as the canary, in the web UI and through MCP tools.
