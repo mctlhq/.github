@@ -65,10 +65,13 @@ spec:
       dependsOn:
         - intent-schema
 
+    # A plan is its own immutable record, not an ExecutionRequest: those
+    # require a work item and model apply, not planning (mctl-api#866).
     - id: plan
-      title: deploy_plan stores the plan digest as an ExecutionRequest and enforces RequiresConfirm
-      owner: mctl-api
       phase: contract
+      issue:
+        repository: mctlhq/mctl-api
+        number: 866
       required: true
       dependsOn:
         - analyze
