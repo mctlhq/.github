@@ -1,0 +1,193 @@
+{
+  "apiVersion": "roadmap.mctl.ai/v1alpha1",
+  "kind": "EpicDefinition",
+  "metadata": {
+    "name": "cross-client-codex-review",
+    "owner": "mashkovd"
+  },
+  "spec": {
+    "title": "Cross-client work continuity and governed Codex review",
+    "goal": "Continue canonical work across MCP clients and independently review spike evidence and proposals, with bounded amendments, explicit delegated authority and durable owner triage.",
+    "lifecycle": "proposed",
+    "github": {
+      "issue": {
+        "repository": "mctlhq/.github",
+        "number": 281
+      }
+    },
+    "phases": [
+      {
+        "id": "foundation",
+        "title": "MCP continuity and review contract"
+      },
+      {
+        "id": "automation",
+        "title": "Review host, amendments and governed decisions"
+      },
+      {
+        "id": "pilot",
+        "title": "Integration evidence and scoped rollout"
+      }
+    ],
+    "workItems": [
+      {
+        "id": "mcp-intents",
+        "title": "feat(mcp): complete WorkItem create, intent append/read and intent-bound execution",
+        "phase": "foundation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-api",
+          "number": 868
+        }
+      },
+      {
+        "id": "mcp-context",
+        "title": "fix(work-context): accept MCP surface and preserve cross-client handoff provenance",
+        "phase": "foundation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 904
+        },
+        "dependsOn": [
+          "mcp-intents"
+        ]
+      },
+      {
+        "id": "review-contract",
+        "title": "feat(review): define independent spike and proposal review receipts",
+        "phase": "foundation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 905
+        },
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 701
+          },
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 702
+          },
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 703
+          },
+          {
+            "repository": "mctlhq/mctl-api",
+            "number": 700
+          },
+          {
+            "repository": "mctlhq/mctl-api",
+            "number": 701
+          }
+        ]
+      },
+      {
+        "id": "codex-host",
+        "title": "feat(mctl): integrate an opt-in Codex review host after the OAuth spike verdict",
+        "phase": "automation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-gitops",
+          "number": 2278
+        },
+        "dependsOn": [
+          "review-contract"
+        ],
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 891
+          }
+        ]
+      },
+      {
+        "id": "review-remediation",
+        "title": "feat(devloop): bound the review–amendment–fresh-review cycle",
+        "phase": "automation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 906
+        },
+        "dependsOn": [
+          "review-contract"
+        ]
+      },
+      {
+        "id": "delegated-decisions",
+        "title": "feat(governance): authorize reviewer-driven proposal actions without impersonating human approval",
+        "phase": "automation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-api",
+          "number": 869
+        },
+        "dependsOn": [
+          "review-contract"
+        ],
+        "externalDependsOn": [
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 703
+          },
+          {
+            "repository": "mctlhq/mctl-api",
+            "number": 700
+          },
+          {
+            "repository": "mctlhq/mctl-api",
+            "number": 701
+          }
+        ]
+      },
+      {
+        "id": "owner-triage",
+        "title": "feat(triage): deliver actionable, version-bound spike and proposal decisions to the owner",
+        "phase": "automation",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 907
+        },
+        "dependsOn": [
+          "review-contract",
+          "delegated-decisions"
+        ]
+      },
+      {
+        "id": "acceptance-pilot",
+        "title": "test(devloop): prove cross-client continuity and gated Codex review pilot",
+        "phase": "pilot",
+        "required": true,
+        "issue": {
+          "repository": "mctlhq/mctl-agents",
+          "number": 908
+        },
+        "dependsOn": [
+          "mcp-intents",
+          "mcp-context",
+          "review-contract",
+          "codex-host",
+          "review-remediation",
+          "delegated-decisions",
+          "owner-triage"
+        ]
+      }
+    ],
+    "completion": {
+      "mode": "allRequired"
+    },
+    "successCriteria": [
+      "Two authorized MCP clients continue one canonical WorkItem with intent-bound execution and tenant isolation; redacted context is explicit.",
+      "Independent spike/proposal review receipts bind actual reviewed content and evidence; amendments require fresh review.",
+      "Technical PASS cannot impersonate human approval; delegated actions require current scoped policy and exact-content authorization.",
+      "Owner triage survives delivery failure and rejects stale or unauthorized decisions without duplicate execution.",
+      "OAuth review host is enabled only after an accepted applicable #891 verdict, with measured limits, revocation and recovery.",
+      "Named pilot demonstrates off/observe/enforce behavior and records reviewer effort, findings, latency, usage and owner interruptions."
+    ]
+  }
+}
