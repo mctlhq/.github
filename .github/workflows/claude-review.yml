@@ -590,7 +590,8 @@ jobs:
       #      the review there and turned the required check green with no
       #      analysis of the PR against its new base (mctlhq/.github#283).
       #      The evidence is now a line in the verdict body, written by the
-      #      run that reviewed and never edited since; see the step.
+      #      run that reviewed, in a verdict nobody has changed since; see
+      #      the step.
       - name: Skip if this commit was already reviewed
         # Originally issue_comment-only — a Codex finding on
         # mctl-telegram#309 caught that closing+reopening a PR, or
@@ -605,13 +606,13 @@ jobs:
         run: |
           # A verdict counts only when its body carries the evidence line the
           # prompt has every verdict end with, naming this run's exact head
-          # AND base, and nobody has edited that body since it was posted
-          # (gap 5 above). commit_id must still match as well, so this can
-          # only ever skip less often than the check it replaced. Verdicts
-          # posted before the line existed carry none: they are not
+          # AND base, and nobody has changed the verdict since it was
+          # submitted (gap 5 above). commit_id must still match as well, so
+          # this can only ever skip less often than the check it replaced.
+          # Verdicts posted before the line existed carry none: they are not
           # evidence, and the run reviews.
           #
-          # Three outcomes, kept apart. true: an unedited verdict with the
+          # Three outcomes, kept apart. true: an unchanged verdict with the
           # evidence. false: the reviews were read in full and hold none.
           # unknown: a read failed, was partial, or did not have the shape it
           # should. Unknown never posts the skip notice and never counts as
@@ -647,34 +648,41 @@ jobs:
 
           # A claude[bot] review body is not claude[bot]'s alone: anyone with
           # write access can edit it, in the UI or through the API. So the
-          # line is evidence only in a body nobody has edited since it was
-          # posted. GitHub stamps every edit, API edits included, into
-          # lastEditedAt, which the REST listing does not carry.
-          unedited=0
+          # line is evidence only in a verdict nobody has changed since it was
+          # submitted: lastEditedAt still unset and updatedAt still equal to
+          # submittedAt. A REST edit moves updatedAt even where it leaves
+          # lastEditedAt unset (seen on a pending review), and so does GitHub
+          # moving a verdict onto another commit. The REST listing carries
+          # neither field.
+          unchanged=0
           if [ "$ids" != "[]" ]; then
-            edits=$(jq -n --argjson ids "$ids" '{variables: {ids: $ids}, query:
-                "query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview { id lastEditedAt } } }"}' |
+            record=$(jq -n --argjson ids "$ids" '{variables: {ids: $ids}, query:
+                "query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview { id lastEditedAt updatedAt submittedAt } } }"}' |
               gh api graphql --input -) ||
               unknown "the edit history of the matching verdicts could not be read"
-            # One response, no errors, and exactly one node per requested id;
-            # -s, because jq given an empty body prints nothing and succeeds.
-            unedited=$(jq -s --argjson ids "$ids" '
+            # One response, no errors, and exactly one well-formed node per
+            # requested id; -s, because jq given an empty body prints nothing
+            # and succeeds.
+            unchanged=$(jq -s --argjson ids "$ids" '
                 (if length == 1 and (.[0] | type) == "object" and (.[0] | has("errors") | not)
                  then .[0].data.nodes else null end) as $nodes
-                | if ($nodes | type) == "array" and all($nodes[]; type == "object" and has("lastEditedAt"))
+                | if ($nodes | type) == "array"
+                     and all($nodes[]; type == "object" and has("lastEditedAt")
+                             and (.lastEditedAt | type == "null" or type == "string")
+                             and (.updatedAt | type == "string") and (.submittedAt | type == "string"))
                      and ($nodes | map(.id) | sort) == ($ids | sort)
-                  then [$nodes[] | select(.lastEditedAt == null)] | length
-                  else error("not the edit history of the matching verdicts") end' <<< "$edits") ||
+                  then [$nodes[] | select(.lastEditedAt == null and .updatedAt == .submittedAt)] | length
+                  else error("not the edit history of the matching verdicts") end' <<< "$record") ||
               unknown "the edit history of the matching verdicts was not usable"
           fi
 
-          if [ "$unedited" -gt 0 ]; then
+          if [ "$unchanged" -gt 0 ]; then
             echo "already_reviewed=true" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR_NUMBER" --repo "$REPO" \
               --body "Skipping — this commit ($HEAD_SHA) already has a Claude review verdict for base $BASE_SHA. Push a new commit, or check the run log if you expected a fresh pass and the previous run actually failed."
           else
             if [ "$ids" != "[]" ]; then
-              echo "::notice::Every claude[bot] verdict recording $HEAD_SHA against base $BASE_SHA has been edited since it was posted, so none of them is evidence. Reviewing afresh."
+              echo "::notice::Every claude[bot] verdict recording $HEAD_SHA against base $BASE_SHA has been edited or otherwise changed since it was submitted, so none of them is evidence. Reviewing afresh."
             elif [ "$on_head" -gt 0 ]; then
               echo "::notice::GitHub reports $on_head claude[bot] verdict(s) on $HEAD_SHA, but none records reviewing it against base $BASE_SHA (an earlier verdict moved onto this commit, or one posted before the evidence line existed). Reviewing afresh."
             fi

@@ -4,8 +4,8 @@ When a branch is updated from its base, GitHub moves the latest approval's
 commit_id onto the new merge head without any new review run, so commit_id is
 no evidence that a head was reviewed. The dedup may skip the review only on a
 claude[bot] verdict whose own body records the exact head and base and that
-nobody has edited since, and must keep a read it could not complete apart
-from one that found no such verdict.
+nobody has changed since it was submitted, and must keep a read it could not
+complete apart from one that found no such verdict.
 
 The step under test is read out of the workflow file itself and run against a
 stand-in `gh` serving canned API responses, so a test can never pass against a
@@ -42,7 +42,8 @@ OLD_HEAD = "7b1c9267f5cf80d738e3b2f3134415740402d764"
 BASE = "9535df34e0fc59af032d4d4a7502f5d29f43570b"
 OLD_BASE = "0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e"
 
-EDIT_QUERY = "query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview { id lastEditedAt } } }"
+EDIT_QUERY = ("query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview"
+              " { id lastEditedAt updatedAt submittedAt } } }")
 
 # Serves `gh api --paginate .../reviews` and `gh api graphql --input -` from a
 # spec file and records every call, with the GraphQL request body appended.
@@ -50,9 +51,13 @@ EDIT_QUERY = "query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview 
 # does; "merged" prints one array, as current gh does. With fail_after, the
 # first pages are printed and gh then exits non-zero, which is what a page
 # failing mid-listing looks like. GraphQL: one node per requested id, in
-# reverse order, edited when listed in "edited"; "raw" replaces the whole
-# response; "fail" prints a clean-looking response and still exits non-zero,
-# as gh does when the response carries errors.
+# reverse order. A node is untouched since submission unless its id is listed
+# in "edited" (an edit GitHub stamped: lastEditedAt set, updatedAt moved),
+# "updated" (updatedAt moved, no stamp: a REST edit of a pending review, or
+# GitHub moving the verdict) or "stamped" (lastEditedAt set, updatedAt not
+# moved). "raw" replaces the whole response; "fail" prints a clean-looking
+# response and still exits non-zero, as gh does when the response carries
+# errors.
 FAKE_GH = """#!/usr/bin/env python3
 import json, os, sys
 
@@ -77,7 +82,11 @@ if args == ["api", "--paginate", spec["path"]]:
     sys.exit(0)
 if graphql:
     edits = spec["graphql"]
-    nodes = [{"id": i, "lastEditedAt": "2026-10-27T10:00:00Z" if i in edits["edited"] else None}
+    submitted, later = "2026-10-26T09:56:57Z", "2026-10-27T10:00:00Z"
+    nodes = [{"id": i,
+              "lastEditedAt": later if i in edits["edited"] + edits["stamped"] else None,
+              "updatedAt": later if i in edits["edited"] + edits["updated"] else submitted,
+              "submittedAt": submitted}
              for i in request["variables"]["ids"]]
     raw = edits["raw"]
     sys.stdout.write(json.dumps({"data": {"nodes": nodes[::-1]}}) if raw is None else raw)
@@ -147,14 +156,16 @@ class Sandbox:
         shutil.rmtree(self.root, ignore_errors=True)
 
     def run(self, pages: list, *, shape: str = "pages", fail_after: int | None = None,
-            edited: tuple = (), graphql_raw: str | None = None, graphql_fail: bool = False,
+            edited: tuple = (), updated: tuple = (), stamped: tuple = (),
+            graphql_raw: str | None = None, graphql_fail: bool = False,
             head: str = HEAD, base: str = BASE) -> subprocess.CompletedProcess:
         self.output.write_text("", encoding="utf-8")
         self.calls.write_text("", encoding="utf-8")
         self.spec.write_text(json.dumps({
             "path": f"repos/{REPO}/pulls/{PR}/reviews",
             "pages": pages, "shape": shape, "fail_after": fail_after,
-            "graphql": {"edited": list(edited), "raw": graphql_raw, "fail": graphql_fail},
+            "graphql": {"edited": list(edited), "updated": list(updated), "stamped": list(stamped),
+                        "raw": graphql_raw, "fail": graphql_fail},
         }), encoding="utf-8")
         env = {
             **os.environ,
@@ -293,8 +304,9 @@ class EvidenceTest(DedupCase):
 
 
 class EditTest(DedupCase):
-    """Write access is enough to edit a claude[bot] review body, so an edited
-    body proves nothing about what claude[bot] reviewed."""
+    """Write access is enough to edit a claude[bot] review body, so a verdict
+    changed after it was submitted proves nothing about what claude[bot]
+    reviewed."""
 
     def test_edited_verdict_is_not_evidence(self) -> None:
         for event, body in verdict_commands():
@@ -302,12 +314,23 @@ class EditTest(DedupCase):
                 verdict = review(body, state=STATE[event])
                 self.assertDecision("false", [[verdict]], edited=(verdict["node_id"],))
         proc = self.decide([[verdict]], edited=(verdict["node_id"],))
-        self.assertIn("has been edited since it was posted", proc.stdout)
+        self.assertIn("has been edited or otherwise changed since it was submitted", proc.stdout)
 
-    def test_one_unedited_verdict_is_enough(self) -> None:
-        edited, kept = review(evidence()), review(evidence())
-        self.assertDecision("true", [[edited, kept]], edited=(edited["node_id"],))
-        self.assertDecision("false", [[edited, kept]], edited=(edited["node_id"], kept["node_id"]))
+    def test_verdict_changed_without_an_edit_stamp_is_not_evidence(self) -> None:
+        # A REST edit of a pending review moved updatedAt and left
+        # lastEditedAt unset; GitHub moving a verdict does the same.
+        verdict = review(evidence())
+        self.assertDecision("false", [[verdict]], updated=(verdict["node_id"],))
+
+    def test_edit_stamp_alone_is_enough_to_disqualify(self) -> None:
+        verdict = review(evidence())
+        self.assertDecision("false", [[verdict]], stamped=(verdict["node_id"],))
+
+    def test_one_unchanged_verdict_is_enough(self) -> None:
+        edited, moved, kept = review(evidence()), review(evidence()), review(evidence())
+        changed = {"edited": (edited["node_id"],), "updated": (moved["node_id"],)}
+        self.assertDecision("true", [[edited, moved, kept]], **changed)
+        self.assertDecision("false", [[edited, moved, kept]], stamped=(kept["node_id"],), **changed)
 
     def test_edit_history_is_read_for_exactly_the_verdicts_with_evidence(self) -> None:
         verdict = review(evidence())
@@ -388,7 +411,9 @@ class UnknownTest(DedupCase):
     def test_unusable_edit_history(self) -> None:
         verdict = review(evidence())
         node = verdict["node_id"]
-        clean = json.dumps({"data": {"nodes": [{"id": node, "lastEditedAt": None}]}})
+        fields = {"id": node, "lastEditedAt": None,
+                  "updatedAt": "2026-10-26T09:56:57Z", "submittedAt": "2026-10-26T09:56:57Z"}
+        clean = json.dumps({"data": {"nodes": [fields]}})
         for raw in (
             "",
             "not json",
@@ -400,10 +425,15 @@ class UnknownTest(DedupCase):
             '{"data": {"nodes": [null]}}',
             '{"data": {"nodes": [{}]}}',
             json.dumps({"data": {"nodes": [{"id": node}]}}),
-            json.dumps({"data": {"nodes": [{"id": "PRR_kwDOSomethingElse", "lastEditedAt": None}]}}),
-            json.dumps({"data": {"nodes": [{"id": node, "lastEditedAt": None}] * 2}}),
-            json.dumps({"data": {"nodes": [{"id": node, "lastEditedAt": None}]},
-                        "errors": [{"message": "Could not resolve to a node"}]}),
+            json.dumps({"data": {"nodes": [dict(fields, id="PRR_kwDOSomethingElse")]}}),
+            json.dumps({"data": {"nodes": [fields] * 2}}),
+            json.dumps({"data": {"nodes": [fields]}, "errors": [{"message": "Could not resolve to a node"}]}),
+            json.dumps({"data": {"nodes": [{k: v for k, v in fields.items() if k != "updatedAt"}]}}),
+            json.dumps({"data": {"nodes": [{k: v for k, v in fields.items() if k != "submittedAt"}]}}),
+            json.dumps({"data": {"nodes": [{k: v for k, v in fields.items() if k != "lastEditedAt"}]}}),
+            json.dumps({"data": {"nodes": [dict(fields, updatedAt=None, submittedAt=None)]}}),
+            json.dumps({"data": {"nodes": [dict(fields, updatedAt=1761472617, submittedAt=1761472617)]}}),
+            json.dumps({"data": {"nodes": [dict(fields, lastEditedAt=False)]}}),
             clean + clean,
             clean[:-3],
         ):
