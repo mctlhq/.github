@@ -1504,7 +1504,7 @@
           "repository": "mctlhq/mctl-telegram"
         }
       ],
-      "updatedAt": "2026-10-30T12:19:42Z"
+      "updatedAt": "2026-10-31T20:02:45Z"
     },
     {
       "blockedBy": [],
@@ -2793,7 +2793,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-30T14:09:06Z"
+      "updatedAt": "2026-10-31T18:55:28Z"
     },
     {
       "blockedBy": [],
@@ -3866,7 +3866,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-30T14:36:08Z"
+      "updatedAt": "2026-10-31T19:57:16Z"
     },
     {
       "blockedBy": [],
@@ -5717,7 +5717,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-31T00:23:07Z"
+      "updatedAt": "2026-10-31T20:02:30Z"
     },
     {
       "blockedBy": [],
@@ -5811,13 +5811,13 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-30T12:19:13Z"
+      "updatedAt": "2026-10-31T20:02:15Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-31T15:47:01Z",
+    "capturedAt": "2026-10-31T20:03:39Z",
     "mode": "live-capture"
   }
 }
