@@ -364,8 +364,9 @@ jobs:
         If the diff is trivial — only config/values YAML (hostname, env
         var, image tag, resource limits, replica count), a dependency bump
         with no logic change, docs/comments, or a one-line typo — approve
-        the PR with a one-line reason and nothing else:
-        `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="APPROVE" -f body="<reason>"`.
+        the PR with a one-line reason, then the evidence line described
+        below, and nothing else:
+        `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="APPROVE" -f body="<reason> Reviewed head=${{ needs.gate.outputs.sha }} base=${{ needs.gate.outputs.base_sha }}"`.
 
         Otherwise, post each finding as an inline review comment using
         the commit-bound REST call below, prefixed with a severity tag:
@@ -387,9 +388,17 @@ jobs:
         targets whatever the PR's current head happens to be at submit
         time, not the commit you actually analyzed:
         - No P1/P2 findings (P3 nits are fine): approve —
-          `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="APPROVE" -f body="No P1/P2 findings (<n> P3). Good to merge."`
+          `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="APPROVE" -f body="No P1/P2 findings (<n> P3). Good to merge. Reviewed head=${{ needs.gate.outputs.sha }} base=${{ needs.gate.outputs.base_sha }}"`
         - One or more P1/P2 findings: request changes —
-          `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="REQUEST_CHANGES" -f body="Has P1/P2 findings, changes requested: <summary>"`
+          `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number || github.event.issue.number }}/reviews --method POST -f commit_id="${{ needs.gate.outputs.sha }}" -f event="REQUEST_CHANGES" -f body="Has P1/P2 findings, changes requested: <summary> Reviewed head=${{ needs.gate.outputs.sha }} base=${{ needs.gate.outputs.base_sha }}"`
+
+        End every verdict body with this evidence line, exactly as the
+        verdict commands above write it, with both SHAs in full:
+        `Reviewed head=${{ needs.gate.outputs.sha }} base=${{ needs.gate.outputs.base_sha }}`
+        GitHub can move an earlier verdict onto a newer commit that nobody
+        reviewed, so a later run treats a verdict as covering its commit
+        only when this line names that exact head and base. A verdict
+        without it is reviewed again.
       # Reviewer-stage model usage (mctlhq/.github#50, agent-finops). The
       # reviewer is the one DevLoop stage whose model call runs here rather
       # than in mctl-agents, so its usage is captured here, at the model-call
@@ -538,11 +547,11 @@ jobs:
       # pull_request/synchronize path — a manual '@claude review' comment
       # posted right after is only ever redundant with that, never with
       # itself. Checks this specific PR's own review list (via the GitHub
-      # reviews API, which records the exact commit_id each review was
-      # submitted against) for an existing TERMINAL VERDICT from claude[bot]
-      # on the current head SHA — NOT workflow-run history, and not just "any
-      # review record at all". Two rounds of review on this workflow itself
-      # (mctl-telegram#309) caught successive gaps here:
+      # reviews API) for an existing TERMINAL VERDICT from claude[bot] that
+      # records reviewing the current head against the current base — NOT
+      # workflow-run history, and not just "any review record at all". Two
+      # rounds of review on this workflow itself (mctl-telegram#309) caught
+      # successive gaps 1-4 here:
       #   1. A run-history check treated a job whose overall conclusion was
       #      "success" as "reviewed" even when the underlying Claude call
       #      failed (continue-on-error masks it) — silently blocking the
@@ -573,24 +582,103 @@ jobs:
       #      exactly the redundant-session waste this check exists to
       #      prevent. Querying the same pinned SHA everything else uses keeps
       #      them consistent.
+      #   5. A review's commit_id is not a record of what was reviewed. When
+      #      a branch is updated from its base, GitHub moves the latest
+      #      approval onto the new merge head without any new run:
+      #      mctl-agents#810's review 5650171210 was submitted on 7b1c9267
+      #      and is now reported on 92963dd3. Matching on commit_id skipped
+      #      the review there and turned the required check green with no
+      #      analysis of the PR against its new base (mctlhq/.github#283).
+      #      The evidence is now a line in the verdict body, written by the
+      #      run that reviewed and never edited since; see the step.
       - name: Skip if this commit was already reviewed
         # Originally issue_comment-only — a Codex finding on
         # mctl-telegram#309 caught that closing+reopening a PR, or
         # draft->ready_for_review, refires `pull_request` for the SAME head
         # SHA (no new commit) and bypassed this check entirely, paying for a
         # fully redundant session. Runs for every trigger type now; the check
-        # is cheap (one paginated API call) relative to a full Claude session.
+        # is cheap (one paginated API call, plus one GraphQL query when a
+        # verdict qualifies) relative to a full Claude session.
         id: dedup
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          already=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" \
-            --jq '[.[] | select(.user.login == "claude[bot]" and .commit_id == "'"$HEAD_SHA"'" and (.state == "APPROVED" or .state == "CHANGES_REQUESTED"))] | length' | \
-            jq -s 'add > 0')
-          echo "already_reviewed=$already" >> "$GITHUB_OUTPUT"
-          if [ "$already" = "true" ]; then
+          # A verdict counts only when its body carries the evidence line the
+          # prompt has every verdict end with, naming this run's exact head
+          # AND base, and nobody has edited that body since it was posted
+          # (gap 5 above). commit_id must still match as well, so this can
+          # only ever skip less often than the check it replaced. Verdicts
+          # posted before the line existed carry none: they are not
+          # evidence, and the run reviews.
+          #
+          # Three outcomes, kept apart. true: an unedited verdict with the
+          # evidence. false: the reviews were read in full and hold none.
+          # unknown: a read failed, was partial, or did not have the shape it
+          # should. Unknown never posts the skip notice and never counts as
+          # reviewed; the review runs, because the verdict it posts is
+          # evidence either way.
+          evidence="Reviewed head=$HEAD_SHA base=$BASE_SHA"
+          unknown() {
+            echo "::warning::Could not tell whether this head and base were already reviewed: $1. Reviewing them."
+            echo "already_reviewed=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          sha='^([0-9a-f]{40}|[0-9a-f]{64})$'
+          [[ $HEAD_SHA =~ $sha && $BASE_SHA =~ $sha ]] ||
+            unknown "the pinned head or base is not a commit SHA"
+
+          # --paginate writes each page as it arrives, so a failure after
+          # page one leaves a valid-looking prefix with a non-zero exit: a
+          # failed read, not a shorter list. Pages come merged into one array
+          # (current gh) or back to back (older gh); -s reads both.
+          reviews=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews") ||
+            unknown "the review list could not be read in full"
+          verdicts=$(jq -cs --arg head "$HEAD_SHA" --arg evidence "$evidence" '
+              if length > 0 and all(.[]; type == "array") and all(.[][]; type == "object") then
+                [.[][] | select(.user.login == "claude[bot]" and .commit_id == $head
+                                and (.state == "APPROVED" or .state == "CHANGES_REQUESTED"))]
+                | {on_head: length,
+                   ids: [.[] | select(.body | type == "string" and contains($evidence)) | .node_id]}
+                | if all(.ids[]; type == "string" and length > 0) then . else error("no node_id") end
+              else error("not a list of reviews") end' <<< "$reviews") ||
+            unknown "the review list was not a list of reviews"
+          on_head=$(jq .on_head <<< "$verdicts")
+          ids=$(jq -c .ids <<< "$verdicts")
+
+          # A claude[bot] review body is not claude[bot]'s alone: anyone with
+          # write access can edit it, in the UI or through the API. So the
+          # line is evidence only in a body nobody has edited since it was
+          # posted. GitHub stamps every edit, API edits included, into
+          # lastEditedAt, which the REST listing does not carry.
+          unedited=0
+          if [ "$ids" != "[]" ]; then
+            edits=$(jq -n --argjson ids "$ids" '{variables: {ids: $ids}, query:
+                "query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview { id lastEditedAt } } }"}' |
+              gh api graphql --input -) ||
+              unknown "the edit history of the matching verdicts could not be read"
+            # One response, no errors, and exactly one node per requested id;
+            # -s, because jq given an empty body prints nothing and succeeds.
+            unedited=$(jq -s --argjson ids "$ids" '
+                (if length == 1 and (.[0] | type) == "object" and (.[0] | has("errors") | not)
+                 then .[0].data.nodes else null end) as $nodes
+                | if ($nodes | type) == "array" and all($nodes[]; type == "object" and has("lastEditedAt"))
+                     and ($nodes | map(.id) | sort) == ($ids | sort)
+                  then [$nodes[] | select(.lastEditedAt == null)] | length
+                  else error("not the edit history of the matching verdicts") end' <<< "$edits") ||
+              unknown "the edit history of the matching verdicts was not usable"
+          fi
+
+          if [ "$unedited" -gt 0 ]; then
+            echo "already_reviewed=true" >> "$GITHUB_OUTPUT"
             gh pr comment "$PR_NUMBER" --repo "$REPO" \
-              --body "Skipping — this commit ($HEAD_SHA) already has a Claude review verdict. Push a new commit, or check the run log if you expected a fresh pass and the previous run actually failed."
+              --body "Skipping — this commit ($HEAD_SHA) already has a Claude review verdict for base $BASE_SHA. Push a new commit, or check the run log if you expected a fresh pass and the previous run actually failed."
+          else
+            if [ "$ids" != "[]" ]; then
+              echo "::notice::Every claude[bot] verdict recording $HEAD_SHA against base $BASE_SHA has been edited since it was posted, so none of them is evidence. Reviewing afresh."
+            elif [ "$on_head" -gt 0 ]; then
+              echo "::notice::GitHub reports $on_head claude[bot] verdict(s) on $HEAD_SHA, but none records reviewing it against base $BASE_SHA (an earlier verdict moved onto this commit, or one posted before the evidence line existed). Reviewing afresh."
+            fi
+            echo "already_reviewed=false" >> "$GITHUB_OUTPUT"
           fi
 
       # Checks out the immutable SHA (needs.gate.outputs.sha), not the
