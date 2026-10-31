@@ -1,9 +1,14 @@
 # Filed 2026-10-30 after two incidents on the connector login path that the
 # tool-path canary could not see: the Cloudflare connector-UA 403 (29.10,
-# mctl-gitops#2261) and MCP refused on the bare origin (30.10, fix in
-# mctl-telegram#957, a PR and therefore not a work item here). Nothing in
-# this epic logs into a real Telegram account automatically on prod; the
-# full login runs only on the Telegram test DC.
+# mctl-gitops#2261) and MCP refused on the bare origin (30.10,
+# mctl-telegram#957).
+#
+# Pivoted 2026-10-31 after live investigation showed that Telegram's test DC
+# still accepts our api_id but no longer gives us a usable account to log in
+# with. The guarded TG_TEST_DC transport remains valid, and mctl-telegram#963
+# stays open as a reactivation path, but it is not a completion dependency.
+# Full-login evidence now uses low-frequency production-DC proofs on a
+# dedicated service account (mctl-telegram#1057), never scheduled phone logins.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -16,10 +21,11 @@ spec:
   goal: >-
     Detect breakage anywhere on the path a new MCP connector takes into
     mctl-telegram (discovery, Telegram OIDC, phone or QR step, token grant,
-    first MCP call, and the edge in front of it) within 30 minutes, without
-    automated logins into real Telegram accounts, and stop the canary account
-    from being broken by an accidental Disconnect.
-  lifecycle: proposed
+    first MCP call, and the edge in front of it) within 30 minutes using
+    continuous synthetic/funnel detectors, plus low-frequency live evidence on
+    dedicated Telegram service accounts, and stop the monitoring canary from
+    being broken by an accidental Disconnect.
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/.github
@@ -33,8 +39,10 @@ spec:
       title: Alerts and runbook for both
     - id: hardening
       title: Canary account guard
-    - id: full-login
-      title: Full MTProto login on the Telegram test DC
+    - id: live-integration
+      title: Low-frequency live MTProto integration evidence
+    - id: live-login
+      title: Low-frequency live Telegram login evidence
   workItems:
     - id: canary-login-path
       title: Canary probes of the connector login path
@@ -44,8 +52,6 @@ spec:
       issue:
         repository: mctlhq/mctl-telegram
         number: 959
-      # The mcp_root step has one passing outcome, an MCP answer on "/",
-      # so it waits for the bare-origin fix to be merged and deployed.
       externalDependsOn:
         - repository: mctlhq/mctl-telegram
           number: 957
@@ -80,34 +86,36 @@ spec:
         repository: mctlhq/mctl-telegram
         number: 961
 
-    # Infrastructure for the item below: test-DC switch and the opt-in CI
-    # job. Needs owner-provided test-DC secrets.
-    - id: test-dc-login
-      title: Run MTProto integration tests against the Telegram test DC
+    - id: live-mtproto-roundtrip
+      title: Guarded test-DC mode plus live service-account message-tool round trip
       owner: mctl-telegram
-      phase: full-login
+      phase: live-integration
       required: true
       issue:
         repository: mctlhq/mctl-telegram
         number: 854
 
-    # The user login flows themselves. #854 covers only the message tools,
-    # so without this item the epic could close without ever running a
-    # login end to end.
-    - id: full-login-e2e
-      title: Full Telegram login flows on the test DC (phone, code, 2FA, QR)
+    - id: live-login-proof
+      title: Low-frequency live Telegram login proof on a dedicated service account
       owner: mctl-telegram
-      phase: full-login
+      phase: live-login
       required: true
       issue:
         repository: mctlhq/mctl-telegram
-        number: 963
+        number: 1057
       dependsOn:
-        - test-dc-login
+        - live-mtproto-roundtrip
+
+  # mctl-telegram#963 is intentionally not a work item while Telegram test-DC
+  # account provisioning is unavailable. It remains open as BLOCKED_BY_TELEGRAM
+  # and can be restored to the graph if a reproducible test-account login path
+  # becomes available again.
   completion:
     mode: allRequired
   successCriteria:
-    - Re-introducing an edge 403 for connector User-Agents, or refusing MCP on the bare origin, turns an alert red within 30 minutes, proven by a deliberate mutation on preview.
-    - A connector that obtains a token but never completes a tool call is visible as a metric and alerts on a sustained rate.
-    - Phone, 2FA and QR login each run end to end on the Telegram test DC in CI and on every release tag, each proven red on a deliberate mutation.
-    - Disconnecting the canary account requires an explicit confirmation naming it as the canary, in the web UI and through MCP tools.
+    - Re-introducing an edge 403 for connector User-Agents, or refusing MCP on the bare origin, turns a detector red within 30 minutes, proven by mutation or preview evidence.
+    - A connector that obtains a token but never completes a successful MCP call is durably visible and alerts only above a minimum-volume floor.
+    - Disconnecting, deleting or revoking the monitoring canary account requires an explicit override and is auditable.
+    - A dedicated live service account proves send, edit, forward and delete through the real production-DC client path at low frequency without re-login on every run.
+    - Full login is proven through mctl-telegram#1057: on-demand QR through the production-DC product code path plus one bounded operator-assisted phone/code/2FA proof; repeated automated phone login is not required.
+    - The unavailable Telegram test-DC account path in mctl-telegram#963 cannot block completion and remains parked until Telegram restores a reproducible test-account login path.
