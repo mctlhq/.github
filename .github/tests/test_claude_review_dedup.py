@@ -355,6 +355,57 @@ class EditTest(DedupCase):
         self.assertDecision("false", [[review("Good to merge.", node_id=MISSING)]])
 
 
+# claude[bot] verdicts as GitHub's GraphQL API reported them on 2026-10-31:
+# (node id, submittedAt, updatedAt). None has lastEditedAt set, and neither
+# does any of the 28,232 submitted reviews in the org's 22 repositories.
+OBSERVED = {
+    # mctl-api#875: an approval nobody touched afterwards.
+    "untouched": ("PRR_kwDORfnDZc8AAAABVN1ZDw", "2026-10-30T21:18:37Z", "2026-10-30T21:18:37Z"),
+    # portfolio#84: created as a pending review 7 s before it was submitted.
+    "submitted from pending": ("PRR_kwDOUVyImc8AAAABNV3KQQ", "2026-09-13T09:26:38Z", "2026-09-13T09:26:38Z"),
+    # mctl-api#367: untouched too, but GitHub wrote updatedAt across a second
+    # boundary. 16 of 6,950 untouched verdicts look like this.
+    "one-second skew": ("PRR_kwDORfnDZc8AAAABO4ek4Q", "2026-09-23T16:26:02Z", "2026-09-23T16:26:03Z"),
+    # mctl-agents#856: moved onto a new head 10 s after it was submitted, the
+    # shortest of the 240 moves seen.
+    "moved after 10 s": ("PRR_kwDOSNnDY88AAAABUorV3A", "2026-10-28T08:32:13Z", "2026-10-28T08:32:23Z"),
+    # mctl-design#144: moved onto a commit created before the verdict and
+    # pushed after it.
+    "moved after 25 s": ("PRR_kwDOSfH2c88AAAABS25k4g", "2026-10-17T22:53:04Z", "2026-10-17T22:53:29Z"),
+    # mctl-agents#810, the case in #283: moved four days later.
+    "moved after 4 days": ("PRR_kwDOSNnDY88AAAABUMbFSg", "2026-10-26T09:56:57Z", "2026-10-30T07:52:45Z"),
+}
+
+
+class ObservedRecordTest(DedupCase):
+    """The decision on GitHub's own records for real verdicts. Each one is
+    given the evidence line for this head and base, so only the record
+    decides."""
+
+    def assertObserved(self, expected: str, name: str) -> None:
+        node, submitted, updated = OBSERVED[name]
+        record = {"id": node, "lastEditedAt": None, "updatedAt": updated, "submittedAt": submitted}
+        with self.subTest(record=name):
+            self.assertDecision(expected, [[review(evidence(), node_id=node)]],
+                                graphql_raw=json.dumps({"data": {"nodes": [record]}}))
+
+    def test_untouched_verdicts_are_evidence(self) -> None:
+        self.assertObserved("true", "untouched")
+        self.assertObserved("true", "submitted from pending")
+
+    def test_moved_verdicts_are_not_evidence(self) -> None:
+        # Moves this close to submission fall in the same minute, so a check
+        # coarser than the second, or with any tolerance, would accept them.
+        self.assertObserved("false", "moved after 10 s")
+        self.assertObserved("false", "moved after 25 s")
+        self.assertObserved("false", "moved after 4 days")
+
+    def test_one_second_skew_is_reviewed_again(self) -> None:
+        # Exact equality is deliberate: a tolerance would also accept an edit
+        # made inside it. Such a verdict costs one extra review.
+        self.assertObserved("false", "one-second skew")
+
+
 class UnknownTest(DedupCase):
     """A read that did not complete is neither "reviewed" nor "not reviewed"."""
 
