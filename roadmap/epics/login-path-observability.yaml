@@ -117,5 +117,8 @@ spec:
     - A connector that obtains a token but never completes a successful MCP call is durably visible and alerts only above a minimum-volume floor.
     - Disconnecting, deleting or revoking the monitoring canary account requires an explicit override and is auditable.
     - A dedicated live service account proves send, edit, forward and delete through the real production-DC client path at low frequency without re-login on every run.
-    - Full login is proven through mctl-telegram#1057: on-demand QR through the production-DC product code path plus one bounded operator-assisted phone/code/2FA proof; repeated automated phone login is not required.
+    - >-
+      Full login is proven through mctl-telegram#1057: on-demand QR through the
+      production-DC product code path plus one bounded operator-assisted
+      phone/code/2FA proof; repeated automated phone login is not required.
     - The unavailable Telegram test-DC account path in mctl-telegram#963 cannot block completion and remains parked until Telegram restores a reproducible test-account login path.
