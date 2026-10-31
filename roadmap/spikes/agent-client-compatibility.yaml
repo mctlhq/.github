@@ -1,0 +1,28 @@
+# Filed from the Cloudflare agent-setup comparison (2026-10-31). The verdict
+# belongs to the owner and is recorded in the decision block after the report
+# in docs/spikes/agent-client-compatibility.md is merged.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: agent-client-compatibility
+  owner: mctlhq/.github
+spec:
+  title: Which coding agents can connect to mctl over MCP
+  question: >-
+    How many of the twelve coding agents on Cloudflare's agent-setup list can
+    connect to api.mctl.ai/mcp, list the platform skills and read one by
+    following only a public guide, and at which step do the others fail?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 290
+  outcomes:
+    - PLATFORM_READY
+    - FIX_PROTOCOL_FIRST
+    - AUTH_PATH_PER_AGENT
+    - NOT_A_FIT
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/agent-client-compatibility.md
