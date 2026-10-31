@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "2ae263268aa9bd739647bb91317804d8e3a54400"
+    "revision": "46541a47ad7f865bc6c85fc1ca72eaacffc832f3"
   },
   "files": {
     "health.json": {
-      "sha256": "8dddb9e386fed83e59c46b75befda8f716e5415f3292375178619c3de2faf432"
+      "sha256": "7c936c0ab3a7d48bbf9dacfb367dc840d3fdb287351640926bc3062561b5054b"
     },
     "ready-set.json": {
-      "sha256": "2fbb623aecbc3456e6b7f6c8bfde81625fc285cb751e214c6d3e4e6e3c6ebac7"
+      "sha256": "a48d3014cf8c6d98dc1aa470f65723a0d46c09f3be8d35e91e8e8ae89caecd2e"
     },
     "snapshot.json": {
-      "sha256": "4d9c13c240c7756541da33a1c93947320d098b4e21a14e1af9c5bc40bfb0b1ff"
+      "sha256": "32a70d57edcba8f60163622c59d471b6c71f4138585ffc40dfb0dc40ad476f95"
     }
   },
   "kind": "RoadmapPublication",
@@ -188,13 +188,13 @@
     },
     {
       "epic": {
-        "goal": "Detect breakage anywhere on the path a new MCP connector takes into mctl-telegram (discovery, Telegram OIDC, phone or QR step, token grant, first MCP call, and the edge in front of it) within 30 minutes, without automated logins into real Telegram accounts, and stop the canary account from being broken by an accidental Disconnect.",
-        "lifecycle": "proposed",
+        "goal": "Detect breakage anywhere on the path a new MCP connector takes into mctl-telegram (discovery, Telegram OIDC, phone or QR step, token grant, first MCP call, and the edge in front of it) within 30 minutes using continuous synthetic/funnel detectors, plus low-frequency live evidence on dedicated Telegram service accounts, and stop the monitoring canary from being broken by an accidental Disconnect.",
+        "lifecycle": "active",
         "name": "login-path-observability",
         "title": "Observe the connector login path, not only connected accounts"
       },
       "path": "roadmap/epics/login-path-observability.yaml",
-      "sha256": "26e4fe82c601ab3cff40012c69ff9c69a787cc59d9caf5b6102612628d40bae0"
+      "sha256": "1ac2b88b00b621491b0902b582d1f5c3b25513df4d367a7b45836d162e297e72"
     },
     {
       "epic": {
@@ -269,12 +269,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-31T20:03:39Z",
+    "capturedAt": "2026-10-31T20:19:56Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "2ae263268aa9bd739647bb91317804d8e3a54400"
+    "revision": "46541a47ad7f865bc6c85fc1ca72eaacffc832f3"
   }
 }

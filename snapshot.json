@@ -3864,9 +3864,10 @@
         "number": 868,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-31T19:57:16Z"
+      "updatedAt": "2026-10-31T20:21:26Z"
     },
     {
       "blockedBy": [],
@@ -4767,9 +4768,10 @@
         "number": 2276,
         "repository": "mctlhq/mctl-gitops"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-30T12:15:59Z"
+      "updatedAt": "2026-10-31T20:20:37Z"
     },
     {
       "blockedBy": [],
@@ -5715,9 +5717,10 @@
         "number": 854,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-31T20:02:30Z"
+      "updatedAt": "2026-10-31T20:21:04Z"
     },
     {
       "blockedBy": [],
@@ -5750,9 +5753,10 @@
         "number": 959,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-30T12:18:58Z"
+      "updatedAt": "2026-10-31T20:20:23Z"
     },
     {
       "blockedBy": [],
@@ -5797,27 +5801,24 @@
     {
       "blockedBy": [],
       "found": true,
-      "parent": {
-        "number": 279,
-        "repository": "mctlhq/.github"
-      },
+      "parent": null,
       "requested": {
-        "number": 963,
+        "number": 1057,
         "repository": "mctlhq/mctl-telegram"
       },
       "resolved": {
-        "number": 963,
+        "number": 1057,
         "repository": "mctlhq/mctl-telegram"
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-31T20:02:15Z"
+      "updatedAt": "2026-10-31T20:22:26Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-10-31T20:03:39Z",
+    "capturedAt": "2026-10-31T20:19:56Z",
     "mode": "live-capture"
   }
 }
