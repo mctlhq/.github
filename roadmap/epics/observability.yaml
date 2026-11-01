@@ -11,7 +11,7 @@ spec:
     Make mctl executions observable as correlated OpenTelemetry traces through a
     vendor-neutral OTLP boundary, with canonical execution identity, backend
     portability and no private payload recording by default.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
