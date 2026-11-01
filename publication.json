@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "a04fe9650c3bf45e9fef2c874a76f10937f81892"
+    "revision": "c46dcb5728e6edd19c61e1751c9ecb6bc66eb86f"
   },
   "files": {
     "health.json": {
-      "sha256": "e03611741fe79d623b3a4adb4b5e45f769fc0570a24dc0c802d909d623081b81"
+      "sha256": "ed7f27eecab1f22cfa4e9d5a0650894019e38c6b07b48b847a47aecf7078cd61"
     },
     "ready-set.json": {
-      "sha256": "2366b9043d95c3286030c6153f40abb389847017295564a4e1957a1a3f373572"
+      "sha256": "bfe1f02642185c896da98a74216dbfd2404ee87f68a12ec03f7e2b77d1c96625"
     },
     "snapshot.json": {
-      "sha256": "bd5fb9bfbfcf38cea3fb23090b98e469129b3d0cdc0bb73c3908695580c9ae2a"
+      "sha256": "53e2a65d0b21cffe5aee296ea95f4974783e6134a993c2c1b1d1101585b16ce1"
     }
   },
   "kind": "RoadmapPublication",
@@ -249,12 +249,12 @@
     {
       "epic": {
         "goal": "Let a Telegram user turn an installed assistant on from their MCP client with no token, machine or model credential of their own: runtime: managed on the install, confirmed with an explicit consent, makes one pooled platform worker per environment claim that account's jobs and run them on an OpenAI-compatible model through the Cloudflare AI gateway, behind the same tool set and policy as the owner-run worker, under hard budget caps.",
-        "lifecycle": "proposed",
+        "lifecycle": "active",
         "name": "telegram-managed-runtime",
         "title": "Managed runtime for Telegram assistants"
       },
       "path": "roadmap/epics/telegram-managed-runtime.yaml",
-      "sha256": "5214a0901fc1dfc52c32523c837d30a252de42d708ff1041cfa90d05b7baade7"
+      "sha256": "82550008c8165cfccdb3068fded57f76613d66520f7b29013e951da1ed3f26a5"
     },
     {
       "epic": {
@@ -279,12 +279,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-01T18:24:16Z",
+    "capturedAt": "2026-11-01T18:34:23Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "a04fe9650c3bf45e9fef2c874a76f10937f81892"
+    "revision": "c46dcb5728e6edd19c61e1751c9ecb6bc66eb86f"
   }
 }
