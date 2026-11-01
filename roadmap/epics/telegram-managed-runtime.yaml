@@ -1,0 +1,150 @@
+# Filed 2026-11-01 as P5 of mctl-telegram#1002 after the first production
+# install of hr-recruiter@0.1.1: the only worker is the owner's Mac mini, so no
+# other Telegram account can run an assistant. Decision record:
+# mctl-telegram docs/adr/0008-managed-runtime.md (PR mctl-telegram#1096).
+# Owner amendments of the same day (consent, reservation-based caps,
+# revocation of issued job tokens, server-authoritative ledger, soak numbers)
+# are part of the success criteria, not follow-ups.
+#
+# Production rollout is deliberately not a work item: it is gated by the
+# conversation-plane gates mctl-telegram#889 and #334 and happens after the
+# preview soak recorded on the epic issue.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: telegram-managed-runtime
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Managed runtime for Telegram assistants
+  goal: >-
+    Let a Telegram user turn an installed assistant on from their MCP client
+    with no token, machine or model credential of their own: runtime: managed
+    on the install, confirmed with an explicit consent, makes one pooled
+    platform worker per environment claim that account's jobs and run them on
+    an OpenAI-compatible model through the Cloudflare AI gateway, behind the
+    same tool set and policy as the owner-run worker, under hard budget caps.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 1088
+  phases:
+    - id: foundation
+      title: Runtime field, consent, pool credential and claim path
+    - id: runner
+      title: OpenAI-compatible runner and the model gate
+    - id: budget
+      title: Usage ledger and reservation-based caps
+    - id: rollout
+      title: Image, preview deployment, soak and docs
+  workItems:
+    - id: runtime-field
+      title: "feat(assistant): runtime field on AssistantInstall with consent, flag and quota"
+      owner: mctl-telegram
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1089
+
+    - id: pool-claim
+      title: "feat(agentapi): pool credential and managed claim path"
+      owner: mctl-telegram
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1090
+      dependsOn:
+        - runtime-field
+
+    - id: openai-runner
+      title: "feat(agent-worker): OpenAI-compatible Runner behind the shared tool set"
+      owner: mctl-telegram
+      phase: runner
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1091
+
+    - id: openai-tool-loop-spike
+      title: "spike(telegram): OpenAI-compatible function calling for the assistant tool loop"
+      owner: mctl-telegram
+      phase: runner
+      required: true
+      issue:
+        repository: mctlhq/.github
+        number: 293
+
+    - id: c1-gate
+      title: "test(eval): C1 gate for the OpenAI Runner on hetzner then nebius"
+      owner: mctl-telegram
+      phase: runner
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1093
+      dependsOn:
+        - openai-runner
+        - openai-tool-loop-spike
+
+    - id: usage-ledger
+      title: "feat(agent): managed-tier usage ledger with reservation caps"
+      owner: mctl-telegram
+      phase: budget
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1092
+      dependsOn:
+        - pool-claim
+
+    - id: ci-image
+      title: "ci(release): publish the agent-worker image on release and dispatch agent-worker-managed-preview"
+      owner: mctl-telegram
+      phase: rollout
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1094
+      dependsOn:
+        - openai-runner
+
+    - id: preview-deploy
+      title: "feat(labs): agent-worker-managed-preview, MANAGED_RUNTIME flags and AI gateway mctl-telegram"
+      owner: mctl-gitops
+      phase: rollout
+      required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2345
+      dependsOn:
+        - runtime-field
+        - pool-claim
+        - openai-runner
+        - c1-gate
+        - usage-ledger
+        - ci-image
+
+    - id: docs
+      title: "docs: managed runtime env table, spec T4/Runtime section and pool-token runbook"
+      owner: mctl-telegram
+      phase: rollout
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1095
+      dependsOn:
+        - preview-deploy
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A Telegram user switches runtime to managed from their MCP client with no token in hand, and only after sending the versioned consent string; the consent version and time are stored and audited, and a new consent version holds existing managed installs until re-consented.
+    - An own-runtime token never claims a managed account's job and the pool never claims an own account's job, enforced by the runtime predicate in both SQL claim queries and mutation-verified in each.
+    - The pool credential can only claim; every per-job call uses a job token bound to the job's account and tool set, and revoking the pool jti refuses an already-issued derived job token within 15 seconds (TestPoolRevocation_KillsIssuedJobToken).
+    - Budget caps are hard under concurrency - the per-job maximum is reserved inside the claim transaction and reconciled on the cost report - proven by a race test with two concurrent claims and budget for one job; exhausted accounts keep their jobs pending and are notified once per window.
+    - The usage ledger is server-authoritative - user, runtime, job and attempt come from the job token and the job row, never from the request body - with identical retries as no-ops and conflicting retries refused with an audited 409.
+    - The OpenAI runner executes the same tool handlers as the MCP server (schemas proven equal by test), and the chosen model passes the C1 gate at 29 of 32 or better with 0 leaks, 0 binding violations and 0 wrong auto-sends.
+    - The preview soak of at least 30 managed jobs records p50 and p95 job latency, cost per job, reservation reconciliation drift of 0, cross-account violations of 0 and gateway logs at 0; production follows only after mctl-telegram#889 and #334.

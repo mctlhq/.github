@@ -1,0 +1,39 @@
+# Phase "runner" of the telegram-managed-runtime epic (mctl-telegram#1088):
+# whether an OpenAI-compatible model through the Cloudflare AI gateway can
+# drive the assistant's tool loop with the existing tool schemas, and which
+# provider serves preview and production, is measured rather than assumed.
+# decisionBy sits before the Anthropic promo credit ends on 2026-11-11.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: telegram-openai-tool-loop
+  owner: mctlhq/mctl-telegram
+spec:
+  title: OpenAI-compatible function calling for the Telegram assistant tool loop
+  question: >-
+    Can an OpenAI-compatible model reached through the Cloudflare AI gateway
+    (Hetzner Qwen3.8-27B or Qwen3.6-35B-A3B via custom-hetzner, Nebius
+    GLM-5.1 via custom-nebius) drive the assistant's 11-tool loop with
+    tool_choice auto and the function schemas taken unchanged from
+    mcplib.Tool.InputSchema, pass the C1 gate (29 of 32 or better, 0 leaks,
+    0 binding violations, 0 wrong auto-sends), and at what p50/p95 latency
+    and cost per job?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 293
+  outcomes:
+    - GO_HETZNER_DEV_NEBIUS_PROD
+    - GO_NEBIUS_ONLY
+    - NEEDS_SCHEMA_ADAPTER
+    - NOT_A_FIT
+  epic:
+    name: telegram-managed-runtime
+    workItem: openai-tool-loop-spike
+  timebox:
+    decisionBy: "2026-11-10"
+  execution:
+    devloop: false
+  evidence:
+    report: docs/spikes/telegram-openai-tool-loop.md
