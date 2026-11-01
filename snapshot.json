@@ -1540,7 +1540,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-01T18:56:08Z"
+      "updatedAt": "2026-11-01T20:49:05Z"
     },
     {
       "blockedBy": [
@@ -2783,7 +2783,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-10-30T14:12:38Z"
+      "updatedAt": "2026-11-01T21:36:48Z"
     },
     {
       "blockedBy": [],
@@ -3904,9 +3904,10 @@
         "number": 869,
         "repository": "mctlhq/mctl-api"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-10-30T14:12:37Z"
+      "updatedAt": "2026-11-01T22:03:18Z"
     },
     {
       "blockedBy": [],
@@ -5993,9 +5994,10 @@
         "number": 1091,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-11-01T18:04:08Z"
+      "updatedAt": "2026-11-01T23:38:16Z"
     },
     {
       "blockedBy": [
@@ -6101,7 +6103,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-01T19:00:22Z",
+    "capturedAt": "2026-11-01T23:41:08Z",
     "mode": "live-capture"
   }
 }
