@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "1a23d779df16d49205feca2f502941268347e0d4"
+    "revision": "a04fe9650c3bf45e9fef2c874a76f10937f81892"
   },
   "files": {
     "health.json": {
-      "sha256": "852ab334325cc831ecc10f7d8be12d4eba65cb124db718471e5f156aea904a38"
+      "sha256": "f8f62ae7b2527a0ccebb25077e4a272163b7602f2ea6baf8ada115c3f95ab2df"
     },
     "ready-set.json": {
-      "sha256": "8d4c54b8e74384b430069ef1d0123e47337357a9cce91342c30a8de07de690ba"
+      "sha256": "9999c0ed47ef7ed15b2ead3df680a9063e389a1c3d847733081300ade80b8854"
     },
     "snapshot.json": {
-      "sha256": "a9dfb0006530c6f75df77c7f25fa929e94fad3e8671f70b03b17ecce06981b55"
+      "sha256": "0207c3300b19e0f979786bfb2611ed6cc1ae0ef6ac4259dc70624ce307b96dc9"
     }
   },
   "kind": "RoadmapPublication",
@@ -248,6 +248,16 @@
     },
     {
       "epic": {
+        "goal": "Let a Telegram user turn an installed assistant on from their MCP client with no token, machine or model credential of their own: runtime: managed on the install, confirmed with an explicit consent, makes one pooled platform worker per environment claim that account's jobs and run them on an OpenAI-compatible model through the Cloudflare AI gateway, behind the same tool set and policy as the owner-run worker, under hard budget caps.",
+        "lifecycle": "proposed",
+        "name": "telegram-managed-runtime",
+        "title": "Managed runtime for Telegram assistants"
+      },
+      "path": "roadmap/epics/telegram-managed-runtime.yaml",
+      "sha256": "5214a0901fc1dfc52c32523c837d30a252de42d708ff1041cfa90d05b7baade7"
+    },
+    {
+      "epic": {
         "goal": "A tenant, or the tenant's own agent, asks an mctl-side Claude agent why a service, rollout, workflow or onboarding is failing. The agent investigates only that tenant's resources, read-only, through a tenant-bound support run token, answers with evidence, and escalates to the platform owner only what the tenant cannot fix themselves, as a tenant-local incident.",
         "lifecycle": "active",
         "name": "tenant-support-agent",
@@ -269,12 +279,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-01T14:20:59Z",
+    "capturedAt": "2026-11-01T18:12:18Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "1a23d779df16d49205feca2f502941268347e0d4"
+    "revision": "a04fe9650c3bf45e9fef2c874a76f10937f81892"
   }
 }
