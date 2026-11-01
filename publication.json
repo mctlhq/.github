@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "c46dcb5728e6edd19c61e1751c9ecb6bc66eb86f"
+    "revision": "69d0f1e1803b4c35d1c1e93f4e8b78f6816b6e4a"
   },
   "files": {
     "health.json": {
-      "sha256": "ed7f27eecab1f22cfa4e9d5a0650894019e38c6b07b48b847a47aecf7078cd61"
+      "sha256": "7e48c0ce77cfb0955eaa920e0089f9159c0f8021c9b7b29a7251d977fd919fd6"
     },
     "ready-set.json": {
-      "sha256": "bfe1f02642185c896da98a74216dbfd2404ee87f68a12ec03f7e2b77d1c96625"
+      "sha256": "751695295f4a3357697388587a874dc61fb4f78af5f0e14e1703b46c20402873"
     },
     "snapshot.json": {
-      "sha256": "53e2a65d0b21cffe5aee296ea95f4974783e6134a993c2c1b1d1101585b16ce1"
+      "sha256": "a90f39f1ba80852d76171538eb1718c503a4fee5d0d2860c16ca284b8c423c4b"
     }
   },
   "kind": "RoadmapPublication",
@@ -209,12 +209,12 @@
     {
       "epic": {
         "goal": "Make mctl executions observable as correlated OpenTelemetry traces through a vendor-neutral OTLP boundary, with canonical execution identity, backend portability and no private payload recording by default.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "observability",
         "title": "Vendor-neutral execution tracing for agents and DevLoop"
       },
       "path": "roadmap/epics/observability.yaml",
-      "sha256": "78476d3f98929d1c7d0117cca8563dcea0d5045ecb417b7253230b21c3903dac"
+      "sha256": "4e73ee0abf2e2c6838922ec69a2894c94a4c6174601c07d24409a0af96dcd177"
     },
     {
       "epic": {
@@ -279,12 +279,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-01T18:34:23Z",
+    "capturedAt": "2026-11-01T19:00:22Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "c46dcb5728e6edd19c61e1751c9ecb6bc66eb86f"
+    "revision": "69d0f1e1803b4c35d1c1e93f4e8b78f6816b6e4a"
   }
 }
