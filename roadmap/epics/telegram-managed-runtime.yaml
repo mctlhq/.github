@@ -25,7 +25,7 @@ spec:
     platform worker per environment claim that account's jobs and run them on
     an OpenAI-compatible model through the Cloudflare AI gateway, behind the
     same tool set and policy as the owner-run worker, under hard budget caps.
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/mctl-telegram
