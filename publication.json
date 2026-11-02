@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "69d0f1e1803b4c35d1c1e93f4e8b78f6816b6e4a"
+    "revision": "a3ba177dc8aa163eff7b468a8cfb449a881bcff9"
   },
   "files": {
     "health.json": {
-      "sha256": "b3da8dfee0bc4523ff724c8124e7049ad8c07fcd357f605b12f0cc111ad7377d"
+      "sha256": "dcfb9e38a20d22b67478ab70a35db056646195859adfa1db398012fa64691c64"
     },
     "ready-set.json": {
-      "sha256": "e1eae3f4f2c3c8b8caa9c8c3245921c067e1ac4191b7b9d1309d006781c75fff"
+      "sha256": "437b345b7dc49efe5273151afa62cdab052d4dabcea78233ccca0e4e8efa88e7"
     },
     "snapshot.json": {
-      "sha256": "aadadd189f47e937b83fcb5e93692ec6f28b14b82eac8a20de1b37dbe37016dd"
+      "sha256": "b6e50d5dc7730383ce4c9914ebf62659ddd39554be9fa64e5756081e73e3add6"
     }
   },
   "kind": "RoadmapPublication",
@@ -134,7 +134,7 @@
         "title": "Cross-client work continuity and governed Codex review"
       },
       "path": "roadmap/epics/cross-client-codex-review.yaml",
-      "sha256": "366193cff73ba2ae9b127862af0c57e1ea3ea9a0e6fbf534b33242a740b433bc"
+      "sha256": "651c6f4d245403b250c1cd81d6b7a90075f8eee0946b1d2ca6d0d6f4e32aa693"
     },
     {
       "epic": {
@@ -279,12 +279,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-02T17:12:40Z",
+    "capturedAt": "2026-11-02T23:12:53Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "69d0f1e1803b4c35d1c1e93f4e8b78f6816b6e4a"
+    "revision": "a3ba177dc8aa163eff7b468a8cfb449a881bcff9"
   }
 }
