@@ -6,9 +6,9 @@
     "owner": "mashkovd"
   },
   "spec": {
-    "title": "Cross-client work continuity and governed Codex review",
-    "goal": "Continue canonical work across MCP clients and independently review spike evidence and proposals, with bounded amendments, explicit delegated authority and durable owner triage.",
-    "lifecycle": "proposed",
+    "title": "Cross-client work continuity and governed independent review",
+    "goal": "Continue canonical work across MCP clients and independently review spike evidence and proposals with a canonical review-worker, bounded amendments, explicit delegated authority boundaries and durable owner triage.",
+    "lifecycle": "active",
     "github": {
       "issue": {
         "repository": "mctlhq/.github",
@@ -22,7 +22,7 @@
       },
       {
         "id": "automation",
-        "title": "Review host, amendments and governed decisions"
+        "title": "Independent review, amendments and governed decisions"
       },
       {
         "id": "pilot",
@@ -223,7 +223,7 @@
       },
       {
         "id": "manual-continuity",
-        "title": "Prove read-only Claude-to-Codex intent handoff",
+        "title": "Prove Claude ↔ ChatGPT WorkItem handoff independently of execution",
         "phase": "foundation",
         "required": true,
         "issue": {
@@ -271,8 +271,8 @@
     "successCriteria": [
       "Required milestone: two authenticated MCP clients share one WorkItem and read bounded intent without starting execution; viewer and tenant isolation are mutation-verified.",
       "Required resume milestone: readable intent_id is pinned; MCP provenance is forwarded; unavailable/redacted context parks without running placeholder text.",
-      "Review uses existing proposal content digest and new versioned spike-report digest, private ADR 018 evidence and full SHAs; changes invalidate receipts.",
-      "Human-input is never approval; direct human decisions bind displayed aar_ and context_digest; policy authorization cannot decide/spend aar_ or impersonate a human.",
+      "Autonomous independent review uses the canonical review-worker producer, the existing proposal content digest and a versioned spike-report digest, private ADR 018 evidence and full SHAs; changed content invalidates prior receipts.",
+      "Human-input is never approval; direct human decisions bind displayed aar_ and context_digest; any future policy authorization cannot decide/spend aar_ or impersonate a human.",
       "Owner triage preserves privacy and handles stale cards, disputed findings, bounded retries and notification failure.",
       "Optional OAuth host/pilot stays disabled unless #910 evaluates accepted #891 ADOPT verdict and applicable policy rows ALLOWED; issue closure alone grants nothing.",
       "Optional pilot rollout is off by default, owner-approved per stage and mutation-verified including in-flight rollback. DEFER/REJECT does not block required completion."
