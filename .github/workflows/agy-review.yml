@@ -202,6 +202,11 @@ jobs:
           unhandled edge cases, and missing tests for changed behavior.
           Do not report formatting or subjective style nits.
 
+          Be extremely concise. Write at most 1–2 short paragraphs per finding.
+          Report P1/P2 issues first; keep P3 findings to one line each.
+          Do not quote full code blocks, only the exact single anchor line.
+          Ensure total output stays well under 2000 tokens.
+
           You are shown a fragment of the repository, never the whole test
           suite: a test that covers changed behaviour may exist in a file, or
           a part of a file, that is not in this diff. So a claim that
@@ -467,17 +472,17 @@ jobs:
           # Same shape as the reconciliation block: only a slug that block
           # normalises counts as consistent, not any string that happens to
           # end in the effort name.
-          case "$AGY_MODEL" in
-            gemini-*-"$effort_lower") tier_consistent=1 ;;
-            *) tier_consistent=0 ;;
-          esac
           is_transient() {
+            local cur_effort
+            cur_effort=$(printf '%s' "$AGY_EFFORT" | tr '[:upper:]' '[:lower:]')
             case "$1" in
               *"UNAVAILABLE (code 503)"*)
                 return 0
                 ;;
               *"--effort is not supported for model \"$AGY_MODEL\""*)
-                if [ "$tier_consistent" = 1 ]; then return 0; fi
+                case "$AGY_MODEL" in
+                  gemini-*-"$cur_effort") return 0 ;;
+                esac
                 ;;
             esac
             # Every arm ends with status 0 (an `if` whose condition fails
@@ -486,6 +491,15 @@ jobs:
             # predicate: a bare `is_transient "$x"` returning 1 aborts
             # under -e like any other failing statement, so callers use it
             # as an if/&& condition, as both call sites below do.
+            return 1
+          }
+
+          is_token_limit() {
+            case "$1" in
+              *"output token limit"*|*"Response was cut off"*|*"response was cut off"*)
+                return 0
+                ;;
+            esac
             return 1
           }
 
@@ -556,6 +570,41 @@ jobs:
           }
 
           run_agy_retrying "$AGY_HOME_PRIMARY"
+
+          # If high reasoning effort caused the model to exceed the hard
+          # output token limit (Gemini reasoning tokens count against the output
+          # token limit), retry with medium effort on the primary account
+          # rather than burning quota on the fallback account or failing immediately.
+          if [ "$status" != "SUCCESS" ] && is_token_limit "$error"; then
+            safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
+            echo "::warning::agy response exceeded output token limit ($safe_error)"
+            target_effort=""
+            case "$effort_lower" in
+              high) target_effort="medium" ;;
+            esac
+
+            if [ -n "$target_effort" ]; then
+              if [ "$(remaining)" -lt 120 ]; then
+                echo "::warning::not retrying with --effort $target_effort: $(remaining)s of the step budget left"
+              else
+                echo "::warning::retrying review with --effort $target_effort on primary account"
+                echo "agy: response exceeded output token limit, retried with --effort $target_effort" >> "$GITHUB_STEP_SUMMARY"
+                AGY_EFFORT="$target_effort"
+                effort_lower="$target_effort"
+                case "$AGY_MODEL" in
+                  gemini-*-high|gemini-*-medium|gemini-*-low)
+                    reconciled_model="${AGY_MODEL%-*}-${effort_lower}"
+                    if [ "$reconciled_model" != "$AGY_MODEL" ]; then
+                      echo "::notice::reconciled agy model from $AGY_MODEL to $reconciled_model to match effort $AGY_EFFORT"
+                      AGY_MODEL="$reconciled_model"
+                    fi
+                    ;;
+                esac
+                echo "model=$AGY_MODEL" >> "$GITHUB_OUTPUT"
+                run_agy_retrying "$AGY_HOME_PRIMARY"
+              fi
+            fi
+          fi
 
           # The one shape observed in production (2026-09-07/08) is agy's
           # own human-readable message, "Individual quota reached. Please
