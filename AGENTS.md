@@ -4,6 +4,14 @@
   live audit and acceptance rationale (root mctlhq/.github#173). The dependency
   graph is owned by `roadmap/epics/agent-commerce.yaml`, not by the plan.
 
+# Spike issue creation rules
+
+- Every spike issue MUST be created from the current `.github/ISSUE_TEMPLATE/spike.yml` on `main`. Before creating a spike through an API, connector, CLI, or agent, fetch the template first; do not rely on remembered or cached fields.
+- Preserve the template title prefix and every required body field, including `Source`, `Question`, `Outcomes`, `Lifecycle`, `Related`, and `Why mctl`. Apply all labels declared by the template. Extra detail may follow the template block, but must not replace or remove required fields.
+- Keep `Source:` as the canonical deduplication key. Check for an existing spike with the same source before creating a new one.
+- Before handing a spike to `agents:intake` or starting DevLoop, re-read the created issue and verify its title, body, and labels against the current template. If it does not conform, fix the issue first and do not start the workflow.
+- If the template changes, the latest version on `main` wins over these examples or any remembered convention.
+
 # Spikes
 
 - [Agent Governance and Decision Assurance](docs/spikes/agent-governance-decision-assurance.md):
