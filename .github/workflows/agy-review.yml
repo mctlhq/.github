@@ -203,8 +203,9 @@ jobs:
           Do not report formatting or subjective style nits.
 
           Be extremely concise. Write at most 1–2 short paragraphs per finding.
-          Prioritize only P1/P2 issues. Do not quote full code blocks, only the
-          exact single anchor line. Ensure total output stays well under 2000 tokens.
+          Report P1/P2 issues first; keep P3 findings to one line each.
+          Do not quote full code blocks, only the exact single anchor line.
+          Ensure total output stays well under 2000 tokens.
 
           You are shown a fragment of the repository, never the whole test
           suite: a test that covers changed behaviour may exist in a file, or
@@ -495,7 +496,7 @@ jobs:
 
           is_token_limit() {
             case "$1" in
-              *[Oo]utput token limit*|*[Ee]xceeded the output token limit*|*[Rr]esponse was cut off*)
+              *"output token limit"*|*"Response was cut off"*|*"response was cut off"*)
                 return 0
                 ;;
             esac
@@ -570,9 +571,9 @@ jobs:
 
           run_agy_retrying "$AGY_HOME_PRIMARY"
 
-          # If high (or medium) reasoning effort caused the model to exceed
-          # the hard output token limit (Gemini reasoning tokens count against
-          # the output token limit), retry with lower effort on the primary account
+          # If high reasoning effort caused the model to exceed the hard
+          # output token limit (Gemini reasoning tokens count against the output
+          # token limit), retry with medium effort on the primary account
           # rather than burning quota on the fallback account or failing immediately.
           if [ "$status" != "SUCCESS" ] && is_token_limit "$error"; then
             safe_error=$(printf '%s' "$error" | tr -d '\r' | tr '\n' ' ' | sed 's/::/:_:/g')
@@ -580,7 +581,6 @@ jobs:
             target_effort=""
             case "$effort_lower" in
               high) target_effort="medium" ;;
-              medium) target_effort="low" ;;
             esac
 
             if [ -n "$target_effort" ]; then
@@ -677,10 +677,6 @@ jobs:
             # A backend blip that outlived the retries above is the same
             # class as quota: agy never read the diff.
             is_transient "$error" && no_verdict=1
-            # An output token limit that outlived the retry above (or had no
-            # time left to retry) reached no complete review or verdict;
-            # treat as no_verdict so it does not block the merge.
-            is_token_limit "$error" && no_verdict=1
             echo "$no_verdict" > no-verdict
             exit 1
           fi
