@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "7bb7e96463798a9a232ed6c1980a5c9f8a8ed98c"
+    "revision": "0de4bc3114dedcde340205906884e42fac6f3eae"
   },
   "files": {
     "health.json": {
-      "sha256": "e7333576328ae8512a9cd84930a012d750e91affb7c6830218fef22727dcd100"
+      "sha256": "3fab141c872733937a97f4f4dc7c8da32e45a362ec8f31f123e2520a42b8f481"
     },
     "ready-set.json": {
-      "sha256": "865964ef105317f7bb8dfd87dc878ff50e78a7d2e97ccfb456427f2ce0a2a3b1"
+      "sha256": "db15e72206467ca4e464149879d49e339753ab51d6078319c2a1c0ca9ac47428"
     },
     "snapshot.json": {
-      "sha256": "eb65a0ca15940aa4da1106b8e6aa7735952e4b075b4eec4cf0252e43f4520d79"
+      "sha256": "d078329831a0ad6a349dd166456bbfef741b47cc926b3965b7483109752979f7"
     }
   },
   "kind": "RoadmapPublication",
@@ -128,13 +128,13 @@
     },
     {
       "epic": {
-        "goal": "Continue canonical work across MCP clients and independently review spike evidence and proposals, with bounded amendments, explicit delegated authority and durable owner triage.",
-        "lifecycle": "proposed",
+        "goal": "Continue canonical work across MCP clients and independently review spike evidence and proposals with a canonical review-worker, bounded amendments, explicit delegated authority boundaries and durable owner triage.",
+        "lifecycle": "active",
         "name": "cross-client-codex-review",
-        "title": "Cross-client work continuity and governed Codex review"
+        "title": "Cross-client work continuity and governed independent review"
       },
       "path": "roadmap/epics/cross-client-codex-review.yaml",
-      "sha256": "efce30db4065d0bbab260666d6e7861f3bb93322e9a85b94e486f0b394c5bb31"
+      "sha256": "eb6c6bada17cca8bae76180bd83790a608467f3882f5f9a438eb554cc42c7af8"
     },
     {
       "epic": {
@@ -279,12 +279,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-03T06:58:40Z",
+    "capturedAt": "2026-11-03T08:13:20Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "7bb7e96463798a9a232ed6c1980a5c9f8a8ed98c"
+    "revision": "0de4bc3114dedcde340205906884e42fac6f3eae"
   }
 }
