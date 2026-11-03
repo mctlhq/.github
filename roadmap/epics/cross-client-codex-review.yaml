@@ -85,6 +85,10 @@
           {
             "repository": "mctlhq/mctl-api",
             "number": 701
+          },
+          {
+            "repository": "mctlhq/mctl-agents",
+            "number": 986
           }
         ]
       },
