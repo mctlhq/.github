@@ -6143,13 +6143,13 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-01T18:04:14Z"
+      "updatedAt": "2026-11-03T20:25:02Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-03T19:06:48Z",
+    "capturedAt": "2026-11-03T21:50:01Z",
     "mode": "live-capture"
   }
 }
