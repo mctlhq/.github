@@ -27,3 +27,5 @@
   as the northbound agent-to-user protocol, spike report for mctlhq/.github#258.
 - [Edge config: Workers KV Instant vs Valkey](docs/spikes/edge-config-kv-instant.md):
   spike report for mctlhq/.github#272, proposed verdict KEEP_VALKEY.
+- [Journey-level correlation: `mctl.intent.id`](docs/spikes/journey-intent-correlation.md):
+  spike report for mctlhq/.github#306, proposed verdict REUSE_WORK_ITEM_ID.
