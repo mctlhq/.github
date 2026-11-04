@@ -1,0 +1,27 @@
+# Proposed verdict (REUSE_WORK_ITEM_ID) lives in the report only. The owner
+# records the decision block; an agent does not record its own approval.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: journey-intent-correlation
+  owner: mctlhq/.github
+spec:
+  title: Journey-level correlation across governed execution
+  question: >-
+    Does MCTL need a journey-level correlation identity (mctl.intent.id) above
+    trace_id, execution_id, approval refs and content hashes, or can the
+    existing WorkItem identity serve, without becoming a second correlation
+    scheme or a governance record?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 306
+  outcomes:
+    - REUSE_WORK_ITEM_ID
+    - ADOPT_INTENT_ID
+    - NO_CHANGE
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/journey-intent-correlation.md
