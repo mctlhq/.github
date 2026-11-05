@@ -1,0 +1,36 @@
+# Owner activated bounded research on 2026-11-05 (mctlhq/.github#309).
+# Cross-cutting product discovery logically related to mctl-telegram#1002
+# (Assistant Catalog); mctl-telegram#1088 (Managed Runtime / P5) and
+# mctl-telegram#1048 (MCP Connectors) remain independent implementation owners.
+# No spec.epic binding: #309 is not an authored workItem in an EpicDefinition,
+# so binding it to an epic here would violate cross-kind roadmap invariants.
+# No implementation or preview/production rollout is authorized by activation.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: team-assistants-shared-memory-economics
+  owner: mctlhq/.github
+spec:
+  title: Shared team assistants, governed skills and memory, and unit economics
+  question: >-
+    Can MCTL extend its existing Assistant Catalog and Managed Runtime with one
+    expert-maintained assistant usable by multiple authorized organization
+    members and channels, sharing reviewed skills and approved knowledge while
+    preserving per-user and per-tenant authority, revocation, auditability and
+    economically bounded execution, without a second agent platform?
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 309
+  outcomes:
+    - EXTEND_EXISTING
+    - EXTEND_AFTER_GATES
+    - DEFER_UNIT_ECONOMICS
+    - REJECT_FOR_MCTL
+  timebox:
+    decisionBy: "2026-11-12"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/team-assistants-shared-skills-memory-economics.md
