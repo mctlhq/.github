@@ -44,6 +44,8 @@ routes = json.load(open(os.environ["GH_ROUTES"], encoding="utf-8"))
 route = next((a for a in args if a.startswith("repos/")), None)
 method = args[args.index("-X") + 1] if "-X" in args else "GET"
 if method != "GET" or args[0] == "label":
+    if routes.get("__write_exit__", 0):
+        sys.stderr.write("gh: Validation Failed (HTTP 422)\\n")
     sys.exit(routes.get("__write_exit__", 0))
 if route not in routes:
     sys.exit(4)
@@ -244,8 +246,13 @@ class LabelTest(Harness):
     def test_replaces_a_stale_label_and_keeps_others(self):
         _, writes = self.apply("agent:codex", ["bug", "agent:claude"])
         self.assertEqual(writes[0][:3], ["api", "-X", "DELETE"])
-        self.assertTrue(writes[0][3].endswith("/labels/agent:claude"))
+        self.assertTrue(writes[0][3].endswith("/labels/agent%3Aclaude"))
         self.assertFalse(any("bug" in " ".join(w) for w in writes))
+
+    def test_stale_label_with_reserved_characters_is_encoded(self):
+        result, writes = self.apply("", ["agent: a/b#c?d"])
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertTrue(writes[0][3].endswith("/labels/agent%3A%20a%2Fb%23c%3Fd"), writes[0][3])
 
     def test_no_write_when_already_correct(self):
         result, writes = self.apply("agent:claude", ["agent:claude"])
@@ -271,6 +278,17 @@ class LabelTest(Harness):
     def test_failed_write_fails_the_step(self):
         result, _ = self.apply("agent:claude", [], __write_exit__=1)
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("HTTP 422", result.stdout)
+
+
+class EnforceTest(Harness):
+    def test_enforce_fails_and_reports_the_count(self):
+        result = self.run_step(ENFORCE, {}, UNKNOWN="2")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("2 commit(s)", result.stdout)
+
+    def test_enforce_is_skipped_when_nothing_is_unknown(self):
+        self.assertIn("steps.classify.outputs.unknown != '0'", ENFORCE["if"])
 
 
 class WorkflowShapeTest(unittest.TestCase):
@@ -278,6 +296,11 @@ class WorkflowShapeTest(unittest.TestCase):
         inputs = WORKFLOW_DOC[True]["workflow_call"]["inputs"]  # YAML reads `on` as True.
         self.assertIs(inputs["enforce"]["default"], False)
         self.assertIn("inputs.enforce", ENFORCE["if"])
+
+    def test_a_newer_push_cancels_the_older_run(self):
+        concurrency = WORKFLOW_DOC["jobs"]["check"]["concurrency"]
+        self.assertIs(concurrency["cancel-in-progress"], True)
+        self.assertIn("github.event.pull_request.number", concurrency["group"])
 
     def test_labels_are_skipped_for_forks(self):
         self.assertIn("head.repo.full_name == github.repository", LABEL["if"])

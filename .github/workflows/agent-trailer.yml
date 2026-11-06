@@ -28,6 +28,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Two quick pushes must not finish out of order and leave the older label.
+    concurrency:
+      group: agent-trailer-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     permissions:
       issues: write
       pull-requests: write
@@ -154,6 +158,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os, subprocess, sys
+          from urllib.parse import quote
 
           ALLOWED = {"", "agent:claude", "agent:codex", "agent:agy", "agent:none", "agent:unknown", "agent:mixed"}
           REPO, PR, LABEL = os.environ["REPO"], os.environ["PR"], os.environ.get("LABEL", "")
@@ -163,6 +168,7 @@ jobs:
               done = subprocess.run(["gh", *args], capture_output=True, text=True)
               if done.returncode != 0:
                   print(f"::error::gh {args[0]} failed while updating the agent label (exit {done.returncode}).")
+                  print(done.stderr.strip()[:500])
                   sys.exit(1)
               return done.stdout
 
@@ -179,7 +185,7 @@ jobs:
               sys.exit(1)
 
           for stale in sorted(name for name in current if name.startswith("agent:") and name != LABEL):
-              gh("api", "-X", "DELETE", f"repos/{REPO}/issues/{PR}/labels/{stale}")
+              gh("api", "-X", "DELETE", f"repos/{REPO}/issues/{PR}/labels/{quote(stale, safe='')}")
           if LABEL and LABEL not in current:
               gh("label", "create", LABEL, "--repo", REPO, "--color", "c5def5", "--force",
                  "--description", "Derived from Agent commit trailers. Self-declared, not an approval signal.")
