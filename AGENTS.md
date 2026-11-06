@@ -1,3 +1,9 @@
+# Commit attribution
+
+- Every commit ends with an `Agent:` trailer naming the tool that wrote it: `claude`, `codex`, `agy`, or `none` for a person working without an assistant. Merge commits and commits by a bot account are exempt. It sits in the last paragraph of the message, next to `Claude-Session` where that applies, and never replaces it. Do not use `Co-Authored-By`.
+- A commit without the trailer counts as `unknown`, never as human. Older commits stay `unknown`; history is not rewritten.
+- The trailer is self-declared. It records what the tool stated, so it is not a security or approval signal, and neither is the `agent:<name>` PR label derived from it by `.github/workflows/agent-trailer.yml` (mctlhq/.github#316).
+
 # Active plans
 
 - [Agent Commerce](docs/plans/agent-commerce.md): capability commerce foundation,

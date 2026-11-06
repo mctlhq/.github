@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/claude-review.yml'
       - '.github/workflows/steward-usage.yml'
+      - '.github/workflows/agent-trailer.yml'
       - '.github/workflows/workflow-tests.yml'
       - '.github/tests/**'
       - 'docs/spikes/security-finding-lifecycle/**'
@@ -22,6 +23,7 @@ on:
     paths:
       - '.github/workflows/claude-review.yml'
       - '.github/workflows/steward-usage.yml'
+      - '.github/workflows/agent-trailer.yml'
       - '.github/workflows/workflow-tests.yml'
       - '.github/tests/**'
       - 'docs/spikes/security-finding-lifecycle/**'
