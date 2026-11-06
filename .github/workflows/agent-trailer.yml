@@ -1,0 +1,203 @@
+name: Agent trailer check
+
+# Every local assistant commits as the operator, so the author field cannot say
+# which tool wrote a change. The `Agent:` commit trailer records what the tool
+# stated (mctlhq/.github#316). It is self-declared: never use it, or the label
+# derived here, as a security or approval signal.
+#
+# Keep three outcomes apart:
+#   - a commit with a valid trailer, or by a bot account, is attributed;
+#   - a commit with a missing or malformed trailer is `unknown`, never human;
+#   - a commit list that could not be read in full is an error: the job fails
+#     and no label changes, because what was not read proves nothing.
+#
+# Commit messages are untrusted. Only SHAs, allowlisted values and counts are
+# ever written to the log, the summary or an output.
+
+on:
+  workflow_call:
+    inputs:
+      enforce:
+        description: Fail when a commit is unknown. Off until one clean week has passed.
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Two quick pushes must not finish out of order and leave the older label.
+    concurrency:
+      group: agent-trailer-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Classify commits
+        id: classify
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess, sys
+          from collections import Counter
+
+          ALLOWED = {"claude", "codex", "agy", "none"}
+          TRAILER_LINE = re.compile(r"^[A-Za-z0-9-]+[ \t]*:[ \t]*\S|^[ \t]+\S")
+          AGENT_LINE = re.compile(r"^agent[ \t]*:[ \t]*(.*?)[ \t]*$", re.IGNORECASE)
+          REPO, PR = os.environ.get("REPO", ""), os.environ.get("PR", "")
+
+
+          def fail(reason):
+              print(f"::error::Agent trailer check could not read this PR: {reason}")
+              sys.exit(1)
+
+
+          def gh_json(*args):
+              try:
+                  done = subprocess.run(["gh", "api", *args], capture_output=True, text=True)
+              except OSError as err:
+                  fail(f"gh did not run ({type(err).__name__})")
+              if done.returncode != 0:
+                  fail(f"gh api {args[-1]} exited {done.returncode}")
+              try:
+                  return json.loads(done.stdout)
+              except ValueError:
+                  fail(f"gh api {args[-1]} returned malformed JSON")
+
+
+          def classify(message, is_bot):
+              """Only the final paragraph, when it is a real trailer block, can declare."""
+              paragraphs = re.split(r"\n[ \t]*\n", message.replace("\r\n", "\n").strip())
+              found = set()
+              if len(paragraphs) >= 2:
+                  lines = paragraphs[-1].split("\n")
+                  if all(TRAILER_LINE.match(line) for line in lines):
+                      for line in lines:
+                          match = AGENT_LINE.match(line)
+                          if match:
+                              found.add(match.group(1))
+              if not found:
+                  return "bot" if is_bot else "unknown"
+              if len(found) == 1 and next(iter(found)) in ALLOWED:
+                  return next(iter(found))
+              return "invalid"
+
+
+          if not re.fullmatch(r"[1-9][0-9]*", PR):
+              fail("no pull request number")
+
+          pull = gh_json(f"repos/{REPO}/pulls/{PR}")
+          total = pull.get("commits") if isinstance(pull, dict) else None
+          if not isinstance(total, int) or isinstance(total, bool) or total < 0:
+              fail("the pull request does not report a commit count")
+
+          pages = gh_json("--paginate", "--slurp", f"repos/{REPO}/pulls/{PR}/commits?per_page=100")
+          if not isinstance(pages, list) or not all(isinstance(page, list) for page in pages):
+              fail("the commit list is not a list of pages")
+          commits = [item for page in pages for item in page]
+          # The endpoint stops at 250 commits, and a short list is not a clean one.
+          if len(commits) != total:
+              fail(f"read {len(commits)} of {total} commits")
+
+          results = []
+          for item in commits:
+              try:
+                  sha, message, parents = item["sha"], item["commit"]["message"], item["parents"]
+              except (KeyError, TypeError):
+                  fail("a commit entry is missing a field")
+              if not (isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha)
+                      and isinstance(message, str) and isinstance(parents, list)):
+                  fail("a commit entry has a malformed field")
+              if len(parents) >= 2:
+                  results.append((sha, "merge"))
+                  continue
+              author = item.get("author")
+              is_bot = isinstance(author, dict) and (
+                  author.get("type") == "Bot" or str(author.get("login", "")).endswith("[bot]"))
+              results.append((sha, classify(message, is_bot)))
+
+          counts = Counter(state for _, state in results)
+          unknown = counts["unknown"] + counts["invalid"]
+          declared = {"unknown" if state == "invalid" else state
+                      for _, state in results if state not in ("merge", "bot")}
+          if not declared:
+              label = ""
+          elif len(declared) == 1:
+              label = f"agent:{next(iter(declared))}"
+          else:
+              label = "agent:mixed"
+
+          for sha, state in results:
+              if state == "unknown":
+                  print(f"::warning::Commit {sha} has no Agent trailer: it counts as unknown, not as human.")
+              elif state == "invalid":
+                  print(f"::warning::Commit {sha} has a malformed Agent trailer: use one of claude, codex, agy, none.")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"label={label}\nunknown={unknown}\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("### Agent trailers\n\n| Commit | Agent |\n| --- | --- |\n")
+              for sha, state in results:
+                  out.write(f"| `{sha[:12]}` | {state} |\n")
+              out.write(f"\nUnknown: {unknown}. Label: {label or 'none'}.\n")
+          PY
+
+      # A fork's token cannot write labels, so a fork PR keeps only the report.
+      - name: Apply the derived label
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          LABEL: ${{ steps.classify.outputs.label }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess, sys
+          from urllib.parse import quote
+
+          ALLOWED = {"", "agent:claude", "agent:codex", "agent:agy", "agent:none", "agent:unknown", "agent:mixed"}
+          REPO, PR, LABEL = os.environ["REPO"], os.environ["PR"], os.environ.get("LABEL", "")
+
+
+          def gh(*args):
+              done = subprocess.run(["gh", *args], capture_output=True, text=True)
+              if done.returncode != 0:
+                  print(f"::error::gh {args[0]} failed while updating the agent label (exit {done.returncode}).")
+                  status = re.search(r"\(HTTP (\d{3})\)", done.stderr)
+                  print(f"HTTP status: {status.group(1) if status else 'not reported'}.")
+                  sys.exit(1)
+              return done.stdout
+
+
+          if LABEL not in ALLOWED:
+              print("::error::The classifier produced a label outside the allowlist.")
+              sys.exit(1)
+
+          try:
+              pages = json.loads(gh("api", "--paginate", "--slurp", f"repos/{REPO}/issues/{PR}/labels?per_page=100"))
+              current = {entry["name"] for page in pages for entry in page}
+          except (ValueError, KeyError, TypeError):
+              print("::error::The current labels could not be read, so none were changed.")
+              sys.exit(1)
+
+          for stale in sorted(name for name in current if name.startswith("agent:") and name != LABEL):
+              gh("api", "-X", "DELETE", f"repos/{REPO}/issues/{PR}/labels/{quote(stale, safe='')}")
+          if LABEL and LABEL not in current:
+              gh("label", "create", LABEL, "--repo", REPO, "--color", "c5def5", "--force",
+                 "--description", "Derived from Agent commit trailers. Self-declared, not an approval signal.")
+              gh("api", "-X", "POST", f"repos/{REPO}/issues/{PR}/labels", "-f", f"labels[]={LABEL}")
+          PY
+
+      - name: Enforce
+        if: inputs.enforce && steps.classify.outputs.unknown != '0'
+        shell: bash
+        env:
+          UNKNOWN: ${{ steps.classify.outputs.unknown }}
+        run: |
+          echo "::error::${UNKNOWN} commit(s) have no valid Agent trailer."
+          exit 1

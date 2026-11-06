@@ -1,0 +1,16 @@
+name: Agent trailers
+
+# This repository's own caller of agent-trailer.yml (mctlhq/.github#316).
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  agent-trailer:
+    permissions:
+      issues: write
+      pull-requests: write
+    uses: ./.github/workflows/agent-trailer.yml
