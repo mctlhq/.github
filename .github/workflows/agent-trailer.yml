@@ -157,7 +157,7 @@ jobs:
           LABEL: ${{ steps.classify.outputs.label }}
         run: |
           python3 - <<'PY'
-          import json, os, subprocess, sys
+          import json, os, re, subprocess, sys
           from urllib.parse import quote
 
           ALLOWED = {"", "agent:claude", "agent:codex", "agent:agy", "agent:none", "agent:unknown", "agent:mixed"}
@@ -168,7 +168,8 @@ jobs:
               done = subprocess.run(["gh", *args], capture_output=True, text=True)
               if done.returncode != 0:
                   print(f"::error::gh {args[0]} failed while updating the agent label (exit {done.returncode}).")
-                  print(done.stderr.strip()[:500])
+                  status = re.search(r"\(HTTP (\d{3})\)", done.stderr)
+                  print(f"HTTP status: {status.group(1) if status else 'not reported'}.")
                   sys.exit(1)
               return done.stdout
 

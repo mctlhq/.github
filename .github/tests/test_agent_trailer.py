@@ -45,7 +45,7 @@ route = next((a for a in args if a.startswith("repos/")), None)
 method = args[args.index("-X") + 1] if "-X" in args else "GET"
 if method != "GET" or args[0] == "label":
     if routes.get("__write_exit__", 0):
-        sys.stderr.write("gh: Validation Failed (HTTP 422)\\n")
+        sys.stderr.write("::warning::echoed-text gh: Validation Failed (HTTP 422)\\n")
     sys.exit(routes.get("__write_exit__", 0))
 if route not in routes:
     sys.exit(4)
@@ -278,7 +278,8 @@ class LabelTest(Harness):
     def test_failed_write_fails_the_step(self):
         result, _ = self.apply("agent:claude", [], __write_exit__=1)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("HTTP 422", result.stdout)
+        self.assertIn("HTTP status: 422", result.stdout)
+        self.assertNotIn("echoed-text", result.stdout)
 
 
 class EnforceTest(Harness):
