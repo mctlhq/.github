@@ -254,6 +254,9 @@ func (v *Service) Fire(au, occ string) (*Execution, error) {
 		return nil, ErrNotFound
 	}
 	w, _ := v.S.EnsureWorkItem(au, occ)
+	if n := len(w.Executions); n > 0 {
+		return w.Executions[n-1], nil // replay of the same occurrence: never allocate a second execution
+	}
 	e, fresh := v.S.StartExecution(w)
 	if !fresh || len(w.Executions) > 1 || e.Phase != "queued" {
 		return e, nil // replay of the same occurrence
