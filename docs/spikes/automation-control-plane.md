@@ -9,7 +9,9 @@ selects the architecture, **not** an implementation proposal or production appro
 ## Non-claims and evidence tags
 
 This report changes nothing in production: no endpoint, worker, Temporal
-schedule, flag or GitOps value is added, and no follow-up issue or epic is filed.
+schedule, runtime flag or GitOps deploy value is added. Planning epic
+mctlhq/.github#322 was filed after the owner decision, without starting any
+implementation issues or DevLoop; no user automation was deployed.
 Evidence tags: `[CODE]` source read at a pinned revision; `[CONFIG]` GitOps
 configuration, not the effective runtime; `[LIVE]` authenticated MCTL read;
 `[DOC]` prior report or contract; `[GIT]` repository history. Results are also
@@ -284,7 +286,7 @@ passed both `test` (including Go `-race`) and `temporal-dev-server` jobs on
 D4 is **bounded**: the real Temporal schedule/overlap/pause/DST checks passed in
 CI, but unmeasured Temporal behavior is still `unknown` regardless of green CI.
 
-## D5 Verdict (proposed)
+## D5 Verdict (owner-decided)
 
 | Option | Fit | Main gap |
 | --- | --- | --- |
