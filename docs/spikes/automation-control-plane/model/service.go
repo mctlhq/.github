@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -257,10 +258,10 @@ func (v *Service) Fire(au, occ string) (*Execution, error) {
 	if n := len(w.Executions); n > 0 {
 		return w.Executions[n-1], nil // replay of the same occurrence: never allocate a second execution
 	}
-	e, fresh := v.S.StartExecution(w)
-	if !fresh || len(w.Executions) > 1 || e.Phase != "queued" {
-		return e, nil // replay of the same occurrence
-	}
+	e, _ := v.S.StartExecution(w)
+	// A terminal occurrence is never retried with the same key: replay is immutable.
+	// This model executes sequentially; production uses a unique WorkItem key plus
+	// a DB transaction/lease to atomically create at most one execution.
 	if !d.ExpiresAt.IsZero() && !v.Clock.Now().Before(d.ExpiresAt) || d.MaxFires > 0 && d.Fires >= d.MaxFires {
 		e.Phase, e.Reason = "refused", "expired"
 		return e, nil
@@ -293,12 +294,23 @@ func (v *Service) Fire(au, occ string) (*Execution, error) {
 // Advance drives an execution through its phases idempotently, so a restarted
 // worker resumes the SAME we_ without a second reservation.
 func (v *Service) Advance(weID string) error {
+	// Snapshot the index under the store lock. The fake-clock reference model
+	// deliberately processes execution transitions sequentially; avoid unsafely
+	// iterating maps while a concurrent Create/Fire updates the store.
+	v.S.mu.Lock()
 	e := v.S.ByID[weID]
 	var d *Definition
-	for _, w := range v.S.WorkItems {
-		if w.ID == e.WorkItem {
-			d = v.S.Defs[w.Automation]
+	if e != nil {
+		for _, w := range v.S.WorkItems {
+			if w.ID == e.WorkItem {
+				d = v.S.Defs[w.Automation]
+				break
+			}
 		}
+	}
+	v.S.mu.Unlock()
+	if e == nil || d == nil {
+		return ErrNotFound
 	}
 	for !e.Terminal() {
 		switch e.Phase {
@@ -361,6 +373,14 @@ func (v *Service) Tick() {
 		if d.Trigger.Kind == TrigSchedule && len(inWin) > 1 {
 			inWin = inWin[len(inWin)-1:] // misfires inside the window run once
 		}
+		// Temporal BUFFER_ONE queues a single occurrence for dispatch after
+		// the active execution ends. Preserve the first buffered occurrence,
+		// do not silently drop or replace it with subsequent overlaps.
+		if s.Buffered != nil && len(v.S.Running(d.ID)) == 0 {
+			buffered := *s.Buffered
+			s.Buffered = nil
+			_, _ = v.Fire(d.ID, "occ-"+buffered.UTC().Format(time.RFC3339))
+		}
 		for _, o := range inWin {
 			if d.Trigger.Kind == TrigAt {
 				s.Done = true
@@ -371,12 +391,16 @@ func (v *Service) Tick() {
 				s.Skipped++
 				continue
 			case len(running) > 0 && d.Trigger.Overlap == OverlapBufferOne:
-				o2 := o
-				s.Buffered = &o2
+				if s.Buffered == nil {
+					o2 := o
+					s.Buffered = &o2
+				}
 				continue
 			case len(running) > 0 && d.Trigger.Overlap == OverlapCancelOther:
 				for _, r := range running {
 					r.Phase, r.Reason = "cancelled", "overlap_cancel_other"
+					// A cancelled, unsettled execution must not retain its budget.
+					v.S.Ledger.Release(r.ID, d.Owner)
 				}
 			}
 			_, _ = v.Fire(d.ID, "occ-"+o.UTC().Format(time.RFC3339))
@@ -407,17 +431,28 @@ func (v *Service) Ingest(ts time.Time, sig string, body []byte, tenant string) (
 		}
 	}
 	v.S.mu.Unlock()
+	// Map iteration order is undefined; the routing order must not determine
+	// which subscriber receives an event. Process every matching definition.
+	sort.Slice(ds, func(i, j int) bool { return ds[i].ID < ds[j].ID })
 	capped := 0
+	var firstErr error
 	for _, d := range ds {
-		if d.Trigger.Await { // dependency template: Signal the awaiting run
+		if d.Trigger.Await { // dependency template: Signal a parked run
+			signalled := false
 			for _, r := range v.S.Running(d.ID) {
 				if r.Phase == "awaiting_signal" {
 					r.Signals++
 					r.Phase = "reserved"
 					decision = "signal"
-					err = v.Advance(r.ID)
-					return
+					if runErr := v.Advance(r.ID); runErr != nil && firstErr == nil {
+						firstErr = runErr
+					}
+					signalled = true
+					break // one awaiting run per subscribed definition
 				}
+			}
+			if signalled {
+				continue // do not drop later matching definitions
 			}
 		}
 		if cap := d.Trigger.FanoutCap; cap > 0 && len(v.S.Running(d.ID)) >= cap {
@@ -425,13 +460,17 @@ func (v *Service) Ingest(ts time.Time, sig string, body []byte, tenant string) (
 			continue
 		}
 		if _, ferr := v.Fire(d.ID, "ev-"+e.ID); ferr == nil {
-			decision = "start"
+			if decision == "" {
+				decision = "start"
+			}
+		} else if firstErr == nil {
+			firstErr = ferr
 		}
 	}
-	if decision == "" && capped > 0 {
+	if decision == "" && capped > 0 && firstErr == nil {
 		return "coalesced", ErrFanoutCapped
 	}
-	return decision, nil
+	return decision, firstErr
 }
 
 // Run is mctl_run_automation (manual fire); dependency/await templates park.
