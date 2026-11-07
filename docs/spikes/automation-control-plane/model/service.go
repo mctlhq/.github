@@ -258,7 +258,10 @@ func (v *Service) Fire(au, occ string) (*Execution, error) {
 	if n := len(w.Executions); n > 0 {
 		return w.Executions[n-1], nil // replay of the same occurrence: never allocate a second execution
 	}
-	e, _ := v.S.StartExecution(w)
+	e, fresh := v.S.StartExecution(w)
+	if !fresh {
+		return e, nil // another caller created this execution: no second reservation
+	}
 	// A terminal occurrence is never retried with the same key: replay is immutable.
 	// This model executes sequentially; production uses a unique WorkItem key plus
 	// a DB transaction/lease to atomically create at most one execution.
