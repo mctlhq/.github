@@ -64,7 +64,10 @@ the proposal design, not re-observed at these pins.
 ## D2 Contract and threat model
 
 Schemas: `docs/spikes/automation-control-plane/schemas/automation-definition.v0.schema.json`
-and `operations.v0.schema.json` (nine operations, closed error vocabulary).
+(server-owned definition/read form), `automation-create.v0.schema.json` (create input
+without issued identity/version/lifecycle/provenance/surface), and
+`operations.v0.schema.json` (nine operations, closed error vocabulary).
+The create schema MUST reference the client input form, never the read form.
 
 **Definition.** Opaque `au_`, tenant, owner (canonical principal), delegated actor,
 creating surface, a registered template reference, pin or resolution policy,
@@ -230,8 +233,16 @@ not-found, 3 repeated refusals auto-pause, crash after reserve resumes the same
 `we_` with one reservation, delivery failure stops at 3 attempts and stays readable.
 Benchmark (one run, 8 vCPU container, indicative only): idempotent re-fire about
 240 ns; one tick over 1000 weekly schedules about 2.6 ms.
-Limitations: concurrency is modelled sequentially; the scheduler is a model, not
-Temporal.
+Amended model regression coverage: separate create-input schema vs server-owned
+fields; dependency event fanout to *all* matching definitions; Telegram `chat_id`
+routing; `buffer_one` dispatch after current run finishes; `cancel_other` budget
+release; budget refusals not consuming MaxFires; unknown execution read safety;
+and explicit value assertions for Temporal DST. A model-level test also probes
+concurrent map lookup while definitions are inserted. These amendments must pass
+CI before merge. Limitations: execution transitions are still modeled
+sequentially (this is not a full multi-worker concurrency proof); scheduler
+semantics are a model, not Temporal. The event fanout test does not prove
+crash-safe per-subscriber delivery in a real durable event router.
 
 ### `[TEMPORAL_DEV]` real server
 
@@ -251,7 +262,8 @@ Observed in the local run on 2026-11-07 (all three subtests pass):
 
 Divergences and findings:
 - The model's DST defaults (`gap_policy: skip`, `overlap_pick: later`) were set from
-  these observations, not assumed. `shift_forward` and `first` are product options
+  these observations, not assumed. The amended real-server test now **asserts**
+  exact gap (zero next times) and overlap (one at `2027-10-31T01:30:00Z`) results. `shift_forward` and `first` are product options
   that Temporal does not provide; the model implements and tests them explicitly.
 - A **paused** Schedule reports no next action times, so the DST probe uses an
   unpaused far-future Schedule.
@@ -261,9 +273,13 @@ Divergences and findings:
 Not verified on a real server (remain `unknown`): catch-up window behavior,
 `buffer_one` and `cancel_other`, Update-with-Start/Signal routing, Schedule update
 and delete races, namespace isolation and Search Attribute tenant filtering, and the
-CI job itself (it has not yet run on GitHub-hosted runners; only locally).
-D4 is therefore **partial**: the required real-server test exists and passes locally;
-the PR must not claim D4 complete unless the `temporal-dev-server` check is green.
+The first GitHub-hosted CI run *has* completed: workflow run `42330874949`
+  (`Reusable workflow tests`, check `temporal-dev-server`) passed on original PR
+  HEAD `9a3012b`. Subsequent changes must pass the check again on their own HEAD.
+D4 is therefore **bounded**: the required real-server test passed locally and in
+GitHub-hosted CI for the prior HEAD. The amended PR must also pass the separate
+`temporal-dev-server` check and race-enabled model test on its **current head**;
+unmeasured Temporal behaviours remain `unknown` regardless of green CI.
 
 ## D5 Verdict (proposed)
 
