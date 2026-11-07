@@ -69,7 +69,7 @@ jobs:
 
       - name: Automation control plane reference model [MODEL] (mctlhq/.github#318)
         working-directory: docs/spikes/automation-control-plane
-        run: go vet ./... && go test ./...
+        run: go vet ./... && go test -race ./...
 
   # Distinct required check: real Temporal dev server + official SDK, loopback
   # only, in-memory state, synthetic inert workflow, no credentials. A missing
