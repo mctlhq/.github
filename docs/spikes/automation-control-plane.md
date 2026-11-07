@@ -272,14 +272,16 @@ Divergences and findings:
 
 Not verified on a real server (remain `unknown`): catch-up window behavior,
 `buffer_one` and `cancel_other`, Update-with-Start/Signal routing, Schedule update
-and delete races, namespace isolation and Search Attribute tenant filtering, and the
-The first GitHub-hosted CI run *has* completed: workflow run `42330874949`
-  (`Reusable workflow tests`, check `temporal-dev-server`) passed on original PR
-  HEAD `9a3012b`. Subsequent changes must pass the check again on their own HEAD.
-D4 is therefore **bounded**: the required real-server test passed locally and in
-GitHub-hosted CI for the prior HEAD. The amended PR must also pass the separate
-`temporal-dev-server` check and race-enabled model test on its **current head**;
-unmeasured Temporal behaviours remain `unknown` regardless of green CI.
+and delete races, namespace isolation, Search Attribute tenant filtering, and
+crash-safe per-subscriber event fanout. These require independent implementation
+gates and cannot be inferred from the reference model.
+
+GitHub-hosted CI evidence: the initial workflow run `42330874949` passed on
+`9a3012b`; after amendments, `Reusable workflow tests` run `42395765284`
+passed both `test` (including Go `-race`) and `temporal-dev-server` jobs on
+`cf952d8`. Any newer PR head must pass the same required checks again.
+D4 is **bounded**: the real Temporal schedule/overlap/pause/DST checks passed in
+CI, but unmeasured Temporal behavior is still `unknown` regardless of green CI.
 
 ## D5 Verdict (proposed)
 
