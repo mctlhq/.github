@@ -238,7 +238,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 256,
-      "description": "Opaque verified owner authorization reference for support follow-ups; server validates ownership/tenant and refuses unbound values."
+      "description": "Opaque reference to owner authorization for a support follow-up. The current reference model checks presence only; real authorization/tenant verification is a future mandatory implementation gate."
     }
   },
   "not": {
