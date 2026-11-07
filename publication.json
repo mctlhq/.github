@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "018ff3034de7202910b280c4c437ad9cfeee81af"
+    "revision": "ace500c15d7653dfa3049057974dfcb7567294f9"
   },
   "files": {
     "health.json": {
-      "sha256": "23e99f46057102226f5d7539c3a7e2334d41330f184b744d36217addcb185427"
+      "sha256": "cb6ad625b37a86fbfa7a319279031c32519cd921120bc3f11f2bcb0b895a2531"
     },
     "ready-set.json": {
-      "sha256": "fda73af54b8bd45cca1a9a7f98a805221102ac7fc17655ca9ab0da68aa490be9"
+      "sha256": "476c06e68392cdcdb859491b566f33b7f72b5562c56ae535fd407649d01b3bc4"
     },
     "snapshot.json": {
-      "sha256": "71cac6d7ec9a5c9f22f04860750e470e571893dc5cecbf1d2c81432b776ad824"
+      "sha256": "cc2fc2fcca8b5e692d7073277d2ec711ef20796d2d59c3a933975a096205c44b"
     }
   },
   "kind": "RoadmapPublication",
@@ -75,6 +75,16 @@
       },
       "path": "roadmap/epics/agent-runtime-assurance.yaml",
       "sha256": "89fb6d2a214bc93a0318008518cb08f44c885383ae72dbba519765f6b4e34bf7"
+    },
+    {
+      "epic": {
+        "goal": "Let Claude, ChatGPT, Telegram assistants and mctl-support create and manage user-owned at/schedule/event/dependency automations through the existing mctl-api authority, Temporal scheduling and mctl-agents execution layer, with Telegram as the first bounded delivery channel, without duplicating WorkItem execution, identity, policy, budget or approval state.",
+        "lifecycle": "proposed",
+        "name": "automation-control-plane",
+        "title": "Governed Temporal-backed user automations across MCTL surfaces"
+      },
+      "path": "roadmap/epics/automation-control-plane.yaml",
+      "sha256": "e4956a5652435b304efe01be162b37d2695156b4dd4397fd60035515b2d103e3"
     },
     {
       "epic": {
@@ -289,12 +299,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-07T17:27:36Z",
+    "capturedAt": "2026-11-07T17:33:36Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "018ff3034de7202910b280c4c437ad9cfeee81af"
+    "revision": "ace500c15d7653dfa3049057974dfcb7567294f9"
   }
 }

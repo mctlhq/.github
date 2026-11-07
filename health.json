@@ -158,7 +158,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -430,7 +430,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -500,7 +500,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -735,7 +735,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -988,7 +988,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1329,7 +1329,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -1337,6 +1337,181 @@
         "drift": 14,
         "error": 0,
         "info": 0
+      }
+    },
+    {
+      "apiVersion": "roadmap.mctl.ai/v1alpha1",
+      "completion": {
+        "blocking": [
+          "automation-agent-execution",
+          "automation-api-store",
+          "automation-contract",
+          "automation-event-dependencies",
+          "automation-rollout-assurance",
+          "automation-surfaces-delivery",
+          "temporal-schedule-reconcile"
+        ],
+        "items": [
+          {
+            "id": "automation-agent-execution",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "automation-api-store",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "automation-contract",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "automation-event-dependencies",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "automation-rollout-assurance",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "automation-surfaces-delivery",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          },
+          {
+            "id": "optional-chatgpt-push",
+            "reason": "unbound",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "optional-ci-event-producer",
+            "reason": "unbound",
+            "required": false,
+            "status": "incomplete"
+          },
+          {
+            "id": "temporal-schedule-reconcile",
+            "reason": "unbound",
+            "required": true,
+            "status": "incomplete"
+          }
+        ],
+        "mode": "allRequired",
+        "required": {
+          "complete": 0,
+          "incomplete": 7,
+          "total": 7,
+          "unknown": 0
+        },
+        "status": "incomplete"
+      },
+      "diagnostics": [
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner automation-agent-execution)",
+          "subject": {
+            "owner": "automation-agent-execution"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner automation-api-store)",
+          "subject": {
+            "owner": "automation-api-store"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner automation-contract)",
+          "subject": {
+            "owner": "automation-contract"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner automation-event-dependencies)",
+          "subject": {
+            "owner": "automation-event-dependencies"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner automation-rollout-assurance)",
+          "subject": {
+            "owner": "automation-rollout-assurance"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner automation-surfaces-delivery)",
+          "subject": {
+            "owner": "automation-surfaces-delivery"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner optional-chatgpt-push)",
+          "subject": {
+            "owner": "optional-chatgpt-push"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner optional-ci-event-producer)",
+          "subject": {
+            "owner": "optional-ci-event-producer"
+          }
+        },
+        {
+          "code": "BindingUnbound",
+          "level": "info",
+          "message": "BindingUnbound (owner temporal-schedule-reconcile)",
+          "subject": {
+            "owner": "temporal-schedule-reconcile"
+          }
+        }
+      ],
+      "epic": {
+        "issue": {
+          "number": 322,
+          "repository": "mctlhq/.github"
+        },
+        "manifest": {
+          "path": "roadmap/epics/automation-control-plane.yaml",
+          "sha256": "e4956a5652435b304efe01be162b37d2695156b4dd4397fd60035515b2d103e3"
+        },
+        "name": "automation-control-plane"
+      },
+      "kind": "RoadmapHealth",
+      "source": {
+        "apiBase": "https://api.github.com",
+        "capturedAt": "2026-11-07T17:33:36Z",
+        "mode": "live-capture"
+      },
+      "state": "healthy",
+      "summary": {
+        "drift": 0,
+        "error": 0,
+        "info": 9
       }
     },
     {
@@ -1439,7 +1614,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1588,7 +1763,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1861,7 +2036,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -1981,7 +2156,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -2136,7 +2311,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3059,7 +3234,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3139,7 +3314,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3222,7 +3397,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3606,7 +3781,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -3716,7 +3891,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3816,7 +3991,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -3981,7 +4156,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -4184,7 +4359,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -4321,7 +4496,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -4441,7 +4616,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -4581,7 +4756,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -5061,7 +5236,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -5141,7 +5316,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -5271,7 +5446,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",
@@ -5868,7 +6043,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "drift",
@@ -6038,7 +6213,7 @@
       "kind": "RoadmapHealth",
       "source": {
         "apiBase": "https://api.github.com",
-        "capturedAt": "2026-11-07T17:27:36Z",
+        "capturedAt": "2026-11-07T17:33:36Z",
         "mode": "live-capture"
       },
       "state": "healthy",

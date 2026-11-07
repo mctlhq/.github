@@ -1547,6 +1547,22 @@
       "updatedAt": "2026-11-02T08:28:13Z"
     },
     {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 322,
+        "repository": "mctlhq/.github"
+      },
+      "resolved": {
+        "number": 322,
+        "repository": "mctlhq/.github"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-11-07T17:29:08Z"
+    },
+    {
       "blockedBy": [
         {
           "number": 196,
@@ -6348,7 +6364,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-07T17:27:36Z",
+    "capturedAt": "2026-11-07T17:33:36Z",
     "mode": "live-capture"
   }
 }
