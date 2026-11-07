@@ -1,9 +1,10 @@
 # MCTL automation control plane
 
 Spike report for mctlhq/.github#318 (carrier DevLoop; refs only, not closing).
-Proposed verdict: `EXTEND_MCTL_API`. **Owner decision pending.** The manifest
-`roadmap/spikes/automation-control-plane.yaml` stays `lifecycle: proposed` with no
-`decision` and no `epic` block; an agent does not record its own approval.
+Owner decision (2026-11-07): **`EXTEND_MCTL_API`** after research PR #319
+merged. The spike manifest is `lifecycle: decided`, with an owner-authored
+`decision` and planned implementation epic mctlhq/.github#322. This decision
+selects the architecture, **not** an implementation proposal or production approval.
 
 ## Non-claims and evidence tags
 
@@ -292,7 +293,10 @@ CI, but unmeasured Temporal behavior is still `unknown` regardless of green CI.
 | C `DEDICATED_AUTOMATION_SERVICE` | strongest isolation | a fourth identity-aware ingress and store; no evidence yet that a namespace + queue cannot give isolation |
 | D `DEFER_WITH_GAPS` | safest | the model shows the refusal semantics are implementable; gaps below are not blockers for a first slice |
 
-**Proposed: `EXTEND_MCTL_API`.** The owner decision is pending.
+**Decided: `EXTEND_MCTL_API` (owner, 2026-11-07).** Research evidence
+supports extending the mctl-api authority rather than creating a fourth
+service. Implementation is scoped by epic mctlhq/.github#322, still
+`lifecycle: proposed` and subject to separate DevLoop approval.
 
 Technology comparison (user-facing surface):
 
@@ -320,7 +324,8 @@ reconcile drift repaired within 5 minutes, spend at most the per-run ceiling.
 Telegram is the first delivery proof. ChatGPT same-chat push is `unknown`,
 tracked in mctlhq/.github#300, and is not an acceptance dependency.
 
-Follow-up candidates, **unfiled**; each needs a duplicate check first:
+Follow-up candidate implementation slices are planned in epic mctlhq/.github#322,
+**unfiled as individual implementation issues** until separately approved:
 1. mctl-api: Temporal Schedule client and `au_` store (check mctl-api#284, #41).
 2. mctl-api: template registry and desired/observed reconciler.
 3. mctl-agents: `AgentAutomationWorkflow` on a separate queue.
