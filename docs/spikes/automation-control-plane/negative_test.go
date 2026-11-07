@@ -81,6 +81,25 @@ func TestCrossTenantInspectAndCreateRefused(t *testing.T) { // T9
 	}
 	_, err := e.Svc.Create(u2, model.CreateRequest{IdempotencyKey: "x", Tenant: "acme", Owner: "u2", Template: "reminder.v1", Trigger: d.Trigger})
 	isErr(t, err, model.ErrNotFound)
+	// same-tenant, different principal: owner-only
+	e.S.Authority.AddMember("acme", "u3")
+	e.S.Authority.Link("u3", "claude")
+	u3 := model.Caller{Principal: "u3", Surface: "claude"}
+	if _, err := e.Svc.Get(u3, d.ID); err != model.ErrNotFound {
+		t.Fatalf("same-tenant get: %v", err)
+	}
+	if _, err := e.Svc.Pause(u3, d.ID, d.Version); err != model.ErrNotFound {
+		t.Fatalf("same-tenant pause: %v", err)
+	}
+	if _, err := e.Svc.Run(u3, d.ID, "r"); err != model.ErrNotFound {
+		t.Fatalf("same-tenant run: %v", err)
+	}
+	if l, err := e.Svc.List(u3, "acme"); err != nil || len(l) != 0 {
+		t.Fatalf("same-tenant list: %v %d", err, len(l))
+	}
+	if l, err := e.Svc.List(e.U1, "acme"); err != nil || len(l) != 1 {
+		t.Fatalf("owner list: %v %d", err, len(l))
+	}
 	if _, err := e.Svc.Get(u2, "au_9999"); err != model.ErrNotFound { // same answer as a missing id: no existence oracle
 		t.Fatal("existence oracle")
 	}

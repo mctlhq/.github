@@ -253,7 +253,14 @@ func TestSupportFollowupBounded(t *testing.T) { // T5
 	if ok != 3 {
 		t.Fatalf("fires=%d, want 3 (cap)", ok)
 	}
+	own := e.create("own", model.Trigger{Kind: model.TrigAt, At: e.Clock.Now().Add(time.Hour)})
+	if l, err := e.Svc.List(sup, "acme"); err != nil || len(l) != 1 || l[0].ID != d.ID {
+		t.Fatalf("support list within TTL must exclude owner definitions (%s): %v %d", own.ID, err, len(l))
+	}
 	e.Clock.Advance(25 * time.Hour)
+	if l, _ := e.Svc.List(sup, "acme"); len(l) != 0 {
+		t.Fatalf("support list after TTL: %d", len(l))
+	}
 	if _, err := e.Svc.Get(sup, d.ID); err != model.ErrNotFound {
 		t.Fatalf("support read after TTL: %v", err)
 	}

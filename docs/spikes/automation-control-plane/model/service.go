@@ -177,10 +177,19 @@ func (v *Service) Get(c Caller, id string) (*Definition, error) {
 	if err := v.authorize(c, d.Tenant); err != nil {
 		return nil, err
 	}
-	if c.Actor == "support" && !v.Clock.Now().Before(d.ExpiresAt) {
-		return nil, ErrNotFound // support read is TTL-bounded
+	if !v.visible(c, d) {
+		return nil, ErrNotFound // owner-only, support read is TTL-bounded; no existence oracle
 	}
 	return d, nil
+}
+
+// visible applies the per-definition read rule after tenant authorization:
+// support sees only unexpired support-created definitions, everyone else only their own.
+func (v *Service) visible(c Caller, d *Definition) bool {
+	if c.Actor == "support" {
+		return d.Actor == "support" && v.Clock.Now().Before(d.ExpiresAt)
+	}
+	return d.Owner == c.Principal
 }
 
 func (v *Service) List(c Caller, tenant string) ([]*Definition, error) {
@@ -191,7 +200,7 @@ func (v *Service) List(c Caller, tenant string) ([]*Definition, error) {
 	defer v.S.mu.Unlock()
 	var out []*Definition
 	for _, d := range v.S.Defs {
-		if d.Tenant == tenant && d.State != StateDeleted {
+		if d.Tenant == tenant && d.State != StateDeleted && v.visible(c, d) {
 			out = append(out, d)
 		}
 	}
