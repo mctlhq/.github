@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "afb232838c79279141d293e6ce311f3ec664bfbc"
+    "revision": "02d3a63e0d961e1fe0c1e3fe6a319b613222e7f5"
   },
   "files": {
     "health.json": {
-      "sha256": "aac8c8bbe7499f4b6cf0c5c03928befdbe0a143d5eff8435c5a9aff7834b24f0"
+      "sha256": "25e80b69f773066aa7f90827d2c296331b9b2e449ec91f9fec8d8b9f4b187360"
     },
     "ready-set.json": {
-      "sha256": "e499ab865fbed1f820f853b3985d49f8d6c7ae1c4808d306ad8a8c5773bb4d19"
+      "sha256": "dc5eec52b14ba91104150c3142f48edbe8220f6be77f15428675ad391ba5b5f0"
     },
     "snapshot.json": {
-      "sha256": "37cfe8e8b59cdf736dc8b8eff940a18f9a73f3cdadf44847fbb4910ca6593eb4"
+      "sha256": "1053588f2d49bbbfe4131507aa4e64fc9259260177b4bd216c7b26e65f9c21f9"
     }
   },
   "kind": "RoadmapPublication",
@@ -238,6 +238,16 @@
     },
     {
       "epic": {
+        "goal": "Close the tool-surface, coverage and multi-account gaps found in the 2026-11-07 Chatroost comparison without giving up what differentiates tg.mctl.ai: server-side gates, read-only default, audit and per-chat control. Measure the onboarding funnel before changing it further.",
+        "lifecycle": "active",
+        "name": "telegram-competitor-gap",
+        "title": "Telegram competitor gap on governed terms"
+      },
+      "path": "roadmap/epics/telegram-competitor-gap.yaml",
+      "sha256": "601fc25c94426631e04c4c4893e74caa84393cb6b4d09a38e2a41e955099a9d9"
+    },
+    {
+      "epic": {
         "goal": "Make Local Bridge a zero-admin, local-first Telegram access path where Telegram authentication and MTProto session state remain on the user's device, activation binds the local identity to an mctl account, sending is explicitly owner-controlled, and device-bound credentials can refresh and revoke without operator intervention.",
         "lifecycle": "completed",
         "name": "telegram-local-bridge-self-service",
@@ -279,12 +289,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-07T06:11:50Z",
+    "capturedAt": "2026-11-07T09:05:06Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "afb232838c79279141d293e6ce311f3ec664bfbc"
+    "revision": "02d3a63e0d961e1fe0c1e3fe6a319b613222e7f5"
   }
 }
