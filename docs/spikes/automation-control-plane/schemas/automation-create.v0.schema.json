@@ -22,12 +22,6 @@
       "minLength": 1,
       "description": "Canonical principal, never a raw surface id."
     },
-    "delegated_actor": {
-      "enum": [
-        "assistant",
-        "support"
-      ]
-    },
     "template": {
       "type": "object",
       "additionalProperties": false,
@@ -239,6 +233,12 @@
     "max_fires": {
       "type": "integer",
       "minimum": 1
+    },
+    "auth_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque verified owner authorization reference for support follow-ups; server validates ownership/tenant and refuses unbound values."
     }
   },
   "not": {
