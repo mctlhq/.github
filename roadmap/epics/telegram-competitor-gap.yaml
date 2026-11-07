@@ -1,0 +1,137 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: telegram-competitor-gap
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Telegram competitor gap on governed terms
+  goal: >-
+    Close the tool-surface, coverage and multi-account gaps found in the
+    2026-11-07 Chatroost comparison without giving up what differentiates
+    tg.mctl.ai: server-side gates, read-only default, audit and per-chat
+    control. Measure the onboarding funnel before changing it further.
+  lifecycle: active
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 1173
+  phases:
+    - id: measurement
+      title: Measurement and evidence
+    - id: foundation
+      title: Tool-surface foundation and identity
+    - id: coverage
+      title: Read coverage and examples
+    - id: governance
+      title: Destructive cap and per-chat scope
+    - id: writes
+      title: Telegram write tools
+    - id: remeasure
+      title: Onboarding funnel re-measure
+    - id: multiaccount
+      title: Multi-account, ADR first
+  workItems:
+    - id: send-code-evidence
+      phase: measurement
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1162
+
+    - id: first-call-labels
+      phase: measurement
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1165
+
+    - id: tool-tier-table
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1174
+
+    - id: identity-vs-account
+      phase: foundation
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 749
+
+    - id: read-coverage
+      phase: coverage
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1155
+      dependsOn:
+        - tool-tier-table
+
+    - id: examples-page
+      phase: coverage
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1156
+      dependsOn:
+        - tool-tier-table
+
+    - id: destructive-cap
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1154
+      dependsOn:
+        - tool-tier-table
+
+    - id: per-chat-scope
+      phase: governance
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1152
+      dependsOn:
+        - destructive-cap
+
+    - id: write-tools
+      phase: writes
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1175
+      dependsOn:
+        - tool-tier-table
+        - read-coverage
+
+    - id: funnel-remeasure
+      phase: remeasure
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1157
+      dependsOn:
+        - send-code-evidence
+
+    - id: multi-account
+      phase: multiaccount
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1153
+      dependsOn:
+        - identity-vs-account
+        - per-chat-scope
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Every registered tool has exactly one tier, and a test fails when a tool is missing from the table or its annotations disagree with it.
+    - get_my_identity and the manage page distinguish the signed-in identity from the connected Telegram account.
+    - Folders and forum topics are readable, and an examples page lists only tools a regular user can call.
+    - delete_messages has a persistent per-user daily cap and is off until the owner opts in.
+    - An owner can limit an assistant to chosen chats, and every peer-bearing tool refuses peers outside that scope.
+    - Write tools added here go through a documented gate, and the public security text matches what the server enforces.
+    - The 2026-11-21 funnel re-measure is reported against the threshold fixed on #1157 before the data was read.
