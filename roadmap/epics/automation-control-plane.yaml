@@ -1,0 +1,132 @@
+# Planned implementation graph for the decided #318 spike.
+# Unbound work items are planning only; do not auto-intake or execute them.
+# Each slice requires a separately approved DevLoop proposal and rollout gate.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: automation-control-plane
+  owner: mctl-api
+  labels:
+    - roadmap
+spec:
+  title: Governed Temporal-backed user automations across MCTL surfaces
+  goal: >-
+    Let Claude, ChatGPT, Telegram assistants and mctl-support create and manage
+    user-owned at/schedule/event/dependency automations through the existing
+    mctl-api authority, Temporal scheduling and mctl-agents execution layer,
+    with Telegram as the first bounded delivery channel, without duplicating
+    WorkItem execution, identity, policy, budget or approval state.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 322
+  phases:
+    - id: authority
+      title: Contract, identity and authorization gates
+    - id: api
+      title: Durable AutomationDefinition store and MCP/REST
+    - id: temporal
+      title: Temporal schedules and desired/observed reconciliation
+    - id: execution
+      title: Governed AgentAutomationWorkflow and WorkItem execution
+    - id: events
+      title: Verified event and dependency triggers
+    - id: surfaces
+      title: Telegram, Claude/ChatGPT and Support integration
+    - id: rollout
+      title: End-to-end assurance and explicit rollout gating
+  workItems:
+    - id: automation-contract
+      title: Freeze user-automation v1 schemas, template allowlist, identity boundaries and action-time authority
+      owner: mctl-api
+      phase: authority
+      required: true
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 318
+
+    - id: automation-api-store
+      title: Implement durable au_ storage, MCP/REST operations, idempotency/CAS, visibility, audit and run-history view
+      owner: mctl-api
+      phase: api
+      required: true
+      dependsOn:
+        - automation-contract
+
+    - id: temporal-schedule-reconcile
+      title: Integrate real Temporal Schedule CRUD with crash-safe reconciliation, overlap, DST and namespace isolation decision
+      owner: mctl-api
+      phase: temporal
+      required: true
+      dependsOn:
+        - automation-api-store
+
+    - id: automation-agent-execution
+      title: Run AgentAutomationWorkflow with per-fire wi_ to xr_ to we_, budget, policy, approval and cancellation checkpoints
+      owner: mctl-agents
+      phase: execution
+      required: true
+      dependsOn:
+        - temporal-schedule-reconcile
+
+    - id: automation-event-dependencies
+      title: Implement verified event ingress, durable subscriber fanout, replay dedupe and dependency signals
+      owner: mctl-api
+      phase: events
+      required: true
+      dependsOn:
+        - automation-api-store
+        - automation-agent-execution
+
+    - id: automation-surfaces-delivery
+      title: Bind Claude/ChatGPT MCP, Telegram AssistantInstall and read-only Support followups to shared au_ ownership
+      owner: mctl-telegram
+      phase: surfaces
+      required: true
+      dependsOn:
+        - automation-agent-execution
+        - automation-event-dependencies
+
+    - id: automation-rollout-assurance
+      title: Require end-to-end proof, metrics, safety gates and operator-approved activation; flag off by default
+      owner: mctl-gitops
+      phase: rollout
+      required: true
+      dependsOn:
+        - automation-api-store
+        - temporal-schedule-reconcile
+        - automation-agent-execution
+        - automation-event-dependencies
+        - automation-surfaces-delivery
+
+    - id: optional-ci-event-producer
+      title: Add authenticated GitHub check_run and workflow_run event producer only after ingress proof
+      owner: mctl-api
+      phase: events
+      required: false
+      dependsOn:
+        - automation-event-dependencies
+
+    - id: optional-chatgpt-push
+      title: Evaluate delivering a result to an existing ChatGPT chat if provider API ever supports it
+      owner: mctl-api
+      phase: surfaces
+      required: false
+      dependsOn:
+        - automation-surfaces-delivery
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 300
+
+  completion:
+    mode: allRequired
+  successCriteria:
+    - A cross-surface canonical principal can create, pause, list and inspect one user-owned automation via MCP/REST; other principals in the same tenant see not-found.
+    - Each fire has one idempotent wi_ with existing xr_ and we_; overlapping occurrences never violate one-active-we_-per-wi_ or double-charge the usage ledger.
+    - Real Temporal integration proves one-shot, recurrence, overlap, pause and recovery from partial Schedule writes; reconciliation distinguishes incomplete observations from confirmed orphans.
+    - External events originate from signed/authorized producers with tenant-bound source hydration, per-definition durable fanout and replay-safe dedupe; unknown CI event types do not appear supported.
+    - Fire-time and action-time policy gates deny revoked installs and cross-tenant, cross-principal or unapproved mutating actions; support followups are read-only, TTL-bound and at most three fires.
+    - Every run has bounded budget, concurrency and delivery retries with auditable refusals; no raw Temporal workflows, namespaces or signals are accepted from clients.
+    - The first activation is operator-tenant-only reminder.v1 and at, with flags off before separate human approvals, rollback preserving WorkItem history, and measured drift, p95 and spend limits.
+    - ChatGPT same-chat push, CI check_run ingestion and Commerce actions remain optional gated followups and do not block the core epic.

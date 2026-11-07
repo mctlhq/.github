@@ -1,5 +1,5 @@
-# Proposed verdict lives in the report only. The owner records the decision
-# block; an agent does not record its own approval.
+# Owner decision 2026-11-07 after research PR #319 merged and
+# implementation planning epic #322 was filed (no implementation approval).
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -12,7 +12,7 @@ spec:
     dependency trigger) created and managed from Claude, ChatGPT and Telegram,
     on existing Temporal, WorkItem and agent execution primitives, without a
     second scheduler, run store, identity key or approval path?
-  lifecycle: proposed
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/.github
@@ -28,3 +28,10 @@ spec:
     devloop: true
   evidence:
     report: docs/spikes/automation-control-plane.md
+  decision:
+    verdict: EXTEND_MCTL_API
+    decidedAt: "2026-11-07"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/.github
+        number: 322
