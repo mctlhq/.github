@@ -1,0 +1,14 @@
+{
+  "_note": "Synthetic test material only. The key below is not a secret.",
+  "hmac_key": "synthetic-test-key-not-a-secret",
+  "tenants": {"acme": ["u1"], "globex": ["u2"]},
+  "links": {"u1": ["claude", "chatgpt", "telegram"], "u2": ["claude"], "svc-support": ["support"]},
+  "support": {"principal": "svc-support", "bound_tenant": "acme"},
+  "installs": {"inst-acme-1": {"tenant": "acme", "revision": 1}},
+  "templates": [
+    {"Name": "reminder.v1", "Mutating": false, "Support": false},
+    {"Name": "agent.investigate-ci-failure.v1", "Mutating": false, "Support": false},
+    {"Name": "agent.deploy.v1", "Mutating": true, "Support": false},
+    {"Name": "support.diagnostic-followup.v1", "Mutating": false, "Support": true}
+  ]
+}

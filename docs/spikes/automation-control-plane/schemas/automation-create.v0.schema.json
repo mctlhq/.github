@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/spikes/automationcp/automation-create.v0.schema.json",
+  "title": "CreateAutomationDefinition v0: client request fields only (spike, not in force)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tenant",
+    "owner",
+    "template",
+    "trigger",
+    "delivery",
+    "budget"
+  ],
+  "properties": {
+    "tenant": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Canonical principal, never a raw surface id."
+    },
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*\\.v[0-9]+$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "pin": {
+      "type": "object",
+      "description": "Pinned agent/profile/install revision, or a named resolution policy.",
+      "properties": {
+        "install": {
+          "type": "string"
+        },
+        "install_revision": {
+          "type": "integer"
+        },
+        "resolution_policy": {
+          "enum": [
+            "pinned",
+            "latest-compatible"
+          ]
+        }
+      }
+    },
+    "trigger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ],
+          "properties": {
+            "kind": {
+              "const": "at"
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Offset-aware instant."
+            },
+            "local": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$"
+            },
+            "timezone": {
+              "type": "string",
+              "description": "IANA zone; required with local."
+            },
+            "gap_policy": {
+              "enum": [
+                "skip",
+                "shift_forward"
+              ],
+              "default": "skip"
+            },
+            "overlap_pick": {
+              "enum": [
+                "later",
+                "first"
+              ],
+              "default": "later"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "timezone"
+          ],
+          "properties": {
+            "kind": {
+              "const": "schedule"
+            },
+            "cron": {
+              "type": "string"
+            },
+            "interval_seconds": {
+              "type": "integer",
+              "minimum": 60
+            },
+            "timezone": {
+              "type": "string"
+            },
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "catchup_window_seconds": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "overlap": {
+              "enum": [
+                "skip",
+                "buffer_one",
+                "cancel_other",
+                "allow_all"
+              ],
+              "default": "skip"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "event_type"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "event",
+                "dependency"
+              ]
+            },
+            "event_type": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+\\.[a-z0-9_]+$"
+            },
+            "subject_prefix": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "fanout_cap": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "await": {
+              "type": "boolean",
+              "description": "dependency only: template parks a run and is Signalled."
+            }
+          }
+        }
+      ]
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Template inputs. Secret-shaped values are refused at create."
+    },
+    "delivery": {
+      "type": "object",
+      "required": [
+        "adapter"
+      ],
+      "properties": {
+        "adapter": {
+          "enum": [
+            "telegram",
+            "none"
+          ]
+        },
+        "chat_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "policy_snapshot_ref": {
+      "type": "string"
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "per_run_minor",
+        "per_owner_day_minor"
+      ],
+      "properties": {
+        "per_run_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "per_owner_day_minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_concurrent_runs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "ttl_seconds": {
+      "type": "integer",
+      "minimum": 60
+    },
+    "retention_days": {
+      "type": "integer"
+    },
+    "max_fires": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "auth_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Opaque reference to owner authorization for a support follow-up. The current reference model checks presence only; real authorization/tenant verification is a future mandatory implementation gate."
+    }
+  },
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "workflow_type"
+        ]
+      },
+      {
+        "required": [
+          "task_queue"
+        ]
+      },
+      {
+        "required": [
+          "namespace"
+        ]
+      },
+      {
+        "required": [
+          "signal"
+        ]
+      }
+    ]
+  },
+  "description": "Client-supplied definition only. Owner is verified against the authenticated principal/delegation; creating_surface, automation_id, version, lifecycle, provenance and run fields are always server-assigned."
+}

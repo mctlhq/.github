@@ -1,0 +1,30 @@
+# Proposed verdict lives in the report only. The owner records the decision
+# block; an agent does not record its own approval.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: automation-control-plane
+  owner: mctlhq/.github
+spec:
+  title: MCTL automation control plane (Temporal-backed Automation MCP across surfaces)
+  question: >-
+    Can MCTL offer durable, user-owned automations (at, schedule, event or
+    dependency trigger) created and managed from Claude, ChatGPT and Telegram,
+    on existing Temporal, WorkItem and agent execution primitives, without a
+    second scheduler, run store, identity key or approval path?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 318
+  outcomes:
+    - COMPOSE_EXISTING_ONLY
+    - EXTEND_MCTL_API
+    - DEDICATED_AUTOMATION_SERVICE
+    - DEFER_WITH_GAPS
+  timebox:
+    decisionBy: "2026-12-15"
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/automation-control-plane.md
