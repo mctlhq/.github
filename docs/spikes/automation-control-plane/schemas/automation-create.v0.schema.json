@@ -7,7 +7,6 @@
   "required": [
     "tenant",
     "owner",
-    "creating_surface",
     "template",
     "trigger",
     "delivery",
@@ -25,15 +24,6 @@
     },
     "delegated_actor": {
       "enum": [
-        "assistant",
-        "support"
-      ]
-    },
-    "creating_surface": {
-      "enum": [
-        "claude",
-        "chatgpt",
-        "telegram",
         "assistant",
         "support"
       ]
@@ -275,5 +265,5 @@
       }
     ]
   },
-  "description": "Client-supplied definition only. The authenticated server derives/binds owner, surface and issued id/version/provenance, and ignores no unauthorized values."
+  "description": "Client-supplied definition only. Owner is verified against the authenticated principal/delegation; creating_surface, automation_id, version, lifecycle, provenance and run fields are always server-assigned."
 }
