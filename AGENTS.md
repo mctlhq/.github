@@ -35,3 +35,6 @@
   spike report for mctlhq/.github#272, proposed verdict KEEP_VALKEY.
 - [Journey-level correlation: `mctl.intent.id`](docs/spikes/journey-intent-correlation.md):
   spike report for mctlhq/.github#306, proposed verdict REUSE_WORK_ITEM_ID.
+- [Automation control plane](docs/spikes/automation-control-plane.md): spike report
+  for mctlhq/.github#318, proposed verdict EXTEND_MCTL_API, with a Go reference
+  model and a real Temporal dev-server proof in `docs/spikes/automation-control-plane/`.
