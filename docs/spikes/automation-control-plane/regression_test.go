@@ -27,6 +27,12 @@ func TestCreateRequestSchemaSeparatesServerFields(t *testing.T) {
             if required == field { t.Fatalf("create input requires server field %s", field) }
         }
     }
+    if _, ok := schema.Properties["auth_ref"]; !ok {
+        t.Fatal("support follow-up create cannot carry a verified owner auth_ref")
+    }
+    if _, ok := schema.Properties["delegated_actor"]; ok {
+        t.Fatal("delegated_actor must come from the authenticated server identity")
+    }
     for _, required := range []string{"tenant", "owner", "template", "trigger", "delivery", "budget"} {
         found := false
         for _, field := range schema.Required { if field == required { found = true } }
