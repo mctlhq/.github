@@ -1,0 +1,1 @@
+{"specversion":"mctl.events/v1","id":"gh-delivery-0002","type":"github.check_run.completed","source":"mctl-github-ingress","occurred_at":"2026-11-07T00:00:00Z","correlation_id":"corr-0002","subject":{"kind":"github.check_run","repo":"mctlhq/demo"}}

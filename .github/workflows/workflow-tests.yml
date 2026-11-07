@@ -17,6 +17,7 @@ on:
       - 'docs/spikes/security-finding-lifecycle/**'
       - 'docs/spikes/cve-advisory-impact/**'
       - 'docs/spikes/mcp-gateway-g0/**'
+      - 'docs/spikes/automation-control-plane/**'
   push:
     branches:
       - main
@@ -29,6 +30,7 @@ on:
       - 'docs/spikes/security-finding-lifecycle/**'
       - 'docs/spikes/cve-advisory-impact/**'
       - 'docs/spikes/mcp-gateway-g0/**'
+      - 'docs/spikes/automation-control-plane/**'
 
 permissions: {}
 
@@ -59,3 +61,45 @@ jobs:
       - name: MCP gateway G0 reference model (mctlhq/.github#195)
         working-directory: docs/spikes/mcp-gateway-g0
         run: go vet ./... && go test ./...
+
+      - name: Set up Go for the automation control plane reference model
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: docs/spikes/automation-control-plane/go.mod
+
+      - name: Automation control plane reference model [MODEL] (mctlhq/.github#318)
+        working-directory: docs/spikes/automation-control-plane
+        run: go vet ./... && go test ./...
+
+  # Distinct required check: real Temporal dev server + official SDK, loopback
+  # only, in-memory state, synthetic inert workflow, no credentials. A missing
+  # binary, a server that does not start or a worker that cannot poll FAILS
+  # (the test calls t.Fatal, never t.Skip).
+  temporal-dev-server:
+    runs-on: ubuntu-latest
+    env:
+      TEMPORAL_CLI_VERSION: 1.10.0
+      TEMPORAL_CLI_SHA256: 521f461f3d108902763bb71e85cd0fd382dc9357b59604ae03da6ae734d16890
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - name: Set up Go for the Temporal dev-server integration proof
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: docs/spikes/automation-control-plane/temporal-integration/go.mod
+
+      - name: Install pinned Temporal CLI (checksum verified)
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/temporal-cli"
+          mkdir -p "$dir"
+          url="https://github.com/temporalio/cli/releases/download/v${TEMPORAL_CLI_VERSION}/temporal_cli_${TEMPORAL_CLI_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$dir/temporal.tar.gz" "$url"
+          echo "${TEMPORAL_CLI_SHA256}  $dir/temporal.tar.gz" | sha256sum -c -
+          tar -xzf "$dir/temporal.tar.gz" -C "$dir" temporal
+          echo "TEMPORAL_CLI=$dir/temporal" >> "$GITHUB_ENV"
+
+      - name: Temporal dev-server integration [TEMPORAL_DEV] (mctlhq/.github#318)
+        working-directory: docs/spikes/automation-control-plane/temporal-integration
+        run: go vet ./... && go test -count=1 -v ./...

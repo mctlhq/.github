@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mctl.ai/spikes/automationcp/operations.v0.schema.json",
+  "title": "Automation MCP/REST operation inputs and the closed error vocabulary (spike)",
+  "$defs": {
+    "idem": {"type": "string", "minLength": 8, "maxLength": 128},
+    "id": {"type": "string", "pattern": "^au_[0-9a-z]{8,40}$"},
+    "page": {"type": "object", "properties": {"cursor": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 100}}},
+    "error": {"enum": ["raw_temporal_forbidden", "not_found", "idempotency_key_reused", "version_conflict", "signature_invalid", "replay_window",
+      "duplicate_event", "fanout_capped", "budget_exceeded", "unsupported_event_type", "owner_not_member", "install_revoked",
+      "identity_unlinked", "template_forbidden_for_actor", "invalid_argument"]}
+  },
+  "oneOf": [
+    {"title": "mctl_create_automation", "type": "object", "required": ["tenant", "idempotency_key", "definition"], "additionalProperties": false,
+      "properties": {"tenant": {"type": "string"}, "idempotency_key": {"$ref": "#/$defs/idem"}, "definition": {"$ref": "automation-definition.v0.schema.json"}}},
+    {"title": "mctl_list_automations", "type": "object", "required": ["tenant"], "properties": {"tenant": {"type": "string"}, "state": {"enum": ["enabled", "paused"]}, "page": {"$ref": "#/$defs/page"}}},
+    {"title": "mctl_get_automation", "type": "object", "required": ["automation_id"], "properties": {"automation_id": {"$ref": "#/$defs/id"}}},
+    {"title": "mctl_update_automation", "type": "object", "required": ["automation_id", "idempotency_key", "expected_version", "patch"], "properties": {
+      "automation_id": {"$ref": "#/$defs/id"}, "idempotency_key": {"$ref": "#/$defs/idem"}, "expected_version": {"type": "integer", "minimum": 1}, "patch": {"type": "object"}}},
+    {"title": "mctl_pause_automation / mctl_resume_automation", "type": "object", "required": ["automation_id", "idempotency_key", "expected_version"], "properties": {
+      "automation_id": {"$ref": "#/$defs/id"}, "idempotency_key": {"$ref": "#/$defs/idem"}, "expected_version": {"type": "integer"}}},
+    {"title": "mctl_delete_automation", "type": "object", "required": ["automation_id", "idempotency_key", "expected_version"], "properties": {
+      "automation_id": {"$ref": "#/$defs/id"}, "idempotency_key": {"$ref": "#/$defs/idem"}, "expected_version": {"type": "integer"}, "cancel_in_flight": {"type": "boolean", "default": false}}},
+    {"title": "mctl_run_automation", "type": "object", "required": ["automation_id", "idempotency_key"], "properties": {"automation_id": {"$ref": "#/$defs/id"}, "idempotency_key": {"$ref": "#/$defs/idem"}}},
+    {"title": "mctl_list_automation_runs (bounded history; view over wi_/we_)", "type": "object", "required": ["automation_id"], "properties": {"automation_id": {"$ref": "#/$defs/id"}, "page": {"$ref": "#/$defs/page"}}}
+  ]
+}
