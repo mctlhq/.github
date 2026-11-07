@@ -39,13 +39,18 @@ func InertWorkflow(ctx workflow.Context, sleep time.Duration) (string, error) {
 	return "ok", nil
 }
 
-func freePort(t *testing.T) int {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+func freePorts(t *testing.T) (int, int) {
+	l1, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("no free loopback port: %v", err)
 	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
+	defer l1.Close()
+	l2, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("no free loopback port: %v", err)
+	}
+	defer l2.Close()
+	return l1.Addr().(*net.TCPAddr).Port, l2.Addr().(*net.TCPAddr).Port
 }
 
 // startServer launches the dev server and returns a connected client.
@@ -60,7 +65,7 @@ func startServer(t *testing.T) client.Client {
 		t.Fatalf("temporal CLI is not the pinned %s: %q err=%v", pinnedCLI, out, err)
 	}
 	t.Logf("[TEMPORAL_DEV] cli: %s", strings.TrimSpace(string(out)))
-	port, uiPort := freePort(t), freePort(t)
+	port, uiPort := freePorts(t)
 	cmd := exec.Command(bin, "server", "start-dev", "--ip", "127.0.0.1",
 		"--port", fmt.Sprint(port), "--ui-port", fmt.Sprint(uiPort), "--headless",
 		"--namespace", "automationcp-test", "--log-level", "error")
@@ -78,7 +83,13 @@ func startServer(t *testing.T) client.Client {
 	for {
 		c, err = client.Dial(client.Options{HostPort: addr, Namespace: "automationcp-test"})
 		if err == nil {
-			break
+			hctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			_, err = c.CheckHealth(hctx, nil)
+			cancel()
+			if err == nil {
+				break
+			}
+			c.Close()
 		}
 		if time.Now().After(deadline) {
 			t.Fatalf("dev server did not become ready: %v", err)

@@ -274,11 +274,11 @@ func (v *Service) Fire(au, occ string) (*Execution, error) {
 		return e, err
 	}
 	d.Refusals = 0
-	d.Fires++
 	if err := v.S.Ledger.Reserve(e.ID, d.Owner, v.RunCostMinor, d.Budget); err != nil {
 		e.Phase, e.Reason = "refused", err.Error() // before the agent mock is called
 		return e, err
 	}
+	d.Fires++ // counted only once the run is actually reserved
 	e.Phase = "reserved"
 	if v.CrashAfter["reserved"] {
 		delete(v.CrashAfter, "reserved")
@@ -402,7 +402,7 @@ func (v *Service) Ingest(ts time.Time, sig string, body []byte, tenant string) (
 	var ds []*Definition
 	for _, d := range v.S.Defs {
 		if d.Tenant == tenant && d.State == StateEnabled && (d.Trigger.Kind == TrigEvent || d.Trigger.Kind == TrigDependency) &&
-			d.Trigger.EventType == e.Type && strings.HasPrefix(e.Subject["repo"], d.Trigger.SubjectPrefix) {
+			d.Trigger.EventType == e.Type && strings.HasPrefix(subjectKey(e), d.Trigger.SubjectPrefix) {
 			ds = append(ds, d)
 		}
 	}
@@ -450,4 +450,13 @@ func (v *Service) Run(c Caller, id, idem string) (*Execution, error) {
 		e.Phase = "awaiting_signal"
 	}
 	return e, err
+}
+
+// subjectKey picks the subject attribute an event type is routed on: the
+// repository for GitHub events, the chat for Telegram events.
+func subjectKey(e *Envelope) string {
+	if strings.HasPrefix(e.Type, "telegram.") {
+		return e.Subject["chat_id"]
+	}
+	return e.Subject["repo"]
 }
