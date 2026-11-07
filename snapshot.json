@@ -4319,9 +4319,10 @@
         "number": 1118,
         "repository": "mctlhq/mctl-gitops"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-11-04T01:48:13Z"
+      "updatedAt": "2026-11-07T17:14:07Z"
     },
     {
       "blockedBy": [
@@ -6175,9 +6176,10 @@
         "number": 1152,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-11-07T13:01:54Z"
+      "updatedAt": "2026-11-07T16:55:57Z"
     },
     {
       "blockedBy": [],
@@ -6340,13 +6342,13 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-07T09:01:25Z"
+      "updatedAt": "2026-11-07T17:06:17Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-07T13:15:44Z",
+    "capturedAt": "2026-11-07T17:27:36Z",
     "mode": "live-capture"
   }
 }
