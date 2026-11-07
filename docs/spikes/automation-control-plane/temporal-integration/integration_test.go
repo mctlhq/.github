@@ -155,7 +155,10 @@ func TestTemporalDevServer(t *testing.T) {
 		}
 		// one-shot: wait past several intervals and assert exactly one action.
 		time.Sleep(3 * time.Second)
-		desc, _ = h.Describe(ctx)
+		desc, err = h.Describe(ctx)
+		if err != nil {
+			t.Fatalf("describe after one-shot: %v", err)
+		}
 		if desc.Info.NumActions != 1 {
 			t.Fatalf("one-shot fired %d times, want 1", desc.Info.NumActions)
 		}
@@ -192,13 +195,19 @@ func TestTemporalDevServer(t *testing.T) {
 		if err := h.Pause(ctx, client.SchedulePauseOptions{Note: "spike"}); err != nil {
 			t.Fatal(err)
 		}
-		d, _ = h.Describe(ctx)
+		d, err = h.Describe(ctx)
+		if err != nil {
+			t.Fatalf("describe schedule: %v", err)
+		}
 		if !d.Schedule.State.Paused {
 			t.Fatal("not paused")
 		}
 		before := d.Info.NumActions
 		time.Sleep(8 * time.Second)
-		d, _ = h.Describe(ctx)
+		d, err = h.Describe(ctx)
+		if err != nil {
+			t.Fatalf("describe schedule: %v", err)
+		}
 		if d.Info.NumActions != before {
 			t.Fatalf("paused schedule fired: %d -> %d", before, d.Info.NumActions)
 		}
@@ -235,8 +244,17 @@ func TestTemporalDevServer(t *testing.T) {
 				got = append(got, ts.UTC().Format(time.RFC3339))
 			}
 			t.Logf("[TEMPORAL_DEV] dst_%s europe/berlin 02:30 next_action_times_utc=%v", tc.name, got)
-			if len(got) > 1 {
-				t.Fatalf("%s: expected at most one computed next action, got %v", tc.name, got)
+			// Assert exact observed Temporal semantics; a false 0/1 result
+			// must not silently become the model's DST default.
+			switch tc.name {
+			case "gap":
+				if len(got) != 0 {
+					t.Fatalf("DST gap expected zero next actions, got %v", got)
+				}
+			case "overlap":
+				if len(got) != 1 || got[0] != "2027-10-31T01:30:00Z" {
+					t.Fatalf("DST overlap expected 2027-10-31T01:30:00Z exactly once, got %v", got)
+				}
 			}
 		}
 	})
