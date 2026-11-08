@@ -13,8 +13,9 @@
     {
       "amount": "30.00",
       "confidence": "0.80",
+      "currency": "EUR",
       "merchant": "Cafe Imaginario",
-      "reason": "same account, merchant, amount and local date under distinct ids",
+      "reason": "same account, currency, merchant, amount and local date under distinct ids",
       "txns": [
         "e003",
         "e004"
