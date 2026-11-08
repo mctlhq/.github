@@ -246,7 +246,7 @@ def month_spend_by_category(txns, month, tz, corrections, rates, target, today):
                 continue
             merchant = orig.merchant
         category = cats.get(merchant)
-        if category is None or category[0] == "uncategorized":
+        if category is None or not category[0] or category[0] == "uncategorized":
             uncertain.append({"txn": t.key, "reason": "category_unresolved"})
             continue
         cat = category[0]
