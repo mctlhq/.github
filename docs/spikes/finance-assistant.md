@@ -235,3 +235,57 @@ cannot confine delivery to the owner without a new identity system, or if the ow
 financial rows.
 
 This report does not close #325; the owner records the decision.
+
+## D12 Owner decision and primary-source verification (2026-11-08)
+
+**Owner verdict: `RESEARCH_ONLY_DEFER` (decided by `mashkovd`).** This post-research
+decision follows the independently reviewed and merged [research PR #326](https://github.com/mctlhq/.github/pull/326)
+and supersedes D11's earlier “owner decision required” status. It is **not**
+`NO_ADOPTION`, permission to implement a Finance Assistant, permission to process
+real statements, or permission to activate runtime/bank/provider integrations.
+The `SpikeDefinition` is the canonical decision record.
+
+### Independent external primary-source check
+
+The investigator reported in D1 that its lookup had not located the primary sources;
+the following **subsequent owner-decision review** supplies additional evidence,
+accessed on **2026-11-08** (do not re-label the original D1 run as successful):
+
+- **[PRIMARY] Anthropic Help Center**:
+  https://support.claude.com/en/articles/18185620-use-personal-finance-in-claude
+  describes Personal Finance as US-only beta for Pro/Max/Ultra, with Plaid-linked
+  bank/card/loan/investment accounts, read-only access and no money movement.
+- **[PRIMARY] Anthropic product article (2026-11-05)**:
+  https://claude.com/resources/articles/introducing-personal-finance-in-claude
+  describes read-only linked accounts and the beta's US rollout. It is a product
+  reference, not MCTL's bank coverage, security or regulatory authorization.
+- **[PRIMARY] Plaid country/product coverage**:
+  https://support.plaid.com/hc/en-us/articles/27895826947735-What-Plaid-products-are-supported-in-each-country-and-region
+  lists European financial-data countries; **Montenegro is not listed**.
+  This is evidence that direct Montenegro bank/transaction coverage via Plaid
+  is not established, **not** proof that all banks or all alternative providers
+  lack support. Global Identity Verification coverage must never be mistaken
+  for Transactions coverage.
+
+The new primary sources improve D1 evidence but **do not overturn the defer
+verdict**: validated owner-private MCTL delivery, test-tenant authorization,
+persistent-storage deletion/retention, model-provider egress and L2 integration
+evidence are still absent. L1 synthetic arithmetic tests cannot prove them.
+
+### Bounded next step (authorized for intake, not implementation)
+
+Follow-up: [mctl-telegram #1240](https://github.com/mctlhq/mctl-telegram/issues/1240),
+**owner-private delivery and CSV feasibility**. Existing #297 Saved Messages
+`SendToSelf` / `InputPeerSelf` offers a code path to inspect; #354 shows why
+command classification must be examined with failure/reconnect scenarios.
+The follow-up must pin current merged code and stage L2 security tests only
+with test accounts, synthetic transactions and fake transports, after its own
+DevLoop proposal/review/human approval. It must compare private owner delivery,
+an owner workspace, and a CSV-only rules digest. **No live user records,
+real Telegram sends, bank auth, new runtime, production flags or deployment.**
+
+**Exit criteria:** If testable owner-only delivery is impossible without a new
+identity system, or private financial-data retention cannot be made governable
+under existing ownership, stop and return to the owner. Otherwise propose the
+smallest bounded follow-up for a new exact-artifact approval; do not promote
+`RESEARCH_ONLY_DEFER` to `REUSE_CATALOG_CSV_MVP` automatically.
