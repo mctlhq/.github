@@ -142,11 +142,12 @@ def reconcile_pending(txns, window_days=7):
     Returns (still_pending, reconciled_pairs, posted). Reconciled pending rows leave the pending list.
     """
     posted = [t for t in txns if t.status == "posted"]
-    pending, pairs = [], []
+    pending, pairs, used = [], [], set()
     for p in (t for t in txns if t.status == "pending"):
-        match = next((q for q in posted if q.account_id == p.account_id and q.merchant == p.merchant
+        match = next((q for q in posted if id(q) not in used and q.account_id == p.account_id and q.merchant == p.merchant
                       and q.amount == p.amount and dt.timedelta(0) <= q.ts - p.ts <= dt.timedelta(days=window_days)), None)
         if match:
+            used.add(id(match))  # one posted row reconciles at most one pending row
             pairs.append((p, match))
         else:
             pending.append(p)
