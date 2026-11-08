@@ -1,0 +1,8 @@
+{"grant": {"tenant": "t-alpha", "owner": "u-owner", "source": "src-eur", "destination": "saved-messages:u-owner"},
+ "principals": {
+  "owner": {"id": "u-owner", "tenant": "t-alpha", "kind": "user"},
+  "second_user": {"id": "u-second", "tenant": "t-alpha", "kind": "user"},
+  "other_tenant": {"id": "u-other", "tenant": "t-beta", "kind": "user"},
+  "tg_peer": {"id": "tg-peer-77", "tenant": "t-alpha", "kind": "telegram_peer"},
+  "group": {"id": "tg-group-5", "tenant": "t-alpha", "kind": "group"}},
+ "destinations": {"owner_private": "saved-messages:u-owner", "group_chat": "group:tg-group-5", "peer_dm": "dm:tg-peer-77"}}

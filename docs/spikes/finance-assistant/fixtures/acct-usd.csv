@@ -1,0 +1,4 @@
+source_id,account_id,external_id,ts,status,amount,currency,merchant,memo,bank_category,kind,transfer_ref,refund_of
+src-usd,usd-1,u001,2026-10-03T14:00:00Z,posted,-50.00,USD,Fiktiv Cloud,hosting,software,spend,,
+src-usd,usd-1,u002,2026-10-15T08:00:00Z,posted,216.00,USD,Own transfer from EUR,move funds,transfer,transfer,T1,
+src-usd,usd-1,u003,2026-10-18T16:00:00Z,posted,-20.00,USD,Demo Books,book,shopping,spend,,
