@@ -1,3 +1,5 @@
+# Owner decision 2026-11-08 after reviewed and merged research PR #329.
+# Architecture-only decision; implementation epic #330 remains proposed and unapproved.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -9,7 +11,7 @@ spec:
     Which cross-surface UI, dependency, CSP, CI and deployment contracts should
     be standardized across the six MCTL web surfaces, and would any measured
     framework migration be preferable to keeping the present runtimes?
-  lifecycle: proposed
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/.github
@@ -24,3 +26,10 @@ spec:
     devloop: true
   evidence:
     report: docs/spikes/web-platform-unification.md
+  decision:
+    verdict: STANDARDIZE_CONTRACTS_KEEP_RUNTIMES
+    decidedAt: "2026-11-08"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/.github
+        number: 330
