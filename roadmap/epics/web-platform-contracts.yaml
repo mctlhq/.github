@@ -1,0 +1,85 @@
+# Planning graph after owner architecture verdict on spike mctlhq/.github#328.
+# This EpicDefinition is PROPOSED only. No implementation issues, intake, DevLoop,
+# code, package or production rollout are authorized by creating this manifest.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: web-platform-contracts
+  owner: mctl-design
+  labels:
+    - roadmap
+spec:
+  title: Federated Web Platform Contracts — header, accessibility, asset integrity and CSP
+  goal: >-
+    Keep each of the six MCTL web surfaces on its existing runtime, while defining
+    and (after separate approvals) verifying consistent navigation accessibility,
+    immutable design-asset delivery, source/live CSP boundaries, and rollback
+    without requiring a cross-framework migration or broad shared JavaScript.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 330
+  phases:
+    - id: evidence
+      title: Observe real route behavior, CDN headers and design release provenance
+    - id: contracts
+      title: Freeze framework-independent header and CSS integrity contracts
+    - id: assurance
+      title: Test the contracts on previews and require separate release approvals
+    - id: optional-pilot
+      title: Only if separately approved, pilot a public-route JS adapter
+  workItems:
+    - id: web-contract-evidence
+      title: Capture safe route CSP, CDN CORS/cache, browser keyboard/no-JS baseline and exact image provenance
+      owner: mctl-design
+      phase: evidence
+      required: true
+      externalDependsOn:
+        - repository: mctlhq/.github
+          number: 328
+
+    - id: web-header-a11y-contract
+      title: Specify Escape, pointer dismissal, focus, ARIA, responsive and no-JS behaviors without forcing common breakpoints
+      owner: mctl-design
+      phase: contracts
+      required: true
+      dependsOn:
+        - web-contract-evidence
+
+    - id: web-asset-integrity-contract
+      title: Specify exact versions, per-file hashes, optional SRI and CORS, CDN immutability and vendored sync/rollback
+      owner: mctl-design
+      phase: contracts
+      required: true
+      dependsOn:
+        - web-contract-evidence
+
+    - id: web-contract-preview-assurance
+      title: Design preview/browser a11y and route-CSP tests, CI ownership and separately approved deployment gates
+      owner: mctl-gitops
+      phase: assurance
+      required: true
+      dependsOn:
+        - web-header-a11y-contract
+        - web-asset-integrity-contract
+
+    - id: optional-public-header-adapter
+      title: Evaluate a locally vendored site-header.js only on script-permitted Alice and SeerrSense public routes
+      owner: mctl-alice
+      phase: optional-pilot
+      required: false
+      dependsOn:
+        - web-header-a11y-contract
+        - web-asset-integrity-contract
+        - web-contract-preview-assurance
+
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Six consumers retain Nuxt/Go/VitePress/Vue-Hono/native-Node/Fastify; any framework migration requires a distinct measured spike and owner verdict.
+    - Real effective HTTP CSP including representative redirect/error/auth/consent routes and CDN Access-Control-Allow-Origin/Cache-Control are observed safely or remain explicitly unknown; no secret-bearing production auth flow is probed.
+    - Mobile navigation contract covers native keyboard activation, aria-expanded, Escape, outside pointer, focus restoration, responsive breakpoints, reduced-motion and no-JS, with framework-native implementations and browser a11y evidence.
+    - SRI is not enabled until CDN CORS/crossorigin, immutable byte hashes and failure rollback are verified; strict CSP routes keep local/vendored assets and never gain broad new script origins.
+    - Existing issues mctl-design#34/#78, mctl-telegram#599, mctl-academy#210 and mctl-gitops#500 remain their respective owners; no duplicate issues are filed for the same work.
+    - Every work item and any optional adapter pilot requires its own separate DevLoop proposal, independent review, exact human approval, and deployment gate; this proposed epic starts none.
