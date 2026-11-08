@@ -1,5 +1,5 @@
-# Proposed verdict (RESEARCH_ONLY_DEFER) lives in the report only. The owner
-# records the decision block; an agent does not record its own approval.
+# Owner decision on 2026-11-08 after research PR #326 merged.
+# RESEARCH_ONLY_DEFER means no product implementation approval.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: SpikeDefinition
 metadata:
@@ -12,7 +12,7 @@ spec:
     existing Telegram Assistant Catalog, starting with read-only analytics,
     without a parallel agent runtime and without exposing financial data
     through conversation auto-replies?
-  lifecycle: proposed
+  lifecycle: decided
   github:
     issue:
       repository: mctlhq/.github
@@ -26,3 +26,10 @@ spec:
     devloop: true
   evidence:
     report: docs/spikes/finance-assistant.md
+  decision:
+    verdict: RESEARCH_ONLY_DEFER
+    decidedAt: "2026-11-08"
+    decidedBy: mashkovd
+    followUps:
+      - repository: mctlhq/mctl-telegram
+        number: 1240
