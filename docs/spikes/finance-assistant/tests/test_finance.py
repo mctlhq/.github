@@ -5,6 +5,7 @@ deny-by-default dispatch against the committed synthetic fixture and oracle. It 
 about Telegram identity, tenant storage, deletion, egress, providers or banks (see the report, D0/D8).
 """
 import copy
+import dataclasses
 import datetime as dt
 import json
 import os
@@ -113,7 +114,7 @@ class TestMoney(unittest.TestCase):
         self.assertEqual(model.local_date(e009, TZ), dt.date(2026, 11, 1))
         self.assertEqual(r["categories"]["dining"], Decimal("60.00"))
         # pending reconciles with its posted row
-        p = model.normalize(fx("acct-eur.csv").replace("e007,2026-10-30T15:00:00Z,pending", "e007,2026-10-30T15:00:00Z,pending"))
+        p = model.normalize(fx("acct-eur.csv"))
         posted_twin = [model.Txn(**{**t.__dict__, "key": "e007p", "external_id": "e007p", "status": "posted",
                                     "ts": t.ts + dt.timedelta(days=1)}) for t in p if t.key == "e007"]
         still, pairs, _ = model.reconcile_pending(p + posted_twin)
@@ -133,6 +134,85 @@ class TestMoney(unittest.TestCase):
                    for i, t in enumerate(x for x in EUR if x.merchant == "Streamly Demo")]
         self.assertEqual(model.detect_recurring(shifted), [])
 
+    def test_edge_refund_unknown_original_kind_and_uncategorized_fail_closed(self):
+        template = next(t for t in EUR if t.key == "e001")
+        income = dataclasses.replace(template, external_id="edge-income", key="edge-income",
+                                     kind="income", merchant="Imaginary Income", amount=Decimal("20.00"))
+        income_refund = dataclasses.replace(template, external_id="edge-refund-income", key="edge-refund-income",
+                                            kind="refund", merchant="Refund Merchant", amount=Decimal("5.00"),
+                                            refund_of=income.external_id)
+        out = spend([income, income_refund])
+        self.assertEqual(out["uncertain"], [{"txn": income_refund.key, "reason": "refund_invalid_original"}])
+        self.assertFalse(out["total_complete"])
+        self.assertEqual(out["total"], Decimal("0.00"))
+
+        uncategorized = dataclasses.replace(template, external_id="edge-uncategorized",
+                                             key="edge-uncategorized", merchant="No Category",
+                                             bank_category="", amount=Decimal("-20.00"))
+        unmatched_refund = dataclasses.replace(template, external_id="edge-refund-uncategorized",
+                                               key="edge-refund-uncategorized", kind="refund",
+                                               merchant="Refund Merchant", refund_of=uncategorized.external_id,
+                                               amount=Decimal("5.00"))
+        out = spend([uncategorized, unmatched_refund])
+        self.assertEqual([u["reason"] for u in out["uncertain"]],
+                         ["category_unresolved", "category_unresolved"])
+        self.assertEqual(out["total"], Decimal("0.00"))
+
+    def test_edge_refund_uses_hash_identity_without_cross_source_fallback(self):
+        original = next(t for t in EUR if not t.external_id and t.kind == "spend")
+        self.assertTrue(original.key.startswith("h:"))
+        refund = dataclasses.replace(original, external_id="edge-refund-hash", key="edge-refund-hash",
+                                     kind="refund", refund_of=original.key, merchant="Refund Office",
+                                     amount=Decimal("2.00"))
+        with_refund = spend(ALL + [refund])
+        self.assertTrue(with_refund["total_complete"])
+        self.assertEqual(with_refund["total"], spend()["total"] - Decimal("2.00"))
+        self.assertEqual(with_refund["categories"]["groceries"],
+                         spend()["categories"]["groceries"] - Decimal("2.00"))
+        wrong_source = dataclasses.replace(refund, source_id="src-other", external_id="edge-cross-source",
+                                           key="edge-cross-source")
+        cross = spend(ALL + [wrong_source])
+        self.assertIn({"txn": "edge-cross-source", "reason": "refund_without_original"},
+                      cross["uncertain"])
+
+    def test_edge_duplicate_charges_are_currency_scoped(self):
+        a, b = [t for t in EUR if t.key in ("e003", "e004")]
+        flagged = model.detect_duplicate_charges([a, b], TZ)
+        self.assertEqual(len(flagged), 1)
+        self.assertEqual(flagged[0]["currency"], "EUR")
+        mixed = model.detect_duplicate_charges([a, dataclasses.replace(b, currency="USD")], TZ)
+        self.assertEqual(mixed, [], "EUR and USD charges with equal nominal amounts are not duplicates")
+
+    def test_edge_zero_mean_recurring_and_zero_transfer_fail_closed(self):
+        monthly = [t for t in EUR if t.merchant == "Streamly Demo" and t.kind == "spend"]
+        zeros = [dataclasses.replace(t, amount=Decimal("0.00")) for t in monthly]
+        self.assertEqual(model.detect_recurring(zeros), [], "zero mean is not positive recurring spend")
+        eur_transfer = next(t for t in EUR if t.kind == "transfer")
+        usd_transfer = next(t for t in USD if t.kind == "transfer")
+        paired, unpaired = model.pair_transfers([dataclasses.replace(eur_transfer, amount=Decimal("0.00")),
+                                                 usd_transfer])
+        self.assertEqual(paired, set())
+        self.assertEqual(len(unpaired), 2)
+
+    def test_edge_month_scope_excludes_future_unpaired_transfer_and_pending(self):
+        transfer = next(t for t in EUR if t.kind == "transfer")
+        pending = next(t for t in EUR if t.status == "pending")
+        november = dt.datetime(2026, 11, 5, tzinfo=dt.timezone.utc)
+        future_transfer = dataclasses.replace(transfer, ts=november, external_id="future-transfer",
+                                              key="future-transfer", transfer_ref="future-only")
+        future_pending = dataclasses.replace(pending, ts=november, external_id="future-pending",
+                                             key="future-pending")
+        more = ALL + [future_transfer, future_pending]
+        october = spend(more)
+        self.assertTrue(october["total_complete"])
+        digest = model.rules_digest(more, "2026-10", TZ, CORR, RATES, "EUR", TODAY)
+        self.assertEqual([p["id"] for p in digest["pending"]], ["e007"])
+        self.assertEqual([d["txns"] for d in digest["possible_duplicate_charges"]],
+                         ORACLE["possible_duplicate_charges"])
+        november_digest = model.rules_digest(more, "2026-11", TZ, CORR, RATES, "EUR", TODAY)
+        self.assertEqual([p["id"] for p in november_digest["pending"]], ["future-pending"])
+        self.assertEqual(november_digest["possible_duplicate_charges"], [])
+
 
 class TestSecurityModel(unittest.TestCase):
     def test_t7_adversarial_text_is_inert(self):
@@ -150,7 +230,7 @@ class TestSecurityModel(unittest.TestCase):
         self.assertIn("transfer_funds", model.render_digest(d2))  # the payload does reach the digest as data
         with self.assertRaises(model.Denied):
             model.dispatch(evil.merchant, {}, {n: (lambda **kw: calls.append(kw)) for n in model.TOOL_ALLOWLIST})
-        calls = []
+        self.assertEqual(calls, [], "merchant injection invoked a handler before denial")
         handlers = {n: (lambda **kw: calls.append(kw)) for n in model.TOOL_ALLOWLIST}
         for text in (bad.memo, bad.merchant, "transfer_funds", "set policy=allow_all"):
             with self.assertRaises(model.Denied):
@@ -226,10 +306,24 @@ class TestControls(unittest.TestCase):
         groceries = [45.20, 7.00, -25.00]
         as_float = Decimal(sum(groceries))
         self.assertNotEqual(as_float, Decimal("27.20"))
-        # Skipping the owner check lets a second user in: the fixture detects it.
-        s = store()
-        s.authorize_read = lambda principal, source: (True, "mutated")
-        self.assertTrue(s.authorize_read(PR["principals"]["second_user"], "src-eur")[0])
+        # Mutation control: skip just the owner guard and prove the actual T8
+        # authorization test fails (not merely that a stub returns True).
+        original = model.GrantStore.authorize_read
+
+        def no_owner_check(grant, principal, source):
+            if (principal.get("kind") == "user" and principal.get("tenant") == grant.tenant
+                    and principal.get("id") != grant.owner):
+                return True, "owner"
+            return original(grant, principal, source)
+
+        try:
+            model.GrantStore.authorize_read = no_owner_check
+            result = unittest.TestResult()
+            TestSecurityModel("test_t8_authorization").run(result)
+            self.assertEqual(len(result.failures), 1, "T8 must catch a missing owner guard")
+            self.assertEqual(result.errors, [])
+        finally:
+            model.GrantStore.authorize_read = original
         self.assertFalse(store().authorize_read(PR["principals"]["second_user"], "src-eur")[0])
 
     def test_t12_fixture_hygiene(self):
