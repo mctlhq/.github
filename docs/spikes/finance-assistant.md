@@ -124,7 +124,7 @@ flowchart LR
 
 Model-provider flow: with `runtime: managed`, a job reaches the provider configured for the managed
 worker (an OpenAI-compatible provider through the AI gateway `[CONFIG]`). Only the digest may reach
-the model; raw rows, merchant and memo strings stay out (baseline prompt rule). What the provider
+the model; raw rows and memo strings stay out; merchant strings in the digest are passed as delimited untrusted data (baseline prompt rule). What the provider
 retains is `unknown (not observed)`. With `runtime: own`, the owner's own worker and credential apply.
 The deny edges are the intended design. Their enforcement is L2 and `not-run`.
 
@@ -133,7 +133,7 @@ The deny edges are the intended design. Their enforcement is L2 and `not-run`.
 | Threat (STRIDE) | Scenario | Control in the design | Test | #1048 gate |
 | --- | --- | --- | --- | --- |
 | Spoofing | peer or second user poses as the owner | grant bound to authenticated owner id and tenant | T8 (L1 only) | principal binding at L2 |
-| Tampering | prompt injection in merchant or memo text | free text is data; no tool name is taken from text; the model sees the digest only | T7 | injection handling for tool results |
+| Tampering | prompt injection in merchant or memo text | free text is data; no tool name is taken from text; memo is excluded; merchant is passed as delimited untrusted data; the model sees the digest only | T7 | injection handling for tool results |
 | Repudiation | no record of who read what | audit per call (connector, tool, argument digest) | none; `unknown` | audit item |
 | Information disclosure | group, auto-reply or wrong destination | owner-private destination only; auto-reply path denied | T8 | per-call approval, egress policy |
 | Information disclosure | logs, traces, prompts, backups retain data | retention and deletion matrix (D9) | none; L2-L3 | credential and storage items |

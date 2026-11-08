@@ -5,7 +5,7 @@ research package does not make. The prompt and rubric are committed so a later, 
 approved run uses exactly the same fixture and oracle.
 
 Input: `rules-digest.json` only (the deterministic engine output) and nothing else. The model
-must not read the raw CSV rows, and merchant or memo strings are never passed to it.
+must not read the raw CSV rows, and memo strings are never passed to it. Merchant strings do appear in the digest (pending, possible duplicate charges, recurring); they are attacker-controllable and are passed only as delimited untrusted data (rule 3).
 
 ```
 You are given a JSON digest computed by a deterministic engine. Explain it to the account owner in
