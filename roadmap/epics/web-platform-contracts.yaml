@@ -1,6 +1,7 @@
-# Planning graph after owner architecture verdict on spike mctlhq/.github#328.
-# This EpicDefinition is PROPOSED only. No implementation issues, intake, DevLoop,
-# code, package or production rollout are authorized by creating this manifest.
+# Owner activation of the CONTRACT/EVIDENCE phase after decided spike #328 and merged PR #331.
+# Active epic with first evidence work item bound to mctl-design#207.
+# This is NOT implementation approval: investigator proposal/review/human approval
+# and separate release gates still apply; other work items remain unbound.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -15,7 +16,7 @@ spec:
     and (after separate approvals) verifying consistent navigation accessibility,
     immutable design-asset delivery, source/live CSP boundaries, and rollback
     without requiring a cross-framework migration or broad shared JavaScript.
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/.github
@@ -35,6 +36,9 @@ spec:
       owner: mctl-design
       phase: evidence
       required: true
+      issue:
+        repository: mctlhq/mctl-design
+        number: 207
       externalDependsOn:
         - repository: mctlhq/.github
           number: 328
@@ -82,4 +86,4 @@ spec:
     - Mobile navigation contract covers native keyboard activation, aria-expanded, Escape, outside pointer, focus restoration, responsive breakpoints, reduced-motion and no-JS, with framework-native implementations and browser a11y evidence.
     - SRI is not enabled until CDN CORS/crossorigin, immutable byte hashes and failure rollback are verified; strict CSP routes keep local/vendored assets and never gain broad new script origins.
     - Existing issues mctl-design#34/#78, mctl-telegram#599, mctl-academy#210 and mctl-gitops#500 remain their respective owners; no duplicate issues are filed for the same work.
-    - Every work item and any optional adapter pilot requires its own separate DevLoop proposal, independent review, exact human approval, and deployment gate; this proposed epic starts none.
+    - The active epic permits only evidence issue mctl-design#207 into separately gated DevLoop investigation; no implementer may run before digest-bound human approval, and every other work item or pilot remains unbound and separately gated.
