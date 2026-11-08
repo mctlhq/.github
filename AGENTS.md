@@ -43,6 +43,7 @@
   finance for the Assistant Catalog, spike report for mctlhq/.github#325,
   proposed verdict RESEARCH_ONLY_DEFER, with a stdlib Python reference model in
   `docs/spikes/finance-assistant/`.
-- [Web platform unification](docs/spikes/web-platform-unification.md): research-only
-  report and proposed ADR for mctlhq/.github#328; no owner decision, with many
-  runtime observations marked `unknown (not observed)`.
+- [Web platform unification](docs/spikes/web-platform-unification.md): decided
+  STANDARDIZE_CONTRACTS_KEEP_RUNTIMES for mctlhq/.github#328; architecture-only
+  owner verdict, with proposed adoption epic #330 and independently gated followups.
+  Live HTTP/browser observations still have explicit unknown/not-run boundaries.
