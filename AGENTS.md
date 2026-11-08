@@ -43,3 +43,6 @@
   finance for the Assistant Catalog, spike report for mctlhq/.github#325,
   proposed verdict RESEARCH_ONLY_DEFER, with a stdlib Python reference model in
   `docs/spikes/finance-assistant/`.
+- [Web platform unification](docs/spikes/web-platform-unification.md): research-only
+  report and proposed ADR for mctlhq/.github#328; no owner decision, with many
+  runtime observations marked `unknown (not observed)`.

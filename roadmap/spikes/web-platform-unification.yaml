@@ -1,0 +1,26 @@
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: web-platform-unification
+  owner: mctlhq/.github
+spec:
+  title: MCTL Web Platform Unification, cross-surface contracts, CSS/CSP, framework evaluation
+  question: >-
+    Which cross-surface UI, dependency, CSP, CI and deployment contracts should
+    be standardized across the six MCTL web surfaces, and would any measured
+    framework migration be preferable to keeping the present runtimes?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 328
+  outcomes:
+    - STANDARDIZE_CONTRACTS_KEEP_RUNTIMES
+    - PILOT_SHARED_ADAPTERS
+    - TARGETED_MIGRATION_AFTER_BENCHMARK
+    - DEFER_UNTIL_BASELINES
+    - NO_ADOPTION
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/web-platform-unification.md
