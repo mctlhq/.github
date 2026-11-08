@@ -1,0 +1,9 @@
+{"month": "2026-10", "timezone": "Europe/Podgorica", "currency": "EUR", "today": "2026-11-01",
+ "categories": {"dining": "60.00", "groceries": "27.20", "other": "9.99", "shopping": "18.40", "software": "46.00", "subscriptions": "12.99"},
+ "total": "174.58",
+ "notes": "groceries = 45.20 + 7.00 - 25.00 refund; shopping = 20.00 USD * 0.92; software = 50.00 USD * 0.92; e009 falls in November in the owner timezone; e007 is pending; the T1 pair is a transfer",
+ "suppressed_repeated_imports": 4,
+ "pending": ["e007"],
+ "possible_duplicate_charges": [["e003", "e004"]],
+ "recurring": [{"merchant": "Streamly Demo", "cadence": "monthly", "count": 3, "mean_amount": "12.99"}],
+ "fx": {"from": "USD", "to": "EUR", "rate": "0.92", "source": "synthetic-fixture", "as_of": "2026-10-31", "usd_total": "70.00", "eur_total": "64.40"}}

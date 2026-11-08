@@ -39,3 +39,7 @@
   EXTEND_MCTL_API for mctlhq/.github#318 (research PR #319); implementation
   planning epic #322 remains proposed, with a Go reference model and real
   Temporal dev-server proof in `docs/spikes/automation-control-plane/`.
+- [Finance Assistant](docs/spikes/finance-assistant.md): read-only personal
+  finance for the Assistant Catalog, spike report for mctlhq/.github#325,
+  proposed verdict RESEARCH_ONLY_DEFER, with a stdlib Python reference model in
+  `docs/spikes/finance-assistant/`.

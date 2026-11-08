@@ -1,0 +1,28 @@
+# Proposed verdict (RESEARCH_ONLY_DEFER) lives in the report only. The owner
+# records the decision block; an agent does not record its own approval.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: SpikeDefinition
+metadata:
+  name: finance-assistant
+  owner: mctlhq/.github
+spec:
+  title: Finance Assistant, read-only personal finance intelligence for the Assistant Catalog
+  question: >-
+    Can MCTL offer a safe, useful, tenant-isolated Finance Assistant inside the
+    existing Telegram Assistant Catalog, starting with read-only analytics,
+    without a parallel agent runtime and without exposing financial data
+    through conversation auto-replies?
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 325
+  outcomes:
+    - REUSE_CATALOG_CSV_MVP
+    - EXTEND_AFTER_CONNECTOR_GATES
+    - RESEARCH_ONLY_DEFER
+    - NO_ADOPTION
+  execution:
+    devloop: true
+  evidence:
+    report: docs/spikes/finance-assistant.md

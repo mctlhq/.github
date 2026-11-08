@@ -1,0 +1,5 @@
+source_id,account_id,external_id,ts,status,amount,currency,merchant,memo,bank_category,kind,transfer_ref,refund_of
+src-eur,eur-1,e001,2026-10-02T09:00:00Z,posted,-45.20,EUR,Fiktiv Market,weekly shop,groceries,spend,,
+src-eur,eur-1,e002,2026-10-05T06:00:00Z,posted,-12.99,EUR,Streamly Demo,monthly plan,subscriptions,spend,,
+src-eur,eur-1,e003,2026-10-10T12:00:00Z,posted,-30.00,EUR,Cafe Imaginario,dinner,dining,spend,,
+src-eur,eur-1,,2026-10-22T09:00:00Z,posted,-7.00,EUR,Fiktiv Market,no id row,groceries,spend,,
