@@ -207,3 +207,68 @@ The strongest candidate for a **later, separately approved** narrow adapter is t
 | SeerrSense public and other error routes | effective/specific policy **unknown (not observed)**; public page contains an inline theme script and local `site.js` | audit server headers and edge response before proposing any CSP hardening |
 
 **Remaining gate:** read-only effective HTTP response headers on representative public, consent/auth, error and redirect routes (only where safe and not involving secrets); verify CDN `Cache-Control`, `Access-Control-Allow-Origin`, and optional SRI feasibility; test responsive navigation with Playwright/axe in a preview. None of these were executed as part of the research-only AMEND. The mctl.ai performance baseline remains `not-run`, and migrations are **not** justified by current evidence.
+
+## D6 Owner architecture decision — 2026-11-08
+
+**Verdict: `STANDARDIZE_CONTRACTS_KEEP_RUNTIMES` — DECIDED by `mashkovd`.**
+
+The owner selected this **architecture-only** verdict after the research-only
+[spike #328](https://github.com/mctlhq/.github/issues/328) and the merged, independently
+reviewed [research PR #329](https://github.com/mctlhq/.github/pull/329)
+(merge commit `82912265a1b6a96babf5f2aca9fcaba9e4c7b959`).
+The canonical [SpikeDefinition](../../roadmap/spikes/web-platform-unification.yaml)
+records `lifecycle: decided` and this exact outcome. Earlier D5 and R0 text intentionally
+retain the **pre-decision** research uncertainty and their `PROPOSED` labels as historical
+context; this D6 section is the subsequent owner decision.
+
+### What is approved
+1. **Retain the current runtimes:** Nuxt static marketing, Telegram Go/html/template and
+   MTProto custody, VitePress docs, Academy Vue/Hono, Alice native Node HTTP, and SeerrSense
+   Fastify. A migration requires a separate, evidence-triggered spike and owner verdict.
+2. **Standardize contracts, not implementations:** navigation/header semantics and
+   accessibility, scoped response CSP, exact design asset provenance, immutable CSS/CDN
+   behavior, reproducible vendoring and rollback. Vue/VitePress/Go-native navigation
+   patterns remain acceptable; no universal `site-header.js` is required.
+3. **Keep strict security boundaries:** source policy is not effective HTTP proof. Telegram
+   lite/managed/OAuth pages and SeerrSense consent keep route-specific restrictions,
+   including any pre-existing narrowly nonce-allowed scripts. No new general header
+   JavaScript or CDN origin is authorized for sensitive routes.
+4. **Follow-up planning only:** [proposed Epic #330](https://github.com/mctlhq/.github/issues/330)
+   with an [unbound work-item graph](../../roadmap/epics/web-platform-contracts.yaml) covering
+   live evidence, header/a11y contract, asset-integrity contract and preview assurance.
+   An optional Alice/SeerrSense public-only adapter is explicitly outside this approval.
+
+### Why this option rather than the alternatives
+- **`PILOT_SHARED_ADAPTERS`:** near-identical Alice and SeerrSense header code is real,
+  but their 981px vs 768px breakpoints differ, and browser behavior/CSP verification
+  is not yet complete. A pilot may be separately authorized after contract/evidence gates.
+- **`TARGETED_MIGRATION_AFTER_BENCHMARK`:** neither Nuxt/Astro nor Hono/Fastify has a
+  measured performance, security or maintenance issue justifying migration costs.
+- **`DEFER_UNTIL_BASELINES`:** this would unnecessarily delay the *architectural
+  standardization direction*. Missing live CSP and browser evidence **does** block
+  implementation/rollout, not the decision to preserve existing runtimes.
+- **`NO_ADOPTION`:** existing shared design `0.20.2` and independently verified
+  six-consumer image parity make the narrow common-contract approach worthwhile.
+
+### Mandatory implementation gates — not approved here
+- Safe read-only verification of effective HTTP CSP on public and representative
+  auth/consent/error/redirect routes, plus CDN CORS, immutable cache and SRI
+  compatibility; do not touch sensitive production sessions or secrets.
+- Browser/preview checks for nav keyboard and focus, no-JS and reduced-motion behavior,
+  including the 981px vs 768px mobile cutoff differences.
+- Exact design dependency pinning and drift protection, coordinated with existing
+  [design#34](https://github.com/mctlhq/mctl-design/issues/34),
+  [design#78](https://github.com/mctlhq/mctl-design/issues/78),
+  [telegram#599](https://github.com/mctlhq/mctl-telegram/issues/599),
+  [academy#210](https://github.com/mctlhq/mctl-academy/issues/210) and
+  [gitops#500](https://github.com/mctlhq/mctl-gitops/issues/500).
+- Every follow-up: separate owned issue, DevLoop intake/proposal, independent review,
+  human approval bound to the reviewed content and separately approved release/rollout.
+  Epic #330 remains **`proposed`**, no agents:intake or implementation start.
+
+**Explicit non-approval:** no site-header JavaScript implementation, changes in six
+application repositories, framework ports, new CI workflows, CDN/SRI production switches,
+CSP relaxations, GitOps deploy changes, or acceptance of unknown live observations.
+
+The current report keeps `not-run` and `unknown (not observed)` findings intact.
+The owner's architecture decision does not retroactively convert those to passes.
