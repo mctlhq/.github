@@ -5838,9 +5838,10 @@
         "number": 749,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-11-07T09:45:19Z"
+      "updatedAt": "2026-11-07T22:51:47Z"
     },
     {
       "blockedBy": [],
@@ -6327,7 +6328,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-07T09:01:22Z"
+      "updatedAt": "2026-11-07T22:49:30Z"
     },
     {
       "blockedBy": [],
@@ -6357,16 +6358,16 @@
         "number": 1175,
         "repository": "mctlhq/mctl-telegram"
       },
-      "state": "open",
-      "stateReason": "reopened",
+      "state": "closed",
+      "stateReason": "completed",
       "subIssues": [],
-      "updatedAt": "2026-11-07T21:40:07Z"
+      "updatedAt": "2026-11-08T00:58:10Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-07T21:59:47Z",
+    "capturedAt": "2026-11-08T01:29:40Z",
     "mode": "live-capture"
   }
 }
