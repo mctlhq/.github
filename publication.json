@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "82912265a1b6a96babf5f2aca9fcaba9e4c7b959"
+    "revision": "8b2e858283d2e88f5796fd4b8761ef52fcd02595"
   },
   "files": {
     "health.json": {
-      "sha256": "e41710ea81a7595e176e304ebd265cd94801753d2ce947242a1f6494d0f87be0"
+      "sha256": "b49b9542d983f40a6af4c29eea0bde389c04458f4110306a2b99bb5269adaf8e"
     },
     "ready-set.json": {
-      "sha256": "698a852ebd009e7617fcc86162cf5c10caf59f2224b7964531c261ea25fd22f3"
+      "sha256": "6ffe2b2cbfe8fb2c35f43a18988e31111f30b172505d8e636e8223c0ffa3e28c"
     },
     "snapshot.json": {
-      "sha256": "638fc36b4bb729b58eeee03c126d171bdb8a0cbe92aabddb22cd6b8eb029ccbd"
+      "sha256": "8838db2e3188607d7364023e0462ca45a4031596eab7ea524ce956ef26682d07"
     }
   },
   "kind": "RoadmapPublication",
@@ -295,16 +295,26 @@
       },
       "path": "roadmap/epics/unified-identity.yaml",
       "sha256": "ec082f3b9a9991ec8f6c1cd37d9bb91736be9fb06d072b897ff00e62b97e6d6b"
+    },
+    {
+      "epic": {
+        "goal": "Keep each of the six MCTL web surfaces on its existing runtime, while defining and (after separate approvals) verifying consistent navigation accessibility, immutable design-asset delivery, source/live CSP boundaries, and rollback without requiring a cross-framework migration or broad shared JavaScript.",
+        "lifecycle": "proposed",
+        "name": "web-platform-contracts",
+        "title": "Federated Web Platform Contracts \u2014 header, accessibility, asset integrity and CSP"
+      },
+      "path": "roadmap/epics/web-platform-contracts.yaml",
+      "sha256": "3a03544fae71ec2a2f2d985dc2d324d6aaf843343ef19558aec6fd44a661fba1"
     }
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-08T20:47:54Z",
+    "capturedAt": "2026-11-08T22:02:59Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "82912265a1b6a96babf5f2aca9fcaba9e4c7b959"
+    "revision": "8b2e858283d2e88f5796fd4b8761ef52fcd02595"
   }
 }
