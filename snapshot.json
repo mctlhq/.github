@@ -1593,7 +1593,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-08T22:08:21Z"
+      "updatedAt": "2026-11-09T01:38:20Z"
     },
     {
       "blockedBy": [
@@ -4077,9 +4077,42 @@
         "number": 207,
         "repository": "mctlhq/mctl-design"
       },
+      "state": "closed",
+      "stateReason": "completed",
+      "subIssues": [],
+      "updatedAt": "2026-11-09T01:08:54Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 209,
+        "repository": "mctlhq/mctl-design"
+      },
+      "resolved": {
+        "number": 209,
+        "repository": "mctlhq/mctl-design"
+      },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-08T23:11:42Z"
+      "updatedAt": "2026-11-09T01:33:39Z"
+    },
+    {
+      "blockedBy": [],
+      "found": true,
+      "parent": null,
+      "requested": {
+        "number": 210,
+        "repository": "mctlhq/mctl-design"
+      },
+      "resolved": {
+        "number": 210,
+        "repository": "mctlhq/mctl-design"
+      },
+      "state": "open",
+      "subIssues": [],
+      "updatedAt": "2026-11-09T01:34:26Z"
     },
     {
       "blockedBy": [
@@ -6416,7 +6449,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-09T00:59:37Z",
+    "capturedAt": "2026-11-09T01:38:06Z",
     "mode": "live-capture"
   }
 }
