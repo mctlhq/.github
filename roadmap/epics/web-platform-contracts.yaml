@@ -1,8 +1,9 @@
-# Owner activation of the CONTRACT/EVIDENCE phase after decided spike #328 and merged PR #331.
-# P0 evidence #207 merged; P1/P2 docs-only contract work items are now bound to
-# mctl-design#209 and #210 by owner GO. They may enter independent DevLoop intake.
-# Binding is NOT implementation approval: investigator/review/exact digest-bound
-# human approval still apply. Assurance/pilot and any runtime changes stay unbound.
+# Owner-governed federated web platform contracts (epic mctlhq/.github#330).
+# P0 mctl-design#207 and P1/P2 mctl-design#209/#210 are merged.
+# P3 web-contract-preview-assurance is bound to mctl-gitops#2544 for
+# read-only DevLoop investigation and a separate exact-digest approval gate.
+# This binding does NOT authorize implementer, GitOps changes, CI execution,
+# production probes, CSP changes, consumer rollout or optional JS adapters.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -71,6 +72,9 @@ spec:
       owner: mctl-gitops
       phase: assurance
       required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2544
       dependsOn:
         - web-header-a11y-contract
         - web-asset-integrity-contract
@@ -93,4 +97,4 @@ spec:
     - Mobile navigation contract covers native keyboard activation, aria-expanded, Escape, outside pointer, focus restoration, responsive breakpoints, reduced-motion and no-JS, with framework-native implementations and browser a11y evidence.
     - SRI is not enabled until CDN CORS/crossorigin, immutable byte hashes and failure rollback are verified; strict CSP routes keep local/vendored assets and never gain broad new script origins.
     - Existing issues mctl-design#34/#78, mctl-telegram#599, mctl-academy#210 and mctl-gitops#500 remain their respective owners; no duplicate issues are filed for the same work.
-    - P0 evidence mctl-design#207 is completed. P1/P2 docs-only contracts mctl-design#209/#210 may enter independent DevLoop investigations only; each proposal needs independent review and exact digest-bound human approval before its docs-only implementer can run. Preview assurance, optional pilot, consumer modifications and production rollout remain unbound and separately gated.
+    - P0 evidence mctl-design#207 and P1/P2 contracts mctl-design#209/#210 are completed. P3 preview assurance mctl-gitops#2544 is bound for read-only DevLoop investigation and independent proposal review; exact digest-bound human approval is still REQUIRED before any implementer or test/CI file change. No production auth probes, CSP/Cloudflare/CDN/GitOps deploy changes, consumer modifications or rollout are authorized. Optional adapter/pilot and per-consumer rollout remain unbound and separately gated.
