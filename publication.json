@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "648bf5eb714a4b90898e02ce762e193da80a4890"
+    "revision": "b6e1337a3565759a7b7784db50eaf5e9f15c8748"
   },
   "files": {
     "health.json": {
-      "sha256": "a535cb97d2e5fa69e7ba16ae9c4f5cd32d411632bdc6c4967f1a84db1ca2927e"
+      "sha256": "7f82e2b4d5da26b85124b04bb1d879ab722bfa14037a33410d62e86c6990a177"
     },
     "ready-set.json": {
-      "sha256": "ce78bcc544bcfb9d0acbfc6c9b3041c078d56398defa17020111e84e39287b3b"
+      "sha256": "659056034a824db64902985a80d18ae97d69927425fc856a1fe5965e10ad408c"
     },
     "snapshot.json": {
-      "sha256": "9b7007dd482bad439423932a7b927177b2fd89b0d749ed81a8fd8d1e8a0405c5"
+      "sha256": "46afd242ac57a89794da8b0637f852342d7c343fb648500e85ea7c50bb23cc2a"
     }
   },
   "kind": "RoadmapPublication",
@@ -304,17 +304,17 @@
         "title": "Federated Web Platform Contracts \u2014 header, accessibility, asset integrity and CSP"
       },
       "path": "roadmap/epics/web-platform-contracts.yaml",
-      "sha256": "5516eb8f278a24f55586254cf7b21fcf6a6921bd094c9f7b29dca41f2e39d174"
+      "sha256": "e4177652b94a781c49ead111aaa4da6286491b8fce6d7f51377df22372d937c2"
     }
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-09T08:06:24Z",
+    "capturedAt": "2026-11-09T13:28:56Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "648bf5eb714a4b90898e02ce762e193da80a4890"
+    "revision": "b6e1337a3565759a7b7784db50eaf5e9f15c8748"
   }
 }
