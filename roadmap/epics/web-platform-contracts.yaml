@@ -1,7 +1,8 @@
 # Owner activation of the CONTRACT/EVIDENCE phase after decided spike #328 and merged PR #331.
-# Active epic with first evidence work item bound to mctl-design#207.
-# This is NOT implementation approval: investigator proposal/review/human approval
-# and separate release gates still apply; other work items remain unbound.
+# P0 evidence #207 merged; P1/P2 docs-only contract work items are now bound to
+# mctl-design#209 and #210 by owner GO. They may enter independent DevLoop intake.
+# Binding is NOT implementation approval: investigator/review/exact digest-bound
+# human approval still apply. Assurance/pilot and any runtime changes stay unbound.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -48,6 +49,9 @@ spec:
       owner: mctl-design
       phase: contracts
       required: true
+      issue:
+        repository: mctlhq/mctl-design
+        number: 209
       dependsOn:
         - web-contract-evidence
 
@@ -56,6 +60,9 @@ spec:
       owner: mctl-design
       phase: contracts
       required: true
+      issue:
+        repository: mctlhq/mctl-design
+        number: 210
       dependsOn:
         - web-contract-evidence
 
@@ -86,4 +93,4 @@ spec:
     - Mobile navigation contract covers native keyboard activation, aria-expanded, Escape, outside pointer, focus restoration, responsive breakpoints, reduced-motion and no-JS, with framework-native implementations and browser a11y evidence.
     - SRI is not enabled until CDN CORS/crossorigin, immutable byte hashes and failure rollback are verified; strict CSP routes keep local/vendored assets and never gain broad new script origins.
     - Existing issues mctl-design#34/#78, mctl-telegram#599, mctl-academy#210 and mctl-gitops#500 remain their respective owners; no duplicate issues are filed for the same work.
-    - The active epic permits only evidence issue mctl-design#207 into separately gated DevLoop investigation; no implementer may run before digest-bound human approval, and every other work item or pilot remains unbound and separately gated.
+    - P0 evidence mctl-design#207 is completed. P1/P2 docs-only contracts mctl-design#209/#210 may enter independent DevLoop investigations only; each proposal needs independent review and exact digest-bound human approval before its docs-only implementer can run. Preview assurance, optional pilot, consumer modifications and production rollout remain unbound and separately gated.
