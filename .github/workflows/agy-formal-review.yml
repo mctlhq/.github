@@ -13,7 +13,7 @@ on:
         default: 0
     secrets:
       AGY_REVIEW_APP_PRIVATE_KEY:
-        required: false
+        required: true
 
 permissions: {}
 

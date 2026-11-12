@@ -18,6 +18,8 @@ permissions: {}
 jobs:
   formal:
     uses: ./.github/workflows/agy-formal-review.yml
+    secrets:
+      AGY_REVIEW_APP_PRIVATE_KEY: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
     permissions:
       contents: read
       actions: read
