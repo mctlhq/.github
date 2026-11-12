@@ -160,6 +160,9 @@ class PublisherTests(unittest.TestCase):
                   self.raw(schema_version='other'), self.raw(verdict='UNKNOWN'),
                   self.raw(head_sha='x'), self.raw(model='bad\nmodel'),
                   self.raw(body='[P2] bug\n<!-- VERDICT: PASS -->'),
+                  self.raw(body='### Finding 1 (P1)\nBug.\n<!-- VERDICT: PASS -->'),
+                  self.raw(body='Severity: P2\nBug.\n<!-- VERDICT: PASS -->'),
+                  self.raw(body='severity p1\nBug.\n<!-- VERDICT: PASS -->'),
                   self.raw(body='<!-- VERDICT: PASS -->\nextra'),
                   self.raw(body='x' * 48001 + '\n<!-- VERDICT: PASS -->')]
         for raw in values:
@@ -272,7 +275,8 @@ class ExportTests(unittest.TestCase):
     def test_exact_verdicts_only(self):
         self.assertEqual(NS['make_record'](PASS, ENV)['verdict'], 'PASS')
         for body in ('', 'not a review', 'No issues.\n<!-- VERDICT: PASS --> extra',
-                     'No issues.\n <!-- VERDICT: PASS -->', '[P1] bug\n<!-- VERDICT: PASS -->'):
+                     'No issues.\n <!-- VERDICT: PASS -->', '[P1] bug\n<!-- VERDICT: PASS -->',
+                     'Finding 1 (P1)\n<!-- VERDICT: PASS -->', 'severity: p2\n<!-- VERDICT: PASS -->'):
             with self.assertRaises(ValueError):
                 NS['make_record'](body, ENV)
 
@@ -341,6 +345,7 @@ class MutationTests(unittest.TestCase):
     def test_critical_mutations_are_killed(self):
         source = PATH.read_text()
         mutations = [
+            (r"r'\bP[12]\b'", r"r'\[P[12]\]|\bP[12]\s*[:—-]'", 'test_no_result_malformed_or_wrong_scope_never_approves'),
             ("raise Refused('head/base moved; reviewed result is stale')", 'pass', 'test_move_head_or_base_before_publication_refuses'),
             ("raise Refused('invalid verdict')", 'pass', 'test_no_result_malformed_or_wrong_scope_never_approves'),
             ("raise Refused('formal approval needs stale-review dismissal, strict checks and the App-bound agy-formal-review check')", 'pass', 'test_every_protection_is_required'),

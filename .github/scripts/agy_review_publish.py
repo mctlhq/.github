@@ -206,7 +206,7 @@ class Publisher:
         last = [line for line in body.splitlines() if line.strip()][-1]
         if last not in VERDICTS or result['verdict'] != VERDICTS[last]:
             raise Refused('invalid verdict')
-        if result['verdict'] == 'PASS' and re.search(r'\[P[12]\]|\bP[12]\s*[:—-]', '\n'.join(body.splitlines()[:-1])):
+        if result['verdict'] == 'PASS' and re.search(r'\bP[12]\b', '\n'.join(body.splitlines()[:-1]), re.IGNORECASE):
             raise Refused('PASS contradicts P1/P2 finding')
         if not isinstance(result['model'], str) or not re.fullmatch('[A-Za-z0-9_.-]{1,128}', result['model']):
             raise Refused('invalid reviewer model')
