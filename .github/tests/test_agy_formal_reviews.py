@@ -2,6 +2,9 @@
 import copy
 import importlib.util
 import json
+import os
+import tempfile
+from unittest.mock import patch
 from pathlib import Path
 import re
 import unittest
@@ -298,6 +301,40 @@ class ExportTests(unittest.TestCase):
         review = formal['jobs']['review']
         self.assertNotIn('secrets', review)
         self.assertEqual(review['with']['conventions'], '')
+
+
+class SourceResolutionTests(unittest.TestCase):
+    def resolve(self, refs, target=REPO):
+        formal = yaml.safe_load((ROOT / '.github/workflows/agy-formal-review.yml').read_text())
+        scripts = [next(x['run'] for x in formal['jobs'][job]['steps'] if x.get('id') == 'source')
+                   for job in ('prepare', 'publish')]
+        self.assertEqual(scripts[0], scripts[1])
+        script = scripts[0].split("python3 - <<'PY_SOURCE'\n", 1)[1].rsplit('\nPY_SOURCE', 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'output'
+            (Path(directory) / 'source-run.json').write_text(json.dumps({'referenced_workflows': refs}))
+            with patch.dict(os.environ, RUNNER_TEMP=directory, GITHUB_OUTPUT=str(output), TARGET_REPOSITORY=target):
+                exec(compile(script, '<actual workflow source resolver>', 'exec'), {})
+            return output.read_text()
+
+    def test_actual_local_and_external_api_path_forms_resolve_exact_sha(self):
+        # Local calls also use canonical owner/repo/path@ref in the REST API.
+        # Observed: .github run 43218908988, local claude-review.yml caller.
+        prefix = 'mctlhq/.github/.github/workflows/agy-formal-review.yml@'
+        for ref in ('main', HEAD):
+            with self.subTest(ref=ref):
+                self.assertEqual(self.resolve([{'path': prefix + ref, 'sha': HEAD}]),
+                                 'sha=' + HEAD + '\ntarget_name=test-repo\n')
+
+    def test_missing_ambiguous_wrong_repository_and_bad_sha_refuse(self):
+        valid = {'path': 'mctlhq/.github/.github/workflows/agy-formal-review.yml@main', 'sha': HEAD}
+        for refs in (None, [], [valid, valid], [dict(valid, sha='invalid')],
+                     [dict(valid, path='evil/.github/.github/workflows/agy-formal-review.yml@main')],
+                     [dict(valid, path='./.github/workflows/agy-formal-review.yml')]):
+            with self.subTest(refs=refs), self.assertRaises(ValueError):
+                self.resolve(refs)
+        with self.assertRaises(ValueError):
+            self.resolve([valid], target='outside/repo')
 
 
 class MutationTests(unittest.TestCase):

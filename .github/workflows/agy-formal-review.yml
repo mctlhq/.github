@@ -116,7 +116,7 @@ jobs:
       contents: read
       actions: read
     concurrency:
-      group: agy-formal-publish-${{ github.repository }}-${{ needs.prepare.outputs.number }}
+      group: agy-formal-publish-${{ inputs.repository || github.repository }}-${{ needs.prepare.outputs.number }}
       cancel-in-progress: false
     steps:
       - name: Resolve trusted reusable source

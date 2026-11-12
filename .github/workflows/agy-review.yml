@@ -147,7 +147,7 @@ jobs:
     # no free memory and 1.1 GB already in swap, and more slots would not have
     # changed the cancellation rate this fixes.
     concurrency:
-      group: agy-review-${{ github.repository }}-${{ inputs.formal_review && inputs.review_pr_number || github.event.pull_request.number }}
+      group: agy-review-${{ inputs.formal_review && inputs.review_repository || github.repository }}-${{ inputs.formal_review && inputs.review_pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
     permissions:
       contents: read
