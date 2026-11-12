@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -284,7 +285,15 @@ def main():
             print(pub.publish(env.get('REVIEW_RECORD', '')))
         except Exception:
             # If a newer run owns the check, fail() refuses to overwrite it.
-            pub.fail(env.get('REVIEWED_HEAD', ''))
+            try:
+                pub.fail(env.get('REVIEWED_HEAD', ''))
+            except Exception as cleanup_error:
+                # Keep the publication error authoritative; API outcomes may
+                # be unknown and cleanup must never turn a failure into success.
+                print('Formal check cleanup could not complete (' +
+                      type(cleanup_error).__name__ +
+                      '); inspect check state. Original publication failure follows.',
+                      file=sys.stderr)
             raise
     else:
         raise Refused('unknown mode')

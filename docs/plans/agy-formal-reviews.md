@@ -71,8 +71,9 @@ closed. No bypass permission is requested.
 7. Verify the acceptance checklist below before merging that target PR. The
    App review does not satisfy an independent human-only approval requirement.
 
-After bootstrap, prepare a pilot caller PR in `mctl-gitops` replacing its old
-informational caller. Pin the reviewed shared wrapper to its merged SHA:
+Pilot caller draft: [mctl-gitops#2605](https://github.com/mctlhq/mctl-gitops/pull/2605).
+It remains inactive until bootstrap acceptance. After bootstrap, review and
+activate the pilot caller replacing the old informational caller. Pin the reviewed shared wrapper to its merged SHA:
 
 ```yaml
 name: Agy formal review
@@ -117,6 +118,13 @@ identity, protected code checkout, and compatibility defaults. Mutation tests
 remove four critical refusals and confirm the corresponding tests turn red,
 then restore the original implementation and confirm green. These tests do not
 prove live App permissions or GitHub review counting.
+
+The actual prompt preparation shell also runs against temporary Git fixtures:
+complete text passes; empty, oversized, and binary diffs refuse. Disabling the
+real guard makes those rejected fixtures pass; restoring it restores refusal.
+The actual CLI entrypoint is tested with missing cleanup metadata and a newer
+check owner: it preserves the original publication exception, reports unknown
+cleanup state, and leaves the newer check untouched.
 
 Live acceptance (not yet run):
 

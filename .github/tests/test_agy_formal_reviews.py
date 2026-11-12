@@ -1,12 +1,15 @@
 """Exercise the actual publisher and inline result exporter with synthetic API responses."""
 import copy
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import tempfile
 from unittest.mock import patch
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 import yaml
@@ -270,6 +273,22 @@ class PublisherTests(unittest.TestCase):
         with self.assertRaises(P.Refused):
             P.loads('{"x":1,"x":2}')
 
+    def test_cli_cleanup_failure_keeps_original_error_and_newer_check(self):
+        for head in ('', HEAD):
+            with self.subTest(head=head):
+                api, pub = self.setup_pub()
+                api.checks[0]['external_id'] = 'agy/v1:mctlhq/test-repo:7:101:1'
+                original_check = copy.deepcopy(api.checks)
+                env = dict(ENV, PUBLISH_MODE='publish', REVIEW_RECORD='{',
+                           REVIEWED_HEAD=head, AGY_REVIEW_TOKEN='fixture', GITHUB_TOKEN='fixture')
+                diagnostic = io.StringIO()
+                with patch.dict(os.environ, env, clear=True), patch.object(P, 'API', return_value=api):
+                    with contextlib.redirect_stderr(diagnostic), self.assertRaises(json.JSONDecodeError):
+                        P.main()
+                self.assertIn('cleanup could not complete', diagnostic.getvalue())
+                self.assertEqual(api.checks, original_check)
+                self.assertEqual(api.reviews, [])
+
 
 class ExportTests(unittest.TestCase):
     def test_exact_verdicts_only(self):
@@ -339,6 +358,61 @@ class SourceResolutionTests(unittest.TestCase):
                 self.resolve(refs)
         with self.assertRaises(ValueError):
             self.resolve([valid], target='outside/repo')
+
+
+class PromptGateTests(unittest.TestCase):
+    def run_prompt(self, directory, base, head, script):
+        script = script.replace('${{ github.run_id }}', 'fixture')
+        self.assertNotIn('${{', script)
+        env = dict(os.environ, RUNNER_TEMP=directory, GITHUB_ENV=directory + '/env',
+                   BASE_SHA=base, HEAD_SHA=head, EXTRA_CONVENTIONS='', FORMAL_REVIEW='true',
+                   REVIEW_REPOSITORY=REPO)
+        return subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', script],
+                              cwd=directory, env=env, capture_output=True, text=True)
+
+    def test_actual_shell_gate_accepts_complete_text_and_rejects_opaque_or_incomplete_diff(self):
+        script = next(x['run'] for x in WF['jobs']['review']['steps']
+                      if x.get('name') == 'Prepare review prompt')
+        mutant = script.replace('if [ "$FORMAL_REVIEW" = "true" ]; then', 'if false; then')
+        self.assertNotEqual(mutant, script)
+        for kind in ('text', 'empty', 'large', 'binary'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                def git(*args):
+                    return subprocess.check_output(['git', *args], cwd=directory,
+                                                   stderr=subprocess.DEVNULL, text=True).strip()
+
+                git('init', '--initial-branch=fixture', '--object-format=sha1')
+                file = Path(directory) / 'candidate.txt'
+                file.write_text('baseline\n')
+                git('add', 'candidate.txt')
+                def commit():
+                    git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        '-c', 'commit.gpgsign=false', 'commit', '-m', 'test: synthetic fixture',
+                        '-m', 'Agent: codex')
+                    return git('rev-parse', 'HEAD')
+
+                base = commit()
+                if kind != 'empty':
+                    file.write_bytes({'text': b'complete text change\n',
+                                      'large': b'x' * 160000 + b'\n',
+                                      'binary': b'\x00opaque\x00binary'}[kind])
+                    git('add', 'candidate.txt')
+                    head = commit()
+                else:
+                    head = base
+                actual = self.run_prompt(directory, base, head, script)
+                if kind == 'text':
+                    self.assertEqual(actual.returncode, 0, actual.stderr)
+                    prompt = (Path(directory) / 'agy-review-fixture/prompt.md').read_text()
+                    self.assertIn('+complete text change', prompt)
+                else:
+                    self.assertNotEqual(actual.returncode, 0, actual.stdout)
+                    # Disable the actual guard and prove the same rejected
+                    # fixture becomes incorrectly accepted, then restore it.
+                    mutated = self.run_prompt(directory, base, head, mutant)
+                    self.assertEqual(mutated.returncode, 0, mutated.stderr)
+                    restored = self.run_prompt(directory, base, head, script)
+                    self.assertNotEqual(restored.returncode, 0)
 
 
 class MutationTests(unittest.TestCase):
