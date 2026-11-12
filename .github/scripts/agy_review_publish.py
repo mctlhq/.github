@@ -265,7 +265,7 @@ class Publisher:
         if not SHA.fullmatch(head):
             raise Refused('no valid reviewed head for failure status')
         check = self.owned_check(head)
-        self.finish_check(check, 'failure', 'No usable current-head review; no approval published.')
+        self.finish_check(check, 'failure', 'Formal publication incomplete or failed; merge is not authorized by this check. Inspect reviews before retrying.')
 
 
 def main():

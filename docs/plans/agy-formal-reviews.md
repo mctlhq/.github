@@ -126,7 +126,10 @@ Live acceptance (not yet run):
   check/comment with the same text cannot satisfy it.
 - A deliberate P2 fixture produces `CHANGES_REQUESTED` and a failed check.
 - Pushing after review invalidates approval and requires a fresh result.
-- Missing verdict/quota/timeout/API failure produces no new approval.
+- Missing verdict/quota/model timeout produces no approval. An API write failure
+  can have an unknown outcome: the check must remain non-successful, and the
+  operator inspects actual reviews before retrying. Never report an unobserved
+  write as absent.
 - Base movement prevents stale publication; strict checks require an up-to-date
   branch. Untrusted events, fork PRs, draft PRs, or a PR-editable conventions
   string cannot obtain approval.
