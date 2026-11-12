@@ -114,6 +114,26 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(api.reviews[0]['commit_id'], HEAD)
         self.assertEqual(api.checks[0]['conclusion'], 'success')
 
+    def test_lost_write_response_is_unknown_and_cannot_authorize_merge(self):
+        class LostResponse(Fake):
+            def __call__(self, method, path, payload=None, absent=False):
+                result = super().__call__(method, path, payload, absent)
+                if method == 'POST' and path.endswith('/reviews'):
+                    raise P.Refused('synthetic lost response after provider accepted review')
+                return result
+
+        api = LostResponse()
+        pub = P.Publisher(api, api, ENV)
+        pub.prepare()
+        with self.assertRaises(P.Refused):
+            pub.publish(self.raw())
+        pub.fail(HEAD)
+        self.assertEqual(api.reviews[0]['state'], 'APPROVED')
+        self.assertEqual(api.checks[0]['conclusion'], 'failure')
+        summary = api.checks[0]['output']['summary']
+        self.assertIn('Inspect reviews', summary)
+        self.assertNotIn('no approval published', summary)
+
     def test_central_dispatch_reviews_target_without_borrowing_its_run_identity(self):
         api = Fake(); api.source_repo = 'mctlhq/.github'
         env = dict(ENV, GITHUB_REPOSITORY=api.source_repo, TARGET_REPOSITORY=REPO)
