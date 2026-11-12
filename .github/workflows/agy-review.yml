@@ -34,7 +34,27 @@ name: Agy PR review (reusable)
 
 on:
   workflow_call:
+    outputs:
+      review_record:
+        description: Complete structured result for the trusted formal publisher; empty on no verdict.
+        value: ${{ jobs.review.outputs.review_record }}
     inputs:
+      formal_review:
+        description: Internal mode for the default-branch formal wrapper; never authorizes publication itself.
+        type: boolean
+        default: false
+      review_repository:
+        type: string
+        default: ''
+      review_pr_number:
+        type: number
+        default: 0
+      review_head_sha:
+        type: string
+        default: ''
+      review_base_sha:
+        type: string
+        default: ''
       # Defaulted to gemini-3.8-flash-high with effort: high since 2026-10-14.
       # medium (2026-09-14..10-14) was chosen when high took ~11-14 min per
       # review on agy 1.1.27. A benchmark on agy 1.3.5 (4 PRs, 166-4515
@@ -84,12 +104,18 @@ on:
 jobs:
   review:
     if: >
+      (inputs.formal_review == true && inputs.review_pr_number > 0 &&
+      (github.event_name == 'pull_request_target' || github.event_name == 'workflow_dispatch') &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ||
+      (inputs.formal_review == false &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       (inputs.skip_bot_prs == false ||
       (github.event.pull_request.user.login != 'dependabot[bot]' &&
       (startsWith(github.event.pull_request.head.ref, 'release-please--') == false ||
-      endsWith(github.event.pull_request.user.login, '[bot]') == false)))
+      endsWith(github.event.pull_request.user.login, '[bot]') == false))))
+    outputs:
+      review_record: ${{ steps.formal_record.outputs.record }}
     runs-on: [self-hosted, agy-reviewer]
     timeout-minutes: 20
     # Started reviews are allowed to finish. With cancel-in-progress: true a
@@ -121,28 +147,31 @@ jobs:
     # no free memory and 1.1 GB already in swap, and more slots would not have
     # changed the cancellation rate this fixes.
     concurrency:
-      group: agy-review-${{ github.repository }}-${{ github.event.pull_request.number }}
+      group: agy-review-${{ inputs.formal_review && inputs.review_repository || github.repository }}-${{ inputs.formal_review && inputs.review_pr_number || github.event.pull_request.number }}
       cancel-in-progress: false
     permissions:
       contents: read
       pull-requests: write
     env:
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      REVIEW_REPOSITORY: ${{ inputs.formal_review && inputs.review_repository || github.repository }}
+      PR_NUMBER: ${{ inputs.formal_review && inputs.review_pr_number || github.event.pull_request.number }}
       PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     steps:
       - name: Checkout pull request
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ inputs.formal_review && inputs.review_repository || github.repository }}
+          ref: ${{ inputs.formal_review && inputs.review_head_sha || github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Prepare review prompt
         shell: bash
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ inputs.formal_review && inputs.review_base_sha || github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ inputs.formal_review && inputs.review_head_sha || github.event.pull_request.head.sha }}
           EXTRA_CONVENTIONS: ${{ inputs.conventions }}
+          FORMAL_REVIEW: ${{ inputs.formal_review }}
         run: |
           set -euo pipefail
 
@@ -150,7 +179,8 @@ jobs:
           mkdir -p "$SCRATCH"
           echo "AGY_SCRATCH=$SCRATCH" >> "$GITHUB_ENV"
 
-          git diff --stat "$BASE_SHA...$HEAD_SHA" > "$SCRATCH/stat.txt"
+          # Never run a diff driver/textconv from candidate attributes.
+          git diff --no-ext-diff --no-textconv --stat "$BASE_SHA...$HEAD_SHA" > "$SCRATCH/stat.txt"
           # Context width is a correctness knob, not a generosity knob. At
           # --unified=50 a 298-line change to mctl-api#236 shipped 874 lines
           # of UNCHANGED code inside the diff — 75% of the body — and every
@@ -162,14 +192,31 @@ jobs:
           # Keep this small; the prompt below now tells the reviewer to
           # anchor every finding on a changed line, which is what actually
           # bounds scope.
-          git diff --no-ext-diff --unified=10 "$BASE_SHA...$HEAD_SHA" > "$SCRATCH/pr.diff"
+          git diff --no-ext-diff --no-textconv --unified=10 "$BASE_SHA...$HEAD_SHA" > "$SCRATCH/pr.diff"
 
+          if [ "$FORMAL_REVIEW" = "true" ]; then
+            # Caller conventions can come from PR-controlled workflows. They
+            # are never instructions for an approving reviewer.
+            EXTRA_CONVENTIONS=""
+            git diff --no-ext-diff --no-textconv --numstat "$BASE_SHA...$HEAD_SHA" > "$SCRATCH/numstat.txt"
+            if grep -q $'^-\t-\t' "$SCRATCH/numstat.txt"; then
+              echo "::error::formal review cannot approve opaque binary changes"
+              exit 1
+            else
+              grep_status=$?
+              [ "$grep_status" -eq 1 ] || { echo "::error::could not inspect binary-change listing"; exit 1; }
+            fi
+            if [ ! -s "$SCRATCH/pr.diff" ] || [ "$(wc -c < "$SCRATCH/pr.diff")" -gt 150000 ]; then
+              echo "::error::formal review requires the entire nonempty diff; no approval on truncation"
+              exit 1
+            fi
+          fi
           MARKER="END-OF-DIFF-$(uuidgen)"
 
           {
             cat <<PROMPT
           You are a second, independent reviewer for a GitHub pull request in
-          repository "${{ github.repository }}".
+          repository "${REVIEW_REPOSITORY}".
 
           Review only the diff embedded below. It begins right after the
           "--- BEGIN DIFF ---" line and ends right before the line reading
@@ -682,14 +729,61 @@ jobs:
           fi
           jq -r '.response' result.json > review.md
 
+      - name: Export complete formal review result
+        id: formal_record
+        if: inputs.formal_review == true && steps.agy.outcome == 'success'
+        shell: bash
+        working-directory: ${{ env.AGY_SCRATCH }}
+        env:
+          HEAD_SHA: ${{ inputs.review_head_sha }}
+          BASE_SHA: ${{ inputs.review_base_sha }}
+          AGY_MODEL: ${{ steps.agy.outputs.model || inputs.model }}
+        run: |
+          python3 - <<'PY_RECORD'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          def make_record(body, env):
+              if not body.strip() or len(body.encode('utf-8')) > 48000:
+                  raise ValueError('empty or oversized review; no approval')
+              last = [line for line in body.splitlines() if line.strip()][-1]
+              verdicts = {'<!-- VERDICT: PASS -->': 'PASS',
+                          '<!-- VERDICT: FAIL:P1 -->': 'FAIL:P1',
+                          '<!-- VERDICT: FAIL:P2 -->': 'FAIL:P2',
+                          '<!-- VERDICT: FAIL:P1,P2 -->': 'FAIL:P1,P2'}
+              if last not in verdicts:
+                  raise ValueError('missing or malformed verdict; no approval')
+              verdict = verdicts[last]
+              if verdict == 'PASS' and re.search(r'\bP[12]\b', '\n'.join(body.splitlines()[:-1]), re.IGNORECASE):
+                  raise ValueError('PASS contradicts a P1/P2 finding; no approval')
+              for name in ('HEAD_SHA', 'BASE_SHA'):
+                  if not re.fullmatch('[0-9a-f]{40}', env[name]):
+                      raise ValueError('invalid reviewed commit')
+              number = int(env['PR_NUMBER'])
+              if number <= 0:
+                  raise ValueError('invalid PR number')
+              return {'schema_version': 'agy-review/v1', 'repository': env['REVIEW_REPOSITORY'],
+                      'source_repository': env['GITHUB_REPOSITORY'],
+                      'pr_number': number, 'head_sha': env['HEAD_SHA'], 'base_sha': env['BASE_SHA'],
+                      'run_id': int(env['GITHUB_RUN_ID']), 'run_attempt': int(env['GITHUB_RUN_ATTEMPT']),
+                      'model': env['AGY_MODEL'], 'verdict': verdict, 'body': body}
+
+          if __name__ == '__main__':
+              record = make_record(Path('review.md').read_text(), os.environ)
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+                  stream.write('record=' + json.dumps(record, ensure_ascii=True, separators=(',', ':')) + '\n')
+          PY_RECORD
+
       - name: Publish review comment
-        if: steps.agy.outcome == 'success'
+        if: inputs.formal_review == false && steps.agy.outcome == 'success'
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
         env:
           GH_TOKEN: ${{ github.token }}
           BLOCKING: ${{ inputs.blocking }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ inputs.formal_review && inputs.review_head_sha || github.event.pull_request.head.sha }}
           # Reconciled model from the agy step, with fallback to raw input if the
           # run step failed before writing outputs.
           AGY_MODEL: ${{ steps.agy.outputs.model || inputs.model }}
@@ -715,7 +809,7 @@ jobs:
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file comment.md
 
       - name: Note agy failure
-        if: steps.agy.outcome != 'success'
+        if: inputs.formal_review == false && steps.agy.outcome != 'success'
         shell: bash
         working-directory: ${{ env.AGY_SCRATCH }}
         env:

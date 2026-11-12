@@ -10,6 +10,9 @@
   live audit and acceptance rationale (root mctlhq/.github#173). The dependency
   graph is owned by `roadmap/epics/agent-commerce.yaml`, not by the plan.
 
+- [Agy formal reviews](docs/plans/agy-formal-reviews.md): isolated reviewer App,
+  exact-head approval publisher, pilot activation and acceptance checklist.
+
 # Spike issue creation rules
 
 - Every spike issue MUST be created from the current `.github/ISSUE_TEMPLATE/spike.yml` on `main`. Before creating a spike through an API, connector, CLI, or agent, fetch the template first; do not rely on remembered or cached fields.

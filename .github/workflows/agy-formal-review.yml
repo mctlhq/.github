@@ -1,0 +1,178 @@
+name: Agy formal review (trusted reusable)
+
+# Only a default-branch pull_request_target / workflow_dispatch caller may use
+# publisher credentials. Other repositories retain the informational workflow.
+on:
+  workflow_call:
+    inputs:
+      repository:
+        type: string
+        default: ''
+      pr_number:
+        type: number
+        default: 0
+    secrets:
+      AGY_REVIEW_APP_PRIVATE_KEY:
+        required: false
+
+permissions: {}
+
+jobs:
+  prepare:
+    if: >-
+      (github.event_name == 'pull_request_target' || github.event_name == 'workflow_dispatch') &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment: agy-review-publisher
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      eligible: ${{ steps.prepare.outputs.eligible }}
+      number: ${{ steps.prepare.outputs.number }}
+      head: ${{ steps.prepare.outputs.head }}
+      base: ${{ steps.prepare.outputs.base }}
+    steps:
+      - name: Resolve trusted reusable source
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" > "$RUNNER_TEMP/source-run.json"
+          python3 - <<'PY_SOURCE'
+          import json, os, re
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'source-run.json').read_text())
+          target = os.environ['TARGET_REPOSITORY']
+          if not re.fullmatch(r'mctlhq/[A-Za-z0-9_.-]+', target):
+              raise ValueError('invalid target repository')
+          prefix = 'mctlhq/.github/.github/workflows/agy-formal-review.yml@'
+          refs = run.get('referenced_workflows')
+          if not isinstance(refs, list):
+              raise ValueError('reusable workflow source unavailable')
+          matches = [x for x in refs if isinstance(x, dict) and x.get('path', '').startswith(prefix)]
+          if len(matches) != 1 or not re.fullmatch('[0-9a-f]{40}', matches[0].get('sha', '')):
+              raise ValueError('ambiguous/unreadable formal workflow source')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write('sha=' + matches[0]['sha'] + '\n')
+              stream.write('target_name=' + target.split('/')[1] + '\n')
+          PY_SOURCE
+      - name: Checkout only trusted publisher code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: mctlhq/.github
+          ref: ${{ steps.source.outputs.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Generate isolated reviewer token
+        id: token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.AGY_REVIEW_APP_ID }}
+          private-key: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ steps.source.outputs.target_name }}
+          permission-contents: read
+          permission-pull-requests: write
+          permission-checks: write
+          permission-administration: read
+      - name: Validate policy and start the exact-head check
+        id: prepare
+        env:
+          AGY_REVIEW_TOKEN: ${{ steps.token.outputs.token }}
+          AGY_REVIEW_APP_ID: ${{ vars.AGY_REVIEW_APP_ID }}
+          AGY_REVIEW_LOGIN: ${{ steps.token.outputs.app-slug }}[bot]
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+          PUBLISH_MODE: prepare
+        run: python3 .github/scripts/agy_review_publish.py
+
+  review:
+    needs: prepare
+    if: needs.prepare.outputs.eligible == 'true'
+    uses: ./.github/workflows/agy-review.yml
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      formal_review: true
+      review_repository: ${{ inputs.repository || github.repository }}
+      review_pr_number: ${{ fromJSON(needs.prepare.outputs.number) }}
+      review_head_sha: ${{ needs.prepare.outputs.head }}
+      review_base_sha: ${{ needs.prepare.outputs.base }}
+      conventions: ''
+      blocking: false
+      skip_bot_prs: false
+
+  publish:
+    needs: [prepare, review]
+    if: always() && needs.prepare.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    environment: agy-review-publisher
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: agy-formal-publish-${{ inputs.repository || github.repository }}-${{ needs.prepare.outputs.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Resolve trusted reusable source
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" > "$RUNNER_TEMP/source-run.json"
+          python3 - <<'PY_SOURCE'
+          import json, os, re
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'source-run.json').read_text())
+          target = os.environ['TARGET_REPOSITORY']
+          if not re.fullmatch(r'mctlhq/[A-Za-z0-9_.-]+', target):
+              raise ValueError('invalid target repository')
+          prefix = 'mctlhq/.github/.github/workflows/agy-formal-review.yml@'
+          refs = run.get('referenced_workflows')
+          if not isinstance(refs, list):
+              raise ValueError('reusable workflow source unavailable')
+          matches = [x for x in refs if isinstance(x, dict) and x.get('path', '').startswith(prefix)]
+          if len(matches) != 1 or not re.fullmatch('[0-9a-f]{40}', matches[0].get('sha', '')):
+              raise ValueError('ambiguous/unreadable formal workflow source')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              stream.write('sha=' + matches[0]['sha'] + '\n')
+              stream.write('target_name=' + target.split('/')[1] + '\n')
+          PY_SOURCE
+      - name: Checkout only trusted publisher code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: mctlhq/.github
+          ref: ${{ steps.source.outputs.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Generate isolated reviewer token
+        id: token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.AGY_REVIEW_APP_ID }}
+          private-key: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ steps.source.outputs.target_name }}
+          permission-contents: read
+          permission-pull-requests: write
+          permission-checks: write
+          permission-administration: read
+      - name: Publish only a complete current-head verdict
+        env:
+          AGY_REVIEW_TOKEN: ${{ steps.token.outputs.token }}
+          AGY_REVIEW_APP_ID: ${{ vars.AGY_REVIEW_APP_ID }}
+          AGY_REVIEW_LOGIN: ${{ steps.token.outputs.app-slug }}[bot]
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
+          PR_NUMBER: ${{ needs.prepare.outputs.number }}
+          REVIEWED_HEAD: ${{ needs.prepare.outputs.head }}
+          REVIEW_RECORD: ${{ needs.review.result == 'success' && needs.review.outputs.review_record || '' }}
+          PUBLISH_MODE: publish
+        run: python3 .github/scripts/agy_review_publish.py

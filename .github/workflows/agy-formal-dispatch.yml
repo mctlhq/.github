@@ -1,0 +1,27 @@
+name: Agy formal review dispatch
+
+# Bootstrap/recovery entrypoint: trusted default-branch code can review the
+# pilot PR before a caller has been installed in that repository.
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Same-owner public repository installed on the reviewer App
+        type: string
+        required: true
+        default: mctlhq/mctl-gitops
+      pr_number:
+        description: Open non-draft PR number
+        type: number
+        required: true
+permissions: {}
+jobs:
+  formal:
+    uses: ./.github/workflows/agy-formal-review.yml
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    with:
+      repository: ${{ inputs.repository }}
+      pr_number: ${{ inputs.pr_number }}
