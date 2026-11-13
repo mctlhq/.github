@@ -18,6 +18,7 @@ class FakeServer:
     def __init__(self, variant="good"):
         self.variant = variant
         self.requests = []  # (method, path, body)
+        self.user_agents = []
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -44,6 +45,7 @@ class FakeServer:
 
             def do_GET(self):
                 outer.requests.append(("GET", self.path, None))
+                outer.user_agents.append(self.headers.get("User-Agent"))
                 base = outer.base
                 if self.path == "/.well-known/oauth-protected-resource/mcp":
                     return self._send(200, _fixture("prm.json", base))
@@ -57,6 +59,7 @@ class FakeServer:
             def do_POST(self):
                 body = self._body()
                 outer.requests.append(("POST", self.path, body))
+                outer.user_agents.append(self.headers.get("User-Agent"))
                 if self.path == "/oauth/register":
                     return self._send(201, {"client_id": "client-xyz", "client_secret": "s3cret-value"})
                 if self.path != "/mcp" or outer.variant == "wrong_path":

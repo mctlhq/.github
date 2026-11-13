@@ -121,9 +121,21 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+USER_AGENT = "mctl-compat-probe/1 (+https://github.com/mctlhq/.github/issues/290)"
+
+
 def make_http(timeout=15):
-    opener = urllib.request.build_opener(
-        urllib.request.HTTPHandler, urllib.request.HTTPSHandler, _NoRedirect)  # no cookie processor: nothing persists
+    # Built by hand: build_opener() always adds FileHandler, FTPHandler and
+    # DataHandler, so a discovered file:// URL would be read from local disk.
+    # Only http(s) is reachable here; no cookie processor, so nothing persists.
+    opener = urllib.request.OpenerDirector()
+    for h in (urllib.request.UnknownHandler(), urllib.request.HTTPHandler(), urllib.request.HTTPSHandler(), _NoRedirect(),
+              urllib.request.HTTPDefaultErrorHandler(), urllib.request.HTTPErrorProcessor()):
+        opener.add_handler(h)
+    # Cloudflare in front of api.mctl.ai answers the default "Python-urllib/x"
+    # agent with 403 error 1010 before the request reaches mctl, which would
+    # read as a failed step 1a. Identify the probe honestly instead.
+    opener.addheaders = [("User-Agent", USER_AGENT)]
 
     def http(method, url, headers=None, body=None):
         data = None if body is None else json.dumps(body).encode()

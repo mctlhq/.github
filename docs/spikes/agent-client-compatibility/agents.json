@@ -1,319 +1,391 @@
 {
   "schema": 1,
-  "source": "https://developers.cloudflare.com/agent-setup/",
+  "source": "vendor MCP documentation, located from https://developers.cloudflare.com/agent-setup/",
   "accessed": "2026-11-13",
   "agents": [
     {
       "name": "Claude Code",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/",
+      "doc_url": "https://code.claude.com/docs/en/mcp",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+        "value": "streamable-http",
+        "doc_url": "https://code.claude.com/docs/en/mcp",
+        "quote": "HTTP servers are the recommended option for connecting to remote MCP servers."
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+        "value": "oauth-dcr",
+        "doc_url": "https://code.claude.com/docs/en/mcp",
+        "quote": "Some MCP servers don't support automatic OAuth setup via Dynamic Client Registration."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+        "value": "loopback",
+        "doc_url": "https://code.claude.com/docs/en/mcp",
+        "quote": "By default, Claude Code picks a random available port for the OAuth callback."
       },
       "surfaces_prompts": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+        "value": true,
+        "doc_url": "https://code.claude.com/docs/en/mcp",
+        "quote": "MCP servers can expose prompts that become available as commands in Claude Code."
       },
       "runs_where": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+        "doc_url": "https://code.claude.com/docs/en/mcp",
+        "quote": null
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "Also discovers CIMD automatically; pre-registered --client-id/--client-secret and static headers are supported. Pre-registered redirect form: http://localhost:PORT/callback."
     },
     {
       "name": "Codex",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/codex/",
+      "doc_url": "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+        "value": "streamable-http",
+        "doc_url": "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "quote": "Streamable HTTP servers: Servers that you access at an address."
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+        "value": "oauth-dcr",
+        "doc_url": "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "quote": "OAuth authentication, including Client ID Metadata Documents (CIMD) and Dynamic Client Registration (DCR)"
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+        "value": "loopback",
+        "doc_url": "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "quote": "or `http://127.0.0.1/callback` when unset."
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+        "doc_url": "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "quote": null
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+        "value": "local",
+        "doc_url": "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
+        "quote": "Local Codex clients can also connect directly to MCP servers and share their configuration."
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "CIMD and DCR both documented; login via `codex mcp login <server>`; static bearer_token_env_var / http_headers also supported. developers.openai.com/codex/mcp redirects here."
     },
     {
       "name": "Cursor",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/",
+      "doc_url": "https://cursor.com/docs/context/mcp",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+        "value": "streamable-http",
+        "doc_url": "https://cursor.com/docs/context/mcp",
+        "quote": "Cursor supports three transport methods: (table rows: stdio, SSE, Streamable HTTP)"
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+        "value": "oauth-dcr",
+        "doc_url": "https://cursor.com/docs/context/mcp",
+        "quote": "With dynamic client registration, Cursor registers as a public client with no client secret."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+        "value": "loopback",
+        "doc_url": "https://cursor.com/docs/context/mcp",
+        "quote": "Cursor uses fixed OAuth redirect URLs for MCP servers. (desktop: http://localhost:8787/callback)"
       },
       "surfaces_prompts": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+        "value": true,
+        "doc_url": "https://cursor.com/docs/context/mcp",
+        "quote": "Cursor supports these MCP protocol capabilities and extensions: (table row: Prompts, Supported)"
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+        "value": "local",
+        "doc_url": "https://cursor.com/docs/context/mcp",
+        "quote": "Cloud Agents keep their own MCP sign-ins on Cursor's servers, separate from the sign-ins on your machine."
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "Desktop redirect http://localhost:8787/callback; web and Cloud Agents use hosted https://www.cursor.com/agents/mcp/oauth/callback. Quotes in parentheses summarise table rows on the page."
     },
     {
       "name": "Devin",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/devin/",
+      "doc_url": "https://docs.devin.ai/work-with-devin/mcp",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+        "value": "streamable-http",
+        "doc_url": "https://docs.devin.ai/work-with-devin/mcp",
+        "quote": "HTTP (Streamable HTTP) is recommended for new integrations; SSE is supported for legacy servers."
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+        "value": "oauth-unspecified",
+        "doc_url": "https://docs.devin.ai/work-with-devin/mcp",
+        "quote": "For MCPs that authenticate with OAuth, Devin will prompt you to visit a URL to connect your account."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+        "value": "hosted",
+        "doc_url": "https://docs.devin.ai/work-with-devin/mcp",
+        "quote": "It is `https://api.devin.ai/mcp/oauth/callback` for every Devin deployment"
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+        "doc_url": "https://docs.devin.ai/work-with-devin/mcp",
+        "quote": null
       },
       "runs_where": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+        "doc_url": "https://docs.devin.ai/work-with-devin/mcp",
+        "quote": null
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "Auth choices: None, Auth Header or OAuth; DCR named only for servers without it (own client id/secret)."
     },
     {
       "name": "Droid",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/droid/",
+      "doc_url": "https://docs.factory.com/cli/configuration/mcp",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+        "value": "streamable-http",
+        "doc_url": "https://docs.factory.com/cli/configuration/mcp",
+        "quote": "Droid supports three transports: **stdio** (local processes), **http** (Streamable HTTP, the current MCP standard, which streams responses over SSE internally), and **sse**"
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+        "value": "oauth-dcr",
+        "doc_url": "https://docs.factory.com/cli/configuration/mcp",
+        "quote": "Droid discovers the authorization server, registers a client automatically via Dynamic Client Registration (DCR), and uses Factory's published client metadata when the server supports Client ID Metadata Documents (CIMD)."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+        "value": "loopback",
+        "doc_url": "https://docs.factory.com/cli/configuration/mcp",
+        "quote": "Fixed localhost port for the OAuth callback (1-65535)."
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+        "doc_url": "https://docs.factory.com/cli/configuration/mcp",
+        "quote": null
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+        "value": "local",
+        "doc_url": "https://docs.factory.com/cli/configuration/mcp",
+        "quote": "OAuth tokens are stored globally in your system keyring (or a fallback file)"
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "Factory CLI. CIMD also supported; static --header and pre-registered oauth.clientId supported."
     },
     {
       "name": "GitHub Copilot",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/",
+      "doc_url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+        "value": "streamable-http",
+        "doc_url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers",
+        "quote": "**HTTP** uses the Streamable HTTP transport."
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+        "value": "oauth-dcr",
+        "doc_url": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference",
+        "quote": "Static OAuth client ID (skips dynamic registration)."
       },
       "redirect_uri_form": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+        "doc_url": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference",
+        "quote": null
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+        "doc_url": "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers",
+        "quote": null
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+        "value": "local",
+        "doc_url": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference",
+        "quote": "Configure persistent servers in `~/.copilot/mcp-config.json`."
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "Surface documented: Copilot CLI. DCR is the default implied by the oauthClientId field description; client_credentials grant and static headers also supported. The Copilot cloud agent is reported not to support OAuth remote MCP servers (unverified)."
     },
     {
       "name": "OpenCode",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/",
+      "doc_url": "https://opencode.ai/docs/mcp-servers/",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+        "value": "streamable-http",
+        "doc_url": "https://opencode.ai/docs/mcp-servers/",
+        "quote": "A remote server uses the MCP Streamable HTTP transport and requires an absolute URL:"
       },
       "auth": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+        "value": "oauth-cimd",
+        "doc_url": "https://opencode.ai/docs/mcp-servers/",
+        "quote": "With CIMD, OpenCode sends its metadata document URL as the client_id and skips registration:"
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+        "value": "loopback",
+        "doc_url": "https://opencode.ai/docs/mcp-servers/",
+        "quote": "Authorization servers accept any loopback port for these redirects, as RFC 8252 requires, so callback_port works with CIMD."
       },
       "surfaces_prompts": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+        "value": true,
+        "doc_url": "https://opencode.ai/docs/mcp-servers/",
+        "quote": "MCP prompts become commands named <server>:<prompt> with the same normalization."
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+        "value": "local",
+        "doc_url": "https://opencode.ai/docs/mcp-servers/",
+        "quote": "When OpenCode runs over SSH, in a container, or on a remote server, the browser cannot reach OpenCode after you sign in"
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": null,
+      "notes": "Order: pre-registered client, then CIMD, then DCR fallback. Static headers and oauth:false supported."
     },
     {
       "name": "Pi",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/pi/",
+      "doc_url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md",
       "version_documented": "unknown",
       "transport": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+        "value": "streamable-http",
+        "doc_url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md",
+        "quote": "Pi connects to Model Context Protocol servers over stdio or streamable HTTP and makes their tools and resources available to the model."
       },
       "auth": {
-        "value": "oauth-unspecified",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+        "value": "oauth-cimd",
+        "doc_url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md",
+        "quote": "Without `clientId`, Pi identifies itself with its Client ID Metadata Document on pi.dev when the authorization server advertises support for documents and public clients. Otherwise it registers a client dynamically."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+        "value": "loopback",
+        "doc_url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md",
+        "quote": "`callbackPort` uses `http://127.0.0.1:<port>/callback`."
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+        "doc_url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md",
+        "quote": null
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+        "value": "local",
+        "doc_url": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md",
+        "quote": "Pi reads user-level servers from `~/.pi/agent/mcp.json` and project servers from `.pi/mcp.json`."
       },
-      "untested_reason": null
+      "untested_reason": null,
+      "notes": "DCR fallback; legacy SSE not supported; static headers supported. Also at docs.pi.dev/latest/mcp."
     },
     {
       "name": "Vibe",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/",
+      "doc_url": "https://docs.mistral.ai/vibe/code/cli/mcp-servers",
       "version_documented": "unknown",
       "transport": {
         "value": "streamable-http",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+        "doc_url": "https://docs.mistral.ai/vibe/code/cli/mcp-servers",
+        "quote": "`streamable-http` | The server is reachable over HTTP and supports streaming responses."
       },
       "auth": {
-        "value": "oauth-unspecified",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+        "value": "oauth-dcr",
+        "doc_url": "https://docs.mistral.ai/vibe/code/cli/mcp-servers",
+        "quote": "Without `client_id` or `client_metadata_url`, Vibe registers a client with the server dynamically."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+        "value": "loopback",
+        "doc_url": "https://docs.mistral.ai/vibe/code/cli/mcp-servers",
+        "quote": "After you approve access, the browser redirects to `http://127.0.0.1:<redirect_port>/callback`"
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+        "doc_url": "https://docs.mistral.ai/vibe/code/cli/mcp-servers",
+        "quote": null
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+        "value": "local",
+        "doc_url": "https://docs.mistral.ai/vibe/code/cli/mcp-servers",
+        "quote": "This address must reach the machine where Vibe runs."
       },
-      "untested_reason": null
+      "untested_reason": null,
+      "notes": "Mistral Vibe CLI. CIMD via client_metadata_url when advertised; static auth supported."
     },
     {
       "name": "Visual Studio Code",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/",
+      "doc_url": "https://code.visualstudio.com/docs/agent-customization/mcp-servers",
       "version_documented": "unknown",
       "transport": {
         "value": "streamable-http",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+        "doc_url": "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+        "quote": "`stdio` for a command, `http` for Streamable HTTP, or `sse` for a legacy SSE endpoint."
       },
       "auth": {
-        "value": "oauth-unspecified",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+        "value": "oauth-dcr",
+        "doc_url": "https://code.visualstudio.com/api/extension-guides/ai/mcp",
+        "quote": "It also supports other OAuth identity providers through Dynamic Client Registration (DCR) or a pre-registered OAuth client."
       },
       "redirect_uri_form": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+        "value": "hosted",
+        "doc_url": "https://code.visualstudio.com/api/extension-guides/ai/mcp",
+        "quote": "Include `http://127.0.0.1:33418` and `https://vscode.dev/redirect` in the client's allowed redirect URLs."
       },
       "surfaces_prompts": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+        "value": false,
+        "doc_url": "https://code.visualstudio.com/api/extension-guides/ai/mcp",
+        "quote": "The editor's `/mcp.<server>.<prompt>` picker and argument dialogs aren't exposed in Copilot sessions."
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+        "value": "local",
+        "doc_url": "https://code.visualstudio.com/docs/agent-customization/mcp-servers",
+        "quote": "Local MCP servers can run code on your machine, and tools can access services using your permissions."
       },
-      "untested_reason": null
+      "untested_reason": null,
+      "notes": "Both loopback http://127.0.0.1:33418 and hosted https://vscode.dev/redirect are used. Prompts are surfaced only in the deprecated Local harness."
     },
     {
       "name": "Command Code",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/",
+      "doc_url": "https://commandcode.ai/docs/mcp",
       "version_documented": "unknown",
       "transport": {
         "value": "streamable-http",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+        "doc_url": "https://commandcode.ai/docs/mcp",
+        "quote": "Use `--transport http` to connect to remote MCP servers:"
       },
       "auth": {
         "value": "oauth-unspecified",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+        "doc_url": "https://commandcode.ai/docs/mcp",
+        "quote": "Command Code supports OAuth 2.0 Authorization Code with PKCE for HTTP servers."
       },
       "redirect_uri_form": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+        "doc_url": "https://commandcode.ai/docs/mcp",
+        "quote": null
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+        "doc_url": "https://commandcode.ai/docs/mcp",
+        "quote": null
       },
       "runs_where": {
-        "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+        "value": "local",
+        "doc_url": "https://commandcode.ai/docs/mcp",
+        "quote": "After you grant access, tokens are stored securely in ~/.commandcode/mcp-tokens.json."
       },
-      "untested_reason": null
+      "untested_reason": null,
+      "notes": "Registration method not stated; optional pre-registered oauth.clientId and callbackPort; static headers supported."
     },
     {
       "name": "Bionic",
-      "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/",
+      "doc_url": "https://lmstudio.ai/docs/bionic",
       "version_documented": "unknown",
       "transport": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+        "doc_url": "https://lmstudio.ai/docs/bionic",
+        "quote": null
       },
       "auth": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+        "doc_url": "https://lmstudio.ai/docs/bionic",
+        "quote": null
       },
       "redirect_uri_form": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+        "doc_url": "https://lmstudio.ai/docs/bionic",
+        "quote": null
       },
       "surfaces_prompts": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+        "doc_url": "https://lmstudio.ai/docs/bionic",
+        "quote": null
       },
       "runs_where": {
         "value": "unknown",
-        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+        "doc_url": "https://lmstudio.ai/docs/bionic",
+        "quote": null
       },
-      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+      "untested_reason": "LM Studio's Bionic documentation does not cover MCP at all; only Cloudflare's page claims OAuth support",
+      "notes": "Classic LM Studio has MCP docs, but nothing says they apply to Bionic."
     }
   ]
 }

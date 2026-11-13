@@ -42,6 +42,12 @@ class Ladder(unittest.TestCase):
         self.assertEqual(r["steps"]["4"]["status"], "pass")
         self.assertEqual(r["steps"]["2"]["status"], "pass")
 
+    def test_probe_sends_its_own_user_agent(self):
+        with FakeServer("good") as s:
+            run(s, TOKEN)
+        self.assertTrue(s.user_agents)
+        self.assertEqual(set(s.user_agents), {probe.USER_AGENT})
+
     def test_wrong_path_fails_1a_verbatim(self):  # T2
         with FakeServer("wrong_path") as s:
             r = run(s, TOKEN)
@@ -69,6 +75,42 @@ class Ladder(unittest.TestCase):
         self.assertEqual(r["failed_step"], "1b")
         self.assertEqual(calls, ["http://127.0.0.1:1/mcp"])
         self.assertIn("refused", r["first_failure"]["reason"])
+
+    def _discovery_stub(self, prm, as_meta):
+        calls = []
+
+        def stub(method, url, headers=None, body=None):
+            calls.append(url)
+            if url.endswith("/mcp"):
+                return {"status": 401, "body": "", "headers": {
+                    "www-authenticate": 'Bearer resource_metadata="https://127.0.0.1/prm"'}}
+            if url.endswith("/prm"):
+                return {"status": 200, "body": json.dumps(prm), "headers": {}}
+            return {"status": 200, "body": json.dumps(as_meta), "headers": {}}
+        return calls, stub
+
+    def test_discovered_issuer_file_url_refused(self):
+        calls, stub = self._discovery_stub({"authorization_servers": ["file:///etc"]}, {})
+        r = probe.run_profile(profile(), "http://127.0.0.1:1/mcp", None, False, stub)
+        self.assertEqual(r["failed_step"], "1b")
+        self.assertEqual(len(calls), 2)
+        self.assertIn("refused", r["first_failure"]["reason"])
+
+    def test_discovered_registration_file_url_refused(self):
+        meta = json.load(open(os.path.join(ROOT, "fixtures", "as-metadata.json")))
+        meta["registration_endpoint"] = "file:///etc/passwd"
+        calls, stub = self._discovery_stub({"authorization_servers": ["https://127.0.0.1"]}, meta)
+        r = probe.run_profile(profile(), "http://127.0.0.1:1/mcp", None, True, stub)
+        self.assertEqual(r["failed_step"], "1c")
+        self.assertEqual(len(calls), 3)
+        self.assertIn("refused", r["first_failure"]["reason"])
+
+    def test_opener_has_no_local_scheme_handlers(self):
+        http = probe.make_http(1)
+        for url in ("file:///etc/passwd", "data:,secret", "ftp://127.0.0.1/x"):
+            r = http("GET", url)
+            self.assertEqual(r["status"], 0, url)
+            self.assertIn("unknown url type", r["body"], url)
 
     def test_bad_bearer_fails_1d_and_redacts(self):  # T3
         with FakeServer("bad_bearer") as s:
