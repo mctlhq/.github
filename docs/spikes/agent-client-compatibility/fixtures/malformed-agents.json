@@ -1,0 +1,10 @@
+{"schema": 1, "source": "x", "accessed": "2026-11-13", "agents": [
+  {"name": "Bad", "doc_url": "https://example.invalid/",
+   "version_documented": "unknown",
+   "transport": {"value": "streamable-http"},
+   "auth": {"value": "carrier-pigeon", "doc_url": "https://example.invalid/"},
+   "redirect_uri_form": {"value": "unknown", "doc_url": "https://example.invalid/"},
+   "surfaces_prompts": {"value": "unknown", "doc_url": "https://example.invalid/"},
+   "runs_where": {"value": "unknown", "doc_url": "https://example.invalid/"},
+   "untested_reason": null}
+]}

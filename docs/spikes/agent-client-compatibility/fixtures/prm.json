@@ -1,0 +1,1 @@
+{"resource": "{base}/mcp", "authorization_servers": ["{base}"], "scopes_supported": ["mctl"]}

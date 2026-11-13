@@ -50,3 +50,6 @@
   STANDARDIZE_CONTRACTS_KEEP_RUNTIMES for mctlhq/.github#328; architecture-only
   owner verdict, with proposed adoption epic #330 and independently gated followups.
   Live HTTP/browser observations still have explicit unknown/not-run boundaries.
+- [Agent-client compatibility](docs/spikes/agent-client-compatibility.md): draft
+  slice S1a for mctlhq/.github#290 (#340); probe, offline tests and a doc-sourced
+  matrix, verdict pending live run (#290).
