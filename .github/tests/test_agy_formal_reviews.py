@@ -291,6 +291,14 @@ class PublisherTests(unittest.TestCase):
 
 
 class ExportTests(unittest.TestCase):
+    def test_dispatch_passes_only_the_named_publisher_secret(self):
+        dispatch = yaml.safe_load((ROOT / '.github/workflows/agy-formal-dispatch.yml').read_text())
+        self.assertEqual(dispatch['jobs']['formal']['secrets'], {
+            'AGY_REVIEW_APP_PRIVATE_KEY': '${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}'})
+        formal = yaml.safe_load((ROOT / '.github/workflows/agy-formal-review.yml').read_text())
+        self.assertTrue(formal[True]['workflow_call']['secrets']['AGY_REVIEW_APP_PRIVATE_KEY']['required'])
+        self.assertNotIn('secrets', formal['jobs']['review'])
+
     def test_exact_verdicts_only(self):
         self.assertEqual(NS['make_record'](PASS, ENV)['verdict'], 'PASS')
         for body in ('', 'not a review', 'No issues.\n<!-- VERDICT: PASS --> extra',

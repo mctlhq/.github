@@ -93,13 +93,16 @@ jobs:
       contents: read
       actions: read
       pull-requests: write
+    secrets:
+      AGY_REVIEW_APP_PRIVATE_KEY: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
     with:
-      pr_number: ${{ inputs.pr_number || github.event.pull_request.number }}
+      pr_number: ${{ fromJSON(format('{0}', inputs.pr_number || github.event.pull_request.number)) }}
 ```
 
 Create the same protected environment/variable/secret in the pilot repository
-before enabling that default-branch caller. No `secrets: inherit` is needed: the
-privileged reusable jobs resolve their caller repository's environment secret.
+before enabling that default-branch caller. The caller must pass the named
+secret explicitly, even when it only exists in the environment. GitHub resolves its value from the protected environment in
+the privileged jobs. Do not use `secrets: inherit`.
 Do not run both dispatch sources concurrently for the same head. Check ownership
 is intentionally conservative: once the central bootstrap owns a head, switching
 source repository on that same head refuses; use the central dispatcher until
