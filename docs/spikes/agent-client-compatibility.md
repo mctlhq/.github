@@ -28,7 +28,7 @@ step do the others fail.
 
 ## Evidence tags
 
-- `[DOC]`: stated on the page named in `agents.json` (accessed 2026-11-13).
+- `[DOC]`: stated on the vendor page named in `agents.json`, quoted there (accessed 2026-11-13).
 - `[OBSERVED date, probe commit]`: produced by the committed probe against
   `https://api.mctl.ai/mcp`, token-less, steps 1a-1c only.
 - `UNTESTED`: with the reason in the cell.
@@ -59,32 +59,45 @@ loopback fakes for the red cases `wrong_path`, `bad_bearer`, `no_dcr`,
 
 ## Token-less discovery run
 
-Command, 2026-11-13, probe commit `39d2ddf`, no token, no `--register`:
+Command, 2026-11-13, probe commit `4f0a5ee`, no token, no `--register`:
 
 ```
 python3 docs/spikes/agent-client-compatibility/probe.py --endpoint https://api.mctl.ai/mcp --markdown
 ```
 
-Result: the four profiles with a known auth method (Pi, Vibe, Visual Studio
-Code, Command Code) passed 1a and 1b; the other eight were not probed. Steps
-1c-4 were not run (`--register` off, no token). [OBSERVED 2026-11-13, probe 39d2ddf]
+Result: all eleven profiles with a documented auth method passed 1a (401
+with a `resource_metadata` challenge) and 1b (protected-resource and
+authorization-server metadata carry what the profile needs: a registration
+endpoint for DCR, `client_id_metadata_document_supported` for CIMD). Bionic
+was not probed. Steps 1c-4 were not run (`--register` off, no token). [OBSERVED 2026-11-13, probe 4f0a5ee]
+
+Side observation from the same session: with the default `Python-urllib`
+User-Agent every request got Cloudflare's 403 error 1010 ("browser signature
+banned") before reaching mctl; the probe now sends its own agent string. None
+of the twelve clients is documented to use that agent, so this is recorded
+as a property of the api.mctl.ai edge, not as a client failure. [OBSERVED 2026-11-13, probe 4f0a5ee]
+
+Profile sources: every value in `agents.json` carries the vendor page and
+the sentence it was taken from (`quote`), accessed 2026-11-13. Values the
+page does not state are `unknown`. Earlier drafts took values from the
+Cloudflare index only, which left eight profiles unprobed.
 
 ## Matrix
 
 | agent | version | transport | auth method supported | step reached | failing error verbatim | what mctl would have to change | step 4 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Claude Code | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| Codex | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| Cursor | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| Devin | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| Droid | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| GitHub Copilot | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| OpenCode | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
-| Pi | unknown | unknown | OAuth, registration method not stated [DOC] | 1b [OBSERVED 2026-11-13, probe 39d2ddf]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 39d2ddf]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
-| Vibe | unknown | streamable-http [DOC] | OAuth, registration method not stated [DOC] | 1b [OBSERVED 2026-11-13, probe 39d2ddf]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 39d2ddf]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
-| Visual Studio Code | unknown | streamable-http [DOC] (page config says `"type": "http"`) | OAuth, registration method not stated [DOC] | 1b [OBSERVED 2026-11-13, probe 39d2ddf]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 39d2ddf]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
-| Command Code | unknown | streamable-http [DOC] (`--transport http`) | OAuth, registration method not stated [DOC] | 1b [OBSERVED 2026-11-13, probe 39d2ddf]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 39d2ddf]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
-| Bionic | unknown | unknown | unknown | UNTESTED: documentation does not state the OAuth registration method; no hand check performed | n/a | n/a | UNTESTED: not probed |
+| Claude Code | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Codex | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Cursor | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Devin | unknown | streamable-http [DOC] | OAuth, registration method not stated [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Droid | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| GitHub Copilot | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| OpenCode | unknown | streamable-http [DOC] | OAuth with a client ID metadata document [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c n/a: CIMD needs no registration call; `client_id_metadata_document_supported` advertised [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Pi | unknown | streamable-http [DOC] | OAuth with a client ID metadata document [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c n/a: CIMD needs no registration call; `client_id_metadata_document_supported` advertised [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Vibe | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Visual Studio Code | unknown | streamable-http [DOC] | OAuth with dynamic client registration [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Command Code | unknown | streamable-http [DOC] | OAuth, registration method not stated [DOC] | 1b [OBSERVED 2026-11-13, probe 4f0a5ee]; 1c metadata only (registration endpoint advertised, no POST sent) [OBSERVED 2026-11-13, probe 4f0a5ee]; 1d-3 UNTESTED: no token (operator step on #290) | none: no failing step observed | none observed | UNTESTED: no token |
+| Bionic | unknown | unknown | unknown | UNTESTED: LM Studio's Bionic documentation does not cover MCP at all; only Cloudflare's page claims OAuth support | n/a | n/a | UNTESTED: not probed |
 
 ## Verdict
 
