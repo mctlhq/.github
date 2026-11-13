@@ -1,0 +1,319 @@
+{
+  "schema": 1,
+  "source": "https://developers.cloudflare.com/agent-setup/",
+  "accessed": "2026-11-13",
+  "agents": [
+    {
+      "name": "Claude Code",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/claude-code/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "Codex",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/codex/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/codex/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "Cursor",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/cursor/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "Devin",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/devin/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/devin/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "Droid",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/droid/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/droid/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "GitHub Copilot",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/github-copilot/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "OpenCode",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/opencode/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    },
+    {
+      "name": "Pi",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/pi/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+      },
+      "auth": {
+        "value": "oauth-unspecified",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/pi/"
+      },
+      "untested_reason": null
+    },
+    {
+      "name": "Vibe",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "streamable-http",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+      },
+      "auth": {
+        "value": "oauth-unspecified",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/vibe/"
+      },
+      "untested_reason": null
+    },
+    {
+      "name": "Visual Studio Code",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "streamable-http",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+      },
+      "auth": {
+        "value": "oauth-unspecified",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/visual-studio-code/"
+      },
+      "untested_reason": null
+    },
+    {
+      "name": "Command Code",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "streamable-http",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+      },
+      "auth": {
+        "value": "oauth-unspecified",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/command-code/"
+      },
+      "untested_reason": null
+    },
+    {
+      "name": "Bionic",
+      "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/",
+      "version_documented": "unknown",
+      "transport": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+      },
+      "auth": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+      },
+      "redirect_uri_form": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+      },
+      "surfaces_prompts": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+      },
+      "runs_where": {
+        "value": "unknown",
+        "doc_url": "https://developers.cloudflare.com/agent-setup/bionic/"
+      },
+      "untested_reason": "the vendor page linked from the Cloudflare agent-setup index does not state the OAuth client-registration method; no hand check performed"
+    }
+  ]
+}

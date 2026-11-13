@@ -23,6 +23,7 @@ on:
       - 'docs/spikes/mcp-gateway-g0/**'
       - 'docs/spikes/automation-control-plane/**'
       - 'docs/spikes/finance-assistant/**'
+      - 'docs/spikes/agent-client-compatibility/**'
   push:
     branches:
       - main
@@ -41,6 +42,7 @@ on:
       - 'docs/spikes/mcp-gateway-g0/**'
       - 'docs/spikes/automation-control-plane/**'
       - 'docs/spikes/finance-assistant/**'
+      - 'docs/spikes/agent-client-compatibility/**'
 
 permissions: {}
 
@@ -65,6 +67,9 @@ jobs:
 
       - name: Finance assistant reference model (mctlhq/.github#325)
         run: python3 -I -m unittest discover -s docs/spikes/finance-assistant/tests -v
+
+      - name: Agent-client compatibility probe offline tests (mctlhq/.github#290)
+        run: python3 -I -m unittest discover -s docs/spikes/agent-client-compatibility/tests -v
 
       - name: Set up Go for the MCP gateway G0 reference model
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
