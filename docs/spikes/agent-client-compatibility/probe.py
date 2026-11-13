@@ -122,7 +122,8 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def make_http(timeout=15):
-    opener = urllib.request.build_opener(_NoRedirect)  # no cookie processor: nothing persists
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPHandler, urllib.request.HTTPSHandler, _NoRedirect)  # no cookie processor: nothing persists
 
     def http(method, url, headers=None, body=None):
         data = None if body is None else json.dumps(body).encode()
@@ -264,13 +265,28 @@ def run_profile(profile, endpoint, token, register, http):
         steps["1a"] = _step("fail", _evidence(resp))
         return finish("1a", steps["1a"]["evidence"])
 
+    def unsafe(url):
+        try:
+            check_endpoint(url)
+            return None
+        except ProfileError as e:
+            return _step("fail", {"status": None, "reason": "discovered URL refused: %s" % e})
+
     # 1b discovery
+    bad = unsafe(m.group(1))
+    if bad:
+        steps["1b"] = bad
+        return finish("1b", bad["evidence"])
     prm_resp = http("GET", m.group(1), {"Accept": "application/json"}, None)
     prm = parse_body(prm_resp)
     if prm_resp["status"] != 200 or not isinstance(prm, dict) or not prm.get("authorization_servers"):
         steps["1b"] = _step("fail", _evidence(prm_resp))
         return finish("1b", steps["1b"]["evidence"])
-    issuer = prm["authorization_servers"][0].rstrip("/")
+    issuer = str(prm["authorization_servers"][0]).rstrip("/")
+    bad = unsafe(issuer)
+    if bad:
+        steps["1b"] = bad
+        return finish("1b", bad["evidence"])
     as_resp = http("GET", issuer + "/.well-known/oauth-authorization-server", {"Accept": "application/json"}, None)
     as_meta = parse_body(as_resp)
     if as_resp["status"] != 200 or not isinstance(as_meta, dict) or not _metadata_ok(auth, as_meta):
@@ -290,6 +306,10 @@ def run_profile(profile, endpoint, token, register, http):
             reg_body = {"client_name": "mctl-compat-probe", "redirect_uris": [redirect],
                         "grant_types": ["authorization_code", "refresh_token"],
                         "response_types": ["code"], "token_endpoint_auth_method": "none"}
+            bad = unsafe(str(as_meta["registration_endpoint"]))
+            if bad:
+                steps["1c"] = bad
+                return finish("1c", bad["evidence"])
             r = http("POST", as_meta["registration_endpoint"], {"Content-Type": "application/json"}, reg_body)
             parsed = parse_body(r)
             if r["status"] == 201 and isinstance(parsed, dict) and parsed.get("client_id"):

@@ -58,6 +58,18 @@ class Ladder(unittest.TestCase):
         self.assertEqual(r["failed_step"], "1a")
         self.assertEqual(r["first_failure"]["status"], 403)
 
+    def test_discovered_file_url_refused(self):
+        calls = []
+
+        def stub(method, url, headers=None, body=None):
+            calls.append(url)
+            return {"status": 401, "body": "",
+                    "headers": {"www-authenticate": 'Bearer resource_metadata="file:///etc/passwd"'}}
+        r = probe.run_profile(profile(), "http://127.0.0.1:1/mcp", None, False, stub)
+        self.assertEqual(r["failed_step"], "1b")
+        self.assertEqual(calls, ["http://127.0.0.1:1/mcp"])
+        self.assertIn("refused", r["first_failure"]["reason"])
+
     def test_bad_bearer_fails_1d_and_redacts(self):  # T3
         with FakeServer("bad_bearer") as s:
             r = run(s, TOKEN)
@@ -262,7 +274,7 @@ class Profiles(unittest.TestCase):  # T12
         self.assertEqual(len(rows), 12)
         for l in rows:
             cells = [c.strip() for c in l.split("|")[1:-1]]
-            self.assertIsNone(re.search(r"\b(1d|2|3)\b[^|]*\[OBSERVED\]", cells[4]))
+            self.assertIsNone(re.search(r"\b(1d|2|3)\b[^|;]*\[OBSERVED\b", cells[4]))
 
 
 if __name__ == "__main__":
