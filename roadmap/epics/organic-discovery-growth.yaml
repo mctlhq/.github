@@ -1,0 +1,128 @@
+# PROPOSED / REVIEW ONLY. See mctlhq/.github#349 (owner scope 2026-11-15).
+# Planning graph only: all work items are deliberately unbound to avoid
+# duplicating existing spikes or prematurely creating implementation issues.
+# The owner must separately approve graph apply and every DevLoop implementation.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: organic-discovery-growth
+  owner: mctlhq/.github
+  labels:
+    - roadmap
+spec:
+  title: MCTL Organic Discovery & Growth
+  goal: >-
+    Increase evidence-backed, qualified organic discovery and measurable
+    activation across mctl.ai, alice.mctl.ai, academy.mctl.ai, tg.mctl.ai
+    and docs.mctl.ai by coordinating existing SEO, content, developer
+    distribution and measurement work without duplicate roadmaps,
+    unverified product claims or automatic publishing.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 349
+  phases:
+    - id: evidence
+      title: G0 dated evidence and attribution baseline
+    - id: intent
+      title: G1 per-property intent and content proposals
+    - id: shortlist
+      title: G2 deduplicated bounded candidate shortlist
+    - id: distribution
+      title: G3 ethical distribution and AI-answer measurement
+    - id: measurement
+      title: G4 post-release outcome and keep-or-stop decisions
+  workItems:
+    - id: od-0-baseline
+      title: Verify GSC and Yandex snapshots, coverage, canonical URLs and activation measurement
+      owner: mctlhq/.github
+      phase: evidence
+      required: true
+
+    - id: od-1-alice
+      title: Review Alice high-intent queries and at most two substantive content proposals
+      owner: mctlhq/mctl-alice
+      phase: intent
+      required: true
+      dependsOn:
+        - od-0-baseline
+      externalDependsOn:
+        - repository: mctlhq/mctl-alice
+          number: 174
+
+    - id: od-2-academy
+      title: Measure shipped AI-track course pages and assess sourced curriculum and practice readiness
+      owner: mctlhq/mctl-academy
+      phase: intent
+      required: true
+      dependsOn:
+        - od-0-baseline
+
+    - id: od-3-docs
+      title: Audit actual per-page rendered metadata, indexability and documentation entry intent
+      owner: mctlhq/mctl-docs
+      phase: intent
+      required: true
+      dependsOn:
+        - od-0-baseline
+
+    - id: od-4-telegram
+      title: Verify platforms integration claims and map qualified Telegram MCP search intents
+      owner: mctlhq/mctl-telegram
+      phase: intent
+      required: true
+      dependsOn:
+        - od-0-baseline
+      externalDependsOn:
+        - repository: mctlhq/mctl-telegram
+          number: 784
+
+    - id: od-5-hub
+      title: Reconcile the mctl.ai hub and canonical links to product-specific onboarding
+      owner: mctlhq/mctl-web
+      phase: intent
+      required: true
+      dependsOn:
+        - od-0-baseline
+
+    - id: od-shortlist
+      title: Select evidence-backed isolated candidates and obtain separate owner implementation decisions
+      owner: mctlhq/.github
+      phase: shortlist
+      required: true
+      dependsOn:
+        - od-1-alice
+        - od-2-academy
+        - od-3-docs
+        - od-4-telegram
+        - od-5-hub
+
+    - id: od-6-ai-discovery
+      title: Evaluate AI-answer visibility and external discoverability without duplicate distribution work
+      owner: mctlhq/mctl-web
+      phase: distribution
+      required: false
+      dependsOn:
+        - od-0-baseline
+      externalDependsOn:
+        - repository: mctlhq/mctl-web
+          number: 215
+
+    - id: od-7-evaluation
+      title: Assess approved changes in comparable 28-day GSC windows and record keep-or-stop verdicts
+      owner: mctlhq/.github
+      phase: measurement
+      required: true
+      dependsOn:
+        - od-shortlist
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Every property has a dated comparable 28-day search baseline or explicit CANNOT_OBSERVE with missing-source steps.
+    - Each property has a validated search-intent to canonical URL map and an audited inventory of shipped SEO features.
+    - Candidate work is deduplicated against Alice SEO, Telegram platform packaging, Academy delivered PRs, Docs VitePress metadata and mctl-web discoverability issues.
+    - Product support, operating systems, security, partner and certification claims are checked against dated primary evidence before publication.
+    - Proposed slices identify owners, evidence, risk, exact URLs, tests, separate approval gates and privacy-preserving measurement.
+    - No roadmap graph apply, DevLoop implementer, publishing, directory submission, merge or deployment occurs without separate exact-scope owner authorization.
+    - After authorized releases, like-for-like 28-day results are recorded and reviewed after a reasonable observation window with uncertainty and KEEP, ITERATE, ROLLBACK or INCONCLUSIVE verdicts.
