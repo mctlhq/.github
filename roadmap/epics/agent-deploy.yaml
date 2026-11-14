@@ -18,7 +18,7 @@ spec:
     approval bound to the plan digest, promotion of the exact digest verified
     in preview, a git audit trail separating agent and human, and rollback by
     revision as a tool.
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/.github
