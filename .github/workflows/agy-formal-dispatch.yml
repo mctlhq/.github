@@ -1,7 +1,12 @@
 name: Agy formal review dispatch
+# agy-formal-auto-dispatch.yml finds queued/running formal runs by this title
+# (a queued run has not created its check yet). Keep the two in step.
+run-name: Agy formal review ${{ inputs.repository }}#${{ inputs.pr_number }} @ ${{ inputs.head_sha || 'any' }}
 
 # Bootstrap/recovery entrypoint: trusted default-branch code can review the
-# pilot PR before a caller has been installed in that repository.
+# pilot PR before a caller has been installed in that repository. It is also
+# what agy-formal-auto-dispatch.yml starts (mctlhq/.github#347); a manual run
+# stays the override and may leave head_sha empty.
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +19,11 @@ on:
         description: Open non-draft PR number
         type: number
         required: true
+      head_sha:
+        description: Optional. Review only if this is still the PR head; otherwise start nothing
+        type: string
+        required: false
+        default: ''
 permissions: {}
 jobs:
   formal:
@@ -27,3 +37,4 @@ jobs:
     with:
       repository: ${{ inputs.repository }}
       pr_number: ${{ fromJSON(inputs.pr_number) }}
+      head_sha: ${{ inputs.head_sha }}

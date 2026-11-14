@@ -11,6 +11,11 @@ on:
       pr_number:
         type: number
         default: 0
+      head_sha:
+        # When set, prepare starts nothing unless this is still the PR head:
+        # an automatic dispatch checked its conditions on this head only.
+        type: string
+        default: ''
     secrets:
       AGY_REVIEW_APP_PRIVATE_KEY:
         required: true
@@ -87,6 +92,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha }}
           PUBLISH_MODE: prepare
         run: python3 .github/scripts/agy_review_publish.py
 

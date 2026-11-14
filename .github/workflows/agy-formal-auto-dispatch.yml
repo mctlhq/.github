@@ -1,0 +1,67 @@
+name: Agy formal review auto-dispatch
+
+# Starts the formal Agy review of a target PR only once its verdict is likely
+# to stay current (mctlhq/.github#347): every other required check passing on
+# the head, a Claude verdict for that head, the branch not BEHIND, and no
+# formal run for it already active. Runs pinned to an older head of the same
+# PR are cancelled before they spend a runner slot.
+#
+# Why a schedule. The PRs live in another repository, and GitHub delivers
+# workflow_run and check_suite events only to workflows of the repository the
+# checks ran in, so nothing that happens in mctl-gitops can trigger a workflow
+# here. A caller in the target repository could relay those events, but it
+# would then carry the decision (or a token able to dispatch here) in
+# PR-adjacent code. Polling from this repository's default branch keeps the
+# decision in trusted code only, needs no caller change and no new secret:
+# the target is public, so this repository's own token can read it, and a
+# workflow_dispatch started with GITHUB_TOKEN does start a run.
+#
+# Nothing here creates or completes the agy-formal-review check. Until a
+# dispatched run starts it, the target's required check stays expected
+# (pending), never skipped or green. Any failed, partial or malformed read
+# dispatches nothing; the next round retries.
+#
+# Live only when the repository variable AGY_FORMAL_AUTO_DISPATCH is 'true';
+# otherwise every round is a dry run that only writes its decisions to the
+# job summary. A manual run is a dry run unless dry_run is unticked.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Only report decisions; dispatch and cancel nothing
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: agy-formal-auto-dispatch
+  cancel-in-progress: false
+
+jobs:
+  decide:
+    # The script refuses any other ref too; this only spares the runner.
+    if: github.repository == 'mctlhq/.github' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Dispatch agy-formal-dispatch.yml and cancel its stale runs, in this
+      # repository only. Reads of the public target need no grant.
+      actions: write
+    steps:
+      - name: Checkout trusted decision code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Decide and dispatch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AUTO_DISPATCH_REPOSITORIES: mctlhq/mctl-gitops
+          LIVE: ${{ vars.AGY_FORMAL_AUTO_DISPATCH == 'true' && (github.event_name == 'schedule' || inputs.dry_run == false) }}
+        run: python3 -I .github/scripts/agy_formal_auto_dispatch.py

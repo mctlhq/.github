@@ -111,6 +111,49 @@ runs/attempts can supersede older checks; old publishers cannot overwrite them.
 A required-check failure after quota exhaustion requires a real rerun, never a
 fabricated result or a manual success status.
 
+## Automatic dispatch (mctlhq/.github#347)
+
+`agy-formal-auto-dispatch.yml` starts `agy-formal-dispatch.yml` for a target PR
+only when the verdict is likely to stay current. Its decision lives in
+`.github/scripts/agy_formal_auto_dispatch.py` on this repository's default
+branch and reads only API metadata, never PR-head files or PR text. For the
+current head of an open, non-draft, same-repository PR it requires:
+
+1. every other required check of the base branch's rules passing (GitHub's own
+   rule: `success`, `neutral` or `skipped`), each from its bound integration;
+2. a `claude[bot]` `APPROVED`/`CHANGES_REQUESTED` review with that `commit_id`
+   whose body records `Reviewed head=<head>`; a verdict from an older pinned
+   caller without that line counts only if it was submitted no earlier than the
+   head commit was created, which an approval GitHub moved onto an
+   update-branch head never is;
+3. `behind_by == 0` against the base branch tip;
+4. no `agy-formal-review` check on the head, no active dispatch run for the PR,
+   and fewer than two formal runs active (two runners serve every agy review).
+
+Active dispatch runs are found by their `run-name`, which records repository,
+PR and head (`any` for a manual run without `head_sha`). A run pinned to an
+older head of the PR is cancelled unless its publish job has started. An active
+run whose title does not parse, or a manual run for the PR, blocks dispatch and
+is never cancelled. The dispatched run carries `head_sha`; prepare starts
+nothing if the PR has moved on, so the required check stays pending for the new
+head instead of reviewing a head nobody checked.
+
+Any failed, partial (later page, short of `total_count`) or malformed read
+dispatches nothing and the next round retries. The poller never creates or
+completes `agy-formal-review`.
+
+Trigger: a five-minute schedule. `workflow_run` and `check_suite` reach only
+workflows of the repository the checks ran in, so mctl-gitops events cannot
+start a workflow here, and a relaying caller there would move the decision, or
+a token able to dispatch here, next to PR-controlled code.
+
+Activation: the poller runs dry (decisions in the job summary only) until the
+repository variable `AGY_FORMAL_AUTO_DISPATCH` is `true` in `mctlhq/.github`.
+Manual `agy-formal-dispatch.yml` stays the override. Do not also activate a
+`pull_request_target` caller for the same repository (mctl-gitops#2605 as
+drafted): it would start a formal run on every push, which is the waste this
+removes, and two dispatch sources refuse each other's checks.
+
 ## Acceptance and evidence
 
 Local unit tests exercise the actual publisher and actual inline result exporter
