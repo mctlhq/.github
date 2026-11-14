@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "599c4c930fac3175ce4411d6beb014dcdf648c25"
+    "revision": "8e12ed0663a877e0430161228c521820aa7da036"
   },
   "files": {
     "health.json": {
-      "sha256": "7f0378663fc399bd94011f3fa36f71764d67b32bc8c8ea856c02ec9f7c69f059"
+      "sha256": "7a19dfb2a51d7737716ef1344571ec6df1b75a5b34b21daa95204baef2df950d"
     },
     "ready-set.json": {
-      "sha256": "548b53e588789e756329909dd71234d6bf7954dbe3908c99daa5362ac8193ee3"
+      "sha256": "c9877c76f6e5e2c9e6df5124a52623d00191aa995ba2d6f41b25e4234b1b6456"
     },
     "snapshot.json": {
-      "sha256": "588ffec049ade48fe3f2dd1fe3d6f461749e0fcd43a345d1de9a37e580c924cd"
+      "sha256": "428f8675985f8d51b5ca301e398c096c9c768df554f6b6275decc7c1290f2475"
     }
   },
   "kind": "RoadmapPublication",
@@ -29,12 +29,12 @@
     {
       "epic": {
         "goal": "Give an AI session a governed path from a repository to a running system on mctl in which the agent never holds production power: a server-held approval bound to the plan digest, promotion of the exact digest verified in preview, a git audit trail separating agent and human, and rollback by revision as a tool.",
-        "lifecycle": "proposed",
+        "lifecycle": "active",
         "name": "agent-deploy",
         "title": "Agent-native deploy from repository to running system"
       },
       "path": "roadmap/epics/agent-deploy.yaml",
-      "sha256": "0ebb9ef1686185496cd5b7e738f2943adeeb9237a8e18c73a66546c1186d19b7"
+      "sha256": "67b5b79be52f13576680fb636396beef6f081875f2aeb9fde2594b6283254a44"
     },
     {
       "epic": {
@@ -309,12 +309,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-14T09:50:42Z",
+    "capturedAt": "2026-11-14T11:54:54Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "599c4c930fac3175ce4411d6beb014dcdf648c25"
+    "revision": "8e12ed0663a877e0430161228c521820aa7da036"
   }
 }
