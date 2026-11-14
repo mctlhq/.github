@@ -219,6 +219,22 @@ class PublisherTests(unittest.TestCase):
             with self.assertRaises(P.Refused):
                 P.Publisher(api, api, ENV).prepare()
 
+    def test_expected_head_binds_the_automatic_dispatch(self):
+        # mctlhq/.github#347: the auto-dispatcher checked its conditions on one
+        # head; a run whose PR has moved on starts nothing, creates no check.
+        api = Fake()
+        self.assertIsNone(P.Publisher(api, api, dict(ENV, EXPECTED_HEAD_SHA='c' * 40)).prepare())
+        self.assertEqual(api.checks, [])
+        self.assertFalse(any(method in ('POST', 'PATCH') for method, _, _ in api.calls))
+        api = Fake()
+        self.assertEqual(P.Publisher(api, api, dict(ENV, EXPECTED_HEAD_SHA=HEAD)).prepare()['head'], HEAD)
+        self.assertEqual(len(api.checks), 1)
+        for bad in ('c' * 39, 'C' * 40, HEAD + '\n'):
+            api = Fake()
+            with self.assertRaises(P.Refused):
+                P.Publisher(api, api, dict(ENV, EXPECTED_HEAD_SHA=bad)).prepare()
+            self.assertEqual(api.checks, [])
+
     def test_closed_or_draft_is_not_reviewed(self):
         for mutate in (lambda a: a.pr.update(draft=True), lambda a: a.pr.update(state='closed')):
             api = Fake(); mutate(api)
@@ -432,6 +448,8 @@ class MutationTests(unittest.TestCase):
             ("raise Refused('invalid verdict')", 'pass', 'test_no_result_malformed_or_wrong_scope_never_approves'),
             ("raise Refused('formal approval needs stale-review dismissal, strict checks and the App-bound agy-formal-review check')", 'pass', 'test_every_protection_is_required'),
             ("raise Refused('run event or attempt mismatch')", 'pass', 'test_changed_run_attempt_never_publishes'),
+            ("        if expected and pr['head']['sha'] != expected:\n", "        if False:\n", 'test_expected_head_binds_the_automatic_dispatch'),
+            ("raise Refused('invalid expected head')", 'pass', 'test_expected_head_binds_the_automatic_dispatch'),
         ]
         original = P.Publisher
         for old, new, test in mutations:

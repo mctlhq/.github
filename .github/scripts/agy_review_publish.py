@@ -164,8 +164,15 @@ class Publisher:
         return checks[0]
 
     def prepare(self):
+        expected = self.env.get('EXPECTED_HEAD_SHA', '')
+        if expected and not SHA.fullmatch(expected):
+            raise Refused('invalid expected head')
         pr, branch = self.context()
         if pr['state'] != 'open' or pr['draft']:
+            return None
+        if expected and pr['head']['sha'] != expected:
+            # The dispatcher verified its conditions on another head; start
+            # nothing, so the required check stays pending for the new head.
             return None
         self.policy(branch)
         old = self.checks(pr['head']['sha'])
