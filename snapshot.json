@@ -1457,6 +1457,10 @@
         {
           "number": 2624,
           "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 1031,
+          "repository": "mctlhq/mctl-api"
         }
       ],
       "updatedAt": "2026-11-04T01:48:31Z"
@@ -1570,7 +1574,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-07T17:29:08Z"
+      "updatedAt": "2026-11-14T12:56:51Z"
     },
     {
       "blockedBy": [],
@@ -4038,7 +4042,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-14T09:47:01Z"
+      "updatedAt": "2026-11-14T12:18:25Z"
     },
     {
       "blockedBy": [
@@ -6547,7 +6551,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-14T11:54:54Z",
+    "capturedAt": "2026-11-14T14:16:30Z",
     "mode": "live-capture"
   }
 }
