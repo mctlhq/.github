@@ -36,13 +36,15 @@ spec:
       title: Preview before onboarding, promote and rollback by revision
   workItems:
     # Until this lands the slice runs only on tenant-owned repositories.
-    # mctl-gitops#2159 covers mctl-agents pods only; the tenant egress
-    # default has no issue yet.
+    # mctl-gitops#2159 covers mctl-agents pods only. Owner decision
+    # 2026-11-14 (docs/plans/q4-2026-plan.md): egress off by default with an
+    # allowlist for agent-deploy tenants only; other new tenants stay open.
     - id: preconditions
-      title: Build sandbox with credentials split out; new tenants default to allowInternetEgress false
-      owner: mctl-gitops
       phase: preconditions
       required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2624
       externalDependsOn:
         - repository: mctlhq/mctl-gitops
           number: 1029
@@ -77,9 +79,10 @@ spec:
         - analyze
 
     - id: grants
-      title: Generalize action_approvals grants to deploy operations and remove confirm="yes"
-      owner: mctl-api
       phase: authorize
+      issue:
+        repository: mctlhq/mctl-api
+        number: 1026
       required: true
       dependsOn:
         - plan
