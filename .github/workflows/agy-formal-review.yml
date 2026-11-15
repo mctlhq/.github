@@ -11,6 +11,18 @@ on:
       pr_number:
         type: number
         default: 0
+      # Merge queue mode (mctlhq/.github#351): review and mark the commit the
+      # queue built for pr_number. All three are untrusted; the publisher
+      # re-derives them from the live queue ref before posting anything.
+      queue_head_ref:
+        type: string
+        default: ''
+      queue_head_sha:
+        type: string
+        default: ''
+      queue_base_sha:
+        type: string
+        default: ''
     secrets:
       AGY_REVIEW_APP_PRIVATE_KEY:
         required: true
@@ -87,6 +99,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
           PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+          QUEUE_HEAD_REF: ${{ inputs.queue_head_ref }}
+          QUEUE_HEAD_SHA: ${{ inputs.queue_head_sha }}
+          QUEUE_BASE_SHA: ${{ inputs.queue_base_sha }}
           PUBLISH_MODE: prepare
         run: python3 .github/scripts/agy_review_publish.py
 
@@ -173,6 +188,9 @@ jobs:
           TARGET_REPOSITORY: ${{ inputs.repository || github.repository }}
           PR_NUMBER: ${{ needs.prepare.outputs.number }}
           REVIEWED_HEAD: ${{ needs.prepare.outputs.head }}
+          QUEUE_HEAD_REF: ${{ inputs.queue_head_ref }}
+          QUEUE_HEAD_SHA: ${{ inputs.queue_head_sha }}
+          QUEUE_BASE_SHA: ${{ inputs.queue_base_sha }}
           REVIEW_RECORD: ${{ needs.review.result == 'success' && needs.review.outputs.review_record || '' }}
           PUBLISH_MODE: publish
         run: python3 .github/scripts/agy_review_publish.py

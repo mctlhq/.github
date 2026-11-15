@@ -13,6 +13,8 @@ CHECK = 'agy-formal-review'
 VERDICTS = {'<!-- VERDICT: PASS -->': 'PASS', '<!-- VERDICT: FAIL:P1 -->': 'FAIL:P1',
             '<!-- VERDICT: FAIL:P2 -->': 'FAIL:P2', '<!-- VERDICT: FAIL:P1,P2 -->': 'FAIL:P1,P2'}
 SHA = re.compile('[0-9a-f]{40}')
+# A merge queue entry for one pull request (mctlhq/.github#351).
+QUEUE_REF = re.compile(r'refs/heads/gh-readonly-queue/([A-Za-z0-9_.-]+)/pr-([1-9][0-9]*)-([0-9a-f]{40})')
 
 
 class Refused(RuntimeError):
@@ -101,6 +103,22 @@ class Publisher:
         self.root = 'repos/' + self.repo
         self.pr_path = self.root + f'/pulls/{self.number}'
         self.external_id = f'agy/v1:{self.source_repo}:{self.number}:{self.run}:{self.attempt}'
+        # Merge queue mode: review and mark the commit the queue built, not
+        # the PR head. Every field is untrusted dispatch input and is
+        # re-derived from live refs before anything is posted (queue_state).
+        self.queue = None
+        queue_ref = env.get('QUEUE_HEAD_REF', '')
+        if queue_ref:
+            match = QUEUE_REF.fullmatch(queue_ref)
+            if not match:
+                raise Refused('invalid merge queue ref')
+            head, base = env.get('QUEUE_HEAD_SHA', ''), env.get('QUEUE_BASE_SHA', '')
+            if not (SHA.fullmatch(head) and SHA.fullmatch(base)):
+                raise Refused('invalid merge queue commit')
+            if int(match[2]) != self.number:
+                raise Refused('merge queue ref names another PR')
+            self.queue = {'ref': queue_ref, 'branch': match[1], 'pr_head': match[3],
+                          'head': head, 'base': base}
 
     def context(self):
         repo = self.api('GET', self.root)
@@ -133,8 +151,15 @@ class Publisher:
         stale = False
         strict = False
         bound = False
+        queued = False
+        methods = set()
         for rule in rules:
             params = rule.get('parameters', {})
+            # A merge queue replaces strict: it tests the exact commit main
+            # gets, so a PR-head verdict cannot reach main on a stale base.
+            queued |= rule.get('type') == 'merge_queue'
+            if rule.get('type') == 'merge_queue':
+                methods.add(params.get('merge_method'))
             if rule.get('type') == 'pull_request':
                 stale |= params.get('dismiss_stale_reviews_on_push') is True
             if rule.get('type') == 'required_status_checks':
@@ -148,8 +173,33 @@ class Publisher:
             checks = classic.get('required_status_checks') or {}
             strict |= checks.get('strict') is True
             bound |= any(x.get('context') == CHECK and x.get('app_id') == self.app for x in checks.get('checks', []))
-        if not (stale and strict and bound):
-            raise Refused('formal approval needs stale-review dismissal, strict checks and the App-bound agy-formal-review check')
+        if not (stale and (strict or queued) and bound):
+            raise Refused('formal approval needs stale-review dismissal, strict checks or a merge queue, and the App-bound agy-formal-review check')
+        if self.queue and not queued:
+            raise Refused('merge queue review needs a merge queue rule on the branch')
+        # queue_state expects the queued commit to be a merge of the base and
+        # the PR head, which only the MERGE method builds. Say so plainly
+        # rather than refusing every entry as "not the base plus this PR".
+        if self.queue and queued and methods != {'MERGE'}:
+            raise Refused('merge queue review needs merge_method MERGE')
+
+    def queue_state(self, pr, branch):
+        q = self.queue
+        if q['branch'] != branch:
+            raise Refused('merge queue ref targets another branch')
+        if pr['state'] != 'open' or pr['draft'] or pr['head']['sha'] != q['pr_head']:
+            raise Refused('queued PR is not open at the queued head')
+        ref = self.api('GET', self.root + '/git/ref/' + q['ref'][len('refs/'):], absent=True)
+        if ref is None:
+            raise Refused('merge queue entry is gone')
+        if (not isinstance(ref, dict) or ref.get('ref') != q['ref']
+                or not isinstance(ref.get('object'), dict) or ref['object'].get('sha') != q['head']):
+            raise Refused('merge queue ref does not point at the reviewed commit')
+        commit = self.api('GET', self.root + f'/commits/{q["head"]}')
+        parents = commit.get('parents') if isinstance(commit, dict) else None
+        if (not isinstance(parents, list) or not all(isinstance(x, dict) for x in parents)
+                or [x.get('sha') for x in parents] != [q['base'], q['pr_head']]):
+            raise Refused('merge queue commit is not the base plus this PR')
 
     def checks(self, head):
         found = pages(self.api, self.root + f'/commits/{head}/check-runs', field='check_runs')
@@ -163,19 +213,27 @@ class Publisher:
             raise Refused('check belongs to another run; do not overwrite it')
         return checks[0]
 
+    def target(self, pr, branch):
+        # The (head, base) this run reviews and marks.
+        if self.queue:
+            self.queue_state(pr, branch)
+            return self.queue['head'], self.queue['base']
+        return pr['head']['sha'], pr['base']['sha']
+
     def prepare(self):
         pr, branch = self.context()
-        if pr['state'] != 'open' or pr['draft']:
+        if not self.queue and (pr['state'] != 'open' or pr['draft']):
             return None
         self.policy(branch)
-        old = self.checks(pr['head']['sha'])
+        head, base = self.target(pr, branch)
+        old = self.checks(head)
         if len(old) > 1:
             raise Refused('ambiguous reviewer checks')
         if old:
             match = re.fullmatch(r'agy/v1:' + re.escape(self.source_repo) + r':([0-9]+):([0-9]+):([0-9]+)', old[0].get('external_id', ''))
             if not match or int(match[1]) != self.number or (int(match[2]), int(match[3])) > (self.run, self.attempt):
                 raise Refused('unknown or newer formal review owns this head')
-        data = {'name': CHECK, 'head_sha': pr['head']['sha'], 'status': 'in_progress',
+        data = {'name': CHECK, 'head_sha': head, 'status': 'in_progress',
                 'external_id': self.external_id,
                 'details_url': f'https://github.com/{self.source_repo}/actions/runs/{self.run}',
                 'output': {'title': 'Agy review running', 'summary': 'No approval until a complete current-head verdict is published.'}}
@@ -184,7 +242,7 @@ class Publisher:
             self.api('PATCH', self.root + f'/check-runs/{integer(old[0]["id"])}', data)
         else:
             self.api('POST', self.root + '/check-runs', data)
-        return {'number': self.number, 'head': pr['head']['sha'], 'base': pr['base']['sha']}
+        return {'number': self.number, 'head': head, 'base': base}
 
     def record(self, raw):
         if len(raw.encode()) > 300_000:
@@ -225,9 +283,11 @@ class Publisher:
         self.policy(branch)
         if pr['state'] != 'open' or pr['draft']:
             raise Refused('PR no longer eligible')
-        if (pr['head']['sha'], pr['base']['sha']) != (result['head_sha'], result['base_sha']):
+        if self.target(pr, branch) != (result['head_sha'], result['base_sha']):
             raise Refused('head/base moved; reviewed result is stale')
         check = self.owned_check(result['head_sha'])
+        if self.queue:
+            return self.publish_queue(result, check)
         reviews = pages(self.api, self.pr_path + '/reviews')
         event = 'APPROVE' if result['verdict'] == 'PASS' else 'REQUEST_CHANGES'
         marker = f'<!-- agy-formal:{self.run}:{self.attempt}:{result["head_sha"]}:{result["verdict"]} -->'
@@ -260,6 +320,21 @@ class Publisher:
         self.policy(branch)
         self.finish_check(check, 'success' if event == 'APPROVE' else 'failure',
                           'Complete review for ' + result['head_sha'] + ': ' + result['verdict'])
+        return event
+
+    def publish_queue(self, result, check):
+        # The queue commit belongs to no PR, so no PR review is posted: the
+        # check run on that exact commit is the whole verdict.
+        event = 'APPROVE' if result['verdict'] == 'PASS' else 'REQUEST_CHANGES'
+        # Re-read the queue entry: if it moved or left the queue while the
+        # check was being prepared, queue_state refuses and nothing is green.
+        current, branch = self.context()
+        self.queue_state(current, branch)
+        self.owned_check(result['head_sha'])
+        self.policy(branch)
+        self.finish_check(check, 'success' if event == 'APPROVE' else 'failure',
+                          'Complete review of merge queue commit ' + result['head_sha'] + ' (PR #'
+                          + str(self.number) + '): ' + result['verdict'])
         return event
 
     def fail(self, head):

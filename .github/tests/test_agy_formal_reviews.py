@@ -51,6 +51,9 @@ class Fake:
         self.error = None
         self.move_on_post = False
         self.bad_review = False
+        self.queue_refs = {}
+        self.commits = {}
+        self.move_on_queue_read = None
 
     def __call__(self, method, path, payload=None, absent=False):
         self.calls.append((method, path, copy.deepcopy(payload)))
@@ -71,6 +74,17 @@ class Fake:
                 value = None
             elif bare.endswith('/check-runs'):
                 value = {'check_runs': self.checks}
+            elif bare.startswith(root + '/git/ref/'):
+                ref = 'refs/' + bare[len(root + '/git/ref/'):]
+                if ref not in self.queue_refs:
+                    if absent:
+                        return None
+                    raise P.Refused('synthetic 404')
+                value = {'ref': ref, 'object': {'sha': self.queue_refs[ref]}}
+                if self.move_on_queue_read:
+                    self.move_on_queue_read(self)
+            elif bare.startswith(root + '/commits/'):
+                value = {'parents': [{'sha': x} for x in self.commits[bare.rsplit('/', 1)[1]]]}
             elif bare.endswith('/reviews'):
                 value = self.reviews
             else:
@@ -290,6 +304,150 @@ class PublisherTests(unittest.TestCase):
                 self.assertEqual(api.reviews, [])
 
 
+QHEAD = 'd' * 40
+QREF = 'refs/heads/gh-readonly-queue/main/pr-7-' + HEAD
+QENV = dict(ENV, QUEUE_HEAD_REF=QREF, QUEUE_HEAD_SHA=QHEAD, QUEUE_BASE_SHA=BASE)
+
+
+def queue_fake():
+    api = Fake()
+    api.rules[1]['parameters']['strict_required_status_checks_policy'] = False
+    api.rules.append({'type': 'merge_queue', 'parameters': {'merge_method': 'MERGE'}})
+    api.queue_refs[QREF] = QHEAD
+    api.commits[QHEAD] = [BASE, HEAD]
+    return api
+
+
+class QueueTests(unittest.TestCase):
+    """Merge queue mode (mctlhq/.github#351): mark the queued commit only."""
+
+    def setup_pub(self, api=None, env=None):
+        api = api or queue_fake()
+        pub = P.Publisher(api, api, env or QENV)
+        prepared = pub.prepare()
+        return api, pub, prepared
+
+    def raw(self, review_text=PASS, **changes):
+        record = NS['make_record'](review_text, dict(ENV, HEAD_SHA=QHEAD, BASE_SHA=BASE))
+        record.update(changes)
+        return json.dumps(record)
+
+    def test_queue_pass_marks_only_the_queued_commit_and_posts_no_review(self):
+        api, pub, prepared = self.setup_pub()
+        self.assertEqual(prepared, {'number': 7, 'head': QHEAD, 'base': BASE})
+        self.assertEqual(api.checks[0]['head_sha'], QHEAD)
+        self.assertEqual(pub.publish(self.raw()), 'APPROVE')
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+        self.assertEqual(api.reviews, [])
+        self.assertFalse(any(m == 'POST' and p.endswith('/reviews') for m, p, _ in api.calls))
+
+    def test_queue_findings_fail_the_check(self):
+        api, pub, _ = self.setup_pub()
+        self.assertEqual(pub.publish(self.raw('Bug.\n<!-- VERDICT: FAIL:P2 -->')), 'REQUEST_CHANGES')
+        self.assertEqual(api.checks[0]['conclusion'], 'failure')
+        self.assertEqual(api.reviews, [])
+
+    def test_queue_result_for_the_pr_head_is_stale(self):
+        api, pub, _ = self.setup_pub()
+        with self.assertRaises(P.Refused):
+            pub.publish(self.raw(head_sha=HEAD))
+        self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_queue_needs_a_merge_queue_rule(self):
+        api = queue_fake(); api.rules.pop()
+        api.rules[1]['parameters']['strict_required_status_checks_policy'] = True
+        with self.assertRaises(P.Refused):
+            P.Publisher(api, api, QENV).prepare()
+        self.assertEqual(api.checks, [])
+
+    def test_queue_needs_the_merge_method(self):
+        for method in ('SQUASH', 'REBASE', None):
+            with self.subTest(method=method):
+                api = queue_fake(); api.rules[-1]['parameters']['merge_method'] = method
+                with self.assertRaises(P.Refused) as raised:
+                    P.Publisher(api, api, QENV).prepare()
+                self.assertIn('MERGE', str(raised.exception))
+                self.assertEqual(api.checks, [])
+
+    def test_queue_entry_must_still_exist_and_point_at_the_commit(self):
+        for mutate in (lambda a: a.queue_refs.clear(), lambda a: a.queue_refs.update({QREF: 'e' * 40})):
+            with self.subTest():
+                api = queue_fake(); mutate(api)
+                with self.assertRaises(P.Refused):
+                    P.Publisher(api, api, QENV).prepare()
+                self.assertEqual(api.checks, [])
+                api, pub, _ = self.setup_pub()
+                mutate(api)
+                with self.assertRaises(P.Refused):
+                    pub.publish(self.raw())
+                self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_queue_commit_must_be_base_plus_the_queued_pr(self):
+        for parents in ([BASE], [BASE, 'e' * 40], ['e' * 40, HEAD], [BASE, HEAD, 'e' * 40], [HEAD, BASE]):
+            with self.subTest(parents=parents):
+                api = queue_fake(); api.commits[QHEAD] = parents
+                with self.assertRaises(P.Refused):
+                    P.Publisher(api, api, QENV).prepare()
+                self.assertEqual(api.checks, [])
+
+    def test_queued_pr_must_be_open_at_the_queued_head(self):
+        for mutate in (lambda a: a.pr['head'].update(sha='e' * 40), lambda a: a.pr.update(state='closed'),
+                       lambda a: a.pr.update(draft=True)):
+            with self.subTest():
+                api = queue_fake(); mutate(api)
+                with self.assertRaises(P.Refused):
+                    P.Publisher(api, api, QENV).prepare()
+                self.assertEqual(api.checks, [])
+
+    def test_queue_move_during_publication_never_marks_green(self):
+        api, pub, _ = self.setup_pub()
+        reads = []
+
+        def move(fake):
+            reads.append(1)
+            if len(reads) == 1:  # after the publish-time check, before the re-check
+                fake.queue_refs[QREF] = 'e' * 40
+        api.move_on_queue_read = move
+        with self.assertRaises(P.Refused):
+            pub.publish(self.raw())
+        self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_queue_unavailable_reads_refuse(self):
+        for marker in ('/git/ref/', '/commits/' + QHEAD):
+            with self.subTest(marker=marker):
+                api, pub, _ = self.setup_pub()
+                api.error = lambda method, path, m=marker: method == 'GET' and m in path and not path.endswith('/check-runs') and 'check-runs' not in path
+                with self.assertRaises(P.Refused):
+                    pub.publish(self.raw())
+                self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_queue_inputs_are_validated(self):
+        for changes in ({'QUEUE_HEAD_REF': 'refs/heads/main'},
+                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/main/pr-8-' + HEAD},
+                        {'QUEUE_HEAD_REF': 'refs/heads/someone/pr-7-' + HEAD},
+                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/main/pr-7-' + HEAD + '/x'},
+                        {'QUEUE_HEAD_SHA': 'x'}, {'QUEUE_BASE_SHA': ''},
+                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/other/pr-7-' + HEAD}):
+            with self.subTest(changes=changes):
+                api = queue_fake()
+                # Every forged ref exists and points at the queued commit, so
+                # only the input validation itself can refuse it.
+                for ref in ('refs/heads/gh-readonly-queue/other/pr-7-' + HEAD,
+                            'refs/heads/gh-readonly-queue/main/pr-8-' + HEAD):
+                    api.queue_refs[ref] = QHEAD
+                with self.assertRaises(P.Refused):
+                    P.Publisher(api, api, dict(QENV, **changes)).prepare()
+                self.assertEqual(api.checks, [])
+
+    def test_pr_head_review_accepts_a_merge_queue_instead_of_strict(self):
+        api = queue_fake()
+        pub = P.Publisher(api, api, ENV)
+        self.assertEqual(pub.prepare()['head'], HEAD)
+        api.rules.pop()
+        with self.assertRaises(P.Refused):
+            P.Publisher(api, api, ENV).prepare()
+
+
 class ExportTests(unittest.TestCase):
     def test_dispatch_passes_only_the_named_publisher_secret(self):
         dispatch = yaml.safe_load((ROOT / '.github/workflows/agy-formal-dispatch.yml').read_text())
@@ -430,11 +588,18 @@ class MutationTests(unittest.TestCase):
             (r"r'\bP[12]\b'", r"r'\[P[12]\]|\bP[12]\s*[:—-]'", 'test_no_result_malformed_or_wrong_scope_never_approves'),
             ("raise Refused('head/base moved; reviewed result is stale')", 'pass', 'test_move_head_or_base_before_publication_refuses'),
             ("raise Refused('invalid verdict')", 'pass', 'test_no_result_malformed_or_wrong_scope_never_approves'),
-            ("raise Refused('formal approval needs stale-review dismissal, strict checks and the App-bound agy-formal-review check')", 'pass', 'test_every_protection_is_required'),
+            ("raise Refused('formal approval needs stale-review dismissal, strict checks or a merge queue, and the App-bound agy-formal-review check')", 'pass', 'test_every_protection_is_required'),
+            ("raise Refused('merge queue review needs a merge queue rule on the branch')", 'pass', 'test_queue_needs_a_merge_queue_rule'),
+            ("raise Refused('merge queue ref does not point at the reviewed commit')", 'pass', 'test_queue_entry_must_still_exist_and_point_at_the_commit'),
+            ("raise Refused('merge queue commit is not the base plus this PR')", 'pass', 'test_queue_commit_must_be_base_plus_the_queued_pr'),
+            ("raise Refused('queued PR is not open at the queued head')", 'pass', 'test_queued_pr_must_be_open_at_the_queued_head'),
+            ("raise Refused('merge queue ref names another PR')", 'pass', 'test_queue_inputs_are_validated'),
+            ("raise Refused('merge queue review needs merge_method MERGE')", 'pass', 'test_queue_needs_the_merge_method'),
             ("raise Refused('run event or attempt mismatch')", 'pass', 'test_changed_run_attempt_never_publishes'),
         ]
         original = P.Publisher
         for old, new, test in mutations:
+            suite = PublisherTests if hasattr(PublisherTests, test) else QueueTests
             with self.subTest(test=test):
                 self.assertEqual(source.count(old), 1)
                 scope = {'__name__': 'mutant'}
@@ -443,12 +608,12 @@ class MutationTests(unittest.TestCase):
                 try:
                     P.Publisher = scope['Publisher']
                     red = unittest.TestResult()
-                    PublisherTests(test).run(red)
+                    suite(test).run(red)
                     self.assertFalse(red.wasSuccessful(), 'the mutation survived the real contract test')
                 finally:
                     P.Publisher = original
                 green = unittest.TestResult()
-                PublisherTests(test).run(green)
+                suite(test).run(green)
                 self.assertTrue(green.wasSuccessful(), str(green.errors + green.failures))
 
 
