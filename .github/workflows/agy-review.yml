@@ -264,6 +264,18 @@ jobs:
           can see what the change did and did not cover, and normal severity
           applies.
 
+          The same limit applies to facts about software outside this diff:
+          the inputs a third-party GitHub Action accepts, the fields and value
+          formats of a GitHub event payload or API response, the flags of a
+          CLI, a library's signature. You cannot open those sources here, and
+          they change between versions, so what you remember may be stale. A
+          finding whose failure rests only on such a recalled fact is P3 at
+          most, worded as "unverified: <the assumption>", never P1 or P2.
+          Normal severity applies only when the diff itself shows the
+          contradiction, for example a pinned action's own action.yml changed
+          in this diff, or two changed lines that disagree about the same
+          field.
+
           ${EXTRA_CONVENTIONS:+Repository guidance:
           $EXTRA_CONVENTIONS}
 
