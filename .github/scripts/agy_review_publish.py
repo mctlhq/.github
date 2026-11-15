@@ -117,8 +117,14 @@ class Publisher:
                 raise Refused('invalid merge queue commit')
             if int(match[2]) != self.number:
                 raise Refused('merge queue ref names another PR')
-            self.queue = {'ref': queue_ref, 'branch': match[1], 'pr_head': match[3],
-                          'head': head, 'base': base}
+            # The SHA in gh-readonly-queue/<branch>/pr-<N>-<sha> is the commit
+            # the entry was built on (the merge_group base_sha), not the PR
+            # head: gitops#2665's entry was pr-2665-<base> with parents
+            # [<base>, <PR head>]. The PR head is taken from the live PR and
+            # bound through the queued commit's parents in queue_state.
+            if match[3] != base:
+                raise Refused('merge queue ref names another base')
+            self.queue = {'ref': queue_ref, 'branch': match[1], 'head': head, 'base': base}
 
     def context(self):
         repo = self.api('GET', self.root)
@@ -187,7 +193,7 @@ class Publisher:
         q = self.queue
         if q['branch'] != branch:
             raise Refused('merge queue ref targets another branch')
-        if pr['state'] != 'open' or pr['draft'] or pr['head']['sha'] != q['pr_head']:
+        if pr['state'] != 'open' or pr['draft']:
             raise Refused('queued PR is not open at the queued head')
         ref = self.api('GET', self.root + '/git/ref/' + q['ref'][len('refs/'):], absent=True)
         if ref is None:
@@ -198,7 +204,7 @@ class Publisher:
         commit = self.api('GET', self.root + f'/commits/{q["head"]}')
         parents = commit.get('parents') if isinstance(commit, dict) else None
         if (not isinstance(parents, list) or not all(isinstance(x, dict) for x in parents)
-                or [x.get('sha') for x in parents] != [q['base'], q['pr_head']]):
+                or [x.get('sha') for x in parents] != [q['base'], pr['head']['sha']]):
             raise Refused('merge queue commit is not the base plus this PR')
 
     def checks(self, head):
