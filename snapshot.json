@@ -1290,7 +1290,32 @@
         "repository": "mctlhq/.github"
       },
       "state": "open",
-      "subIssues": [],
+      "subIssues": [
+        {
+          "number": 1061,
+          "repository": "mctlhq/mctl-api"
+        },
+        {
+          "number": 2679,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 355,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 356,
+          "repository": "mctlhq/.github"
+        },
+        {
+          "number": 2680,
+          "repository": "mctlhq/mctl-gitops"
+        },
+        {
+          "number": 357,
+          "repository": "mctlhq/.github"
+        }
+      ],
       "updatedAt": "2026-11-04T01:48:27Z"
     },
     {
@@ -6575,7 +6600,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-15T14:50:16Z",
+    "capturedAt": "2026-11-15T20:25:51Z",
     "mode": "live-capture"
   }
 }
