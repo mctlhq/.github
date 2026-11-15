@@ -275,6 +275,12 @@ jobs:
           contradiction, for example a pinned action's own action.yml changed
           in this diff, or two changed lines that disagree about the same
           field.
+          This cap covers the shape of external interfaces (input names,
+          field formats, flags), not trust: whether a value is attacker
+          controlled (a pull request title, branch name or body), or whether a
+          trigger runs with secrets or write access (pull_request_target,
+          workflow_run). Security findings that rest on those keep normal
+          severity.
 
           ${EXTRA_CONVENTIONS:+Repository guidance:
           $EXTRA_CONVENTIONS}
