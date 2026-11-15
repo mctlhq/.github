@@ -1296,7 +1296,7 @@
           "repository": "mctlhq/projects-mcp"
         }
       ],
-      "updatedAt": "2026-11-15T20:44:09Z"
+      "updatedAt": "2026-11-15T21:56:43Z"
     },
     {
       "blockedBy": [],
@@ -3069,7 +3069,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-15T21:38:55Z"
+      "updatedAt": "2026-11-15T21:52:52Z"
     },
     {
       "blockedBy": [],
@@ -4239,7 +4239,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-15T20:40:02Z"
+      "updatedAt": "2026-11-15T21:56:42Z"
     },
     {
       "blockedBy": [
@@ -4317,7 +4317,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-15T21:38:53Z"
+      "updatedAt": "2026-11-15T21:52:50Z"
     },
     {
       "blockedBy": [],
@@ -6828,7 +6828,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-15T21:42:51Z"
+      "updatedAt": "2026-11-15T21:52:47Z"
     },
     {
       "blockedBy": [
@@ -6852,7 +6852,7 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-15T21:38:58Z"
+      "updatedAt": "2026-11-15T21:52:53Z"
     },
     {
       "blockedBy": [
@@ -6876,13 +6876,13 @@
       },
       "state": "open",
       "subIssues": [],
-      "updatedAt": "2026-11-15T21:38:51Z"
+      "updatedAt": "2026-11-15T21:52:49Z"
     }
   ],
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-15T21:45:06Z",
+    "capturedAt": "2026-11-15T21:58:57Z",
     "mode": "live-capture"
   }
 }

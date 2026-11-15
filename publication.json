@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "1764783300792b1bc3d02dd706e68f11bb9749ea"
+    "revision": "f9e0c853d1cece741d7c6cbccfff36103a1c31dd"
   },
   "files": {
     "health.json": {
-      "sha256": "0178130aa6c41a1296792f9db179a7f40e81d36f24d7343fbe5b85bed8346a0f"
+      "sha256": "9640fc1ca89bec7dfd07a78e724c8d94f9014754bfceb4682f08a7928bbe0c76"
     },
     "ready-set.json": {
-      "sha256": "f8e60263302c70e6a23ae341108ff9f26b10fe39a90db10f51852b83f035927c"
+      "sha256": "b43338d669eba99c118a54156e27eae5a2139c9d3774e431e34685e145a1fbcc"
     },
     "snapshot.json": {
-      "sha256": "7f990121dbadfe5cad67c96703f0a8f33fedbd25a35dea8a799f9985b305c93d"
+      "sha256": "a613cf2d91064f611798446041f56c7dcbf0beaa0e227fbc1d1bf356443315a1"
     }
   },
   "kind": "RoadmapPublication",
@@ -209,12 +209,12 @@
     {
       "epic": {
         "goal": "Replace the user-blind Cloudflare MCP Portal at mcp.mctl.ai with an mctl-owned gateway that decides per principal and per tenant which downstream MCP servers and tools a caller can see and call, while every downstream keeps its own authorization.",
-        "lifecycle": "proposed",
+        "lifecycle": "paused",
         "name": "mcp-gateway",
         "title": "mctl-owned MCP gateway with per-principal, per-tenant tool policy"
       },
       "path": "roadmap/epics/mcp-gateway.yaml",
-      "sha256": "9d4555d4528225d9e42d602bc169db9c41247706e30d28ba2725bff5b9eb516a"
+      "sha256": "e7580a3f2eba6b69f7fcb763ff7110ee0eb241cc7014ee7eac0c51a9bdfa84b6"
     },
     {
       "epic": {
@@ -309,12 +309,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-15T21:45:06Z",
+    "capturedAt": "2026-11-15T21:58:57Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "1764783300792b1bc3d02dd706e68f11bb9749ea"
+    "revision": "f9e0c853d1cece741d7c6cbccfff36103a1c31dd"
   }
 }
