@@ -353,8 +353,9 @@ mctl-api's surface identity links (`surface_identity_links`) already model.
   live on 2026-11-15) and filters tools natively (`ownerOnlyToolFilter`,
   mctl-api#488).
 - The measured hole is not the gateway's to close. The direct-door bypass of
-  mctl-telegram#616 closes when each downstream accepts only mctl-issued
-  tokens. That is Tier A, and it does not need a gateway.
+  mctl-telegram#616 closes for mctl-controlled identities when each
+  downstream accepts mctl-issued tokens and refuses, on its own door too, an
+  account linked to a principal mctl has revoked. That needs no gateway.
 - Without a gateway there is no token exchange. RFC 8693 exists in this
   design only because the gateway calls downstreams as the user. A client
   that talks to each server directly gets a token for that server from
@@ -376,22 +377,38 @@ mctl-api's surface identity links (`surface_identity_links`) already model.
 | projects | Cloudflare Access managed OAuth | no | yes |
 
 CIMD is therefore not a reason for or against the gateway: mctl-api already
-serves it. The case for moving the other servers onto mctl-api's
-authorization server is not CIMD but one sign-in, one principal, one audit
-trail and one revocation path instead of six. It also means one
-implementation to keep current as the MCP authorization spec moves, instead
-of one per server.
+serves it. The case for mctl-api tokens is not CIMD but one sign-in, one
+principal, one audit trail and one revocation path for mctl principals.
 
-### Line I: mctl-api as the one authorization server for MCP
+### Line I: two doors
+
+Revised the same day, 2026-11-15. tg, seerrsense, coolify, alice and
+projects are products with their own external users, who sign in through
+each server's own authorization server today. Closing those doors would make
+every one of them re-connect and get an mctl account, so line I does not
+migrate them. Each server keeps its own door unchanged and adds a second
+one:
+
+- **Own door**: the current authorization server, sign-in, tokens and client
+  registrations, unchanged. It stays first in the RFC 9728 metadata, so a
+  client that picks the first entry behaves as today.
+- **mctl door**: an mctl-api access token with `aud` = the server's
+  resource, verified offline through mctl-api's JWKS, with `sub` =
+  `prn_...` mapped to the server's own user. This is how tenants, corporate
+  users and platform agents reach the server.
+- **Revocation across doors**: an external account linked to a principal
+  (`surface_identity_links`) is refused on the own door too once mctl has
+  revoked or denied that principal. Unlinked accounts are unaffected. This is
+  what closes the #616 bypass for mctl-controlled identities.
 
 | Item | Issue | Delivers |
 | --- | --- | --- |
-| I0 | mctlhq/mctl-api#1062 | resource registry: one RFC 8707 audience per downstream, replacing one variable per resource |
-| I1 | mctlhq/mctl-telegram#1297 | tg accepts only mctl tokens for its audience; closes the #616 bypass |
-| I2 | mctlhq/seerrsense#120 | same for seerrsense |
-| I3 | mctlhq/mctl-coolify-mcp#72 | same for coolify |
-| I4 | mctlhq/mctl-alice#183 | same for alice, admin principals only; open DCR closed |
-| I5 | mctlhq/projects-mcp#50 | projects from Cloudflare Access OAuth to mctl-api |
+| I0 | mctlhq/mctl-api#1062 | resource registry `OAUTH_MCP_RESOURCES`: one RFC 8707 audience per downstream (slice 1: mctl-api#1064, released in 4.161.0) |
+| I1 | mctlhq/mctl-telegram#1297 | mctl door for tg; principal to Telegram account via links; closes #616 for linked identities |
+| I2 | mctlhq/seerrsense#120 | mctl door for seerrsense; the principal-to-user mapping source is decided in the issue |
+| I3 | mctlhq/mctl-coolify-mcp#72 | mctl door for coolify; GitHub, Google and ZITADEL sign-in stay |
+| I4 | mctlhq/mctl-alice#183 | mctl door for alice; its open DCR stays, since external users depend on it |
+| I5 | mctlhq/projects-mcp#50 | mctl door for projects, behind a Cloudflare Access rule (gitops IaC) that lets mctl-api bearer tokens reach the server; the Access OAuth app stays |
 
 I1-I5 depend on I0 and are independent of each other; I1 goes first because
 it closes a measured bypass. Each item filters `tools/list` natively where its
@@ -476,7 +493,9 @@ Accepted by the owner on 2026-10-17, each as recommended.
 - **D5 — Who gets access first.** Decision: platform admins only until
   G5, then tenant owners, then tenant members.
 - **D6 — Order (2026-11-15).** Decision by the owner: defer the gateway
-  (G1-G5) and do line I first, with mctl-api as the one authorization server
-  every MCP server trusts, reached directly by clients. Resume G1 on the
+  (G1-G5) and do line I first: every MCP server also trusts mctl-api tokens
+  for its own audience, reached directly by clients. Revised the same day to
+  two doors: each server keeps its own authorization server for its external
+  users (see "Line I: two doors"). Resume G1 on the
   trigger in "Revision 2026-11-15". Alternative rejected for now: building
   G1-G4 while only platform admins use it.

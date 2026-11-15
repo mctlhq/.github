@@ -5,9 +5,12 @@
 # issues are added as work items when a phase starts.
 #
 # Revised 2026-11-15 (decision D6): the gateway is deferred. Line I (mctl-api
-# as the one authorization server every MCP server trusts, reached directly)
+# as an authorization server every MCP server also trusts, reached directly)
 # is required; G1-G5 are kept as `required: false` and flip back to required
 # when G1 resumes on the trigger in the design's "Revision 2026-11-15".
+# Same day, line I became the two-door model: every server keeps its own
+# authorization server for its external users and also accepts mctl-api
+# tokens for its own audience (design: "Line I: two doors").
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -199,7 +202,7 @@ spec:
   completion:
     mode: allRequired
   successCriteria:
-    - Every MCP server (api, tg, seerrsense, coolify, alice, projects) accepts only mctl-api tokens for its own audience and names https://api.mctl.ai as its authorization server; the mctl-telegram#616 direct-door bypass is closed.
+    - Every MCP server (tg, seerrsense, coolify, alice, projects) accepts mctl-api tokens for its own audience next to its own door, which keeps serving its current users unchanged; a principal mctl has revoked is refused on both doors for a linked account, which closes the mctl-telegram#616 bypass for mctl-controlled identities.
     - Two principals see different tool lists from the same server through the gateway, and a call outside a principal's grants is refused.
     - A removed grant is refused no later than R_max = hard_ttl + refresh_timeout.
     - mcp.mctl.ai serves all current portal users through the gateway and the portal Access apps are removed.
