@@ -360,6 +360,15 @@ class QueueTests(unittest.TestCase):
             P.Publisher(api, api, QENV).prepare()
         self.assertEqual(api.checks, [])
 
+    def test_queue_needs_the_merge_method(self):
+        for method in ('SQUASH', 'REBASE', None):
+            with self.subTest(method=method):
+                api = queue_fake(); api.rules[-1]['parameters']['merge_method'] = method
+                with self.assertRaises(P.Refused) as raised:
+                    P.Publisher(api, api, QENV).prepare()
+                self.assertIn('MERGE', str(raised.exception))
+                self.assertEqual(api.checks, [])
+
     def test_queue_entry_must_still_exist_and_point_at_the_commit(self):
         for mutate in (lambda a: a.queue_refs.clear(), lambda a: a.queue_refs.update({QREF: 'e' * 40})):
             with self.subTest():
@@ -585,6 +594,7 @@ class MutationTests(unittest.TestCase):
             ("raise Refused('merge queue commit is not the base plus this PR')", 'pass', 'test_queue_commit_must_be_base_plus_the_queued_pr'),
             ("raise Refused('queued PR is not open at the queued head')", 'pass', 'test_queued_pr_must_be_open_at_the_queued_head'),
             ("raise Refused('merge queue ref names another PR')", 'pass', 'test_queue_inputs_are_validated'),
+            ("raise Refused('merge queue review needs merge_method MERGE')", 'pass', 'test_queue_needs_the_merge_method'),
             ("raise Refused('run event or attempt mismatch')", 'pass', 'test_changed_run_attempt_never_publishes'),
         ]
         original = P.Publisher

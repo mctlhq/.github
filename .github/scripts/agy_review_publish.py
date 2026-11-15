@@ -152,11 +152,14 @@ class Publisher:
         strict = False
         bound = False
         queued = False
+        methods = set()
         for rule in rules:
             params = rule.get('parameters', {})
             # A merge queue replaces strict: it tests the exact commit main
             # gets, so a PR-head verdict cannot reach main on a stale base.
             queued |= rule.get('type') == 'merge_queue'
+            if rule.get('type') == 'merge_queue':
+                methods.add(params.get('merge_method'))
             if rule.get('type') == 'pull_request':
                 stale |= params.get('dismiss_stale_reviews_on_push') is True
             if rule.get('type') == 'required_status_checks':
@@ -174,6 +177,11 @@ class Publisher:
             raise Refused('formal approval needs stale-review dismissal, strict checks or a merge queue, and the App-bound agy-formal-review check')
         if self.queue and not queued:
             raise Refused('merge queue review needs a merge queue rule on the branch')
+        # queue_state expects the queued commit to be a merge of the base and
+        # the PR head, which only the MERGE method builds. Say so plainly
+        # rather than refusing every entry as "not the base plus this PR".
+        if self.queue and methods != {'MERGE'}:
+            raise Refused('merge queue review needs merge_method MERGE')
 
     def queue_state(self, pr, branch):
         q = self.queue
