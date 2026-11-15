@@ -305,7 +305,8 @@ class PublisherTests(unittest.TestCase):
 
 
 QHEAD = 'd' * 40
-QREF = 'refs/heads/gh-readonly-queue/main/pr-7-' + HEAD
+# The ref names the entry's base commit, not the PR head (see gitops#2665).
+QREF = 'refs/heads/gh-readonly-queue/main/pr-7-' + BASE
 QENV = dict(ENV, QUEUE_HEAD_REF=QREF, QUEUE_HEAD_SHA=QHEAD, QUEUE_BASE_SHA=BASE)
 
 
@@ -423,20 +424,33 @@ class QueueTests(unittest.TestCase):
 
     def test_queue_inputs_are_validated(self):
         for changes in ({'QUEUE_HEAD_REF': 'refs/heads/main'},
-                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/main/pr-8-' + HEAD},
-                        {'QUEUE_HEAD_REF': 'refs/heads/someone/pr-7-' + HEAD},
-                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/main/pr-7-' + HEAD + '/x'},
+                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/main/pr-8-' + BASE},
+                        {'QUEUE_HEAD_REF': 'refs/heads/someone/pr-7-' + BASE},
+                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/main/pr-7-' + BASE + '/x'},
                         {'QUEUE_HEAD_SHA': 'x'}, {'QUEUE_BASE_SHA': ''},
-                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/other/pr-7-' + HEAD}):
+                        {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/other/pr-7-' + BASE}):
             with self.subTest(changes=changes):
                 api = queue_fake()
                 # Every forged ref exists and points at the queued commit, so
                 # only the input validation itself can refuse it.
-                for ref in ('refs/heads/gh-readonly-queue/other/pr-7-' + HEAD,
-                            'refs/heads/gh-readonly-queue/main/pr-8-' + HEAD):
+                for ref in ('refs/heads/gh-readonly-queue/other/pr-7-' + BASE,
+                            'refs/heads/gh-readonly-queue/main/pr-8-' + BASE):
                     api.queue_refs[ref] = QHEAD
                 with self.assertRaises(P.Refused):
                     P.Publisher(api, api, dict(QENV, **changes)).prepare()
+                self.assertEqual(api.checks, [])
+
+    def test_queue_ref_must_name_the_queue_base(self):
+        # A ref naming any other commit (the PR head included) is refused even
+        # when that ref exists and points at the queued commit.
+        for named in (HEAD, 'e' * 40):
+            with self.subTest(named=named):
+                api = queue_fake()
+                ref = 'refs/heads/gh-readonly-queue/main/pr-7-' + named
+                api.queue_refs[ref] = QHEAD
+                with self.assertRaises(P.Refused) as raised:
+                    P.Publisher(api, api, dict(QENV, QUEUE_HEAD_REF=ref)).prepare()
+                self.assertIn('another base', str(raised.exception))
                 self.assertEqual(api.checks, [])
 
     def test_pr_head_review_accepts_a_merge_queue_instead_of_strict(self):
@@ -594,6 +608,7 @@ class MutationTests(unittest.TestCase):
             ("raise Refused('merge queue commit is not the base plus this PR')", 'pass', 'test_queue_commit_must_be_base_plus_the_queued_pr'),
             ("raise Refused('queued PR is not open at the queued head')", 'pass', 'test_queued_pr_must_be_open_at_the_queued_head'),
             ("raise Refused('merge queue ref names another PR')", 'pass', 'test_queue_inputs_are_validated'),
+            ("raise Refused('merge queue ref names another base')", 'pass', 'test_queue_ref_must_name_the_queue_base'),
             ("raise Refused('merge queue review needs merge_method MERGE')", 'pass', 'test_queue_needs_the_merge_method'),
             ("raise Refused('run event or attempt mismatch')", 'pass', 'test_changed_run_attempt_never_publishes'),
         ]
