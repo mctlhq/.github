@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "e69c2117a2eec8227bb586f194dc94a0f54bc71f"
+    "revision": "1764783300792b1bc3d02dd706e68f11bb9749ea"
   },
   "files": {
     "health.json": {
-      "sha256": "0d093589054e411b33e504fbf81e227f2a71bbc870fbd5661020b30e715c5c71"
+      "sha256": "0178130aa6c41a1296792f9db179a7f40e81d36f24d7343fbe5b85bed8346a0f"
     },
     "ready-set.json": {
-      "sha256": "72f9b097a85db08ebb458b0f32792446a82286bbb475a9aa495856f62f474fe9"
+      "sha256": "f8e60263302c70e6a23ae341108ff9f26b10fe39a90db10f51852b83f035927c"
     },
     "snapshot.json": {
-      "sha256": "f3583a57aae438d029212e49c5941a947e293cb1cae2dc55ec887fa0797a4008"
+      "sha256": "7f990121dbadfe5cad67c96703f0a8f33fedbd25a35dea8a799f9985b305c93d"
     }
   },
   "kind": "RoadmapPublication",
@@ -214,7 +214,7 @@
         "title": "mctl-owned MCP gateway with per-principal, per-tenant tool policy"
       },
       "path": "roadmap/epics/mcp-gateway.yaml",
-      "sha256": "74f07633be12bd629beea97cb3485191337ae8e1dce0e943f0998eb8d65621b9"
+      "sha256": "9d4555d4528225d9e42d602bc169db9c41247706e30d28ba2725bff5b9eb516a"
     },
     {
       "epic": {
@@ -309,12 +309,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-15T20:25:51Z",
+    "capturedAt": "2026-11-15T21:45:06Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "e69c2117a2eec8227bb586f194dc94a0f54bc71f"
+    "revision": "1764783300792b1bc3d02dd706e68f11bb9749ea"
   }
 }
