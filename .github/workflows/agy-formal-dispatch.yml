@@ -14,6 +14,20 @@ on:
         description: Open non-draft PR number
         type: number
         required: true
+      # Set together by mctl-gitops' merge_group caller (mctlhq/.github#351);
+      # empty for an ordinary PR-head review.
+      queue_head_ref:
+        description: Merge queue ref (refs/heads/gh-readonly-queue/...), or empty
+        type: string
+        default: ''
+      queue_head_sha:
+        description: Merge queue commit to review, or empty
+        type: string
+        default: ''
+      queue_base_sha:
+        description: Merge queue base commit, or empty
+        type: string
+        default: ''
 permissions: {}
 jobs:
   formal:
@@ -27,3 +41,6 @@ jobs:
     with:
       repository: ${{ inputs.repository }}
       pr_number: ${{ fromJSON(inputs.pr_number) }}
+      queue_head_ref: ${{ inputs.queue_head_ref }}
+      queue_head_sha: ${{ inputs.queue_head_sha }}
+      queue_base_sha: ${{ inputs.queue_base_sha }}
