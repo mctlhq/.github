@@ -180,7 +180,7 @@ class Publisher:
         # queue_state expects the queued commit to be a merge of the base and
         # the PR head, which only the MERGE method builds. Say so plainly
         # rather than refusing every entry as "not the base plus this PR".
-        if self.queue and methods != {'MERGE'}:
+        if self.queue and queued and methods != {'MERGE'}:
             raise Refused('merge queue review needs merge_method MERGE')
 
     def queue_state(self, pr, branch):
