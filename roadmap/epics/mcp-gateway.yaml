@@ -13,6 +13,10 @@
 # tokens for its own audience (design: "Line I: two doors").
 # Later the same day the owner deferred line I too: I1-I5 are kept as
 # `required: false` and flip back to required when line I resumes.
+# The epic is paused (owner, 2026-11-15): G0a is done and I0 slice 1
+# (mctl-api#1064) shipped in 4.161.0 with an empty registry. It resumes on
+# the G1 trigger in the design's "Revision 2026-11-15" or when line I is
+# picked up again.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -27,7 +31,7 @@ spec:
     mctl-owned gateway that decides per principal and per tenant which
     downstream MCP servers and tools a caller can see and call, while every
     downstream keeps its own authorization.
-  lifecycle: proposed
+  lifecycle: paused
   github:
     issue:
       repository: mctlhq/.github
