@@ -29,8 +29,8 @@ G1-G5 stay drafted and resume on the trigger in "Revision 2026-11-15". Where
 this document says "through the gateway", read it as describing the deferred
 design.
 
-The gateway epic and its G1-G5 children are still not drafted; they wait for a
-re-check of this revision against the GO criteria.
+The epic (.github#236) and its G1-G5 children were drafted on 2026-10-26
+after the re-check (.github#235).
 
 ## Goal
 

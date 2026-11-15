@@ -202,5 +202,4 @@ spec:
     - Every MCP server (api, tg, seerrsense, coolify, alice, projects) accepts only mctl-api tokens for its own audience and names https://api.mctl.ai as its authorization server; the mctl-telegram#616 direct-door bypass is closed.
     - Two principals see different tool lists from the same server through the gateway, and a call outside a principal's grants is refused.
     - A removed grant is refused no later than R_max = hard_ttl + refresh_timeout.
-    - Every Tier A downstream accepts only mctl-issued tokens for its own audience; the mctl-telegram#616 direct-door bypass is closed.
     - mcp.mctl.ai serves all current portal users through the gateway and the portal Access apps are removed.
