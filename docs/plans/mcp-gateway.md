@@ -22,6 +22,13 @@ below and cites the report section it answers:
 4. The audience-before-mint ordering is stated ("Identity at the gateway";
    report D2).
 
+**Revised 2026-11-15 (decision D6): the gateway is deferred.** The work that
+is needed whatever the endpoint — every MCP server accepting only mctl-issued
+tokens for its own audience — goes first, as line I below, without a gateway.
+G1-G5 stay drafted and resume on the trigger in "Revision 2026-11-15". Where
+this document says "through the gateway", read it as describing the deferred
+design.
+
 The gateway epic and its G1-G5 children are still not drafted; they wait for a
 re-check of this revision against the GO criteria.
 
@@ -334,6 +341,79 @@ mctl-api's surface identity links (`surface_identity_links`) already model.
 - New host `gw.mcp.mctl.ai` during migration; `mcp.mctl.ai` moves only at the
   end.
 
+## Revision 2026-11-15: gateway deferred, identity first
+
+### Why
+
+- Nobody to tell apart yet. By D5 only platform admins use the gateway until
+  G5, and today the admin set is one principal. G1-G4 would build a
+  per-principal policy that has nobody to tell apart.
+- The gateway can only narrow. Every downstream already authorizes per user,
+  and mctl-api decides tenants by principal (`TENANT_AUTHZ_MODE=principal`,
+  live on 2026-11-15) and filters tools natively (`ownerOnlyToolFilter`,
+  mctl-api#488).
+- The measured hole is not the gateway's to close. The direct-door bypass of
+  mctl-telegram#616 closes when each downstream accepts only mctl-issued
+  tokens. That is Tier A, and it does not need a gateway.
+- Without a gateway there is no token exchange. RFC 8693 exists in this
+  design only because the gateway calls downstreams as the user. A client
+  that talks to each server directly gets a token for that server from
+  mctl-api with an RFC 8707 `resource`, and the server verifies it through
+  JWKS.
+- The cost is a new public service on every MCP call, plus a repository,
+  five phases and a hop, on a cluster at 60-73 % memory with no new nodes.
+
+### Authorization servers today (probed 2026-11-15)
+
+| Server | Authorization server | CIMD | DCR |
+| --- | --- | --- | --- |
+| api | `https://api.mctl.ai` | yes (mctl-api#375) | yes |
+| glovo | `https://api.mctl.ai` (resource `GLOVO_MCP_RESOURCE`) | via api | via api |
+| tg | own, `https://tg.mctl.ai` | yes | yes |
+| seerrsense | own, `https://seerrsense.mctl.ai` | yes | yes |
+| coolify | own, `https://coolify.mctl.ai` | yes | yes |
+| alice | own, `https://alice.mctl.ai` | yes | yes (open) |
+| projects | Cloudflare Access managed OAuth | no | yes |
+
+CIMD is therefore not a reason for or against the gateway: mctl-api already
+serves it. The case for moving the other servers onto mctl-api's
+authorization server is not CIMD but one sign-in, one principal, one audit
+trail and one revocation path instead of six. It also means one
+implementation to keep current as the MCP authorization spec moves, instead
+of one per server.
+
+### Line I: mctl-api as the one authorization server for MCP
+
+| Item | Issue | Delivers |
+| --- | --- | --- |
+| I0 | mctlhq/mctl-api#1062 | resource registry: one RFC 8707 audience per downstream, replacing one variable per resource |
+| I1 | mctlhq/mctl-telegram#1297 | tg accepts only mctl tokens for its audience; closes the #616 bypass |
+| I2 | mctlhq/seerrsense#120 | same for seerrsense |
+| I3 | mctlhq/mctl-coolify-mcp#72 | same for coolify |
+| I4 | mctlhq/mctl-alice#183 | same for alice, admin principals only; open DCR closed |
+| I5 | mctlhq/projects-mcp#50 | projects from Cloudflare Access OAuth to mctl-api |
+
+I1-I5 depend on I0 and are independent of each other; I1 goes first because
+it closes a measured bypass. Each item filters `tools/list` natively where its
+users differ, and keeps its own authorization. The Cloudflare portal stays the
+admin-only aggregate endpoint, with its session duration unchanged: the
+one-year session is the owner's deliberate choice
+(mctl-gitops `infrastructure/cloudflare/account/portal-app.tf`).
+
+What line I leaves for a resumed gateway: G1 and G5 unchanged. G2/G3 shrink
+to routing already-Tier-A servers, plus token exchange. G4 unchanged.
+
+### Trigger to resume G1
+
+Any one of these, recorded on .github#236:
+
+- a tenant (customer or pilot) asks for one MCP endpoint for several people
+  with different rights;
+- a principal other than platform admins needs access to more than one MCP
+  server and per-server sign-in is the blocker;
+- the Cloudflare portal blocks something concrete (a protocol feature it
+  drops, a policy it cannot express) that line I cannot solve per server.
+
 ## Migration
 
 Each phase ends with a check that can fail. The portal keeps running until the
@@ -395,3 +475,8 @@ Accepted by the owner on 2026-10-17, each as recommended.
   resuming the paused epic as it stands.
 - **D5 — Who gets access first.** Decision: platform admins only until
   G5, then tenant owners, then tenant members.
+- **D6 — Order (2026-11-15).** Decision by the owner: defer the gateway
+  (G1-G5) and do line I first, with mctl-api as the one authorization server
+  every MCP server trusts, reached directly by clients. Resume G1 on the
+  trigger in "Revision 2026-11-15". Alternative rejected for now: building
+  G1-G4 while only platform admins use it.

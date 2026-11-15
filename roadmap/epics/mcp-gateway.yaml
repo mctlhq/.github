@@ -3,6 +3,11 @@
 # phase of the paused enterprise-mcp epic and answers .github#128, which
 # stays bound there. Phases G1-G5 are drafts; per-repository implementation
 # issues are added as work items when a phase starts.
+#
+# Revised 2026-11-15 (decision D6): the gateway is deferred. Line I (mctl-api
+# as the one authorization server every MCP server trusts, reached directly)
+# is required; G1-G5 are kept as `required: false` and flip back to required
+# when G1 resumes on the trigger in the design's "Revision 2026-11-15".
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -25,16 +30,18 @@ spec:
   phases:
     - id: token-hardening
       title: G0a mctl-api token hardening
+    - id: identity
+      title: I mctl-api as the one MCP authorization server
     - id: policy
-      title: G1 policy and gateway in front of api
+      title: G1 (deferred, D6) policy and gateway in front of api
     - id: tier-a-core
-      title: G2 Tier A for api and coolify
+      title: G2 (deferred, D6) gateway routing for api and coolify
     - id: tier-a-downstreams
-      title: G3 tg, seerrsense and projects as Tier A
+      title: G3 (deferred, D6) gateway routing for tg, seerrsense and projects
     - id: cutover
-      title: G4 alice as Tier B and cut-over
+      title: G4 (deferred, D6) alice as Tier B and cut-over
     - id: non-admin
-      title: G5 non-admin users
+      title: G5 (deferred, D6) non-admin users
   workItems:
     - id: g0a-token-hardening
       phase: token-hardening
@@ -43,18 +50,120 @@ spec:
         repository: mctlhq/mctl-api
         number: 805
 
+    - id: i0-resource-registry
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-api
+        number: 1062
+      dependsOn:
+        - g0a-token-hardening
+
+    - id: i1-tg
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1297
+      dependsOn:
+        - i0-resource-registry
+
+    - id: i2-seerrsense
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/seerrsense
+        number: 120
+      dependsOn:
+        - i0-resource-registry
+
+    - id: i3-coolify
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-coolify-mcp
+        number: 72
+      dependsOn:
+        - i0-resource-registry
+
+    - id: i4-alice
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/mctl-alice
+        number: 183
+      dependsOn:
+        - i0-resource-registry
+
+    - id: i5-projects
+      phase: identity
+      required: true
+      issue:
+        repository: mctlhq/projects-mcp
+        number: 50
+      dependsOn:
+        - i0-resource-registry
+
     - id: g1-policy
       phase: policy
-      required: true
+      required: false
       issue:
         repository: mctlhq/.github
         number: 237
       dependsOn:
         - g0a-token-hardening
 
+    - id: g1-1-policy-endpoint
+      phase: policy
+      parent: g1-policy
+      required: false
+      issue:
+        repository: mctlhq/mctl-api
+        number: 1061
+
+    - id: g1-2-ceiling
+      phase: policy
+      parent: g1-policy
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2679
+
+    - id: g1-3-data-plane
+      phase: policy
+      parent: g1-policy
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 355
+
+    - id: g1-4-policy-cache
+      phase: policy
+      parent: g1-policy
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 356
+
+    - id: g1-5-deploy-audit
+      phase: policy
+      parent: g1-policy
+      required: false
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2680
+
+    - id: g1-6-live-acceptance
+      phase: policy
+      parent: g1-policy
+      required: false
+      issue:
+        repository: mctlhq/.github
+        number: 357
+
     - id: g2-tier-a-core
       phase: tier-a-core
-      required: true
+      required: false
       issue:
         repository: mctlhq/.github
         number: 238
@@ -63,7 +172,7 @@ spec:
 
     - id: g3-tier-a-downstreams
       phase: tier-a-downstreams
-      required: true
+      required: false
       issue:
         repository: mctlhq/.github
         number: 239
@@ -72,7 +181,7 @@ spec:
 
     - id: g4-cutover
       phase: cutover
-      required: true
+      required: false
       issue:
         repository: mctlhq/.github
         number: 240
@@ -81,7 +190,7 @@ spec:
 
     - id: g5-non-admin
       phase: non-admin
-      required: true
+      required: false
       issue:
         repository: mctlhq/.github
         number: 241
@@ -90,6 +199,7 @@ spec:
   completion:
     mode: allRequired
   successCriteria:
+    - Every MCP server (api, tg, seerrsense, coolify, alice, projects) accepts only mctl-api tokens for its own audience and names https://api.mctl.ai as its authorization server; the mctl-telegram#616 direct-door bypass is closed.
     - Two principals see different tool lists from the same server through the gateway, and a call outside a principal's grants is refused.
     - A removed grant is refused no later than R_max = hard_ttl + refresh_timeout.
     - Every Tier A downstream accepts only mctl-issued tokens for its own audience; the mctl-telegram#616 direct-door bypass is closed.
