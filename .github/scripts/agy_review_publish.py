@@ -17,6 +17,15 @@ SHA = re.compile('[0-9a-f]{40}')
 QUEUE_REF = re.compile(r'refs/heads/gh-readonly-queue/([A-Za-z0-9_.-]+)/pr-([1-9][0-9]*)-([0-9a-f]{40})')
 
 
+# A merge queue commit that adds nothing to an already reviewed PR head is
+# marked from that head's verdict instead of asking the model again. The title
+# is how a carried mark is told apart from a model verdict, so a carried check
+# can never itself be carried onward.
+CARRY_TITLE = 'Agy formal review: success (carried from PR head)'
+EXTERNAL_ID = re.compile(r'agy/v1:(mctlhq/[A-Za-z0-9_.-]+):([1-9][0-9]*):([0-9]+):([0-9]+)')
+MAX_CARRY_FILES = 300
+
+
 class Refused(RuntimeError):
     pass
 
@@ -207,6 +216,76 @@ class Publisher:
                 or [x.get('sha') for x in parents] != [q['base'], pr['head']['sha']]):
             raise Refused('merge queue commit is not the base plus this PR')
 
+    def compare_files(self, base, head):
+        """(merge base, sorted (path, status, previous path, blob) rows) of base...head.
+
+        Anything short of a complete, well-formed listing raises: a partial or
+        unreadable comparison is an unknown, never an empty or equal diff.
+        """
+        rows, merge_base = [], None
+        for page in range(1, 11):
+            obj = self.api('GET', self.root + f'/compare/{base}...{head}?per_page=100&page={page}')
+            if not isinstance(obj, dict) or not isinstance(obj.get('files'), list):
+                raise Refused('comparison unreadable')
+            mb = obj.get('merge_base_commit')
+            if not isinstance(mb, dict) or not SHA.fullmatch(str(mb.get('sha'))):
+                raise Refused('comparison has no merge base')
+            if merge_base not in (None, mb['sha']):
+                raise Refused('comparison merge base moved')
+            merge_base = mb['sha']
+            for item in obj['files']:
+                if not isinstance(item, dict):
+                    raise Refused('comparison entry malformed')
+                name, status, blob = item.get('filename'), item.get('status'), item.get('sha')
+                previous, changes = item.get('previous_filename'), item.get('changes')
+                if (not isinstance(name, str) or not name or not isinstance(blob, str) or not SHA.fullmatch(blob)
+                        or status not in ('added', 'removed', 'modified', 'renamed')
+                        or not (previous is None or isinstance(previous, str))
+                        or type(changes) is not int or changes < 1):
+                    # changes < 1 covers mode-only and pure-rename entries,
+                    # which a blob comparison cannot vouch for.
+                    raise Refused('comparison entry not comparable')
+                rows.append((name, status, previous or '', blob))
+            if len(obj['files']) < 100:
+                if len(rows) >= MAX_CARRY_FILES or len({r[0] for r in rows}) != len(rows):
+                    raise Refused('comparison too large or ambiguous')
+                return merge_base, sorted(rows)
+        raise Refused('comparison exceeded bounded pagination')
+
+    def carry_proof(self, pr, branch):
+        """Return the PR-head check that licenses carrying its verdict, or raise.
+
+        Every condition must hold and every unreadable input refuses; the
+        caller turns a refusal into the ordinary model review.
+        """
+        q = self.queue
+        if not q:
+            raise Refused('not a merge queue review')
+        self.queue_state(pr, branch)  # PR open; ref live; commit is exactly [base, live PR head]
+        head = pr['head']['sha']
+        found = self.checks(head)
+        if len(found) != 1:
+            raise Refused('PR head has no single formal check')
+        check = found[0]
+        match = EXTERNAL_ID.fullmatch(str(check.get('external_id')))
+        if (check.get('head_sha') != head or check.get('status') != 'completed'
+                or check.get('conclusion') != 'success'
+                or not match or match[1] != self.source_repo or int(match[2]) != self.number):
+            raise Refused('PR head has no completed success from a formal run for this PR')
+        output = check.get('output')
+        if not isinstance(output, dict) or str(output.get('title', '')).startswith(CARRY_TITLE):
+            raise Refused('PR head verdict is itself carried or unreadable')
+        integer(check.get('id'))
+        _, pr_rows = self.compare_files(q['base'], head)
+        queue_base, queue_rows = self.compare_files(q['base'], q['head'])
+        if queue_base != q['base']:
+            raise Refused('queue commit does not descend from its base')
+        if not pr_rows or pr_rows != queue_rows:
+            raise Refused('queue commit differs from the reviewed PR diff')
+        # Re-read the entry after the comparisons: it must not have moved.
+        self.queue_state(self.context()[0], branch)
+        return check
+
     def checks(self, head):
         found = pages(self.api, self.root + f'/commits/{head}/check-runs', field='check_runs')
         return [c for c in found if c.get('name') == CHECK and c.get('app', {}).get('id') == self.app]
@@ -243,6 +322,29 @@ class Publisher:
                 'external_id': self.external_id,
                 'details_url': f'https://github.com/{self.source_repo}/actions/runs/{self.run}',
                 'output': {'title': 'Agy review running', 'summary': 'No approval until a complete current-head verdict is published.'}}
+        if self.queue:
+            try:
+                carried = self.carry_proof(pr, branch)
+            except Exception as exc:
+                # Cannot prove it adds nothing: run the model as before. The
+                # reason is a fixed string or an exception class, never a body.
+                print('queue verdict not carried: ' + (str(exc) if isinstance(exc, Refused) else type(exc).__name__))
+                carried = None
+            if carried:
+                done = {'name': CHECK, 'head_sha': head, 'status': 'completed', 'conclusion': 'success',
+                        'external_id': self.external_id,
+                        'details_url': f'https://github.com/{self.source_repo}/actions/runs/{self.run}',
+                        'output': {'title': CARRY_TITLE,
+                                   'summary': f'Merge queue commit {head} (PR #{self.number}) applies exactly the diff of '
+                                              f'PR head {pr["head"]["sha"]} onto {base}: same paths and blobs. That head has a '
+                                              f'complete agy review (check run {carried["id"]}: success). The model was not run again.'}}
+                if old:
+                    done.pop('head_sha')
+                    self.api('PATCH', self.root + f'/check-runs/{integer(old[0]["id"])}', done)
+                else:
+                    self.api('POST', self.root + '/check-runs', done)
+                print('queue verdict carried from PR head')
+                return None
         if old:
             data.pop('head_sha')
             self.api('PATCH', self.root + f'/check-runs/{integer(old[0]["id"])}', data)

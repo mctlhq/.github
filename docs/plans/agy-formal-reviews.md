@@ -153,3 +153,26 @@ Rollback: disable the formal caller/dispatcher, revoke the dedicated App key or
 uninstall it, then remove only the newly added App-specific required check after
 owner review of the fallback gate. Keep existing protections and bypass actors.
 Reinstate the informational caller if desired; it is not an approval substitute.
+
+## Merge queue commit: carrying the PR-head verdict
+
+The queue commit is reviewed by the model again only when that adds information.
+`agy_review_publish.py` (prepare mode, queue entries only) marks the queue commit
+`agy-formal-review` = success without calling the model when ALL of these hold,
+each re-read from the API by the trusted publisher:
+
+- the queue ref, its commit and its parents are exactly `[base, live PR head]`
+  (the existing `queue_state` proof; MERGE method, group of one);
+- the live PR head carries exactly one App-owned `agy-formal-review` that is
+  `completed`/`success`, bound to that head SHA, from a formal run for this
+  repository and PR, and is not itself a carried mark;
+- `base...PR head` and `base...queue commit` list the same non-empty set of
+  (path, status, previous path, blob SHA), the queue comparison's merge base is
+  the base, no entry is mode-only or a pure rename, and fewer than 300 files;
+- the queue ref still points at the commit after those comparisons.
+
+Any other outcome (missing, neutral, failed or stale head verdict, a different
+blob or an extra path, an unreadable or malformed API body, a failed later page)
+logs `queue verdict not carried` and runs the model exactly as before. A carried
+check has the title `Agy formal review: success (carried from PR head)` and never
+licenses a further carry. Inputs from the caller stay untrusted and unchanged.
