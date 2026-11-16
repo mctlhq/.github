@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "f9e0c853d1cece741d7c6cbccfff36103a1c31dd"
+    "revision": "56fd890b1baf15635769bfcec0b3e4ed86ed256e"
   },
   "files": {
     "health.json": {
-      "sha256": "a0752661b9789fd46f801091b523ac3bcc791e25598c32818e1d729d3d5a6360"
+      "sha256": "4472ae3d1ede2fd08b58c06d021d46eba420ff2e6df08adfc10d4d6eb9eb2f1f"
     },
     "ready-set.json": {
-      "sha256": "9ce1af04e0e5df216637c7295096c42ddc663e4d803a0ad2ea5b5f4b4d59318a"
+      "sha256": "65226009252af692117ba5cece254d3b491763c401f921920c646edecf370852"
     },
     "snapshot.json": {
-      "sha256": "0fdaade130a2e45b0e27b66fbaa8e0c63901523d3107205c9380577092835983"
+      "sha256": "afe99a486bb60fef531fbab89630a881cd6b806d7cc86dcddb4708ea40a96301"
     }
   },
   "kind": "RoadmapPublication",
@@ -34,7 +34,7 @@
         "title": "Agent-native deploy from repository to running system"
       },
       "path": "roadmap/epics/agent-deploy.yaml",
-      "sha256": "67b5b79be52f13576680fb636396beef6f081875f2aeb9fde2594b6283254a44"
+      "sha256": "71906eb48712b9fa1e3ec85d48993ca1093fc61e74ea8f7dd5ad63f3bfbc708e"
     },
     {
       "epic": {
@@ -309,12 +309,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-16T08:03:21Z",
+    "capturedAt": "2026-11-16T11:21:19Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "f9e0c853d1cece741d7c6cbccfff36103a1c31dd"
+    "revision": "56fd890b1baf15635769bfcec0b3e4ed86ed256e"
   }
 }
