@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "56fd890b1baf15635769bfcec0b3e4ed86ed256e"
+    "revision": "7eea364ab6ee028884506079bb5179cc12ea8db5"
   },
   "files": {
     "health.json": {
-      "sha256": "47430dcd434becca4425fb3335a5ddf4977c8e77ee84b5a79ca099947af37f83"
+      "sha256": "dcbcb83c06e1293715afee65b932d5efa9aa81cae3f9719f24f2c5c730115389"
     },
     "ready-set.json": {
-      "sha256": "7e56c093eee8260a87e7e7a9fc29691ed4cd5f004331f3e652060efdab4aeca4"
+      "sha256": "b5e5130e6b189971e8589486de5b2e085d6d35f2710487d0b746aa01e78849fe"
     },
     "snapshot.json": {
-      "sha256": "9709264251c5c62852d7648a23945ea52cd4355592996d1fe4d352b9afe0f26d"
+      "sha256": "cfd147dedb1b6ded3c311cca9d6ca7cb051d7af4f8bf017e588478250c1d9271"
     }
   },
   "kind": "RoadmapPublication",
@@ -228,6 +228,16 @@
     },
     {
       "epic": {
+        "goal": "Increase evidence-backed, qualified organic discovery and measurable activation across mctl.ai, alice.mctl.ai, academy.mctl.ai, tg.mctl.ai and docs.mctl.ai by coordinating existing SEO, content, developer distribution and measurement work without duplicate roadmaps, unverified product claims or automatic publishing.",
+        "lifecycle": "proposed",
+        "name": "organic-discovery-growth",
+        "title": "MCTL Organic Discovery & Growth"
+      },
+      "path": "roadmap/epics/organic-discovery-growth.yaml",
+      "sha256": "7be200f4e6a883259fbe26c1c84e8d66c7bfd4bffbd8834c254a3f9ce8df5244"
+    },
+    {
+      "epic": {
         "goal": "Make a versioned EpicDefinition manifest the canonical desired graph for an epic, and derive drift, health and completion from the observed GitHub graph deterministically, with GitHub remaining the human planning surface.",
         "lifecycle": "completed",
         "name": "roadmap-control-plane",
@@ -309,12 +319,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-16T18:39:46Z",
+    "capturedAt": "2026-11-16T22:39:18Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "56fd890b1baf15635769bfcec0b3e4ed86ed256e"
+    "revision": "7eea364ab6ee028884506079bb5179cc12ea8db5"
   }
 }
