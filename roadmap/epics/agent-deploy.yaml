@@ -133,16 +133,16 @@ spec:
           number: 1977
 
     - id: promote-rollback-tools
-      title: promote_deployment and rollback_deployment MCP tools gated through the MCP gateway
+      title: promote_deployment and rollback_deployment MCP tools behind a human grant
       owner: mctl-api
       phase: lifecycle
       required: true
+      # Owner 2026-11-16: the MCP gateway (#237) is a later restriction in
+      # front of these tools, not a dependency; until it exists they are
+      # admins-only (mctl-api#1049). Work starts after mctl-api#1058.
       dependsOn:
         - rollback-revision
         - preview-onboard
-      externalDependsOn:
-        - repository: mctlhq/.github
-          number: 237
   completion:
     mode: allRequired
   successCriteria:
