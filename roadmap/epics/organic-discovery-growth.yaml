@@ -85,6 +85,9 @@ spec:
       required: true
       dependsOn:
         - od-0-baseline
+      externalDependsOn:
+        - repository: mctlhq/mctl-web
+          number: 31
 
     - id: od-shortlist
       title: Select evidence-backed isolated candidates and obtain separate owner implementation decisions
@@ -108,6 +111,8 @@ spec:
       externalDependsOn:
         - repository: mctlhq/mctl-web
           number: 215
+        - repository: mctlhq/.github
+          number: 259
 
     - id: od-7-evaluation
       title: Assess approved changes in comparable 28-day GSC windows and record keep-or-stop verdicts
