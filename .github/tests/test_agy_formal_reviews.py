@@ -54,6 +54,8 @@ class Fake:
         self.queue_refs = {}
         self.commits = {}
         self.move_on_queue_read = None
+        self.other_checks = []
+        self.compare = {}
 
     def __call__(self, method, path, payload=None, absent=False):
         self.calls.append((method, path, copy.deepcopy(payload)))
@@ -73,7 +75,16 @@ class Fake:
             elif bare == root + '/branches/main/protection':
                 value = None
             elif bare.endswith('/check-runs'):
-                value = {'check_runs': self.checks}
+                sha = bare.split('/')[-2]
+                own = [c for c in self.other_checks if c['head_sha'] == sha]
+                value = {'check_runs': own if own else self.checks}
+            elif '/compare/' in bare:
+                a, b = bare.rsplit('/compare/', 1)[1].split('...')
+                if (a, b) not in self.compare:
+                    raise P.Refused('synthetic unconfigured comparison')
+                body = copy.deepcopy(self.compare[(a, b)])
+                page = int(re.search(r'[?&]page=(\d+)', path).group(1))
+                value = dict(body, files=body['files'][(page - 1) * 100:page * 100])
             elif bare.startswith(root + '/git/ref/'):
                 ref = 'refs/' + bare[len(root + '/git/ref/'):]
                 if ref not in self.queue_refs:
@@ -317,6 +328,204 @@ def queue_fake():
     api.queue_refs[QREF] = QHEAD
     api.commits[QHEAD] = [BASE, HEAD]
     return api
+
+
+PRHEAD_CHECK = {'id': 50, 'name': 'agy-formal-review', 'app': {'id': 123}, 'head_sha': HEAD,
+                'status': 'completed', 'conclusion': 'success',
+                'external_id': 'agy/v1:' + REPO + ':7:50:1',
+                'output': {'title': 'Agy formal review: success', 'summary': 'Complete review'}}
+
+
+def file_row(name, blob, status='modified', changes=3, **extra):
+    return dict({'filename': name, 'sha': blob, 'status': status, 'changes': changes}, **extra)
+
+
+def carry_fake():
+    """A queue entry whose commit is exactly the reviewed PR head's diff on the base."""
+    api = queue_fake()
+    api.other_checks = [copy.deepcopy(PRHEAD_CHECK)]
+    rows = [file_row('values.yaml', '1' * 40), file_row('new.yaml', '2' * 40, 'added', 9)]
+    # The queue commit is on a newer base than the PR was branched from, but
+    # carries the same changes; both comparisons are against the queue base.
+    api.compare[(BASE, HEAD)] = {'merge_base_commit': {'sha': 'f' * 40}, 'files': copy.deepcopy(rows)}
+    api.compare[(BASE, QHEAD)] = {'merge_base_commit': {'sha': BASE}, 'files': copy.deepcopy(rows)}
+    return api
+
+
+class CarryTests(unittest.TestCase):
+    """The queue commit is marked from the PR-head verdict only on proof it adds nothing."""
+
+    def run_prepare(self, api, env=None):
+        pub = P.Publisher(api, api, env or QENV)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            prepared = pub.prepare()
+        return prepared, out.getvalue()
+
+    def assert_model_runs(self, api, prepared):
+        # Fallback is the pre-existing behaviour: in_progress check, model job.
+        self.assertEqual(prepared, {'number': 7, 'head': QHEAD, 'base': BASE})
+        self.assertEqual(api.checks[0]['status'], 'in_progress')
+        self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_identical_diff_on_a_reviewed_head_is_carried_without_the_model(self):
+        api = carry_fake()
+        prepared, out = self.run_prepare(api)
+        self.assertIsNone(prepared)  # eligible=false: review and publish jobs are skipped
+        self.assertEqual(len(api.checks), 1)
+        check = api.checks[0]
+        self.assertEqual((check['head_sha'], check['status'], check['conclusion']), (QHEAD, 'completed', 'success'))
+        self.assertEqual(check['output']['title'], P.CARRY_TITLE)
+        self.assertIn(HEAD, check['output']['summary'])
+        self.assertEqual(api.reviews, [])
+        self.assertIn('carried from PR head', out)
+        self.assertFalse(any(m == 'POST' and p.endswith('/reviews') for m, p, _ in api.calls))
+
+    def test_order_of_listed_files_does_not_matter(self):
+        api = carry_fake(); api.compare[(BASE, QHEAD)]['files'].reverse()
+        self.assertIsNone(self.run_prepare(api)[0])
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+
+    def test_a_different_tree_is_never_carried(self):
+        def other_blob(a): a.compare[(BASE, QHEAD)]['files'][0]['sha'] = '3' * 40
+        def extra_file(a): a.compare[(BASE, QHEAD)]['files'].append(file_row('other-pr.yaml', '4' * 40))
+        def missing_file(a): a.compare[(BASE, QHEAD)]['files'].pop()
+        def other_status(a): a.compare[(BASE, QHEAD)]['files'][1]['status'] = 'modified'
+        def other_rename(a): a.compare[(BASE, QHEAD)]['files'][0]['previous_filename'] = 'old.yaml'
+        def empty_both(a):
+            for key in a.compare: a.compare[key]['files'] = []
+        def queue_not_from_base(a): a.compare[(BASE, QHEAD)]['merge_base_commit']['sha'] = 'e' * 40
+        for mutate in (other_blob, extra_file, missing_file, other_status, other_rename, empty_both, queue_not_from_base):
+            with self.subTest(mutate=mutate.__name__):
+                api = carry_fake(); mutate(api)
+                prepared, out = self.run_prepare(api)
+                self.assert_model_runs(api, prepared)
+                self.assertIn('not carried', out)
+
+    def test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr(self):
+        def drop(a): a.other_checks.clear()
+        def failed(a): a.other_checks[0]['conclusion'] = 'failure'
+        def neutral(a): a.other_checks[0]['conclusion'] = 'neutral'
+        def cancelled(a): a.other_checks[0]['conclusion'] = 'cancelled'
+        def running(a): a.other_checks[0].update(status='in_progress', conclusion=None)
+        def queued_success(a): a.other_checks[0]['status'] = 'queued'
+        def stale_head(a): a.other_checks[0]['head_sha'] = 'c' * 40
+        def other_pr(a): a.other_checks[0]['external_id'] = 'agy/v1:' + REPO + ':8:50:1'
+        def other_source(a): a.other_checks[0]['external_id'] = 'agy/v1:mctlhq/elsewhere:7:50:1'
+        def no_external_id(a): a.other_checks[0].pop('external_id')
+        def carried_itself(a): a.other_checks[0]['output']['title'] = P.CARRY_TITLE
+        def no_output(a): a.other_checks[0].pop('output')
+        def duplicate(a): a.other_checks.append(copy.deepcopy(a.other_checks[0]))
+        def foreign_app(a): a.other_checks[0]['app']['id'] = 999
+        for mutate in (drop, failed, neutral, cancelled, running, queued_success, stale_head, other_pr,
+                       other_source, no_external_id, carried_itself, no_output, duplicate, foreign_app):
+            with self.subTest(mutate=mutate.__name__):
+                api = carry_fake(); mutate(api)
+                prepared, out = self.run_prepare(api)
+                self.assert_model_runs(api, prepared)
+
+    def test_the_head_must_be_the_live_pr_head_the_queue_commit_was_built_from(self):
+        for mutate in (lambda a: a.pr['head'].update(sha='c' * 40),
+                       lambda a: a.commits.update({QHEAD: [BASE, 'c' * 40]}),
+                       lambda a: a.commits.update({QHEAD: [HEAD, BASE]}),
+                       lambda a: a.commits.update({QHEAD: [BASE, 'c' * 40, HEAD]})):
+            with self.subTest():
+                api = carry_fake(); mutate(api)
+                try:
+                    prepared, _ = self.run_prepare(api)
+                except P.Refused:
+                    continue  # the unchanged queue_state refusal, no check is green
+                self.assertNotEqual(api.checks and api.checks[0].get('conclusion'), 'success')
+
+    def test_unreadable_or_partial_reads_fall_back_to_the_model(self):
+        def fail_on(marker):
+            return lambda a: setattr(a, 'error', lambda m, p: marker in p)
+        def malformed(key, value):
+            def go(a):
+                a.compare[(BASE, QHEAD)][key] = value
+            return go
+        def many(a):
+            rows = [file_row(f'f{i}.yaml', '5' * 40) for i in range(150)]
+            for key in a.compare: a.compare[key]['files'] = copy.deepcopy(rows)
+        cases = {
+            'compare pr head': fail_on('/compare/' + BASE + '...' + HEAD),
+            'compare queue commit': fail_on('/compare/' + BASE + '...' + QHEAD),
+            'later page': lambda a: (many(a), setattr(a, 'error', lambda m, p: 'page=2' in p)),
+            'check listing': lambda a: setattr(a, 'error', lambda m, p: '/commits/' + HEAD + '/check-runs' in p),
+            'files not a list': malformed('files', 'oops'),
+            'no merge base': malformed('merge_base_commit', None),
+            'bad merge base': malformed('merge_base_commit', {'sha': 'zz'}),
+            'zero changes': lambda a: [r.update(changes=0) for k in a.compare for r in a.compare[k]['files']],
+            'bad blob': lambda a: [r.update(sha='x') for k in a.compare for r in a.compare[k]['files']],
+            'unknown status': lambda a: [r.update(status='changed') for k in a.compare for r in a.compare[k]['files']],
+            'entry not an object': lambda a: [a.compare[k]['files'].insert(0, 'x') for k in a.compare],
+            'duplicate path': lambda a: [a.compare[k]['files'].append(dict(a.compare[k]['files'][0])) for k in a.compare],
+            'unconfigured': lambda a: a.compare.clear(),
+        }
+        for name, mutate in cases.items():
+            with self.subTest(case=name):
+                api = carry_fake(); mutate(api)
+                prepared, out = self.run_prepare(api)
+                self.assert_model_runs(api, prepared)
+                self.assertIn('not carried', out)
+
+    def test_a_listing_of_exactly_one_full_page_and_a_complete_second_page_still_works(self):
+        api = carry_fake()
+        rows = [file_row(f'f{i:03}.yaml', '5' * 40) for i in range(150)]
+        for key in api.compare: api.compare[key]['files'] = copy.deepcopy(rows)
+        self.assertIsNone(self.run_prepare(api)[0])
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+
+    def test_too_many_files_are_never_carried(self):
+        api = carry_fake()
+        rows = [file_row(f'f{i:03}.yaml', '5' * 40) for i in range(300)]
+        for key in api.compare: api.compare[key]['files'] = copy.deepcopy(rows)
+        prepared, _ = self.run_prepare(api)
+        self.assert_model_runs(api, prepared)
+
+    def test_queue_moving_after_the_comparison_is_not_carried(self):
+        api = carry_fake()
+        seen = []
+        def move(fake):
+            seen.append(1)
+            if len(seen) == 2:  # moves after target() and carry_proof()'s entry: the re-read after the comparisons sees it
+                fake.queue_refs[QREF] = 'e' * 40
+        api.move_on_queue_read = move
+        prepared, _ = self.run_prepare(api)
+        self.assertEqual(len(seen), 3)
+        self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_ordinary_pr_head_reviews_are_never_carried(self):
+        api = carry_fake(); api.other_checks.clear()
+        pub = P.Publisher(api, api, ENV)
+        self.assertEqual(pub.prepare(), {'number': 7, 'head': HEAD, 'base': BASE})
+        self.assertEqual(api.checks[0]['status'], 'in_progress')
+        self.assertFalse(any('/compare/' in p for _, p, _ in api.calls))
+
+    def test_an_owned_in_progress_check_on_the_queue_commit_is_completed_not_duplicated(self):
+        api = carry_fake()
+        api.checks.append({'id': 1, 'name': 'agy-formal-review', 'app': {'id': 123}, 'head_sha': QHEAD,
+                           'status': 'in_progress', 'external_id': 'agy/v1:' + REPO + ':7:99:1'})
+        self.assertIsNone(self.run_prepare(api)[0])
+        self.assertEqual(len(api.checks), 1)
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+
+    def test_a_newer_run_owning_the_queue_check_is_not_overwritten_by_a_carry(self):
+        api = carry_fake()
+        api.checks.append({'id': 1, 'name': 'agy-formal-review', 'app': {'id': 123}, 'head_sha': QHEAD,
+                           'status': 'in_progress', 'external_id': 'agy/v1:' + REPO + ':7:101:1'})
+        with self.assertRaises(P.Refused):
+            self.run_prepare(api)
+        self.assertNotIn('conclusion', api.checks[0])
+
+    def test_carried_check_cannot_itself_be_carried_and_model_path_still_publishes(self):
+        # The fallback path is unchanged: prepare, then a model verdict marks the commit.
+        api = carry_fake(); api.other_checks.clear()
+        pub = P.Publisher(api, api, QENV)
+        self.assertEqual(pub.prepare(), {'number': 7, 'head': QHEAD, 'base': BASE})
+        record = NS['make_record'](PASS, dict(ENV, HEAD_SHA=QHEAD, BASE_SHA=BASE))
+        self.assertEqual(pub.publish(json.dumps(record)), 'APPROVE')
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+        self.assertNotEqual(api.checks[0]['output']['title'], P.CARRY_TITLE)
 
 
 class QueueTests(unittest.TestCase):
@@ -611,10 +820,18 @@ class MutationTests(unittest.TestCase):
             ("raise Refused('merge queue ref names another base')", 'pass', 'test_queue_ref_must_name_the_queue_base'),
             ("raise Refused('merge queue review needs merge_method MERGE')", 'pass', 'test_queue_needs_the_merge_method'),
             ("raise Refused('run event or attempt mismatch')", 'pass', 'test_changed_run_attempt_never_publishes'),
+            ("raise Refused('queue commit differs from the reviewed PR diff')", 'pass', 'test_a_different_tree_is_never_carried'),
+            ("raise Refused('queue commit does not descend from its base')", 'pass', 'test_a_different_tree_is_never_carried'),
+            ("raise Refused('PR head has no single formal check')", 'pass', 'test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr'),
+            ("raise Refused('PR head has no completed success from a formal run for this PR')", 'pass', 'test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr'),
+            ("raise Refused('PR head verdict is itself carried or unreadable')", 'pass', 'test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr'),
+            ("raise Refused('comparison entry not comparable')", 'pass', 'test_unreadable_or_partial_reads_fall_back_to_the_model'),
+            ("raise Refused('comparison too large or ambiguous')", 'pass', 'test_too_many_files_are_never_carried'),
+            ("self.queue_state(self.context()[0], branch)\n        return check", "return check", 'test_queue_moving_after_the_comparison_is_not_carried'),
         ]
         original = P.Publisher
         for old, new, test in mutations:
-            suite = PublisherTests if hasattr(PublisherTests, test) else QueueTests
+            suite = next(c for c in (PublisherTests, QueueTests, CarryTests) if hasattr(c, test))
             with self.subTest(test=test):
                 self.assertEqual(source.count(old), 1)
                 scope = {'__name__': 'mutant'}
