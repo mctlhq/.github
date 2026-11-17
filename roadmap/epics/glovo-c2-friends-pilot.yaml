@@ -44,15 +44,15 @@ spec:
       title: P2 official delegated access proposal
   workItems:
     # Decide before any implementation: reuse mctl-api#1011/#1012 for the
-    # hosted write path, or keep the C2 write tools disabled (build or config,
-    # default off). Unbound: the validator allows an item with title and owner
-    # and no issue; its issue still has to be created (proposal in the amendment
-    # notes) before dependents can be evaluated as ready.
+    # hosted write path, or keep the C2 write tools disabled (default off).
     - id: c2-write-gate-decision
       title: Decide whether C2 basket writes reuse mctl-api#1011/#1012 or stay disabled
       owner: mctl-glovo
       phase: safety
       required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 49
 
     # Existing mctl-api#1006/#1011/#1012 own approval primitives.
     # This issue owns C2 hosted MCP end-to-end enforcement proof only.
@@ -96,13 +96,15 @@ spec:
 
     # Deploy flip order (deploy, GLOVO_C2_ENABLED, allowlist, consent, control),
     # ingress and rollback have one owner here; the rehearsal is proven in
-    # c2-e2e-resilience. Unbound: no existing mctl-gitops issue matches (searched
-    # 'glovo cutover', 'glovo c2 deploy'; mctl-glovo#11 has no sub-issues).
+    # c2-e2e-resilience.
     - id: c2-cutover-package
       title: C2 cutover package with flip order, ingress and rollback
       owner: mctl-gitops
       phase: reliability
       required: true
+      issue:
+        repository: mctlhq/mctl-gitops
+        number: 2777
 
     - id: c2-pilot-operations
       title: Privacy-safe pilot telemetry, private alerts and recovery
@@ -156,10 +158,8 @@ spec:
       dependsOn:
         - c2-fresh-link-identity
 
-    # One gate matrix (mctl-glovo#40) with separate recorded owner GOs. The
-    # schema allows one issue per work item, so #40 binds the owner-only GO and
-    # the other GOs are unbound items to be anchored in #40 by section (or in
-    # their own issues). Order: owner-only, 2, 10 (all required), then 20.
+    # One gate matrix (mctl-glovo#40) with separate recorded owner GOs, one
+    # issue per GO. Order: owner-only, 2, 10 (all required), then 20 (optional).
     - id: c2-go-owner
       title: Owner-only E2E GO with exact SHA and rollback evidence
       owner: mctl-glovo
@@ -178,6 +178,9 @@ spec:
       owner: mctl-glovo
       phase: admission
       required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 50
       dependsOn:
         - c2-go-owner
         - c2-e2e-resilience
@@ -187,6 +190,9 @@ spec:
       owner: mctl-glovo
       phase: admission
       required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 51
       dependsOn:
         - c2-go-2
         - c2-e2e-resilience
@@ -212,6 +218,9 @@ spec:
       owner: mctl-glovo
       phase: admission
       required: false
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 52
       dependsOn:
         - c2-cohort-feedback
 
