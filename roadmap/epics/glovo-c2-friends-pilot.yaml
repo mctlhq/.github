@@ -54,10 +54,13 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 49
 
-    # Existing mctl-api#1006/#1011/#1012 own approval primitives.
-    # This issue owns C2 hosted MCP end-to-end enforcement proof only.
-    - id: c2-write-approval-proof
-      title: Prove point-of-effect human approval on hosted basket mutations
+    # Stage 1 (required): prove the hosted write tools are closed or gated
+    # by default. Valid under either decision, so it carries no dependency on
+    # mctl-api#1011/#1012 and a read-only owner-only trial is not blocked.
+    # Existing mctl-api#1006/#1011/#1012 own approval primitives; this issue
+    # owns C2 hosted MCP end-to-end enforcement proof only.
+    - id: c2-write-disabled-proof
+      title: Prove hosted basket mutations are closed or approval-gated by default
       owner: mctl-glovo
       phase: safety
       required: true
@@ -66,6 +69,22 @@ spec:
         number: 41
       dependsOn:
         - c2-write-gate-decision
+
+    # Stage 2 (optional, next stage): point-of-effect human approval for real
+    # basket writes via mctl-api#1006/#1011/#1012. v1alpha1 has no conditional
+    # dependencies, so the write-branch externals live only here. This is the
+    # mandatory gate for ANY enablement of the C2 write tools; it is optional
+    # for epic completion only because the first pilot is read-only (writes
+    # stay disabled, see c2-write-disabled-proof). Unbound until the owner
+    # starts the write stage; no issue is created by this manifest.
+    - id: c2-write-approval-proof
+      title: Prove single-use human approval at point of effect before enabling basket writes
+      owner: mctl-glovo
+      phase: safety
+      required: false
+      dependsOn:
+        - c2-write-gate-decision
+        - c2-write-disabled-proof
       externalDependsOn:
         - repository: mctlhq/mctl-api
           number: 1006
@@ -115,6 +134,9 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 46
 
+    # The live owner-only trial (read-only first). It runs only after the
+    # pre-GO (c2-go-owner); its results are confirmed in this item's own
+    # acceptance, which c2-go-2 consumes.
     - id: c2-e2e-resilience
       title: Reproducible two-principal and owner-authorized live E2E proof
       owner: mctl-glovo
@@ -124,8 +146,38 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 43
       dependsOn:
+        - c2-go-owner
+
+    # C1 cannot derive personal order history. This is the product value
+    # behind retaining C2; no durable raw order-history store is authorized.
+    - id: c2-order-intelligence
+      title: Privacy-safe read-only aggregation of most ordered dishes and recency
+      owner: mctl-glovo
+      phase: intelligence
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 45
+      dependsOn:
+        - c2-fresh-link-identity
+
+    # One gate matrix (mctl-glovo#40) with separate recorded owner GOs, one
+    # issue per GO. Order: owner-only pre-GO -> live E2E (#43) -> 2 -> 10 (all
+    # required), then 20 (optional).
+    # Pre-GO: the permission to PERFORM the owner-only live E2E. Needs the
+    # read-only proof, readiness matrix at an exact SHA, rollback plan and
+    # kill-switch readiness; never live results (those come from c2-e2e-resilience).
+    - id: c2-go-owner
+      title: Owner-only E2E pre-GO with exact SHA, rollback and kill-switch readiness
+      owner: mctl-glovo
+      phase: admission
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 40
+      dependsOn:
         - c2-write-gate-decision
-        - c2-write-approval-proof
+        - c2-write-disabled-proof
         - c2-fresh-link-identity
         - c2-cutover-package
         - c2-pilot-operations
@@ -145,34 +197,6 @@ spec:
         - repository: mctlhq/mctl-gitops
           number: 2709
 
-    # C1 cannot derive personal order history. This is the product value
-    # behind retaining C2; no durable raw order-history store is authorized.
-    - id: c2-order-intelligence
-      title: Privacy-safe read-only aggregation of most ordered dishes and recency
-      owner: mctl-glovo
-      phase: intelligence
-      required: true
-      issue:
-        repository: mctlhq/mctl-glovo
-        number: 45
-      dependsOn:
-        - c2-fresh-link-identity
-
-    # One gate matrix (mctl-glovo#40) with separate recorded owner GOs, one
-    # issue per GO. Order: owner-only, 2, 10 (all required), then 20 (optional).
-    - id: c2-go-owner
-      title: Owner-only E2E GO with exact SHA and rollback evidence
-      owner: mctl-glovo
-      phase: admission
-      required: true
-      issue:
-        repository: mctlhq/mctl-glovo
-        number: 40
-      dependsOn:
-        - c2-write-gate-decision
-        - c2-fresh-link-identity
-        - c2-cutover-package
-
     - id: c2-go-2
       title: Second-account smoke GO (2 users)
       owner: mctl-glovo
@@ -182,7 +206,6 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 50
       dependsOn:
-        - c2-go-owner
         - c2-e2e-resilience
 
     - id: c2-go-10
@@ -195,7 +218,6 @@ spec:
         number: 51
       dependsOn:
         - c2-go-2
-        - c2-e2e-resilience
         - c2-security-boundary
         - c2-order-intelligence
 
@@ -237,11 +259,11 @@ spec:
   completion:
     mode: allRequired
   successCriteria:
-    - C2 real account access stays off by default; each of owner-only, 2 and 10 has its own recorded owner GO with exact SHA and rollback evidence; raising to 20 is a separate optional GO (c2-go-20) that is never automatic and is not required for epic completion.
+    - C2 real account access stays off by default; the owner-only live E2E needs its own recorded pre-GO (exact SHA, rollback and kill-switch readiness, never live results) and the 2 and 10 GOs each need their own recorded owner GO after the evidence of the stage before; raising to 20 is a separate optional GO (c2-go-20) that is never automatic and is not required for epic completion.
     - No cross-principal history, basket or session access is possible; revoked consent and kill-switch state refuse with no stale cache or direct egress fallback.
-    - No real basket mutation can reach Glovo without the user's single-use, live-snapshot-bound human approval, and checkout, payment and order placement remain unavailable.
+    - No real basket mutation can reach Glovo, because the write tools stay disabled (or approval-gated) by default, proven by c2-write-disabled-proof, and checkout, payment and order placement remain unavailable. Enabling basket writes is a later stage and stays binding on the single-use, live-snapshot-bound human approval proven by c2-write-approval-proof (optional for this epic's completion only because the first pilot is read-only); no write enablement is authorized without it.
     - Fresh MCTL login binds one-time Glovo link code redemption to the same verified principal and requires consent revalidation.
-    - Reproducible two-principal tests and separately authorized owner-live E2E cover account link, history, read/write controls, restarts and failure injection across proxy, API, Vault and Postgres.
+    - Reproducible two-principal tests and separately authorized owner-live E2E (read-only first) cover account link, history, read controls and disabled-write behavior, restarts and failure injection across proxy, API, Vault and Postgres.
     - An authenticated user can obtain a bounded, transparent, privacy-safe summary of their most frequently ordered dishes, with partial-history uncertainty explicit.
     - The <=20-user security residuals are either resolved with evidence or separately accepted by the owner with compensating controls, expiry and revisit triggers; no risk acceptance silently overrides a technical check.
     - The program does not create a second approval ledger, bypass existing mctl-api or GitOps release holds, or authorize deployment, external admission or partner outreach by manifest publication.
