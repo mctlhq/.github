@@ -43,6 +43,17 @@ spec:
     - id: partnership
       title: P2 official delegated access proposal
   workItems:
+    # Decide before any implementation: reuse mctl-api#1011/#1012 for the
+    # hosted write path, or keep the C2 write tools disabled (build or config,
+    # default off). Unbound: the validator allows an item with title and owner
+    # and no issue; its issue still has to be created (proposal in the amendment
+    # notes) before dependents can be evaluated as ready.
+    - id: c2-write-gate-decision
+      title: Decide whether C2 basket writes reuse mctl-api#1011/#1012 or stay disabled
+      owner: mctl-glovo
+      phase: safety
+      required: true
+
     # Existing mctl-api#1006/#1011/#1012 own approval primitives.
     # This issue owns C2 hosted MCP end-to-end enforcement proof only.
     - id: c2-write-approval-proof
@@ -53,6 +64,15 @@ spec:
       issue:
         repository: mctlhq/mctl-glovo
         number: 41
+      dependsOn:
+        - c2-write-gate-decision
+      externalDependsOn:
+        - repository: mctlhq/mctl-api
+          number: 1006
+        - repository: mctlhq/mctl-api
+          number: 1011
+        - repository: mctlhq/mctl-api
+          number: 1012
 
     - id: c2-fresh-link-identity
       title: Fresh MCTL login with server-verified principal binding for Glovo link
@@ -74,6 +94,16 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 44
 
+    # Deploy flip order (deploy, GLOVO_C2_ENABLED, allowlist, consent, control),
+    # ingress and rollback have one owner here; the rehearsal is proven in
+    # c2-e2e-resilience. Unbound: no existing mctl-gitops issue matches (searched
+    # 'glovo cutover', 'glovo c2 deploy'; mctl-glovo#11 has no sub-issues).
+    - id: c2-cutover-package
+      title: C2 cutover package with flip order, ingress and rollback
+      owner: mctl-gitops
+      phase: reliability
+      required: true
+
     - id: c2-pilot-operations
       title: Privacy-safe pilot telemetry, private alerts and recovery
       owner: mctl-glovo
@@ -92,9 +122,26 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 43
       dependsOn:
+        - c2-write-gate-decision
         - c2-write-approval-proof
         - c2-fresh-link-identity
+        - c2-cutover-package
         - c2-pilot-operations
+      externalDependsOn:
+        - repository: mctlhq/mctl-api
+          number: 1108
+        - repository: mctlhq/mctl-api
+          number: 1110
+        - repository: mctlhq/mctl-api
+          number: 1111
+        - repository: mctlhq/mctl-gitops
+          number: 2742
+        - repository: mctlhq/mctl-gitops
+          number: 2766
+        - repository: mctlhq/mctl-api
+          number: 1079
+        - repository: mctlhq/mctl-gitops
+          number: 2709
 
     # C1 cannot derive personal order history. This is the product value
     # behind retaining C2; no durable raw order-history store is authorized.
@@ -106,11 +153,15 @@ spec:
       issue:
         repository: mctlhq/mctl-glovo
         number: 45
+      dependsOn:
+        - c2-fresh-link-identity
 
-    # Drafting the gate matrix can happen early, but the item is complete
-    # only after the required safety, product and live proof evidence.
-    - id: c2-cohort-go-no-go
-      title: Evidence-gated owner to 2 to 10 to 20 cohort admission
+    # One gate matrix (mctl-glovo#40) with separate recorded owner GOs. The
+    # schema allows one issue per work item, so #40 binds the owner-only GO and
+    # the other GOs are unbound items to be anchored in #40 by section (or in
+    # their own issues). Order: owner-only, 2, 10 (all required), then 20.
+    - id: c2-go-owner
+      title: Owner-only E2E GO with exact SHA and rollback evidence
       owner: mctl-glovo
       phase: admission
       required: true
@@ -118,6 +169,26 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 40
       dependsOn:
+        - c2-write-gate-decision
+        - c2-fresh-link-identity
+        - c2-cutover-package
+
+    - id: c2-go-2
+      title: Second-account smoke GO (2 users)
+      owner: mctl-glovo
+      phase: admission
+      required: true
+      dependsOn:
+        - c2-go-owner
+        - c2-e2e-resilience
+
+    - id: c2-go-10
+      title: Cohort GO up to 10 users
+      owner: mctl-glovo
+      phase: admission
+      required: true
+      dependsOn:
+        - c2-go-2
         - c2-e2e-resilience
         - c2-security-boundary
         - c2-order-intelligence
@@ -131,7 +202,18 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 47
       dependsOn:
-        - c2-cohort-go-no-go
+        - c2-go-2
+        - c2-go-10
+
+    # Optional: raising GLOVO_C2_CAPACITY to 20 is never automatic and does
+    # not gate epic completion.
+    - id: c2-go-20
+      title: Separate optional owner GO to raise the cohort to 20
+      owner: mctl-glovo
+      phase: admission
+      required: false
+      dependsOn:
+        - c2-cohort-feedback
 
     - id: c2-partner-dossier
       title: Prepare a Glovo delegated OAuth partnership proposal from pilot evidence
@@ -146,7 +228,7 @@ spec:
   completion:
     mode: allRequired
   successCriteria:
-    - C2 real account access stays off by default; each of owner-only, 2, 10 and 20 has its own recorded owner GO with exact SHA and rollback evidence.
+    - C2 real account access stays off by default; each of owner-only, 2 and 10 has its own recorded owner GO with exact SHA and rollback evidence; raising to 20 is a separate optional GO (c2-go-20) that is never automatic and is not required for epic completion.
     - No cross-principal history, basket or session access is possible; revoked consent and kill-switch state refuse with no stale cache or direct egress fallback.
     - No real basket mutation can reach Glovo without the user's single-use, live-snapshot-bound human approval, and checkout, payment and order placement remain unavailable.
     - Fresh MCTL login binds one-time Glovo link code redemption to the same verified principal and requires consent revalidation.
