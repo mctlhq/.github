@@ -1,0 +1,156 @@
+# C2 Friends Pilot: a bounded, owner-gated program beyond the initial C2-2 build.
+# Distinct from mctl-glovo#11 (technical deployment/identity/cutover) and
+# mctl-api#1006/#1011/#1012 (existing synthetic/real approval components).
+# Owner decision 2026-11-17: C2 is the authenticated personalization path;
+# 10 initially and <=20 only after another explicit owner GO.
+# Planning only: manifest/issue creation does not approve release or activation.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: glovo-c2-friends-pilot
+  owner: mctl-glovo
+  labels:
+    - roadmap
+    - glovo
+    - c2
+spec:
+  title: Glovo C2 Friends Pilot — assurance, reliability and order intelligence
+  goal: >-
+    Prove a bounded 10-person, then optionally 20-person, authenticated
+    Glovo MCP pilot with per-principal isolation, consent, human-controlled
+    basket changes, recoverable operations and useful read-only order-history
+    intelligence, while keeping third-party session and unofficial API risks
+    explicit and without authorizing any public release.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/.github
+      number: 365
+    issueType: Epic
+    project:
+      priority: P0
+  phases:
+    - id: safety
+      title: P0/P1 safety and identity boundaries
+    - id: reliability
+      title: P0/P1 reproducible E2E and operability
+    - id: intelligence
+      title: P1 personal order-history value
+    - id: admission
+      title: P0 evidence-based cohort GO/NO-GO
+    - id: learning
+      title: P2 bounded product feedback
+    - id: partnership
+      title: P2 official delegated access proposal
+  workItems:
+    # Existing mctl-api#1006/#1011/#1012 own approval primitives.
+    # This issue owns C2 hosted MCP end-to-end enforcement proof only.
+    - id: c2-write-approval-proof
+      title: Prove point-of-effect human approval on hosted basket mutations
+      owner: mctl-glovo
+      phase: safety
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 41
+
+    - id: c2-fresh-link-identity
+      title: Fresh MCTL login with server-verified principal binding for Glovo link
+      owner: mctl-glovo
+      phase: safety
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 42
+
+    # Resolution can be implemented controls or a recorded, bounded owner
+    # exception with an explicit <=20 cohort and revisit trigger.
+    - id: c2-security-boundary
+      title: Decide broker, Vault TLS and privileged-identity residuals
+      owner: mctl-glovo
+      phase: safety
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 44
+
+    - id: c2-pilot-operations
+      title: Privacy-safe pilot telemetry, private alerts and recovery
+      owner: mctl-glovo
+      phase: reliability
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 46
+
+    - id: c2-e2e-resilience
+      title: Reproducible two-principal and owner-authorized live E2E proof
+      owner: mctl-glovo
+      phase: reliability
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 43
+      dependsOn:
+        - c2-write-approval-proof
+        - c2-fresh-link-identity
+        - c2-pilot-operations
+
+    # C1 cannot derive personal order history. This is the product value
+    # behind retaining C2; no durable raw order-history store is authorized.
+    - id: c2-order-intelligence
+      title: Privacy-safe read-only aggregation of most ordered dishes and recency
+      owner: mctl-glovo
+      phase: intelligence
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 45
+
+    # Drafting the gate matrix can happen early, but the item is complete
+    # only after the required safety, product and live proof evidence.
+    - id: c2-cohort-go-no-go
+      title: Evidence-gated owner to 2 to 10 to 20 cohort admission
+      owner: mctl-glovo
+      phase: admission
+      required: true
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 40
+      dependsOn:
+        - c2-e2e-resilience
+        - c2-security-boundary
+        - c2-order-intelligence
+
+    - id: c2-cohort-feedback
+      title: Evaluate opt-in onboarding, answer quality and recovery feedback
+      owner: mctl-glovo
+      phase: learning
+      required: false
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 47
+      dependsOn:
+        - c2-cohort-go-no-go
+
+    - id: c2-partner-dossier
+      title: Prepare a Glovo delegated OAuth partnership proposal from pilot evidence
+      owner: mctl-glovo
+      phase: partnership
+      required: false
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 48
+      dependsOn:
+        - c2-cohort-feedback
+  completion:
+    mode: allRequired
+  successCriteria:
+    - C2 real account access stays off by default; each of owner-only, 2, 10 and 20 has its own recorded owner GO with exact SHA and rollback evidence.
+    - No cross-principal history, basket or session access is possible; revoked consent and kill-switch state refuse with no stale cache or direct egress fallback.
+    - No real basket mutation can reach Glovo without the user's single-use, live-snapshot-bound human approval, and checkout, payment and order placement remain unavailable.
+    - Fresh MCTL login binds one-time Glovo link code redemption to the same verified principal and requires consent revalidation.
+    - Reproducible two-principal tests and separately authorized owner-live E2E cover account link, history, read/write controls, restarts and failure injection across proxy, API, Vault and Postgres.
+    - An authenticated user can obtain a bounded, transparent, privacy-safe summary of their most frequently ordered dishes, with partial-history uncertainty explicit.
+    - The <=20-user security residuals are either resolved with evidence or separately accepted by the owner with compensating controls, expiry and revisit triggers; no risk acceptance silently overrides a technical check.
+    - The program does not create a second approval ledger, bypass existing mctl-api or GitOps release holds, or authorize deployment, external admission or partner outreach by manifest publication.
