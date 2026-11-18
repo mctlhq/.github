@@ -3,6 +3,10 @@
 # mctl-api#1006/#1011/#1012 (existing synthetic/real approval components).
 # Owner decision 2026-11-17: C2 is the authenticated personalization path;
 # 10 initially and <=20 only after another explicit owner GO.
+# Owner scope 2026-11-18 (plan change, not a GO): Owner-only -> 10 read-only ->
+# Approval + Canary -> 20 read+write. Up to 10: READ_ONLY_FIRST; up to 20: basket
+# writes through the existing mctl-api#1011/#1012 approval (no second ledger).
+# Checkout, payment and place_order are forbidden at every stage.
 # Planning only: manifest/issue creation does not approve release or activation.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
@@ -244,12 +248,34 @@ spec:
         - c2-go-2
         - c2-go-10
 
+    # Operational GO (optional, write stage): a live add / read / change
+    # quantity / remove / recover cycle on separately allowed accounts, after
+    # the read-only 10 stage and before the 20 stage is admitted. Synthetic
+    # tests and the review of mctl-api#1011/#1012 do not replace it. It is never
+    # executed within PR preparation and needs its own owner GO. Optional for
+    # epic completion so the read-only pilot is never blocked by the write
+    # circuit; it dependsOn only required items and the optional approval proof.
+    - id: c2-write-canary
+      title: Write canary on allowed accounts - add, read, change quantity, remove, recover (own owner GO)
+      owner: mctl-glovo
+      phase: admission
+      required: false
+      issue:
+        repository: mctlhq/mctl-glovo
+        number: 57
+      dependsOn:
+        - c2-write-approval-proof
+        - c2-go-10
+
     # Optional: raising GLOVO_C2_CAPACITY to 20 is never automatic and does
-    # not gate epic completion. It follows the read-only stage, so it also
-    # needs the write approval proof (owner decision 2026-11-18): a larger
-    # cohort is never admitted onto a write-capable deployment without it.
+    # not gate epic completion. It is the read+write stage (owner scope
+    # 2026-11-18: Owner-only -> 10 read-only -> Approval + Canary -> 20
+    # read+write). When it is run, every dependency below is binding: the
+    # approval proof, the write canary, the security boundary and the read-only
+    # pilot results. Optional items may depend on required ones (never the
+    # reverse), so this does not enter allRequired completion.
     - id: c2-go-20
-      title: Separate optional owner GO to raise the cohort to 20
+      title: Separate optional owner GO to raise the cohort to 20 with approval-gated basket writes
       owner: mctl-glovo
       phase: admission
       required: false
@@ -257,8 +283,11 @@ spec:
         repository: mctlhq/mctl-glovo
         number: 52
       dependsOn:
+        - c2-go-10
         - c2-cohort-feedback
+        - c2-security-boundary
         - c2-write-approval-proof
+        - c2-write-canary
 
     - id: c2-partner-dossier
       title: Prepare a Glovo delegated OAuth partnership proposal from pilot evidence
@@ -273,11 +302,12 @@ spec:
   completion:
     mode: allRequired
   successCriteria:
-    - C2 real account access stays off by default; the owner-only live E2E needs its own recorded pre-GO (exact SHA, rollback and kill-switch readiness, never live results) and the 2 and 10 GOs each need their own recorded owner GO after the evidence of the stage before; raising to 20 is a separate optional GO (c2-go-20) that is never automatic and is not required for epic completion.
+    - C2 real account access stays off by default; the owner-only live E2E needs its own recorded pre-GO (exact SHA, rollback and kill-switch readiness, never live results) and the 2 and 10 GOs each need their own recorded owner GO after the evidence of the stage before; raising to 20 is a separate optional GO (c2-go-20) that is never automatic and is not required for epic completion, but when it is run it needs the approval proof (c2-write-approval-proof), the write canary (c2-write-canary, its own owner GO), the security boundary and the read-only pilot results first.
     - No cross-principal history, basket or session access is possible; revoked consent and kill-switch state refuse with no stale cache or direct egress fallback.
     - No real basket mutation can reach Glovo, because the write tools stay disabled by default, proven by c2-write-disabled-proof, and checkout, payment and order placement remain unavailable. Enabling basket writes is a later stage and stays binding on the single-use, live-snapshot-bound human approval proven by c2-write-approval-proof (optional for this epic's completion only because the first pilot is read-only); no write enablement is authorized without it, and "approval-gated" counts as proven only once that item is satisfied. The dependency graph encodes this and epic_guards.py enforces it in CI.
     - Fresh MCTL login binds one-time Glovo link code redemption to the same verified principal and requires consent revalidation.
     - Reproducible two-principal tests and separately authorized owner-live E2E (read-only first) cover account link, history, read controls and disabled-write behavior, restarts and failure injection across proxy, API, Vault and Postgres.
     - An authenticated user can obtain a bounded, transparent, privacy-safe summary of their most frequently ordered dishes, with partial-history uncertainty explicit.
     - The <=20-user security residuals are either resolved with evidence or separately accepted by the owner with compensating controls, expiry and revisit triggers; no risk acceptance silently overrides a technical check.
+    - Rule W1 (mctl-glovo#49 and mctl-glovo#55) - writes are enabled only by satisfying the approval item (c2-write-approval-proof), never by a flag alone; the write canary (c2-write-canary) and the 20 GO (c2-go-20) are optional for completion but bind to that item, and checkout, payment and place_order stay forbidden at every stage.
     - The program does not create a second approval ledger, bypass existing mctl-api or GitOps release holds, or authorize deployment, external admission or partner outreach by manifest publication.
