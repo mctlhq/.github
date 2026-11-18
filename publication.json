@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "7eea364ab6ee028884506079bb5179cc12ea8db5"
+    "revision": "ec5a8d7c54cb7d8e50f742268aea09a1e3948e6b"
   },
   "files": {
     "health.json": {
-      "sha256": "7b57af3e006f6367100323e27a58bedb2bed5a6611e708f5e8b7539afac845e1"
+      "sha256": "4b59913af14bb3835429aaee6f23b4998a626f4f65c2f21dc762c29b095abdcd"
     },
     "ready-set.json": {
-      "sha256": "285d2ac45487c3cdfbd190e96cd430112d607049d150ef9205930213a0230caa"
+      "sha256": "165a8b2f46c894026486d6fa086a0c11c24c36e70f7a56adb3da85f1bbbfd187"
     },
     "snapshot.json": {
-      "sha256": "f173c683fb7373f732dc4d03718ba55db58d05d999906a5d24154645af043d3b"
+      "sha256": "f245e810854d2ac355588f5e09a330452c87f732538cfbca94a93ea6e1cb1e53"
     }
   },
   "kind": "RoadmapPublication",
@@ -238,6 +238,16 @@
     },
     {
       "epic": {
+        "goal": "A user chats with a dedicated Telegram bot that reads through and acts on the user's own catalog MCP servers (tg and alice first) with delegated tokens held server-side, a server-side connector executor, per-call approvals for writes, a never-lowerable disclosure class for speech, and egress, taint and revocation controls proven by CI security suites before any deployment.",
+        "lifecycle": "proposed",
+        "name": "personal-assistant",
+        "title": "Personal Assistant, a Bot API bot that calls the user's MCTL MCP servers"
+      },
+      "path": "roadmap/epics/personal-assistant.yaml",
+      "sha256": "a6463b7a5b047f3178f5f9cd876f433340c69dad0126efae402143db965e60f7"
+    },
+    {
+      "epic": {
         "goal": "Make a versioned EpicDefinition manifest the canonical desired graph for an epic, and derive drift, health and completion from the observed GitHub graph deterministically, with GitHub remaining the human planning surface.",
         "lifecycle": "completed",
         "name": "roadmap-control-plane",
@@ -319,12 +329,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-18T11:54:57Z",
+    "capturedAt": "2026-11-18T18:35:23Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "7eea364ab6ee028884506079bb5179cc12ea8db5"
+    "revision": "ec5a8d7c54cb7d8e50f742268aea09a1e3948e6b"
   }
 }
