@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "ec5a8d7c54cb7d8e50f742268aea09a1e3948e6b"
+    "revision": "8b507463b26e8c26f0c20a8c918a11c87c4a1b81"
   },
   "files": {
     "health.json": {
-      "sha256": "4b59913af14bb3835429aaee6f23b4998a626f4f65c2f21dc762c29b095abdcd"
+      "sha256": "dba863a3c59a50f9343e5e0bc6abb732b1a8584103ae4646b0a399c645358853"
     },
     "ready-set.json": {
-      "sha256": "165a8b2f46c894026486d6fa086a0c11c24c36e70f7a56adb3da85f1bbbfd187"
+      "sha256": "35f3bbe396c73be230683264b7397817c9c8685ba658d8e3deb8d924edf0dddf"
     },
     "snapshot.json": {
-      "sha256": "f245e810854d2ac355588f5e09a330452c87f732538cfbca94a93ea6e1cb1e53"
+      "sha256": "f8ded6e84be8e8b90db59658690382441e68f66763f1b72e3fc46cb4a1676e63"
     }
   },
   "kind": "RoadmapPublication",
@@ -239,12 +239,12 @@
     {
       "epic": {
         "goal": "A user chats with a dedicated Telegram bot that reads through and acts on the user's own catalog MCP servers (tg and alice first) with delegated tokens held server-side, a server-side connector executor, per-call approvals for writes, a never-lowerable disclosure class for speech, and egress, taint and revocation controls proven by CI security suites before any deployment.",
-        "lifecycle": "proposed",
+        "lifecycle": "active",
         "name": "personal-assistant",
         "title": "Personal Assistant, a Bot API bot that calls the user's MCTL MCP servers"
       },
       "path": "roadmap/epics/personal-assistant.yaml",
-      "sha256": "a6463b7a5b047f3178f5f9cd876f433340c69dad0126efae402143db965e60f7"
+      "sha256": "3b5d8b25378d21b44675409663dcdb8c23c484f3aaae9a17f8100af6f6aabdf0"
     },
     {
       "epic": {
@@ -329,12 +329,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-18T18:35:23Z",
+    "capturedAt": "2026-11-18T21:21:40Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "ec5a8d7c54cb7d8e50f742268aea09a1e3948e6b"
+    "revision": "8b507463b26e8c26f0c20a8c918a11c87c4a1b81"
   }
 }
