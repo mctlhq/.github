@@ -2,8 +2,10 @@
 # governance). Design: mctl-telegram ADR 0011 and
 # docs/agent-runtime/personal-assistant-threat-model.md (mctl-telegram#1311).
 # mctl-telegram#1048 stays the security owner for user MCP connectors; this
-# epic consumes its gates for catalog servers only. Every work item is HOLD:
-# no agents:intake, implementation or deployment without a per-phase owner GO.
+# epic consumes its gates for catalog servers only. Owner GO on 2026-11-18:
+# Phase 1 IMPLEMENTATION ONLY. Start P1-0, p1-bot-loop and p1-egress.
+# Linking and remaining phases remain gated. NO preview deployment,
+# runtime activation, writes, Glovo or Phase 2 without a separate owner GO.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -20,7 +22,7 @@ spec:
     approvals for writes, a never-lowerable disclosure class for speech, and
     egress, taint and revocation controls proven by CI security suites before
     any deployment.
-  lifecycle: proposed
+  lifecycle: active
   github:
     issue:
       repository: mctlhq/mctl-telegram
@@ -35,6 +37,13 @@ spec:
     - id: expansion
       title: Phase 4 expansion (Glovo, memory, routines)
   workItems:
+    - id: p1-oauth-scope-ceiling
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1327
+
     - id: p1-bot-loop
       phase: read-only
       required: true
@@ -48,6 +57,8 @@ spec:
       issue:
         repository: mctlhq/mctl-telegram
         number: 1314
+      dependsOn:
+        - p1-oauth-scope-ceiling
 
     - id: p1-connector
       phase: read-only
@@ -57,6 +68,7 @@ spec:
         number: 1315
       dependsOn:
         - p1-linking
+        - p1-oauth-scope-ceiling
 
     - id: p1-egress
       phase: read-only
