@@ -1,0 +1,160 @@
+# Drafted 2026-11-18 after the owner's GO for Phase 0 only (architecture and
+# governance). Design: mctl-telegram ADR 0011 and
+# docs/agent-runtime/personal-assistant-threat-model.md (mctl-telegram#1311).
+# mctl-telegram#1048 stays the security owner for user MCP connectors; this
+# epic consumes its gates for catalog servers only. Every work item is HOLD:
+# no agents:intake, implementation or deployment without a per-phase owner GO.
+apiVersion: roadmap.mctl.ai/v1alpha1
+kind: EpicDefinition
+metadata:
+  name: personal-assistant
+  owner: mctl-telegram
+  labels:
+    - roadmap
+spec:
+  title: Personal Assistant, a Bot API bot that calls the user's MCTL MCP servers
+  goal: >-
+    A user chats with a dedicated Telegram bot that reads through and acts on
+    the user's own catalog MCP servers (tg and alice first) with delegated
+    tokens held server-side, a server-side connector executor, per-call
+    approvals for writes, a never-lowerable disclosure class for speech, and
+    egress, taint and revocation controls proven by CI security suites before
+    any deployment.
+  lifecycle: proposed
+  github:
+    issue:
+      repository: mctlhq/mctl-telegram
+      number: 1312
+  phases:
+    - id: read-only
+      title: Phase 1 read-only MVP
+    - id: safe-actions
+      title: Phase 2 safe actions (Alice)
+    - id: pilot
+      title: Phase 3 private pilot
+    - id: expansion
+      title: Phase 4 expansion (Glovo, memory, routines)
+  workItems:
+    - id: p1-bot-loop
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1313
+
+    - id: p1-linking
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1314
+
+    - id: p1-connector
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1315
+      dependsOn:
+        - p1-linking
+
+    - id: p1-egress
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1316
+
+    - id: p1-security-suite
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1317
+      dependsOn:
+        - p1-bot-loop
+        - p1-linking
+        - p1-connector
+        - p1-egress
+
+    - id: p1-switches-preview
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1318
+      dependsOn:
+        - p1-security-suite
+
+    - id: p1-preview-evals
+      phase: read-only
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1319
+      dependsOn:
+        - p1-switches-preview
+
+    - id: p2-approvals
+      phase: safe-actions
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1320
+      dependsOn:
+        - p1-preview-evals
+
+    - id: p2-taint
+      phase: safe-actions
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1321
+      dependsOn:
+        - p1-preview-evals
+
+    - id: p2-alice-actions
+      phase: safe-actions
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1322
+      dependsOn:
+        - p2-approvals
+        - p2-taint
+
+    - id: p2-security-suite-evals
+      phase: safe-actions
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1323
+      dependsOn:
+        - p2-alice-actions
+
+    - id: p3-pilot
+      phase: pilot
+      required: true
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1324
+      dependsOn:
+        - p2-security-suite-evals
+
+    - id: p4-expansion
+      phase: expansion
+      required: false
+      issue:
+        repository: mctlhq/mctl-telegram
+        number: 1325
+      dependsOn:
+        - p3-pilot
+  completion:
+    mode: allRequired
+  successCriteria:
+    - Security suites S1 and S2 run in CI with no deployment, every test is mutation-verified, and S1 is green before any preview deployment.
+    - A connect link opened by a Telegram user other than the principal never yields a usable connection, and a tg connection is usable only when the token's own login identity equals the principal; for servers without a Telegram-bound identity the forwarded completion-link risk is accepted per server by the owner before linking is enabled, never by default.
+    - A PA token for any principal, admins included, carries exactly the pinned read scopes, and tg itself refuses admin and write tools for it.
+    - Every MCP call re-checks connection state and revision immediately before dispatch; a revoked connection is unusable by MCTL even when remote revocation fails.
+    - Telegram content is never spoken by Alice without a disclosure card that shows the target device and the full text.
+    - In a private pilot, the bot reads Telegram and controls Alice with correct approvals, and no unapproved write is observed.
