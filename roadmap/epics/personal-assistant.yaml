@@ -153,7 +153,8 @@ spec:
     mode: allRequired
   successCriteria:
     - Security suites S1 and S2 run in CI with no deployment, every test is mutation-verified, and S1 is green before any preview deployment.
-    - A connect link opened by another Telegram user, or completed with a foreign account, never yields a usable connection.
+    - A connect link opened by a Telegram user other than the principal never yields a usable connection, and a tg connection is usable only when the token's own login identity equals the principal; for servers without a Telegram-bound identity the forwarded completion-link risk is accepted per server by the owner before linking is enabled, never by default.
+    - A PA token for any principal, admins included, carries exactly the pinned read scopes, and tg itself refuses admin and write tools for it.
     - Every MCP call re-checks connection state and revision immediately before dispatch; a revoked connection is unusable by MCTL even when remote revocation fails.
     - Telegram content is never spoken by Alice without a disclosure card that shows the target device and the full text.
     - In a private pilot, the bot reads Telegram and controls Alice with correct approvals, and no unapproved write is observed.
