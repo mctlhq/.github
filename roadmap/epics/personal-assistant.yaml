@@ -42,7 +42,7 @@ spec:
       required: true
       issue:
         repository: mctlhq/mctl-telegram
-        number: 1327
+        number: 1326
 
     - id: p1-bot-loop
       phase: read-only
@@ -84,6 +84,7 @@ spec:
         repository: mctlhq/mctl-telegram
         number: 1317
       dependsOn:
+        - p1-oauth-scope-ceiling
         - p1-bot-loop
         - p1-linking
         - p1-connector
