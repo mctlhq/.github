@@ -30,6 +30,12 @@ jobs:
       - name: Validate roadmap manifests
         run: python3 roadmap/scripts/validate.py roadmap/epics roadmap/spikes
 
+      # Offline per-epic semantic guards (required item exists, stays required,
+      # sits upstream of another). Exit 2 means a guarded epic could not be
+      # evaluated, never "clean".
+      - name: Guard epic work-item graph semantics
+        run: python3 roadmap/scripts/epic_guards.py roadmap/epics
+
       # Diff-aware, offline guard: no completed epic may gain required work.
       # An unresolvable base fails the step (exit 2); it is never read as "no change".
       - name: Guard completed epics against new required work (pull request)
