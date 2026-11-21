@@ -9,6 +9,9 @@
 # Production rollout is deliberately not a work item: it is gated by the
 # conversation-plane gates mctl-telegram#889 and #334 and happens after the
 # preview soak recorded on the epic issue.
+# Completed 2026-11-21: all nine required work items are closed as completed.
+# Production rollout stays outside this epic, as stated above: it is gated by
+# mctl-telegram#889 and #334, which remain open.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -25,7 +28,7 @@ spec:
     platform worker per environment claim that account's jobs and run them on
     an OpenAI-compatible model through the Cloudflare AI gateway, behind the
     same tool set and policy as the owner-run worker, under hard budget caps.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/mctl-telegram
