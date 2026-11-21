@@ -4,6 +4,9 @@
 # mctlhq/mctl-support was created on that verdict and the S1 issues were
 # transferred into it (.github#245-#248 -> mctl-support#2-#5). S2 is bound
 # to #270 and its slices (2026-10-28); S3 and later phases are not bound.
+# Completed 2026-11-21: all nine required S-1..S1 work items are closed as
+# completed. The optional S2 pilot (.github#270) was closed as not planned on
+# 2026-11-13 after zero pilot traffic; its S2a-S2d slices shipped.
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -19,7 +22,7 @@ spec:
     only that tenant's resources, read-only, through a tenant-bound support run
     token, answers with evidence, and escalates to the platform owner only what
     the tenant cannot fix themselves, as a tenant-local incident.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github

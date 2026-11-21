@@ -9,6 +9,8 @@
 # stays open as a reactivation path, but it is not a completion dependency.
 # Full-login evidence now uses low-frequency production-DC proofs on a
 # dedicated service account (mctl-telegram#1057), never scheduled phone logins.
+# Completed 2026-11-21: all six required work items are closed as completed,
+# including the live production-DC login proof (mctl-telegram#1057).
 apiVersion: roadmap.mctl.ai/v1alpha1
 kind: EpicDefinition
 metadata:
@@ -25,7 +27,7 @@ spec:
     continuous synthetic/funnel detectors, plus low-frequency live evidence on
     dedicated Telegram service accounts, and stop the monitoring canary from
     being broken by an accidental Disconnect.
-  lifecycle: active
+  lifecycle: completed
   github:
     issue:
       repository: mctlhq/.github
