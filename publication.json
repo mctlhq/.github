@@ -1,17 +1,17 @@
 {
   "apiVersion": "roadmap.mctl.ai/v1alpha1",
   "evaluator": {
-    "revision": "8b507463b26e8c26f0c20a8c918a11c87c4a1b81"
+    "revision": "7a0659c5bdaf4896d6f6fe68dfa5ca7e2c2d0cb9"
   },
   "files": {
     "health.json": {
-      "sha256": "274f2cf7a6866db5a4c50720cf597d1ac4a8fe1c8e0e023f8bc87b699b24c907"
+      "sha256": "12c7ddee4fce0d627abaf42198aa2e9d78b96dbef19d2b4b325cb8fbc4111bd9"
     },
     "ready-set.json": {
-      "sha256": "94df83ab7b4475cb4db0c166fabc125122c189aa2e4c2a2c58a9322661aeaaad"
+      "sha256": "58483d01579e1c9d4741308ec155e84951f255cf0c5349fc609bad4939912eb9"
     },
     "snapshot.json": {
-      "sha256": "2f1e1c5275bdac5bed3cbbe6ae84c90c9a9e805a7a4cc0af7b6624abb7c7b0e8"
+      "sha256": "2601b163f42b4a9bf93c36143529997275350cb31b4eff96b8bf15c1246ea45e"
     }
   },
   "kind": "RoadmapPublication",
@@ -199,12 +199,12 @@
     {
       "epic": {
         "goal": "Detect breakage anywhere on the path a new MCP connector takes into mctl-telegram (discovery, Telegram OIDC, phone or QR step, token grant, first MCP call, and the edge in front of it) within 30 minutes using continuous synthetic/funnel detectors, plus low-frequency live evidence on dedicated Telegram service accounts, and stop the monitoring canary from being broken by an accidental Disconnect.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "login-path-observability",
         "title": "Observe the connector login path, not only connected accounts"
       },
       "path": "roadmap/epics/login-path-observability.yaml",
-      "sha256": "1ac2b88b00b621491b0902b582d1f5c3b25513df4d367a7b45836d162e297e72"
+      "sha256": "f301513029046b42cee5bcee3cc2b918ffc68ef684df56d1b5f3e2ce7548cbc2"
     },
     {
       "epic": {
@@ -289,22 +289,22 @@
     {
       "epic": {
         "goal": "Let a Telegram user turn an installed assistant on from their MCP client with no token, machine or model credential of their own: runtime: managed on the install, confirmed with an explicit consent, makes one pooled platform worker per environment claim that account's jobs and run them on an OpenAI-compatible model through the Cloudflare AI gateway, behind the same tool set and policy as the owner-run worker, under hard budget caps.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "telegram-managed-runtime",
         "title": "Managed runtime for Telegram assistants"
       },
       "path": "roadmap/epics/telegram-managed-runtime.yaml",
-      "sha256": "82550008c8165cfccdb3068fded57f76613d66520f7b29013e951da1ed3f26a5"
+      "sha256": "09b8d700c54b24e57311e55dca825371eb9580d516fb91f9bcc5edb302d8a19e"
     },
     {
       "epic": {
         "goal": "A tenant, or the tenant's own agent, asks an mctl-side Claude agent why a service, rollout, workflow or onboarding is failing. The agent investigates only that tenant's resources, read-only, through a tenant-bound support run token, answers with evidence, and escalates to the platform owner only what the tenant cannot fix themselves, as a tenant-local incident.",
-        "lifecycle": "active",
+        "lifecycle": "completed",
         "name": "tenant-support-agent",
         "title": "Tenant support agent reachable over A2A (mctl-support)"
       },
       "path": "roadmap/epics/tenant-support-agent.yaml",
-      "sha256": "59b987d53b47ef32fe0eb0a0540af3b026c9d9a961bd72cb271c9e40623ebe48"
+      "sha256": "0c566209382c6abaa2bf8cb302794af0253e57b163102fffeace9523ca1db6ae"
     },
     {
       "epic": {
@@ -329,12 +329,12 @@
   ],
   "observation": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-20T20:30:28Z",
+    "capturedAt": "2026-11-21T00:13:34Z",
     "mode": "live-capture"
   },
   "source": {
     "ref": "main",
     "repository": "mctlhq/.github",
-    "revision": "8b507463b26e8c26f0c20a8c918a11c87c4a1b81"
+    "revision": "7a0659c5bdaf4896d6f6fe68dfa5ca7e2c2d0cb9"
   }
 }
