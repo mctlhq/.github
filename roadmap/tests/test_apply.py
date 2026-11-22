@@ -513,6 +513,85 @@ class ApplyTest(ApplyTestBase):
             mutator.add_dependency(("mctlhq/mctl-web", 5), ("mctlhq/.github", 42))
         self.assertEqual([], opener.calls)
 
+    def test_the_guard_binds_the_path_to_the_template_it_claims(self) -> None:
+        """An allow-listed template with another endpoint's path is refused.
+
+        The allow-list matches on `template`; the wire gets `path`. Unless the
+        two are tied together, a hand-built request can carry an allowed
+        template and any path at all.
+        """
+
+        owned = frozenset({("mctlhq/.github", 42), ("mctlhq/mctl-api", 261)})
+        target = ("mctlhq/.github", 42)
+        related = ("mctlhq/mctl-api", 261)
+
+        def request(template: str, path: str, method: str = "POST"):
+            return github_apply.MutationRequest(
+                kind=github_apply.ADD_SUB_ISSUE,
+                method=method,
+                template=template,
+                path=path,
+                target=target,
+                related=related,
+                body={"sub_issue_id": 7},
+            )
+
+        refused = {
+            "another endpoint": request(
+                github_apply.SUB_ISSUES, "/repos/mctlhq/.github/issues/42/comments"
+            ),
+            "another issue": request(
+                github_apply.SUB_ISSUES, "/repos/mctlhq/.github/issues/43/sub_issues"
+            ),
+            "another repository": request(
+                github_apply.SUB_ISSUES, "/repos/mctlhq/mctl-web/issues/42/sub_issues"
+            ),
+            "a suffixed path": request(
+                github_apply.SUB_ISSUES, "/repos/mctlhq/.github/issues/42/sub_issues/x"
+            ),
+            "a non-numeric dependency": request(
+                github_apply.BLOCKED_BY_ONE,
+                "/repos/mctlhq/.github/issues/42/dependencies/blocked_by/abc",
+                "DELETE",
+            ),
+            "a dependency template with the collection path": request(
+                github_apply.BLOCKED_BY_ONE,
+                "/repos/mctlhq/.github/issues/42/dependencies/blocked_by",
+                "DELETE",
+            ),
+        }
+        for name, bad in refused.items():
+            with self.subTest(case=name):
+                with self.assertRaises(github_apply.MutationRefused) as error:
+                    github_apply.check_request(bad, owned)
+                self.assertIn("template it claims", str(error.exception))
+
+        # The other way: every request `build_request` produces still passes.
+        for kind in (
+            github_apply.ADD_SUB_ISSUE,
+            github_apply.REMOVE_SUB_ISSUE,
+            github_apply.ADD_DEPENDENCY,
+            github_apply.REMOVE_DEPENDENCY,
+        ):
+            with self.subTest(kind=kind):
+                github_apply.check_request(
+                    github_apply.build_request(kind, target, related, 7), owned
+                )
+
+    def test_the_owned_set_must_be_part_of_the_authored_set(self) -> None:
+        owned = {("mctlhq/.github", 42), ("mctlhq/mctl-api", 261)}
+        authored = {("mctlhq/.github", 42)}
+        with self.assertRaises(github_apply.MutationRefused) as refused:
+            github_apply.FakeMutator({"issues": []}, owned, authored)
+        self.assertIn("part of the authored set", str(refused.exception))
+        with self.assertRaises(github_apply.MutationRefused):
+            github_apply.LiveMutator(
+                "token", owned, authored=authored, opener=_RecordingOpener()
+            )
+        # An authored superset, and the default, are accepted.
+        github_apply.FakeMutator({"issues": []}, authored, owned)
+        github_apply.FakeMutator({"issues": []}, owned)
+
     def test_live_writes_need_an_issue_id_resolver(self) -> None:
         opener = _RecordingOpener()
         mutator = github_apply.LiveMutator(
@@ -626,6 +705,22 @@ class ApplyTest(ApplyTestBase):
             {"applied": 1, "alreadySatisfied": 0, "skipped": 0, "failed": 0},
             document["summary"],
         )
+
+    def test_the_audit_records_how_many_operations_the_plan_held(self) -> None:
+        snapshot = mutations.drop_parent_edge(self.converged, API)
+        document = self._plan(snapshot)
+        built = self._result(snapshot)
+        self.assertEqual(1, len(document["operations"]))
+        self.assertEqual(len(document["operations"]), built["audit"]["operationsPlanned"])
+
+        # A converged plan holds none: zero is a recorded count, not an absence.
+        converged = self._result(self.converged)
+        self.assertEqual(0, converged["audit"]["operationsPlanned"])
+        self.assertEqual([], apply_module.schema_errors(converged, self.result_schema))
+
+        # And the key is required, so a result cannot silently omit it.
+        del built["audit"]["operationsPlanned"]
+        self.assertNotEqual([], apply_module.schema_errors(built, self.result_schema))
 
     def test_an_unattributed_run_records_an_explicit_null_proposal(self) -> None:
         document = self._plan(self.converged)
@@ -1171,6 +1266,32 @@ class ApplyMultiManifestTest(ApplyTestBase):
         self.assertEqual(
             [1, 1], [item["summary"]["applied"] for item in document["items"]]
         )
+
+    def test_an_offline_run_still_validates_the_issue_id_map(self) -> None:
+        """`--issue-ids` on a `--snapshot` run is loaded, not silently dropped."""
+
+        with tempfile.TemporaryDirectory() as raw:
+            bad = Path(raw) / "bad-ids.json"
+            bad.write_text(json.dumps({API: 0}), encoding="utf-8")
+            code, rendered, writes = self._run(
+                mutations.drop_parent_edge(self.converged, API),
+                mutations.drop_parent_edge(self.converged, DOCS),
+                ["--execute", "--issue-ids", str(bad)],
+            )
+            self.assertEqual(apply_module.EXIT_ERROR, code)
+            self.assertEqual([], writes)
+            self.assertEqual("", rendered)
+
+            good = Path(raw) / "good-ids.json"
+            good.write_text(json.dumps({API: 11}), encoding="utf-8")
+            code, _, writes = self._run(
+                mutations.drop_parent_edge(self.converged, API),
+                mutations.drop_parent_edge(self.converged, DOCS),
+                ["--execute", "--issue-ids", str(good)],
+            )
+            # A valid map is accepted and, offline, not required to be complete.
+            self.assertEqual(apply_module.EXIT_OK, code)
+            self.assertEqual(2, len(writes))
 
     def test_the_operation_cap_is_summed_across_the_run(self) -> None:
         """One operation each, two manifests, a cap of one: the run is refused.

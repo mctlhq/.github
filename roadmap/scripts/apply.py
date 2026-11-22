@@ -484,6 +484,11 @@ def result(
             # archives. Comparing this against the number of results present
             # answers "did the run finish?" without it.
             "manifestsSelected": manifests_selected,
+            # The within-manifest counterpart: how many operations the plan
+            # held. A result whose `operations` list is shorter than this is a
+            # manifest that stopped part-way, and is otherwise byte-identical
+            # in the archived artifact to one that completed.
+            "operationsPlanned": len(plan_document["operations"]),
         },
     }
 
@@ -1032,6 +1037,11 @@ def _run(
     resolve_id = None
     if args.snapshot:
         snapshot = github_graph.load_snapshot(Path(args.snapshot))
+        # An offline run needs no ids (`FakeMutator` writes in memory), so the
+        # resolver is not passed on. It is still loaded, for its validation
+        # only: otherwise a malformed `--issue-ids` is accepted and ignored,
+        # and the dry run cannot exercise the map guard 6 depends on.
+        _issue_id_resolver(args.issue_ids)
     else:
         token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
         if not token:

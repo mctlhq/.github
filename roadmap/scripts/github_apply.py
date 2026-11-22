@@ -164,6 +164,34 @@ def build_request(
     raise MutationRefused(f"unknown mutation: {kind!r}")
 
 
+def _path_matches_template(request: MutationRequest) -> bool:
+    """Whether `request.path` is the instance of `request.template` it claims.
+
+    The allow-list is keyed on `template`, so a request whose `path` named some
+    other endpoint would pass the allow-list and then be transmitted to the
+    path. The path is rebuilt from the template and the request's own target,
+    which is the only way `build_request` ever produces one. The trailing
+    `{dependency}` of the one endpoint that has it is the related issue's
+    numeric id; it is not known here, so it must be a positive integer.
+    """
+
+    try:
+        owner, repo = _owner_repo(request.target)
+    except MutationRefused:
+        return False
+    marker = "\0"
+    expected = request.template.format(
+        owner=owner, repo=repo, number=request.target[1], dependency=marker
+    )
+    head, found, tail = expected.partition(marker)
+    if not found:
+        return request.path == expected
+    if tail or not request.path.startswith(head):
+        return False
+    identifier = request.path[len(head):]
+    return identifier.isascii() and identifier.isdigit() and int(identifier) > 0
+
+
 def check_request(
     request: MutationRequest,
     owned: frozenset[IssueKey],
@@ -200,6 +228,11 @@ def check_request(
     if (request.method, request.template) not in ALLOWED:
         raise MutationRefused(
             f"{request.method} {request.template}: outside the write allow-list"
+        )
+    if not _path_matches_template(request):
+        raise MutationRefused(
+            f"{request.method} {request.path}: path is not an instance of the "
+            f"{request.template} template it claims"
         )
     if request.target not in owned:
         raise MutationRefused(
