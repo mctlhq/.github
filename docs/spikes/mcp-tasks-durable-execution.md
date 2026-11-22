@@ -150,8 +150,8 @@ signal or grant: the model's signal spy asserts it (N5). The fake workflow reche
 assurance, respondent, request id/hash, rounds and expiry on signal delivery.
 A deterministic post-adapter TOCTOU test verifies that policy revocation between
 validation and delivery cannot resume the workflow. A valid form-mode decline
-is carried as a separate refusal event and produces a business refusal, never
-an empty accepted answer. The model checks the same-client rule before respondent
+is carried as a separate refusal event, stops before any subsequent synthetic
+side effect, and produces a business refusal, never an empty accepted answer. The model checks the same-client rule before respondent
 identity; order between those two is not material to the outcome.
 
 ## TTL, cancellation, revocation, audit
@@ -160,13 +160,14 @@ identity; order between those two is not material to the outcome.
   `ttlMs = (terminal_observed_at - createdAt) + 24h`; afterwards `-32602`, and the
   WorkItem tools still return the result. The scope row outlives the task by the `xr_`
   replay window so an expired-task retry cannot start a duplicate. If the task
-  row has been GC'd but the idempotency scope remains, a same-key `tools/call`
-  returns `-32602` rather than inventing a new `working` response; no second
-  execution request is created.
+  row has expired (before **or** after GC) but the idempotency scope remains,
+  a same-key `tools/call` returns `-32602` rather than inventing a new
+  `working` response; no second execution request is created.
 - `tasks/cancel` acknowledges with `resultType: "complete"` and reports `cancelled` only
   after Temporal reports `Canceled` at the workflow's declared boundary. With no `we_` the
   `xr_` is rejected `cancelled_by_task`. The first terminal state wins.
-- Revoked principals get `-32602` on every `tasks/*` and on `tools/call`.
+- Revoked principals get `-32602` on every `tasks/*`; `tools/call` refuses
+  creation with `-32001` (forbidden) rather than misleading `unknown task`.
   The fake workflow also fences its inert side-effect checkpoint after
   revocation; this is model evidence, **not** proof of a real runtime fence.
 - Audit records reason codes, never content.
@@ -354,7 +355,8 @@ This offline-only revision adds testable guards for the independent review findi
 - R4: Temporal fake revalidates sealed respondent, assurance and client policy
   at signal-delivery time, with an intervening policy-change negative test.
 - R5: revocation also blocks creation and fake side-effects at the checkpoint.
-- R6: replay after task GC never fabricates a fresh task status.
+- R6: an expired same-key replay returns `-32602` both before and after task
+  GC, without fabricating a fresh status or creating a second execution.
 
 Scope of PR #387 remains docs/model/fixtures plus the AGENTS.md index,
 not a production Tasks adapter. CI wiring is isolated in PR #388.
