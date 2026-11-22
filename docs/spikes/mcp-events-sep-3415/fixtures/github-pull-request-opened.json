@@ -1,0 +1,9 @@
+{
+  "specversion": "mctl.events/v1",
+  "id": "github:00000000-0000-4000-8000-000000000001",
+  "type": "github.pull_request.synchronize",
+  "source": "mctl-api",
+  "occurred_at": "2026-11-22T09:05:00Z",
+  "correlation_id": "github:00000000-0000-4000-8000-000000000001",
+  "subject": {"kind": "github.pull_request", "repository": "mctlhq/.github", "number": "1", "head_sha": "0000000000000000000000000000000000000001"}
+}

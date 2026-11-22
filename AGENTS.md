@@ -56,3 +56,7 @@
 - [Enterprise identity](docs/spikes/enterprise-identity.md): proposal revision 2
   for mctlhq/.github#374, separate federation and SCIM lifecycle gates; proposed
   only, DEFER stands.
+- [MCP Events (SEP-3415)](docs/spikes/mcp-events-sep-3415.md): offline slice for
+  mctlhq/.github#377, proposed verdict BOUNDED_HOST_PILOT (offline-first), with
+  a stdlib reference model in `docs/spikes/mcp-events-sep-3415/`; lifecycle
+  stays proposed.
