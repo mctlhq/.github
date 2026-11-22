@@ -290,12 +290,12 @@ Run from `docs/spikes/mcp-tasks-durable-execution`: `go test -race ./...`,
 
 | Ids | Result | Tag |
 | --- | --- | --- |
-| T1-T3, T5-T14, T15-T19, T21-T24 | pass reported by local model run (`model/model_test.go`; T3 covers a second OAuth client; T10 uses 2x10^5 ids, not 10^6); new CI workflow re-runs Go vet/race tests, with check status authoritative | `[MODEL]` |
+| T1-T3, T5-T14, T15-T19, T21-T24 | pass reported by local model run (`model/model_test.go`; T3 covers a second OAuth client; T10 uses 2x10^5 ids, not 10^6); CI wiring lives in stacked PR #388; its Go race check is authoritative once it covers the current HEAD | `[MODEL]` |
 | N1-N10 | pass | `[MODEL]` |
 | D1-D4 | pass: crash before each step, design A and B, concurrent race, claim-scan invariant (concurrent scanner, not exhaustive interleavings) | `[MODEL]` |
 | D5 | `not run: requires Postgres, owner-gated` (G1) | n/a |
 | S1 | `not run`: no vendored official schema; `schemas/tasks-doc-derived.schema.json` is `[DOC]`-derived | `[SCHEMA]` |
-| S2-S6 | pass reported: 12 Go-generated positive fixtures validate, 10 negatives fail on the expected path and validator, with `jsonschema` and no model import; CI check required | `[SCHEMA]` |
+| S2-S6 | pass reported: 12 Go-generated positive fixtures validate, 10 negatives fail on the expected path and validator, with `jsonschema` and no model import; CI check required from stacked PR #388 | `[SCHEMA]` |
 | S8 | partial: the schema checker validates the selected committed golden responses; it does not capture every output from T1-T24. Full exhaustive cross-validation remains unverified | `[SCHEMA]` |
 | S7 | pass in the model (`CheckInputRequests`); the schema also rejects both | `[MODEL]` |
 | S9, S10 | pass | `[MODEL]` |
@@ -347,12 +347,15 @@ This offline-only revision adds testable guards for the independent review findi
   The store now returns lock-protected read snapshots to avoid racing with Claim.
 - R2: form-mode `decline` is forwarded and recorded as a refusal, not an
   accepted empty value; malformed decline content is rejected.
-- R3: `.github/workflows/workflow-tests.yml` now runs Go vet/race tests,
-  independent Python fixtures and verdict mutation tests on the spike paths.
+- R3: Go vet/race tests, independent Python fixtures and verdict mutation
+  tests are wired in **stacked PR #388**, not in this spike PR. The CI
+  workflow diff stays separate, per the recorded owner decision; #388 must
+  remain aligned with the final #387 HEAD and pass before merging either PR.
 - R4: Temporal fake revalidates sealed respondent, assurance and client policy
   at signal-delivery time, with an intervening policy-change negative test.
 - R5: revocation also blocks creation and fake side-effects at the checkpoint.
 - R6: replay after task GC never fabricates a fresh task status.
 
-Scope remains docs/model/fixtures plus CI only, not a production Tasks adapter.
+Scope of PR #387 remains docs/model/fixtures plus the AGENTS.md index,
+not a production Tasks adapter. CI wiring is isolated in PR #388.
 No live Temporal, PostgreSQL, OAuth host or Portal claim is made by this revision.

@@ -24,8 +24,6 @@ on:
       - 'docs/spikes/automation-control-plane/**'
       - 'docs/spikes/finance-assistant/**'
       - 'docs/spikes/agent-client-compatibility/**'
-      - 'docs/spikes/mcp-tasks-durable-execution/**'
-      - 'docs/spikes/mcp-tasks-durable-execution.md'
   push:
     branches:
       - main
@@ -45,8 +43,6 @@ on:
       - 'docs/spikes/automation-control-plane/**'
       - 'docs/spikes/finance-assistant/**'
       - 'docs/spikes/agent-client-compatibility/**'
-      - 'docs/spikes/mcp-tasks-durable-execution/**'
-      - 'docs/spikes/mcp-tasks-durable-execution.md'
 
 permissions: {}
 
@@ -92,23 +88,6 @@ jobs:
       - name: Automation control plane reference model [MODEL] (mctlhq/.github#318)
         working-directory: docs/spikes/automation-control-plane
         run: go vet ./... && go test -race ./...
-
-      - name: Set up Go for MCP Tasks Phase 0 reference model
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: docs/spikes/mcp-tasks-durable-execution/go.mod
-
-      - name: MCP Tasks Phase 0 Go reference model [MODEL] (mctlhq/.github#41)
-        working-directory: docs/spikes/mcp-tasks-durable-execution
-        run: go vet ./... && go test -race ./...
-
-      - name: MCP Tasks Phase 0 independent fixture validation [SCHEMA]
-        run: python3 -I docs/spikes/mcp-tasks-durable-execution/checks/validate_fixtures.py
-
-      - name: MCP Tasks Phase 0 verdict contract and mutation tests [SCHEMA]
-        run: |
-          python3 -I docs/spikes/mcp-tasks-durable-execution/checks/verdict_consistency.py
-          python3 -I -m unittest discover -s docs/spikes/mcp-tasks-durable-execution/checks -p 'test_*.py' -v
 
   # Distinct required check: real Temporal dev server + official SDK, loopback
   # only, in-memory state, synthetic inert workflow, no credentials. A missing
