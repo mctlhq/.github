@@ -448,10 +448,12 @@ func TestTTL(t *testing.T) {
 		t.Fatal("expired task must be -32602")
 	}
 	e.st.GC()
-	// T23: retry inside the scope window replays the same (now expired) task id.
-	r := e.create(human, "k1", "approval", true)["result"].(map[string]any)
-	if r["taskId"] != id || len(e.st.XRs) != 1 {
-		t.Fatal("retry inside the window must not start a duplicate")
+	// T23: the retained scope still binds the original expired id, but
+	// tools/call must return -32602, not a fabricated fresh working handle.
+	r := e.create(human, "k1", "approval", true)
+	if code(r) != CodeInvalidParams || len(e.st.XRs) != 1 ||
+		e.st.Scopes["acme|u1|probe|k1"].TaskID != id {
+		t.Fatalf("expired retry must refuse without duplicate xr_: %v", r)
 	}
 	e.now = e.now.Add(XRReplayWindow)
 	e.st.GC()
