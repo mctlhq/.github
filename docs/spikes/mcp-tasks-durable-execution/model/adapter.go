@@ -90,6 +90,10 @@ func ArgsDigest(args map[string]any) string {
 }
 
 func (a *Adapter) call(r Request) map[string]any {
+	if a.Revoked[r.Principal.ID] {
+		a.audit("create refused reason=revoked")
+		return rpcErr(CodeInvalidParams, "unknown task")
+	}
 	args, _ := r.Params["arguments"].(map[string]any)
 	key, _ := args["idempotency_key"].(string)
 	if key == "" {
@@ -111,11 +115,17 @@ func (a *Adapter) call(r Request) map[string]any {
 		}
 		return rpcErr(CodeInternal, "internal error")
 	}
-	t, ok, _ := a.Store.Task(id)
-	a.audit("create task=%s", id)
-	if !ok { // replay inside the scope window after the task row expired
-		t = &TaskRow{TaskID: id, CreatedAt: a.Now()}
+	t, ok, err := a.Store.Task(id)
+	if err != nil {
+		return rpcErr(CodeInternal, "internal error")
 	}
+	if !ok {
+		// The retained idempotency scope prevents duplicate dispatch, but the
+		// terminal task was GC'd. Never fabricate a new working handle.
+		a.audit("create refused reason=expired_task_replay")
+		return rpcErr(CodeInvalidParams, "unknown task")
+	}
+	a.audit("create task=%s", id)
 	if !declared(r.Params) {
 		return map[string]any{"result": map[string]any{
 			"content":           []any{map[string]any{"type": "text", "text": "started"}},
@@ -219,8 +229,12 @@ func (a *Adapter) view(t *TaskRow, p Principal) (map[string]any, map[string]any)
 			status, terminal = "cancelled", true
 		case "Failed", "TimedOut", "Terminated":
 			status, terminal = "failed", true
+			reason := "execution_" + strings.ToLower(w.State)
+			if w.FailedReason != "" {
+				reason = w.FailedReason
+			}
 			out["error"] = map[string]any{"code": CodeInternal, "message": "execution " + strings.ToLower(w.State),
-				"data": map[string]any{"reason": "execution_" + strings.ToLower(w.State)}}
+				"data": map[string]any{"reason": reason}}
 		case "OrphanClosed":
 			status, terminal = "failed", true
 			out["error"] = map[string]any{"code": CodeInternal, "message": "execution orphaned",
@@ -404,9 +418,15 @@ func (a *Adapter) checkEntry(t *TaskRow, p Principal, w *Workflow, key string, r
 	if rq.Round > rq.MaxRound {
 		return "rounds_exhausted"
 	}
-	e, _ := raw.(map[string]any)
+	e, ok := raw.(map[string]any)
+	if !ok {
+		return "invalid_value"
+	}
 	if e["action"] == "decline" {
-		return "" // form-mode decline carries no content to validate
+		if _, hasContent := e["content"]; hasContent {
+			return "invalid_value"
+		}
+		return "" // explicit decline, never an accepted empty value
 	}
 	c, _ := e["content"].(map[string]any)
 	val, ok := c["value"].(string)

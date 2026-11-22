@@ -146,19 +146,29 @@ ignored and audited with its reason, and the call still returns `resultType: "co
 
 `same_client` policy also requires the creating `client_id` (`client_mismatch`); the pilot
 default is `any_client_of_owner`. No code path from `tasks/update` reaches an approval
-signal or grant: the model's signal spy asserts it (N5). The model checks the same-client
-rule before respondent identity; order between those two is not material to the outcome.
+signal or grant: the model's signal spy asserts it (N5). The fake workflow rechecks the sealed client-relay policy, OAuth client binding,
+assurance, respondent, request id/hash, rounds and expiry on signal delivery.
+A deterministic post-adapter TOCTOU test verifies that policy revocation between
+validation and delivery cannot resume the workflow. A valid form-mode decline
+is carried as a separate refusal event and produces a business refusal, never
+an empty accepted answer. The model checks the same-client rule before respondent
+identity; order between those two is not material to the outcome.
 
 ## TTL, cancellation, revocation, audit
 
 - Non-terminal: `ttlMs: null`, never expired or deleted. Terminal:
   `ttlMs = (terminal_observed_at - createdAt) + 24h`; afterwards `-32602`, and the
   WorkItem tools still return the result. The scope row outlives the task by the `xr_`
-  replay window so an expired-task retry cannot start a duplicate.
+  replay window so an expired-task retry cannot start a duplicate. If the task
+  row has been GC'd but the idempotency scope remains, a same-key `tools/call`
+  returns `-32602` rather than inventing a new `working` response; no second
+  execution request is created.
 - `tasks/cancel` acknowledges with `resultType: "complete"` and reports `cancelled` only
   after Temporal reports `Canceled` at the workflow's declared boundary. With no `we_` the
   `xr_` is rejected `cancelled_by_task`. The first terminal state wins.
-- Revoked principals get `-32602` on every `tasks/*`.
+- Revoked principals get `-32602` on every `tasks/*` and on `tools/call`.
+  The fake workflow also fences its inert side-effect checkpoint after
+  revocation; this is model evidence, **not** proof of a real runtime fence.
 - Audit records reason codes, never content.
 
 ## Sequence diagrams
@@ -280,12 +290,13 @@ Run from `docs/spikes/mcp-tasks-durable-execution`: `go test -race ./...`,
 
 | Ids | Result | Tag |
 | --- | --- | --- |
-| T1-T3, T5-T14, T15-T19, T21-T24 | pass (`model/model_test.go`; T3 covers a second OAuth client; T10 uses 2x10^5 ids, not 10^6) | `[MODEL]` |
+| T1-T3, T5-T14, T15-T19, T21-T24 | pass reported by local model run (`model/model_test.go`; T3 covers a second OAuth client; T10 uses 2x10^5 ids, not 10^6); CI wiring lives in stacked PR #388; its Go race check is authoritative once it covers the current HEAD | `[MODEL]` |
 | N1-N10 | pass | `[MODEL]` |
 | D1-D4 | pass: crash before each step, design A and B, concurrent race, claim-scan invariant (concurrent scanner, not exhaustive interleavings) | `[MODEL]` |
 | D5 | `not run: requires Postgres, owner-gated` (G1) | n/a |
 | S1 | `not run`: no vendored official schema; `schemas/tasks-doc-derived.schema.json` is `[DOC]`-derived | `[SCHEMA]` |
-| S2-S6, S8 | pass: 12 Go-generated positive fixtures validate, 10 negatives fail on the expected path and message, with `jsonschema` and no model import | `[SCHEMA]` |
+| S2-S6 | pass reported: 12 Go-generated positive fixtures validate, 10 negatives fail on the expected path and validator, with `jsonschema` and no model import; CI check required from stacked PR #388 | `[SCHEMA]` |
+| S8 | partial: the schema checker validates the selected committed golden responses; it does not capture every output from T1-T24. Full exhaustive cross-validation remains unverified | `[SCHEMA]` |
 | S7 | pass in the model (`CheckInputRequests`); the schema also rejects both | `[MODEL]` |
 | S9, S10 | pass | `[MODEL]` |
 | T4, `[TEMPORAL_DEV]` re-runs of T1/T3/T11/T15/N7, 8-day time-skipped approval | `not run`: the opt-in `temporal-integration/` module was not built in this run | `[TEMPORAL_DEV]` |
@@ -325,3 +336,26 @@ Gated phases: G1 delete the branch (tables are additive); G2 and later remove th
 - Mapping an mctl principal to an ADR 013 `actor_ref` is `unknown (not observed)`.
 - Retention of the `work_item_create_requests` and `work_item_requests` rows is `unknown (not observed)`.
 - Whether mcp-go v1.0.0 allows custom `tasks/*` handlers without its legacy store is G2.
+
+
+## Review follow-up: PR #387 revision 3
+
+This offline-only revision adds testable guards for the independent review findings:
+
+- R1: cancellation/dispatcher claim race is covered by deterministic model tests;
+  the dispatcher replays a recorded cancel after starting a just-claimed workflow.
+  The store now returns lock-protected read snapshots to avoid racing with Claim.
+- R2: form-mode `decline` is forwarded and recorded as a refusal, not an
+  accepted empty value; malformed decline content is rejected.
+- R3: Go vet/race tests, independent Python fixtures and verdict mutation
+  tests are wired in **stacked PR #388**, not in this spike PR. The CI
+  workflow diff stays separate, per the recorded owner decision; #388 must
+  remain aligned with the final #387 HEAD and pass before merging either PR.
+- R4: Temporal fake revalidates sealed respondent, assurance and client policy
+  at signal-delivery time, with an intervening policy-change negative test.
+- R5: revocation also blocks creation and fake side-effects at the checkpoint.
+- R6: replay after task GC never fabricates a fresh task status.
+
+Scope of PR #387 remains docs/model/fixtures plus the AGENTS.md index,
+not a production Tasks adapter. CI wiring is isolated in PR #388.
+No live Temporal, PostgreSQL, OAuth host or Portal claim is made by this revision.

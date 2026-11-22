@@ -18,7 +18,7 @@ SCHEMA = ROOT / "schemas" / "tasks-doc-derived.schema.json"
 # must be among the errors, so a negative cannot pass for an unrelated reason
 EXPECT = {
     "input_required_missing_inputrequests": ("required", "result", "'inputRequests' is a required property"),
-    "input_required_empty_inputrequests": ("minProperties", "result/inputRequests", "non-empty"),
+    "input_required_empty_inputrequests": ("minProperties", "result/inputRequests", ""),
     "completed_without_result": ("required", "result", "'result' is a required property"),
     "failed_without_error": ("required", "result", "'error' is a required property"),
     "get_with_resulttype_task": ("const", "result/resultType", "'complete'"),

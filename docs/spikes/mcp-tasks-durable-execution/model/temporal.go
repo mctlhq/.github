@@ -22,6 +22,7 @@ type HIRequest struct {
 	MaxLen          int // typed ResponseSpec: string up to MaxLen
 	ActorRefs       []string
 	AllowMCP        bool // respondent_policy allows mcp/client_relayed (ADR 013 extension, G4)
+	ClientPolicy, ClientID string // sealed client binding
 	ExpiresAt       time.Time
 	Round, MaxRound int
 }
@@ -43,6 +44,7 @@ type Grant struct {
 // Workflow is the fake TaskProbeWorkflow. Phases run in order.
 type Workflow struct {
 	ID           string
+	Owner, ClientPolicy, ClientID string
 	Phases       []string // sleep | input | human_input | approval
 	Idx          int
 	State        string // Running | Completed | Failed | Canceled | TimedOut | Terminated | OrphanClosed
@@ -51,6 +53,9 @@ type Workflow struct {
 	Grant        *Grant
 	CancelWanted bool
 	Business     bool // completed with isError
+	SideEffect   bool // inert fake checkpoint, guarded by revocation
+	FailedReason string
+	Declines     []string // explicit declines distinct from accepted answers
 	Rejections   []string
 	Answers      []string
 	Actors       []string
@@ -66,6 +71,7 @@ type Temporal struct {
 	BeforeSig  func(*Workflow)
 	Grants     map[string]*Grant
 	GrantCount int
+	Revoked    map[string]bool // fake revocation source (same as adapter's)
 }
 
 // NewTemporal returns an empty fake.
@@ -76,10 +82,15 @@ func NewTemporal(now func() time.Time) *Temporal {
 var errTemporal = errors.New("temporal unreadable")
 
 // Start begins a workflow for a scenario ("," separated phases).
-func (t *Temporal) Start(id string, phases []string, actors []string) {
+func (t *Temporal) Start(id string, phases []string, actors []string, binding ...string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	w := &Workflow{ID: id, Phases: phases, State: "Running", Actors: actors}
+	owner, clientPolicy, clientID := "", "", ""
+	if len(binding) >= 3 {
+		owner, clientPolicy, clientID = binding[0], binding[1], binding[2]
+	}
+	w := &Workflow{ID: id, Phases: phases, State: "Running", Actors: actors,
+		Owner: owner, ClientPolicy: clientPolicy, ClientID: clientID}
 	t.WFs[id] = w
 	t.enter(w)
 }
@@ -95,7 +106,8 @@ func (t *Temporal) enter(w *Workflow) {
 		w.Gate = GateInput
 		h := fmt.Sprintf("sha256:%016x%016x", w.Idx+1, len(w.ID))
 		w.Req = &HIRequest{RequestID: "hir-" + h[7:23], Hash: h, Message: "Enter a value", MaxLen: 64,
-			ActorRefs: w.Actors, AllowMCP: p == "input", ExpiresAt: t.Now().Add(72 * time.Hour), MaxRound: 3, Round: 1}
+			ActorRefs: w.Actors, AllowMCP: p == "input", ClientPolicy: w.ClientPolicy,
+			ClientID: w.ClientID, ExpiresAt: t.Now().Add(72 * time.Hour), MaxRound: 3, Round: 1}
 	case "approval":
 		w.Gate = GateApproval
 		t.GrantCount++
@@ -145,12 +157,25 @@ func (t *Temporal) SignalHumanInput(id string, r HIResponse) {
 		w.Rejections = append(w.Rejections, "hash_mismatch")
 	case t.Now().After(w.Req.ExpiresAt):
 		w.Rejections = append(w.Rejections, "expired")
+	case w.Req.Round > w.Req.MaxRound:
+		w.Rejections = append(w.Rejections, "rounds_exhausted")
+	case r.Surface != "mcp" || r.Assurance != "client_relayed" || r.Client == "":
+		w.Rejections = append(w.Rejections, "assurance_mismatch")
+	case !w.Req.AllowMCP:
+		w.Rejections = append(w.Rejections, "policy_denied")
+	case w.Req.ClientPolicy == "same_client" && r.Client != w.Req.ClientID:
+		w.Rejections = append(w.Rejections, "client_mismatch")
 	case !contains(w.Req.ActorRefs, r.Respondent):
 		w.Rejections = append(w.Rejections, "respondent_mismatch")
 	default:
-		w.Answers = append(w.Answers, r.Value)
-		if r.Declined || r.Value == "fail" {
-			w.Business = true
+		if r.Declined {
+			w.Declines = append(w.Declines, r.RequestID)
+			w.Business = true // explicit refusal, not an accepted empty value
+		} else {
+			w.Answers = append(w.Answers, r.Value)
+			if r.Value == "fail" {
+				w.Business = true
+			}
 		}
 		w.Idx++
 		t.enter(w)
@@ -204,11 +229,16 @@ func (t *Temporal) Tick() {
 			w.State = "Canceled"
 			continue
 		}
+		if w.Owner != "" && t.Revoked[w.Owner] {
+			w.State, w.FailedReason = "Failed", "authorization_revoked"
+			continue
+		}
 		if w.Idx >= len(w.Phases) {
 			continue
 		}
 		switch w.Phases[w.Idx] {
 		case "sleep":
+			w.SideEffect = true
 			w.Idx++
 			t.enter(w)
 		case "approval":
