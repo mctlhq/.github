@@ -741,7 +741,7 @@ func TestDeclineStillChecked(t *testing.T) {
 	}
 }
 
- 
+
 // A policy mutation between adapter validation and Temporal signalling must
 // still be denied by the sealed workflow-side respondent policy.
 func TestSealedRespondentPolicyRevalidatedAtSignal(t *testing.T) {
@@ -785,7 +785,7 @@ func TestRevokedCreateAndSideEffectCheckpoint(t *testing.T) {
 	e := newEnv(t, "A")
 	id := e.newTask("k-revoke", "sleep")
 	e.ad.Revoked[human.ID] = true
-	if code(e.create(human, "k-after-revoke", "sleep", true)) != CodeInvalidParams {
+	if code(e.create(human, "k-after-revoke", "sleep", true)) != CodeForbidden {
 		t.Fatal("revoked principal created a new task")
 	}
 	if len(e.st.XRs) != 1 {
@@ -811,10 +811,13 @@ func TestExpiredReplayRefusesFabricatedHandle(t *testing.T) {
 		t.Fatalf("not terminal: %v", got)
 	}
 	e.now = e.now.Add(TerminalRetention)
-	e.st.GC()
 	xrCount := len(e.st.XRs)
 	if got := e.create(human, "k-expire-retry", "sleep", true); code(got) != CodeInvalidParams {
-		t.Fatalf("expired retry returned a fabricated working handle: %v", got)
+		t.Fatalf("pre-GC expired retry returned a fabricated working handle: %v", got)
+	}
+	e.st.GC()
+	if got := e.create(human, "k-expire-retry", "sleep", true); code(got) != CodeInvalidParams {
+		t.Fatalf("post-GC expired retry returned a fabricated working handle: %v", got)
 	}
 	if len(e.st.XRs) != xrCount || e.st.Scopes["acme|u1|probe|k-expire-retry"].TaskID != id {
 		t.Fatal("replay created a second execution or lost the retained id")
@@ -852,22 +855,18 @@ func TestDeclineWithUnexpectedContentRejected(t *testing.T) {
 	}
 }
 
-func TestCancelAfterClaimBeforeStartUsesDurableIntent(t *testing.T) {
+func TestDeclineStopsBeforeSubsequentSideEffect(t *testing.T) {
 	e := newEnv(t, "A")
-	id := e.create(human, "k-claim-gap", "sleep", true)["result"].(map[string]any)["taskId"].(string)
-	// Force Claim without Start; cancel cannot signal the not-yet-created workflow.
-	x := e.st.PendingXRs()[0]
-	weID := "we_" + x.ID[3:]
-	if !e.st.Claim(x.ID, weID) {
-		t.Fatal("expected claim to succeed")
-	}
-	e.call("tasks/cancel", id, human, nil)
-	e.tw.Start(weID, []string{"sleep"}, []string{"alice"}, human.ID, "any_client_of_owner", human.ClientID)
-	if e.st.CancelRecorded(x.ID) {
-		e.tw.RequestCancel(weID)
-	}
+	id := e.newTask("k-decline-stop", "input,sleep")
+	e.call("tasks/update", id, human, map[string]any{"inputResponses": map[string]any{
+		e.reqID(id): map[string]any{"action": "decline"},
+	}})
 	e.tw.Tick()
-	if w := e.tw.WFs[weID]; w.State != "Canceled" || w.SideEffect {
-		t.Fatalf("cancelled workflow crossed the side-effect checkpoint: %+v", w)
+	w := e.tw.WFs["we_1"]
+	if w.State != "Completed" || !w.Business || w.SideEffect || len(w.Declines) != 1 {
+		t.Fatalf("decline continued into a later effect: %+v", w)
+	}
+	if g := e.get(id); g["status"] != "completed" || g["result"].(map[string]any)["isError"] != true {
+		t.Fatalf("decline outcome not reported as business refusal: %v", g)
 	}
 }

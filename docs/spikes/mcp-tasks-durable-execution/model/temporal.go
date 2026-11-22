@@ -169,13 +169,17 @@ func (t *Temporal) SignalHumanInput(id string, r HIResponse) {
 		w.Rejections = append(w.Rejections, "respondent_mismatch")
 	default:
 		if r.Declined {
+			// Explicit refusal ends the synthetic work item immediately.
+			// It must never continue into a later side-effecting phase.
 			w.Declines = append(w.Declines, r.RequestID)
-			w.Business = true // explicit refusal, not an accepted empty value
-		} else {
-			w.Answers = append(w.Answers, r.Value)
-			if r.Value == "fail" {
-				w.Business = true
-			}
+			w.Business = true
+			w.Idx = len(w.Phases)
+			t.enter(w)
+			return
+		}
+		w.Answers = append(w.Answers, r.Value)
+		if r.Value == "fail" {
+			w.Business = true
 		}
 		w.Idx++
 		t.enter(w)

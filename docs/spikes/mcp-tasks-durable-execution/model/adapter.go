@@ -92,7 +92,7 @@ func ArgsDigest(args map[string]any) string {
 func (a *Adapter) call(r Request) map[string]any {
 	if a.Revoked[r.Principal.ID] {
 		a.audit("create refused reason=revoked")
-		return rpcErr(CodeInvalidParams, "unknown task")
+		return rpcErr(CodeForbidden, "principal revoked")
 	}
 	args, _ := r.Params["arguments"].(map[string]any)
 	key, _ := args["idempotency_key"].(string)
@@ -119,9 +119,11 @@ func (a *Adapter) call(r Request) map[string]any {
 	if err != nil {
 		return rpcErr(CodeInternal, "internal error")
 	}
-	if !ok {
-		// The retained idempotency scope prevents duplicate dispatch, but the
-		// terminal task was GC'd. Never fabricate a new working handle.
+	if !ok || (t.TerminalObservedAt != nil &&
+		!a.Now().Before(t.TerminalObservedAt.Add(TerminalRetention))) {
+		// A retained idempotency scope prevents duplicate dispatch while a
+		// terminal task is expired, whether or not GC has deleted its row.
+		// Never fabricate a fresh working handle for an expired task.
 		a.audit("create refused reason=expired_task_replay")
 		return rpcErr(CodeInvalidParams, "unknown task")
 	}
