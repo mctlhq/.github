@@ -301,6 +301,13 @@ jobs:
     needs: gate
     if: needs.gate.outputs.stale != 'true'
     runs-on: ${{ inputs.runner }}
+    # `true` when this run detected a reviewer self-edit and DELIBERATELY did
+    # not review (mctlhq/.github#37). The job then concludes success, which is
+    # the only non-failing conclusion a job can report, so this output is the
+    # machine-readable signal that tells that success apart from a real
+    # review: nothing was reviewed and no verdict exists.
+    outputs:
+      self_edit: ${{ steps.selfedit.outputs.blocked == 'true' }}
     # Bounds mid-flight duplication: pull_request (auto, on every push) and a
     # manual '@claude review' comment on the same commit are two independent
     # triggers for the workflow, and nothing before this stopped both runs
@@ -1065,6 +1072,7 @@ jobs:
       # push gets a fresh notice instead of being silently covered by an old
       # one, and so tooling can recognise this state without parsing prose.
       - name: Explain the self-edit refusal
+        id: selfedit-notice
         if: steps.selfedit.outputs.blocked == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1087,8 +1095,7 @@ jobs:
           silence=$(printf '%s\n' \
             "Silence can also mean the phrase was not \`@claude review\`, or that the" \
             "commenter has no write access. Where none of the causes above can be fixed," \
-            "there is no verdict to be had on this pull request: the check stays red on" \
-            "every commit, and the thing to do is merge past it.")
+            "there is no Claude verdict to be had on this pull request.")
 
           # `@claude review` works because `issue_comment` runs the
           # DEFAULT-BRANCH copy of the workflow, so what matters is that
@@ -1149,6 +1156,20 @@ jobs:
               "$way_out")
           fi
 
+          # The check this job reports is NOT red, and not a review either.
+          # Say so in the one place a reader of the PR looks, in a form that
+          # cannot be mistaken for a verdict (mctlhq/.github#37).
+          notreview=$(printf '%s\n' \
+            "" \
+            "" \
+            "**This is not a review.** The \`review\` check on this commit is" \
+            "non-failing only because this pull request edits the reviewer itself and" \
+            "the run was deliberately skipped (\`self_edit=true\`). Claude did not look" \
+            "at the change and posted no approval. Whatever review path your policy" \
+            "normally requires for a change like this must still be satisfied" \
+            "separately; a green check here does not satisfy it.")
+          body="$body$notreview"
+
           # Annotate BEFORE reaching for the API. Under `set -e` a failing
           # `gh pr comment` aborts the step, and if the annotation came after
           # it, that one failure would cost both — leaving the red check with
@@ -1159,7 +1180,13 @@ jobs:
           else
             why="differs from the copy on the default branch"
           fi
-          echo "::error::No review ran — $WF_PATH $why, so the reviewer refused to start."
+          msg="No review ran — $WF_PATH $why, so the reviewer was skipped (self_edit=true). The check is non-failing but is NOT a review."
+          echo "::warning::$msg"
+          {
+            echo "### Claude review skipped: reviewer self-edit"
+            echo "$msg"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "self_edit=true" >> "$GITHUB_OUTPUT"
 
           # `--paginate` writes each page as it arrives, so a mid-listing
           # failure leaves a PREFIX on stdout with a non-zero exit. Treating
@@ -1180,9 +1207,14 @@ jobs:
             *) gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body" ;;
           esac
 
-          # Fail closed. Green here would read as "reviewed, found nothing",
-          # which is the one thing that did not happen.
-          exit 1
+          # Non-failing by owner decision (mctlhq/.github#37): a red check on
+          # every reviewer bump taught admins to merge past red. A job cannot
+          # conclude neutral, so this concludes success; that is NOT read as
+          # "reviewed, found nothing" because no Claude step ran, no approval
+          # is synthesised, and `self_edit=true` (step and job output), the
+          # warning annotation and the PR comment all say so. Policy is
+          # satisfied by the alternative review path, never by this check.
+          exit 0
 
       - name: Claude review
         id: review
