@@ -875,7 +875,7 @@ existing fixtures, and the mutated snapshot still validates against
 GitHub's sub-issue and dependency endpoints identify the *related* issue by numeric
 id, which `github-graph-snapshot.schema.json` does not record. A live run therefore
 supplies that mapping from outside, with `--issue-ids` (a JSON object of
-`"owner/repo#number": id`); the write client will not read GitHub to find it, because
+`"owner/repo#number": <positive id>`); the write client will not read GitHub to find it, because
 a reader inside the write module would defeat the point of the split.
 
 ### CLI
@@ -936,7 +936,9 @@ Guards, in order:
    that unwinds the run from operation five of nine — and an *absent* map (the flag
    omitted on a live `--execute` run that has operations to write) is the same guard
    failure at its widest, so it is refused up front too rather than aborting on the
-   first operation. An offline run is not held to this: `FakeMutator` needs no ids.
+   first operation. An offline run is not held to this: `FakeMutator` needs no ids, but a
+   `--issue-ids` file given to an offline run is still loaded and validated, so the dry
+   run rejects a malformed map just as the live run would.
 
 Guards 1–6 are all evaluated for *every* selected manifest before the first mutation
 is transmitted, so a guard firing on the last manifest of a whole-corpus run cannot
@@ -966,7 +968,8 @@ the last two — plus one audit block:
   },
   "planId": "<64 hex>",
   "targets": [{"repository": "mctlhq/mctl-agents", "number": 333}],
-  "manifestsSelected": 1                     // how many the run selected
+  "manifestsSelected": 1,                    // how many the run selected
+  "operationsPlanned": 1                     // how many operations this manifest's plan held
 }
 ```
 
@@ -975,6 +978,8 @@ whole-corpus run that applies the first manifest and then stops emits exactly on
 `RoadmapApplyResult`, otherwise indistinguishable from a clean single-manifest run,
 and the exit code that would have said otherwise is not archived beside the file.
 Comparing it against the number of results present answers the question directly.
+`operationsPlanned` is the same signal inside one manifest: an `operations` list shorter
+than it is a manifest that stopped part-way.
 
 `roadmap-apply-result.schema.json` is `additionalProperties: false` throughout, types
 every target as `issueRef`, and restricts `reason` to a closed vocabulary, so there is
