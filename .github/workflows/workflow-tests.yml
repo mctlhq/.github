@@ -24,6 +24,9 @@ on:
       - 'docs/spikes/automation-control-plane/**'
       - 'docs/spikes/finance-assistant/**'
       - 'docs/spikes/agent-client-compatibility/**'
+      - 'docs/spikes/mcp-tasks-durable-execution/**'
+      - 'docs/spikes/mcp-tasks-durable-execution.md'
+      - 'roadmap/spikes/mcp-tasks-durable-execution.yaml'
   push:
     branches:
       - main
@@ -43,6 +46,9 @@ on:
       - 'docs/spikes/automation-control-plane/**'
       - 'docs/spikes/finance-assistant/**'
       - 'docs/spikes/agent-client-compatibility/**'
+      - 'docs/spikes/mcp-tasks-durable-execution/**'
+      - 'docs/spikes/mcp-tasks-durable-execution.md'
+      - 'roadmap/spikes/mcp-tasks-durable-execution.yaml'
 
 permissions: {}
 
@@ -88,6 +94,23 @@ jobs:
       - name: Automation control plane reference model [MODEL] (mctlhq/.github#318)
         working-directory: docs/spikes/automation-control-plane
         run: go vet ./... && go test -race ./...
+
+      - name: Set up Go for the MCP Tasks durable-execution model
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: docs/spikes/mcp-tasks-durable-execution/go.mod
+
+      - name: MCP Tasks durable-execution model [MODEL] (mctlhq/.github#41)
+        working-directory: docs/spikes/mcp-tasks-durable-execution
+        run: go vet ./... && go test -race -count=1 ./...
+
+      - name: MCP Tasks fixtures against the derived schema [SCHEMA] (mctlhq/.github#41)
+        working-directory: docs/spikes/mcp-tasks-durable-execution
+        run: python3 -I checks/validate_fixtures.py
+
+      - name: MCP Tasks verdict vocabulary consistency [SCHEMA] (mctlhq/.github#41)
+        working-directory: docs/spikes/mcp-tasks-durable-execution
+        run: python3 -I checks/verdict_consistency.py && python3 -I -m unittest discover -s checks -v
 
   # Distinct required check: real Temporal dev server + official SDK, loopback
   # only, in-memory state, synthetic inert workflow, no credentials. A missing
