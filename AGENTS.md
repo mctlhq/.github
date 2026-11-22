@@ -53,3 +53,6 @@
 - [Agent-client compatibility](docs/spikes/agent-client-compatibility.md): draft
   slice S1a for mctlhq/.github#290 (#340); probe, offline tests and a doc-sourced
   matrix, verdict pending live run (#290).
+- [Enterprise identity](docs/spikes/enterprise-identity.md): proposal revision 2
+  for mctlhq/.github#374, separate federation and SCIM lifecycle gates; proposed
+  only, DEFER stands.

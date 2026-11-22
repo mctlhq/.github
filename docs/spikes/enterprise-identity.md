@@ -1,12 +1,12 @@
 # Proposal Revision 2 — .github#374
 
-22 November2026. Proposed only. Primary DEFER enterprise activation, SCIM and custom adapter development. Existing pinned21 November code/config evidence is reused, not live reverified. Supplements earlier research; no old review is claimed to cover this revision. Human ZITADEL, explicit provider/issuer/subject links, canonical principal membership and existing approvals remain authoritative.
+22 November 2026. Proposed only. Primary DEFER enterprise activation, SCIM and custom adapter development. Existing pinned 21 November code/config evidence is reused, not live reverified. Supplements earlier research; no old review is claimed to cover this revision. Human ZITADEL, explicit provider/issuer/subject links, canonical principal membership and existing approvals remain authoritative.
 
 ## Independent decisions
 
 F: enterprise OIDC/SAML federation. Product must name use case, target relying party, enterprise IdP/protocol, user population, current manual baseline, required trust/email/MFA assertions and existing grants. Private demand evidence is referenced safely, not customer names in public issues. Missing demand -> DEFER. SAML may be compared if required; smallest candidate is OIDC-only, one isolated synthetic org, one IdP, manually linked principals/grants, SCIM off, no automatic admin/JIT/control-plane access, no customer onboarding. Plan review is allowed independently of SCIM; no pilot is authorized here.
 
-L: SCIM provisioning/lifecycle. Require separate concrete Users/Groups/disable requirements, operations and residual-access bounds. Native ZITADEL4.20.5 SCIM2 Preview Users is comparison baseline from pinned upstream, not deployed capability proof. Groups missing is not an automatic adapter verdict. L does not require enterprise federation F to have passed: existing sign-in may suffice; only its actual authentication/lifecycle prerequisites apply. F success does not approve L. Preserve DEFER for SCIM activation/custom adapter until native gap and safety proof exist.
+L: SCIM provisioning/lifecycle. Require separate concrete Users/Groups/disable requirements, operations and residual-access bounds. Native ZITADEL 4.20.5 SCIM2 Preview Users is comparison baseline from pinned upstream, not deployed capability proof. Groups missing is not an automatic adapter verdict. L does not require enterprise federation F to have passed: existing sign-in may suffice; only its actual authentication/lifecycle prerequisites apply. F success does not approve L. Preserve DEFER for SCIM activation/custom adapter until native gap and safety proof exist.
 
 ## Revocation contract worksheet
 
