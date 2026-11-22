@@ -116,6 +116,16 @@ on:
           rides on, but the model no longer drops below model-mid.
         type: string
         default: claude-sonnet-5-5
+      settle-seconds:
+        description: >
+          Quiet period, in seconds, that a pull_request-triggered run waits in
+          `gate` before comparing its commit with the PR head (mctlhq/.github#71).
+          A burst of pushes then collapses to one paid review on the final
+          head: every earlier run finds the head moved and stops before the
+          review job. 0 disables the wait. Not applied to issue_comment runs,
+          which are an explicit request. Integer, 0-300.
+        type: number
+        default: 60
       allowed-bots:
         description: >
           Comma-separated bot actors whose pushes may still be reviewed.
@@ -241,6 +251,30 @@ jobs:
       # head SHA rather than a post-checkout `git rev-parse HEAD`: nothing is
       # checked out in this job, and the event SHA is what everything
       # downstream is pinned to.
+      # Settle before looking (mctlhq/.github#71). The checks below, and the
+      # one right before the review call, are point-in-time snapshots: pushes
+      # 30s apart each cleared them before the next push existed, so every
+      # commit bought a paid session. Waiting here, in the cheap read-only
+      # gate and outside the review concurrency group, lets a later push land
+      # first; the run that started last sees an unmoved head and reviews it.
+      # The concurrency group stays SHA-scoped (see `review`).
+      - name: Let a burst of pushes settle
+        if: github.event_name == 'pull_request'
+        env:
+          SETTLE_SECONDS: ${{ inputs.settle-seconds }}
+        run: |
+          case "$SETTLE_SECONDS" in
+            ''|*[!0-9]*) echo "::error::settle-seconds must be an integer, got '$SETTLE_SECONDS'"; exit 1 ;;
+          esac
+          if [ "$SETTLE_SECONDS" -gt 300 ]; then
+            echo "::error::settle-seconds must be at most 300, got $SETTLE_SECONDS"
+            exit 1
+          fi
+          if [ "$SETTLE_SECONDS" -gt 0 ]; then
+            echo "Waiting ${SETTLE_SECONDS}s for further pushes before the staleness check"
+            sleep "$SETTLE_SECONDS"
+          fi
+
       - name: Reject if this run's commit is no longer the PR's current head
         id: staleness
         env:
@@ -250,6 +284,12 @@ jobs:
           TRIGGERED_FOR: ${{ github.event.pull_request.head.sha || steps.pr-ref.outputs.sha }}
         run: |
           current_head=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid -q .headRefOid)
+          # A head that could not be read is unknown, never "moved": fail the
+          # gate rather than report stale (which would skip the review).
+          if [ -z "$current_head" ]; then
+            echo "::error::could not read the PR head; refusing to treat that as stale or fresh"
+            exit 1
+          fi
           if [ "$TRIGGERED_FOR" != "$current_head" ]; then
             echo "::notice::stale run — triggered for $TRIGGERED_FOR but PR head is now $current_head; skipping"
             echo "stale=true" >> "$GITHUB_OUTPUT"
