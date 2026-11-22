@@ -29,6 +29,7 @@ type HIRequest struct {
 // HIResponse is what SignalHumanInputResponse carries.
 type HIResponse struct {
 	RequestID, RequestHash, Value          string
+	Declined                               bool // form-mode decline: no value
 	Respondent, Surface, Assurance, Client string
 }
 
@@ -148,7 +149,7 @@ func (t *Temporal) SignalHumanInput(id string, r HIResponse) {
 		w.Rejections = append(w.Rejections, "respondent_mismatch")
 	default:
 		w.Answers = append(w.Answers, r.Value)
-		if r.Value == "fail" {
+		if r.Declined || r.Value == "fail" {
 			w.Business = true
 		}
 		w.Idx++

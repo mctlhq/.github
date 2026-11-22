@@ -43,6 +43,9 @@ type Adapter struct {
 	Now      func() time.Time
 	Revoked  map[string]bool
 	Audit    []string // reason codes only, never content
+
+	// AfterXRRead is a test hook between the xr_ read and RejectPending in cancel.
+	AfterXRRead func()
 }
 
 // declared reports whether the request itself declares the extension.
@@ -320,8 +323,22 @@ func (a *Adapter) cancel(t *TaskRow, p Principal) map[string]any {
 	})
 	a.audit("cancel task=%s", t.TaskID)
 	if xr.WEID == "" {
-		a.Store.RejectPending(xr.ID, "cancelled_by_task")
-		return ack
+		if a.AfterXRRead != nil {
+			a.AfterXRRead()
+		}
+		if a.Store.RejectPending(xr.ID, "cancelled_by_task") {
+			return ack
+		}
+		// The dispatcher claimed the xr_ between the read and the reject:
+		// re-read and cancel the workflow it started. If Start has not run
+		// yet, RequestCancel is a no-op and Dispatch honors the recorded
+		// CancelRequestedAt right after Start.
+		if xr, err = a.Store.XR(t.XRID); err != nil || xr == nil {
+			return rpcErr(CodeInternal, "internal error")
+		}
+		if xr.WEID == "" {
+			return ack // rejected by someone else: terminal already
+		}
 	}
 	a.Temporal.RequestCancel(xr.WEID) // no-op on a terminal workflow
 	return ack
@@ -357,7 +374,7 @@ func (a *Adapter) update(t *TaskRow, r Request) map[string]any {
 		val, _ := c["value"].(string)
 		// 8. forward; the workflow re-validates everything.
 		a.Temporal.SignalHumanInput(xr.WEID, HIResponse{RequestID: w.Req.RequestID, RequestHash: w.Req.Hash,
-			Value: val, Respondent: p.ActorRef, Surface: "mcp", Assurance: "client_relayed", Client: p.ClientID})
+			Value: val, Declined: e["action"] == "decline", Respondent: p.ActorRef, Surface: "mcp", Assurance: "client_relayed", Client: p.ClientID})
 		a.audit("update entry forwarded client=%s", p.ClientID)
 	}
 	return ack
@@ -388,6 +405,9 @@ func (a *Adapter) checkEntry(t *TaskRow, p Principal, w *Workflow, key string, r
 		return "rounds_exhausted"
 	}
 	e, _ := raw.(map[string]any)
+	if e["action"] == "decline" {
+		return "" // form-mode decline carries no content to validate
+	}
 	c, _ := e["content"].(map[string]any)
 	val, ok := c["value"].(string)
 	b, _ := json.Marshal(c)

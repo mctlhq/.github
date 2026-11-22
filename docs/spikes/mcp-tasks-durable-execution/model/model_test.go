@@ -674,3 +674,65 @@ func TestFixtures(t *testing.T) {
 		}
 	}
 }
+
+// Review fix: the dispatcher claims the xr_ between cancel's read and its
+// RejectPending. The cancel must still reach the workflow it started.
+func TestCancelRaceWithDispatcherClaim(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.create(human, "k1", "input", true)["result"].(map[string]any)["taskId"].(string)
+	// A dispatcher that claims and starts but knows nothing of recorded cancels:
+	// only the adapter's re-read can save the cancel here.
+	e.ad.AfterXRRead = func() {
+		x := e.st.PendingXRs()[0]
+		we := "we_" + x.ID[3:]
+		if !e.st.Claim(x.ID, we) {
+			t.Fatal("claim must win in this interleaving")
+		}
+		e.tw.Start(we, []string{"input"}, []string{"alice"})
+	}
+	e.call("tasks/cancel", id, human, nil)
+	if g := e.get(id); g["status"] != "cancelled" {
+		t.Fatalf("cancel lost in the claim race: %v", g)
+	}
+}
+
+// Claim happened but Start has not: Dispatch honors the recorded cancel.
+func TestCancelRecordedBeforeStartIsHonored(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.create(human, "k1", "input", true)["result"].(map[string]any)["taskId"].(string)
+	now := e.now
+	e.st.Update(id, func(r *TaskRow) { r.CancelRequestedAt = &now })
+	Dispatch(e.st, e.tw)
+	if g := e.get(id); g["status"] != "cancelled" {
+		t.Fatalf("recorded cancel ignored at start: %v", g)
+	}
+}
+
+// Review fix: a form-mode decline is a valid response and is forwarded;
+// the workflow ends as a business error, never as a silent no-op.
+func TestDeclineIsForwarded(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k1", "input")
+	e.call("tasks/update", id, human, map[string]any{"inputResponses": map[string]any{
+		e.reqID(id): map[string]any{"action": "decline"}}})
+	g := e.get(id)
+	if g["status"] != "completed" {
+		t.Fatalf("decline not forwarded: %v", g)
+	}
+	if r, _ := g["result"].(map[string]any); r == nil || r["isError"] != true {
+		t.Fatalf("decline must end as a business error: %v", g)
+	}
+}
+
+// Decline still passes checks 2-7: wrong respondent is ignored.
+func TestDeclineStillChecked(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k1", "input")
+	other := human
+	other.ActorRef = "mallory"
+	e.call("tasks/update", id, other, map[string]any{"inputResponses": map[string]any{
+		e.reqID(id): map[string]any{"action": "decline"}}})
+	if g := e.get(id); g["status"] != "input_required" {
+		t.Fatalf("decline from a non-respondent must be ignored: %v", g)
+	}
+}

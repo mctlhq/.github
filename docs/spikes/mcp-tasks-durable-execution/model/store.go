@@ -319,6 +319,18 @@ func (s *Store) Claim(id, weID string) bool {
 	return false
 }
 
+// CancelRecorded reports whether a task bound to xr_ id has a recorded cancel.
+func (s *Store) CancelRecorded(xrID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, t := range s.Tasks {
+		if t.XRID == xrID && t.CancelRequestedAt != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // Update runs fn on a task row under the store lock.
 func (s *Store) Update(id string, fn func(*TaskRow)) {
 	s.mu.Lock()

@@ -17,6 +17,9 @@ func Dispatch(s *Store, t *Temporal) int {
 				phases = []string{"sleep"}
 			}
 			t.Start(we, phases, []string{"alice"})
+			if s.CancelRecorded(x.ID) { // cancel raced the claim: honor it now
+				t.RequestCancel(we)
+			}
 			n++
 		}
 	}
