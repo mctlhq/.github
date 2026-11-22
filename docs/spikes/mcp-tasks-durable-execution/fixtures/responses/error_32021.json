@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": -32021,
+    "message": "tasks extension not declared on this request"
+  }
+}

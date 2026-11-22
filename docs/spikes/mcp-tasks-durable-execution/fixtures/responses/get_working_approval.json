@@ -1,0 +1,12 @@
+{
+  "result": {
+    "createdAt": "2026-11-22T12:00:00Z",
+    "lastUpdatedAt": "2026-11-22T12:00:00Z",
+    "pollIntervalMs": 5000,
+    "resultType": "complete",
+    "status": "working",
+    "statusMessage": "waiting for owner approval",
+    "taskId": "tk_fixture03",
+    "ttlMs": null
+  }
+}

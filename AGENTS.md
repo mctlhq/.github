@@ -56,3 +56,7 @@
 - [Enterprise identity](docs/spikes/enterprise-identity.md): proposal revision 2
   for mctlhq/.github#374, separate federation and SCIM lifecycle gates; proposed
   only, DEFER stands.
+- [MCP Tasks over durable executions](docs/spikes/mcp-tasks-durable-execution.md):
+  Phase 0 evidence for mctlhq/.github#41 (pilot mctl-api#284); recommendation
+  BOUNDED_PILOT, not a decision, with an offline Go reference model and fixtures in
+  `docs/spikes/mcp-tasks-durable-execution/`. Temporal dev-server tests not run.
