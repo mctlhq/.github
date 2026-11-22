@@ -1206,6 +1206,17 @@ jobs:
           DENIALS_ATTEMPT: 0
         run: bash -c "$DENIALS_LOG_SH"
 
+      # Each attempt's execution output is moved to its own file as soon as the
+      # attempt is measured, so the fallback can never overwrite the primary's
+      # result and a fallback that writes nothing leaves NO file rather than
+      # the primary's stale one (mctlhq/.github#53).
+      - name: Preserve primary execution output
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/claude-execution-output.json" ]; then
+            mv "$RUNNER_TEMP/claude-execution-output.json" "$RUNNER_TEMP/claude-execution-output-primary.json"
+          fi
+
       # Fallback retry on a SECOND token. An earlier revision of the donor
       # workflow refused to do this, on a 2026-07-22 observation that
       # CLAUDE_CODE_OAUTH_TOKEN and CLAUDE_CODE_OAUTH_TOKEN_2 failed
@@ -1245,12 +1256,16 @@ jobs:
           DENIALS_ATTEMPT: 1
         run: bash -c "$DENIALS_LOG_SH"
 
-      # The primary and the fallback write the same execution-output file, so
-      # re-read it here: after a fallback run it holds the FALLBACK result.
-      # If the fallback somehow exits without rewriting the file, this reads
-      # the primary's stale is_error=true and reports failure — deliberately
-      # fail-closed, since a green gate on an unverified review is the worse
-      # outcome.
+      - name: Preserve fallback execution output
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/claude-execution-output.json" ]; then
+            mv "$RUNNER_TEMP/claude-execution-output.json" "$RUNNER_TEMP/claude-execution-output-fallback.json"
+          fi
+
+      # Reads the FALLBACK's own file. If the fallback exits without writing
+      # one, there is nothing to read and the check reports failure: a green
+      # gate on an unverified review is the worse outcome.
       - name: Check final review outcome
         id: review-final
         if: always()
@@ -1264,7 +1279,7 @@ jobs:
           elif [ "$HAS_FALLBACK" != "true" ]; then
             echo "failed=true" >> "$GITHUB_OUTPUT"
           else
-            OUT="$RUNNER_TEMP/claude-execution-output.json"
+            OUT="$RUNNER_TEMP/claude-execution-output-fallback.json"
             is_error="false"
             if [ -f "$OUT" ]; then
               is_error=$(jq -r '
@@ -1272,7 +1287,7 @@ jobs:
                 else ([.[] | select(.type == "result")] | if length > 0 then (.[-1].is_error // false | tostring) else "false" end)
                 end' "$OUT" 2>/dev/null || echo "false")
             fi
-            if [ "$FALLBACK_OUTCOME" = "failure" ] || [ "$is_error" = "true" ]; then
+            if [ "$FALLBACK_OUTCOME" = "failure" ] || [ ! -f "$OUT" ] || [ "$is_error" = "true" ]; then
               echo "failed=true" >> "$GITHUB_OUTPUT"
             else
               echo "failed=false" >> "$GITHUB_OUTPUT"
@@ -1337,12 +1352,39 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          HAS_FALLBACK: ${{ steps.token-check.outputs.has_fallback }}
+          FALLBACK_OUTCOME: ${{ steps.review2.outcome }}
         run: |
-          OUT="$RUNNER_TEMP/claude-execution-output.json"
-          if [ -f "$OUT" ] && grep -qiE "hit your limit|usage limit|rate.?limit|overloaded|insufficient.*quota|credit balance|out of.*usage" "$OUT"; then
-            echo "::warning::Claude reviewer hit a transient usage limit — treating as non-blocking."
+          # Decide from the FINAL attempt only: the fallback when it ran,
+          # otherwise the primary. Each attempt has its own file (see the
+          # "Preserve ... execution output" steps), so the verdict can never
+          # describe one attempt while the comment speaks for another.
+          if [ "$HAS_FALLBACK" = "true" ] && [ -n "$FALLBACK_OUTCOME" ] && [ "$FALLBACK_OUTCOME" != "skipped" ]; then
+            ATTEMPT="fallback"
+          else
+            ATTEMPT="primary"
+          fi
+          OUT="$RUNNER_TEMP/claude-execution-output-$ATTEMPT.json"
+          # A billed attempt is never a quota block, whatever its text says:
+          # an API refusal costs nothing. The match is on the last result
+          # entry's message only, not on the whole transcript, which also
+          # carries the review prompt. Anything unreadable stays unknown.
+          shape=unknown
+          if [ -f "$OUT" ]; then
+            shape=$(jq -r '
+              if type != "array" then "unknown"
+              else ([.[] | select(.type == "result")] | last) as $r
+                | if $r == null then "unknown"
+                  elif (($r.total_cost_usd | type) == "number" and $r.total_cost_usd > 0) then "billed"
+                  elif (($r.result // $r.error // "") | tostring
+                        | test("hit your limit|usage limit|rate.?limit|overloaded|insufficient.*quota|credit balance|out of.*usage"; "i")) then "limit"
+                  else "other" end
+              end' "$OUT" 2>/dev/null || echo unknown)
+          fi
+          if [ "$shape" = "limit" ]; then
+            echo "::warning::Claude reviewer ($ATTEMPT attempt) hit a transient usage limit — treating as non-blocking."
             gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
-              "⏳ The Claude reviewer hit the shared usage limit and could not finish. This is **transient** and is *not* a code issue. Re-run with \`@claude review\` once the window resets." || true
+              "⏳ The Claude reviewer hit the shared usage limit on its final attempt (the $ATTEMPT token) and could not finish. This is **transient** and is *not* a code issue. Re-run with \`@claude review\` once the window resets." || true
             exit 0
           fi
           # The line below used to say "see the step logs" and send whoever
@@ -1358,7 +1400,7 @@ jobs:
           # file — that holds the model's entire pass over the diff, which is
           # what the action hides on purpose.
           if [ -f "$OUT" ]; then
-            echo "::group::Reviewer failure diagnostics"
+            echo "::group::Reviewer failure diagnostics ($ATTEMPT attempt)"
             jq -r '
               (if type == "array" then [.[] | select(.type == "result")] else [] end)
               | if length == 0 then
@@ -1377,7 +1419,12 @@ jobs:
           else
             echo "no execution output was written at all — the action failed before it ran"
           fi
+          case "$shape" in
+            billed) why="The final attempt ($ATTEMPT token) was billed and still failed, so this is **not** a usage limit and waiting will not help." ;;
+            other)  why="The final attempt ($ATTEMPT token) failed for a non-quota reason." ;;
+            *)      why="The final attempt ($ATTEMPT token) failed and its result could not be read, so the cause is unknown." ;;
+          esac
           gh pr comment "$PR_NUMBER" --repo "$REPO" \
-            --body "Claude review failed to complete on both tokens (see the [run log]($RUN_URL); the 'Reviewer failure diagnostics' group in the review job says why). Re-trigger with \`@claude review\` once the underlying issue is resolved."
-          echo "::error::Claude reviewer failed for a non-quota reason — see the 'Reviewer failure diagnostics' group in this job."
+            --body "Claude review failed to complete. $why See the [run log]($RUN_URL); the 'Reviewer failure diagnostics' group in the review job says why. Re-trigger with \`@claude review\` once the underlying issue is resolved."
+          echo "::error::Claude reviewer failed for a non-quota reason ($ATTEMPT attempt, $shape) — see the 'Reviewer failure diagnostics' group in this job."
           exit 1
