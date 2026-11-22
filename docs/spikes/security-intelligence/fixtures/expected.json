@@ -1,0 +1,86 @@
+[
+  {
+    "case_id": "E1",
+    "disposition": "NO_MATCH",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e1"
+  },
+  {
+    "case_id": "E2",
+    "disposition": "MATCH_REFERENCE",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e2"
+  },
+  {
+    "case_id": "E3",
+    "disposition": "REPLAY",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e2"
+  },
+  {
+    "case_id": "E4",
+    "disposition": "CONFLICT",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e2"
+  },
+  {
+    "case_id": "E5",
+    "disposition": "NO_MATCH",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e5"
+  },
+  {
+    "case_id": "E6",
+    "disposition": "NO_MATCH",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e6"
+  },
+  {
+    "case_id": "E7",
+    "disposition": "MATCH_REFERENCE",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e7"
+  },
+  {
+    "case_id": "E8",
+    "disposition": "REJECT",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e8"
+  },
+  {
+    "case_id": "E9",
+    "disposition": "MATCH_REFERENCE",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e9"
+  },
+  {
+    "case_id": "E10",
+    "disposition": "UNKNOWN",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e10"
+  },
+  {
+    "case_id": "E11",
+    "disposition": "UNKNOWN",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:e11"
+  },
+  {
+    "case_id": "E12",
+    "disposition": "COVERAGE_UNKNOWN",
+    "rule_revision": "EG373-R1/1",
+    "allowset_revision": "eval1",
+    "evidence_ref": "fixture:missing-source"
+  }
+]

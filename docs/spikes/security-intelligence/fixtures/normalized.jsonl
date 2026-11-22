@@ -1,0 +1,12 @@
+{"case_id":"E1","input":{"id":"e1","source":"fixture-squid","method":"CONNECT","destination":"allowed.invalid:443","status":200}}
+{"case_id":"E2","input":{"id":"e2","source":"fixture-squid","method":"CONNECT","destination":"outside.invalid:443","status":200}}
+{"case_id":"E3","input":{"id":"e2","source":"fixture-squid","method":"CONNECT","destination":"outside.invalid:443","status":200}}
+{"case_id":"E4","input":{"id":"e2","source":"fixture-squid","method":"CONNECT","destination":"changed.invalid:443","status":200}}
+{"case_id":"E5","input":{"id":"e5","source":"fixture-squid","method":"CONNECT","destination":"outside.invalid:443","status":403}}
+{"case_id":"E6","input":{"id":"e6","source":"fixture-squid","method":"CONNECT","destination":"ALLOWED.INVALID.:443","status":200}}
+{"case_id":"E7","input":{"id":"e7","source":"fixture-squid","method":"CONNECT","destination":"allowed.invalid:8443","status":200}}
+{"case_id":"E8","input":{"id":"e8","source":"untrusted-fixture","method":"CONNECT","destination":"outside.invalid:443","status":200}}
+{"case_id":"E9","input":{"id":"e9","source":"fixture-squid","method":"CONNECT","destination":"allowed.invalid.evil.invalid:443","status":200}}
+{"case_id":"E10","input":{"id":"e10","source":"fixture-squid","method":"GET","destination":"http://outside.invalid/path","status":200}}
+{"case_id":"E11","input":{"id":"e11","source":"fixture-squid","method":"CONNECT","destination":"outside.invalid:443"}}
+{"case_id":"E12","input":{"coverage":"missing-source"}}

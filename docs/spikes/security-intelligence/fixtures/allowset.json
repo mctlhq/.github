@@ -1,0 +1,6 @@
+{
+  "revision": "eval1",
+  "destinations": [
+    "allowed.invalid:443"
+  ]
+}
