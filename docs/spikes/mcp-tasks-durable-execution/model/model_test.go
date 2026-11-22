@@ -25,7 +25,9 @@ func newEnv(t *testing.T, design string) *env {
 	clk := func() time.Time { return e.now }
 	e.st = NewStore(design, clk)
 	e.tw = NewTemporal(clk)
-	e.ad = &Adapter{Store: e.st, Temporal: e.tw, Now: clk, Revoked: map[string]bool{}}
+	revoked := map[string]bool{}
+	e.tw.Revoked = revoked
+	e.ad = &Adapter{Store: e.st, Temporal: e.tw, Now: clk, Revoked: revoked}
 	return e
 }
 
@@ -734,5 +736,136 @@ func TestDeclineStillChecked(t *testing.T) {
 		e.reqID(id): map[string]any{"action": "decline"}}})
 	if g := e.get(id); g["status"] != "input_required" {
 		t.Fatalf("decline from a non-respondent must be ignored: %v", g)
+	}
+}
+
+ 
+// A policy mutation between adapter validation and Temporal signalling must
+// still be denied by the sealed workflow-side respondent policy.
+func TestSealedRespondentPolicyRevalidatedAtSignal(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k-policy", "input")
+	e.tw.BeforeSig = func(w *Workflow) { w.Req.AllowMCP = false }
+	e.answer(id, e.reqID(id), "ok", human)
+	w := e.tw.WFs["we_1"]
+	if w.Idx != 0 || len(w.Rejections) != 1 || w.Rejections[0] != "policy_denied" {
+		t.Fatalf("stale client-relay policy passed workflow recheck: %+v", w)
+	}
+}
+
+func TestSealedClientAndAssuranceRevalidatedAtSignal(t *testing.T) {
+	e := newEnv(t, "A")
+	result := e.ad.Handle(Request{Method: "tools/call", Principal: human, Params: map[string]any{
+		"_meta": meta(true),
+		"arguments": map[string]any{"idempotency_key": "k-client-recheck", "scenario": "input", "client_policy": "same_client"},
+	}})
+	id := result["result"].(map[string]any)["taskId"].(string)
+	Dispatch(e.st, e.tw)
+	e.tw.BeforeSig = func(w *Workflow) { w.Req.ClientID = "different-client" }
+	e.answer(id, e.reqID(id), "ok", human)
+	w := e.tw.WFs["we_1"]
+	if w.Idx != 0 || len(w.Rejections) != 1 || w.Rejections[0] != "client_mismatch" {
+		t.Fatalf("stale client policy passed workflow recheck: %+v", w)
+	}
+	e2 := newEnv(t, "A")
+	e2.newTask("k-assurance", "input")
+	req := e2.tw.WFs["we_1"].Req
+	e2.tw.SignalHumanInput("we_1", HIResponse{RequestID: req.RequestID, RequestHash: req.Hash,
+		Value: "ok", Respondent: human.ActorRef, Client: human.ClientID,
+		Surface: "mcp", Assurance: "service_token"})
+	w = e2.tw.WFs["we_1"]
+	if w.Idx != 0 || len(w.Rejections) != 1 || w.Rejections[0] != "assurance_mismatch" {
+		t.Fatalf("spoofed assurance accepted: %+v", w)
+	}
+}
+
+func TestRevokedCreateAndSideEffectCheckpoint(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k-revoke", "sleep")
+	e.ad.Revoked[human.ID] = true
+	if code(e.create(human, "k-after-revoke", "sleep", true)) != CodeInvalidParams {
+		t.Fatal("revoked principal created a new task")
+	}
+	if len(e.st.XRs) != 1 {
+		t.Fatal("revocation did not fence creation")
+	}
+	e.tw.Tick()
+	w := e.tw.WFs["we_1"]
+	if w.State != "Failed" || w.FailedReason != "authorization_revoked" || w.SideEffect {
+		t.Fatalf("revoked task reached side-effect checkpoint: %+v", w)
+	}
+	delete(e.ad.Revoked, human.ID)
+	if got := e.get(id); got["status"] != "failed" ||
+		got["error"].(map[string]any)["data"].(map[string]any)["reason"] != "authorization_revoked" {
+		t.Fatalf("revocation failure not classified: %v", got)
+	}
+}
+
+func TestExpiredReplayRefusesFabricatedHandle(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k-expire-retry", "sleep")
+	e.tw.Tick()
+	if got := e.get(id); got["status"] != "completed" {
+		t.Fatalf("not terminal: %v", got)
+	}
+	e.now = e.now.Add(TerminalRetention)
+	e.st.GC()
+	xrCount := len(e.st.XRs)
+	if got := e.create(human, "k-expire-retry", "sleep", true); code(got) != CodeInvalidParams {
+		t.Fatalf("expired retry returned a fabricated working handle: %v", got)
+	}
+	if len(e.st.XRs) != xrCount || e.st.Scopes["acme|u1|probe|k-expire-retry"].TaskID != id {
+		t.Fatal("replay created a second execution or lost the retained id")
+	}
+	if code(e.call("tasks/get", id, human, nil)) != CodeInvalidParams {
+		t.Fatal("expired task must remain inaccessible")
+	}
+	e.st.FailReads = true
+	if got := e.create(human, "k-expire-retry", "sleep", true); code(got) != CodeInternal {
+		t.Fatalf("store read error hidden on create replay: %v", got)
+	}
+}
+
+func TestDeclineIsNotAnAcceptedEmptyValue(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k-decline-distinct", "input")
+	req := e.reqID(id)
+	e.call("tasks/update", id, human, map[string]any{"inputResponses": map[string]any{
+		req: map[string]any{"action": "decline"},
+	}})
+	w := e.tw.WFs["we_1"]
+	if len(w.Declines) != 1 || w.Declines[0] != req || len(w.Answers) != 0 {
+		t.Fatalf("decline became an accepted value: %+v", w)
+	}
+}
+
+func TestDeclineWithUnexpectedContentRejected(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.newTask("k-invalid-decline", "input")
+	e.call("tasks/update", id, human, map[string]any{"inputResponses": map[string]any{
+		e.reqID(id): map[string]any{"action": "decline", "content": map[string]any{"value": "unexpected"}},
+	}})
+	if w := e.tw.WFs["we_1"]; w.Idx != 0 || len(w.Answers) != 0 || len(w.Declines) != 0 {
+		t.Fatalf("malformed decline resumed execution: %+v", w)
+	}
+}
+
+func TestCancelAfterClaimBeforeStartUsesDurableIntent(t *testing.T) {
+	e := newEnv(t, "A")
+	id := e.create(human, "k-claim-gap", "sleep", true)["result"].(map[string]any)["taskId"].(string)
+	// Force Claim without Start; cancel cannot signal the not-yet-created workflow.
+	x := e.st.PendingXRs()[0]
+	weID := "we_" + x.ID[3:]
+	if !e.st.Claim(x.ID, weID) {
+		t.Fatal("expected claim to succeed")
+	}
+	e.call("tasks/cancel", id, human, nil)
+	e.tw.Start(weID, []string{"sleep"}, []string{"alice"}, human.ID, "any_client_of_owner", human.ClientID)
+	if e.st.CancelRecorded(x.ID) {
+		e.tw.RequestCancel(weID)
+	}
+	e.tw.Tick()
+	if w := e.tw.WFs[weID]; w.State != "Canceled" || w.SideEffect {
+		t.Fatalf("cancelled workflow crossed the side-effect checkpoint: %+v", w)
 	}
 }

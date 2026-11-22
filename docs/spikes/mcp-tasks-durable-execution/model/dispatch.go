@@ -16,7 +16,11 @@ func Dispatch(s *Store, t *Temporal) int {
 			if x.Scenario == "" {
 				phases = []string{"sleep"}
 			}
-			t.Start(we, phases, []string{"alice"})
+			owner, clientPolicy, clientID := "", "", ""
+			if task, ok, err := s.Task(x.TaskKey); err == nil && ok {
+				owner, clientPolicy, clientID = task.Owner, task.ClientPolicy, task.ClientID
+			}
+			t.Start(we, phases, []string{"alice"}, owner, clientPolicy, clientID)
 			if s.CancelRecorded(x.ID) { // cancel raced the claim: honor it now
 				t.RequestCancel(we)
 			}

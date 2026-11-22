@@ -253,7 +253,8 @@ func (s *Store) PendingXRs() []*XR {
 	var out []*XR
 	for _, x := range s.XRs {
 		if x.State == "pending" {
-			out = append(out, x)
+			copy := *x
+			out = append(out, &copy)
 		}
 	}
 	return out
@@ -284,7 +285,11 @@ func (s *Store) Task(id string) (*TaskRow, bool, error) {
 		return nil, false, ErrStore
 	}
 	t, ok := s.Tasks[id]
-	return t, ok, nil
+	if !ok {
+		return nil, false, nil
+	}
+	copy := *t
+	return &copy, true, nil
 }
 
 // XR reads an execution request.
@@ -294,7 +299,11 @@ func (s *Store) XR(id string) (*XR, error) {
 	if s.FailReads {
 		return nil, ErrStore
 	}
-	return s.XRs[id], nil
+	if x := s.XRs[id]; x != nil {
+		copy := *x
+		return &copy, nil
+	}
+	return nil, nil
 }
 
 // RejectPending rejects a still-pending xr_ under the item lock.
