@@ -35,6 +35,13 @@ name: Claude PR review (reusable)
 
 on:
   workflow_call:
+    outputs:
+      self_edit:
+        description: >
+          'true' when the run was a reviewer self-edit: Claude was deliberately
+          not run, the check is non-failing and is NOT a review. A caller gate
+          can read needs.<job>.outputs.self_edit to demand another review path.
+        value: ${{ jobs.review.outputs.self_edit }}
     inputs:
       runner:
         description: Runner label for both jobs.
