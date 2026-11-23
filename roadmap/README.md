@@ -92,6 +92,7 @@ roadmap/
   scripts/
     validate.py
     lifecycle_guard.py    diff-aware completed-epic guard
+    epic_guards.py        per-epic semantic guards (required item exists, upstream edges)
     github_graph.py       read-only observation
     reconcile.py          desired vs observed
     health.py
@@ -108,6 +109,7 @@ roadmap/
   tests/
     test_validate.py
     test_lifecycle_guard.py
+    test_epic_guards.py
     test_reconcile.py
     test_health.py
     test_completion.py
