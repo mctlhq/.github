@@ -460,6 +460,49 @@ class ControllerAcceptanceTests(unittest.TestCase):
         self.assertEqual(rc_bad, 1)
         self.assertIn('cannot promote shadow-configured repository', m_bad['errors'][0])
 
+        # Shadow mode also requires stale_dismissal and (strict or merge_queue) to match agy_review_publish.
+        for bad_name, mutate_rules in (
+            ('missing stale dismissal', lambda ghx: ghx.rules[0]['parameters'].clear()),
+            ('missing strict and merge queue', lambda ghx: ghx.rules[1]['parameters'].update(strict_required_status_checks_policy=False)),
+        ):
+            with self.subTest(bad_name=bad_name):
+                gh_pol = FakeGitHub(mode='shadow')
+                mutate_rules(gh_pol)
+                rc_pol, m_pol = run_controller(gh_pol, gate_repos=f'{REPO}:shadow')
+                self.assertEqual(rc_pol, 1)
+                self.assertIn('lacks baseline branch protection', m_pol['errors'][0])
+                self.assertEqual(gh_pol.dispatches, [])
+
+        # CrossRepoActionsAPI falls back on HTTP 403 from dispatch_api without breaking evaluation.
+        def failing_dispatch(method, path, payload=None):
+            if f'repos/{REPO}/actions/' in path:
+                raise C.Unknown(f'GET {path}: HTTP 403')
+            return gh.api(method, path, payload)
+
+        fallback_api = C.CrossRepoActionsAPI(failing_dispatch, gh.api)
+        gh.checks.clear()
+        res_runs = fallback_api('GET', f'repos/{REPO}/actions/workflows/claude-review.yml/runs?per_page=100&page=1')
+        self.assertEqual(res_runs['total_count'], len(gh.claude_runs))
+
+        # issue_comment without pull_requests matches #pr cleanly via jobs_fn boundary (never matching #420 for #42).
+        gh_bound = FakeGitHub()
+        gh_bound.add_claude_run(115, event='issue_comment', head_sha='9' * 40, conclusion='success', pull_requests=[], display_title='Claude PR #420')
+        matched_42 = review_trust.find_matching_claude_runs(
+            gh_bound.claude_runs, 42, HEAD,
+            jobs_fn=lambda rid: gh_bound.run_jobs[rid],
+        )
+        self.assertEqual(matched_42, [])
+
+        # Non-main/non-SHA branch ref in referenced_workflows must be refused.
+        self.assertFalse(review_trust.is_trusted_reusable_ref(
+            {'path': review_trust.TRUSTED_AGY_REUSABLE + 'evil-branch', 'sha': 'f' * 40},
+            review_trust.TRUSTED_AGY_REUSABLE,
+        ))
+        self.assertTrue(review_trust.is_trusted_reusable_ref(
+            {'path': review_trust.TRUSTED_AGY_REUSABLE + 'main', 'sha': 'f' * 40},
+            review_trust.TRUSTED_AGY_REUSABLE,
+        ))
+
         # Shadow reuses completed independent-review-shadow check cleanly without re-dispatching.
         gh_sr = FakeGitHub(mode='shadow')
         gh_sr.add_claude_run(110, conclusion='failure', steps=[gh_sr.outcome_step('Classify outcome: NO_VERDICT_TRANSIENT')])
@@ -570,10 +613,16 @@ class ControllerMutationTests(unittest.TestCase):
                 "if False:\n            pass",
                 'test_t13_shadow_mode_and_downgrade_only_override',
             ),
+            (
+                "if not (policy.stale_dismissal and (policy.strict or policy.queued)):",
+                "if False:",
+                'test_t13_shadow_mode_and_downgrade_only_override',
+            ),
         ]
         orig_decide = C.decide_pr
         orig_classify = C.classify_claude_run
         orig_parse = C.parse_repo_configs
+        orig_eval = C.evaluate_repo
         for old, new, test_name in mutations:
             with self.subTest(test=test_name):
                 self.assertEqual(source.count(old), 1, f'expected single occurrence of {old!r}')
@@ -586,6 +635,7 @@ class ControllerMutationTests(unittest.TestCase):
                     C.decide_pr = mod.__dict__['decide_pr']
                     C.classify_claude_run = mod.__dict__['classify_claude_run']
                     C.parse_repo_configs = mod.__dict__['parse_repo_configs']
+                    C.evaluate_repo = mod.__dict__['evaluate_repo']
                     red = unittest.TestResult()
                     ControllerAcceptanceTests(test_name).run(red)
                     self.assertFalse(red.wasSuccessful(), 'mutation survived acceptance test')
@@ -594,6 +644,7 @@ class ControllerMutationTests(unittest.TestCase):
                     C.decide_pr = orig_decide
                     C.classify_claude_run = orig_classify
                     C.parse_repo_configs = orig_parse
+                    C.evaluate_repo = orig_eval
                 green = unittest.TestResult()
                 ControllerAcceptanceTests(test_name).run(green)
                 self.assertTrue(green.wasSuccessful(), str(green.errors + green.failures))

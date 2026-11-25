@@ -100,9 +100,9 @@ class API:
             raise Refused('GitHub response unavailable or malformed') from exc
 
 
-def pages(api, path, field=None):
+def pages(api, path, field=None, max_pages=100):
     result = []
-    for page in range(1, 101):
+    for page in range(1, max_pages + 1):
         sep = '&' if '?' in path else '?'
         obj = api('GET', f'{path}{sep}per_page=100&page={page}')
         values = obj.get(field) if field and isinstance(obj, dict) else obj
@@ -111,6 +111,8 @@ def pages(api, path, field=None):
         result.extend(values)
         if len(values) < 100:
             return result
+    if max_pages < 100:
+        return result
     raise Refused('listing exceeded bounded pagination')
 
 
@@ -370,7 +372,7 @@ class Publisher:
     def _claude_workflow_runs(self):
         wf_file = review_trust.caller_allowlist_for(self.repo)[0].rsplit('/', 1)[1]
         try:
-            runs = pages(self.run_api, self.root + f'/actions/workflows/{wf_file}/runs', field='workflow_runs')
+            runs = pages(self.run_api, self.root + f'/actions/workflows/{wf_file}/runs', field='workflow_runs', max_pages=5)
         except Refused:
             # Cross-repo run_api (GITHUB_TOKEN on source_repo) may lack workflow listing on target repo.
             if self.repo != self.source_repo:

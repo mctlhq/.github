@@ -139,22 +139,24 @@ def parse_repo_configs(raw: str, override_repo: str = '', override_mode: str = '
 
 
 class API:
-    def __init__(self, token: str):
-        if not token:
+    def __init__(self, token: str | None):
+        if token is None:
             raise Unknown('missing token')
         self.token = token
 
     def __call__(self, method: str, path: str, payload=None):
+        headers = {
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json',
+            'X-GitHub-Api-Version': '2022-11-28',
+        }
+        if self.token:
+            headers['Authorization'] = 'Bearer ' + self.token
         req = urllib.request.Request(
             'https://api.github.com/' + path,
             method=method,
             data=None if payload is None else json.dumps(payload).encode(),
-            headers={
-                'Authorization': 'Bearer ' + self.token,
-                'Accept': 'application/vnd.github+json',
-                'Content-Type': 'application/json',
-                'X-GitHub-Api-Version': '2022-11-28',
-            },
+            headers=headers,
         )
         try:
             with urllib.request.urlopen(req, timeout=20) as response:
@@ -168,6 +170,29 @@ class API:
             raise Unknown(f'{method} {path.split("?")[0]}: HTTP {exc.code}') from None
         except (OSError, ValueError) as exc:
             raise Unknown(f'{method} {path.split("?")[0]}: unavailable or malformed') from exc
+
+
+class CrossRepoActionsAPI:
+    """Try dispatch_api (source GITHUB_TOKEN), then target api, then public GET on cross-repo 401/403."""
+
+    def __init__(self, *transports):
+        self._transports = list(transports)
+        self._preferred = None
+
+    def __call__(self, method: str, path: str, payload=None):
+        if self._preferred is not None:
+            return self._preferred(method, path, payload)
+        last_exc = None
+        for transport in self._transports:
+            try:
+                res = transport(method, path, payload)
+                self._preferred = transport
+                return res
+            except Unknown as exc:
+                last_exc = exc
+                if 'HTTP 401' not in str(exc) and 'HTTP 403' not in str(exc):
+                    raise
+        raise last_exc or Unknown('cross-repo Actions read failed')
 
 
 def pages(api, path: str, field_name: str | None = None, max_pages: int = PAGE_LIMIT) -> list[dict]:
@@ -450,7 +475,7 @@ def find_qualifying_agy_reuse(
         run_obj = api('GET', f'repos/{source_repo}/actions/runs/{run_id}')
         refs = _dict(run_obj, 'formal run').get('referenced_workflows')
         if not isinstance(refs, list) or not any(
-            isinstance(x, dict) and str(x.get('path', '')).startswith(review_trust.TRUSTED_AGY_REUSABLE)
+            review_trust.is_trusted_reusable_ref(x, review_trust.TRUSTED_AGY_REUSABLE)
             for x in refs
         ):
             continue
@@ -621,8 +646,10 @@ def decide_pr(
     compute_digest_fn: Callable[[str, str, str], str],
     metrics: Metrics,
     actions_api=None,
+    source_actions_api=None,
 ) -> Decision:
     actions_api = actions_api or api
+    source_actions_api = source_actions_api or actions_api
     if not pr.eligible:
         return Decision(OUTCOME_OTHER, 'skip', pr.why_not)
     if pr.author == agy_login:
@@ -654,7 +681,13 @@ def decide_pr(
 
     all_repo_runs = pages(actions_api, f'repos/{repo}/actions/workflows/'
                                f'{review_trust.caller_allowlist_for(repo)[0].rsplit("/", 1)[1]}/runs', 'workflow_runs', max_pages=5)
-    claude_runs = review_trust.find_matching_claude_runs(all_repo_runs, pr.number, pr.head, reviews=reviews)
+    claude_runs = review_trust.find_matching_claude_runs(
+        all_repo_runs,
+        pr.number,
+        pr.head,
+        jobs_fn=lambda rid: pages(actions_api, f'repos/{repo}/actions/runs/{rid}/jobs', 'jobs', max_pages=1),
+        reviews=reviews,
+    )
 
     # 2. Check trusted unedited Claude PASS.
     try:
@@ -713,7 +746,7 @@ def decide_pr(
 
     # 4. Reuse qualifying formal Agy result, preserve terminal failure, or dispatch.
     reused, reused_chk = find_qualifying_agy_reuse(
-        lambda m, p, payload=None: (actions_api if '/actions/' in p else api)(m, p, payload),
+        lambda m, p, payload=None: (source_actions_api if '/actions/' in p else api)(m, p, payload),
         source_repo, repo, pr.number, pr.head, live_digest,
         check_runs, reviews, app_id, agy_login, gate_mode, target_check,
     )
@@ -723,7 +756,7 @@ def decide_pr(
 
     if not force_rerun:
         term_fail, term_reason = has_terminal_fallback_failure(
-            lambda m, p, payload=None: (actions_api if '/actions/' in p else api)(m, p, payload),
+            lambda m, p, payload=None: (source_actions_api if '/actions/' in p else api)(m, p, payload),
             source_repo, repo, pr.number, pr.head, live_digest,
             check_runs, completed_dispatches, app_id, gate_mode, target_check,
         )
@@ -775,8 +808,10 @@ def evaluate_repo(
             else:
                 raise
         policy = parse_policy(rules, classic, app_id, ENFORCE_CHECK)
-        if gate_mode == 'enforce' and not (policy.stale_dismissal and (policy.strict or policy.queued) and policy.required_bound):
-            raise Unknown(f'{repo} lacks enforceable policy (stale_dismissal, strict/merge_queue, bound {ENFORCE_CHECK})')
+        if not (policy.stale_dismissal and (policy.strict or policy.queued)):
+            raise Unknown(f'{repo} lacks baseline branch protection (stale_dismissal and strict/merge_queue)')
+        if gate_mode == 'enforce' and not policy.required_bound:
+            raise Unknown(f'{repo} lacks enforceable policy (App-bound {ENFORCE_CHECK})')
         prs = [parse_pr(x, repo, default_branch) for x in pages(api, f'repos/{repo}/pulls?state=open&base={default_branch}')]
         if pr_filter is not None:
             prs = [p for p in prs if p.number == pr_filter]
@@ -809,12 +844,13 @@ def evaluate_repo(
             metrics.errors.append(f'{repo}#{run.number}: cancel failed for run {run.id}: {exc}')
             still_active.append(run)
 
+    target_actions_api = dispatch_api if repo == source_repo else CrossRepoActionsAPI(dispatch_api, api, API(''))
     for pr in prs:
         try:
             dec = decide_pr(
                 api, source_repo, repo, default_branch, pr, policy, gate_mode, target_check,
                 agy_login, app_id, still_active, completed_dispatches, force_rerun,
-                compute_digest_fn, metrics, actions_api=dispatch_api,
+                compute_digest_fn, metrics, actions_api=target_actions_api, source_actions_api=dispatch_api,
             )
             ext_digest = dec.diff_digest or ('sha256:' + ('0' * 64))
             ext_id = f'gate/v1:{repo}:{pr.number}:{pr.head}:{gate_mode}:{ext_digest}'

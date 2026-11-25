@@ -88,6 +88,20 @@ def extract_reviewed_markers(body: str) -> tuple[str, str] | None:
     return matches[0]
 
 
+def is_trusted_reusable_ref(entry: object, prefix: str) -> bool:
+    """Verify referenced_workflows entry uses @main or exact @<commit-sha> of prefix."""
+    if not isinstance(entry, dict):
+        return False
+    path = entry.get('path')
+    sha = entry.get('sha')
+    if not isinstance(path, str) or not isinstance(sha, str) or not SHA.fullmatch(sha):
+        return False
+    if not path.startswith(prefix):
+        return False
+    ref = path[len(prefix):]
+    return ref == 'main' or ref == sha
+
+
 def verify_run_caller_trust(
     api_get: Callable[[str], dict],
     repo: str,
@@ -113,13 +127,7 @@ def verify_run_caller_trust(
     refs = detail.get('referenced_workflows')
     if not isinstance(refs, list):
         raise TrustError('referenced_workflows missing or malformed')
-    trusted_ref = any(
-        isinstance(r, dict)
-        and isinstance(r.get('path'), str)
-        and r['path'].startswith(TRUSTED_CLAUDE_REUSABLE)
-        and SHA.fullmatch(str(r.get('sha', '')))
-        for r in refs
-    )
+    trusted_ref = any(is_trusted_reusable_ref(r, TRUSTED_CLAUDE_REUSABLE) for r in refs)
     if not trusted_ref:
         return False, 'referenced_workflows lacks trusted claude-review.yml'
     if not require_unchanged_blob:
@@ -220,8 +228,13 @@ def find_matching_claude_runs(
                 matched.append(run)
             elif jobs_fn is not None and type(run.get('id')) is int:
                 title = str(run.get('display_title') or '')
-                if f'#{pr_number}' in title:
-                    matched.append(run)
+                if re.search(rf'(?<!\d)#{pr_number}(?!\d)', title):
+                    jobs = jobs_fn(run['id'])
+                    if any(
+                        isinstance(j, dict) and (j.get('name') in ('gate', 'review') or str(j.get('name', '')).endswith(('/ gate', '/ review')))
+                        for j in jobs
+                    ):
+                        matched.append(run)
     return matched
 
 
