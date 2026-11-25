@@ -55,19 +55,16 @@ on:
       review_base_sha:
         type: string
         default: ''
-      # Defaulted to gemini-3.8-flash-high with effort: high since 2026-10-14.
-      # medium (2026-09-14..10-14) was chosen when high took ~11-14 min per
-      # review on agy 1.1.27. A benchmark on agy 1.3.5 (4 PRs, 166-4515
-      # changed lines) measured high at 5.7-6.7 min, 1.0-1.8x medium and
-      # well inside the 14 min budget, and high was the only tier to rate a
-      # real money-path bug P1 (mctl-agents#649, matching Claude's review).
+      # Defaulted to gemini-4-hydrogen-high with effort: high since 2026-11-25
+      # (verified with `agy models` on agy 1.5.17; previously
+      # gemini-3.8-flash-high since 2026-10-14, after medium in 2026-09-14..10-14).
       # Repositories that need faster or cheaper reviews can override with
       # `with: effort: medium` (the model tier is reconciled to match).
       # agy-canary.yml probes these defaults daily.
       model:
         description: Gemini model to use with agy.
         type: string
-        default: 'gemini-3.8-flash-high'
+        default: 'gemini-4-hydrogen-high'
       effort:
         description: Reasoning effort level for agy (low, medium, high).
         type: string
