@@ -14,10 +14,16 @@ DIGEST = re.compile(r'sha256:[0-9a-f]{64}')
 _META = re.compile(r'^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40,64}) ([0-9a-f]{40,64}) ([AMDTU])$')
 
 
+class EmptyDiffError(ValueError):
+    """Raised when git diff-tree between merge_base and head produces no changed files."""
+
+
 def digest_from_diff_tree(raw: bytes) -> str:
     """Compute canonical pr_diff_digest_v1 from `git diff-tree -r --no-renames --full-index -z` bytes."""
-    if not raw or not raw.endswith(b'\x00'):
-        raise ValueError('diff-tree output empty or unterminated')
+    if not raw:
+        raise EmptyDiffError('diff-tree output empty')
+    if not raw.endswith(b'\x00'):
+        raise ValueError('diff-tree output unterminated')
     parts = raw[:-1].split(b'\x00')
     if len(parts) % 2 != 0:
         raise ValueError('diff-tree record count is odd')
