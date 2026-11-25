@@ -420,6 +420,34 @@ class ControllerAcceptanceTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(m['decisions'][0]['action'], 'pass_check')
 
+    def test_issue_comment_without_pr_links_preserves_trusted_pass(self):
+        gh = FakeGitHub()
+        gh.add_claude_pass(event='issue_comment', head_sha='9' * 40)
+        gh.claude_runs[-1].update(pull_requests=[], display_title='Claude review on #42')
+        rc, metrics = run_controller(gh)
+        self.assertEqual(rc, 0)
+        self.assertEqual(metrics['decisions'][0]['action'], 'pass_check')
+        self.assertEqual(gh.dispatches, [])
+
+    def test_reviewed_base_digest_failure_is_isolated_as_unknown(self):
+        gh = FakeGitHub()
+        gh.rules[1]['parameters']['strict_required_status_checks_policy'] = False
+        gh.rules.append({'type': 'merge_queue', 'parameters': {'merge_method': 'MERGE'}})
+        gh.compares[f'{ALT_BASE}...{HEAD}'] = {'merge_base_commit': {'sha': '9' * 40}}
+        gh.add_claude_pass(base=ALT_BASE)
+
+        def compute_digest(repo, merge_base, head):
+            if merge_base != MB:
+                raise RuntimeError('synthetic git stderr')
+            return DIGEST
+
+        rc, metrics = run_controller(gh, digest_fn=compute_digest)
+        self.assertEqual(rc, 1)
+        self.assertIn('cannot compute reviewed-base diff digest', metrics['errors'][0])
+        self.assertNotIn('synthetic git stderr', metrics['errors'][0])
+        self.assertEqual(gh.checks, [])
+        self.assertEqual(gh.dispatches, [])
+
     def test_t11_t12_unreadable_api_fails_closed_as_unknown_and_stale_run_cancellation(self):
         gh = FakeGitHub()
         gh.add_claude_pass()

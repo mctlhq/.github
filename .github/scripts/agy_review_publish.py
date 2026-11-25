@@ -414,19 +414,26 @@ class Publisher:
                 def _carry_get(path):
                     return self.run_api('GET', path) if '/actions/' in path else self.api('GET', path)
 
+                matching_runs = review_trust.find_matching_claude_runs(
+                    claude_runs,
+                    self.number,
+                    head,
+                    jobs_fn=lambda rid: pages(self.run_api, self.root + f'/actions/runs/{rid}/jobs',
+                                              field='jobs', max_pages=1),
+                    reviews=reviews,
+                )
                 claude_ok, _, rev_base = review_trust.verify_claude_pass(
                     reviews=reviews,
                     graphql_fn=self._graphql,
                     api_get=_carry_get,
                     repo=self.repo,
-                    pr_number=self.number,
                     default_branch=branch,
                     head_sha=head,
                     live_base_sha=q['base'],
                     merge_base_sha=merge_base,
                     strict=self.strict,
                     live_diff_digest=live_digest,
-                    claude_runs=claude_runs,
+                    matching_claude_runs=matching_runs,
                     compute_digest_fn=self._compute_digest,
                 )
             else:

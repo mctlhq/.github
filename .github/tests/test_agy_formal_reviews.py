@@ -70,6 +70,7 @@ class Fake:
         self.compare = {}
         self.workflow_runs = []
         self.run_details = {}
+        self.run_jobs = {}
         self.contents = {}
         self.branch_commits = []
         self.edited_nodes = set()
@@ -99,6 +100,9 @@ class Fake:
                 value = {'default_branch': 'main'}
             elif bare == 'repos/' + self.source_repo + '/actions/runs/100':
                 value = {'event': 'pull_request_target', 'run_attempt': self.attempt}
+            elif bare.startswith(root + '/actions/runs/') and bare.endswith('/jobs'):
+                rid = int(bare.split('/')[-2])
+                value = {'jobs': self.run_jobs.get(rid, [])}
             elif bare.startswith(root + '/actions/runs/'):
                 rid = int(bare.rsplit('/', 1)[1])
                 if rid not in self.run_details:
@@ -586,6 +590,16 @@ class CarryTests(unittest.TestCase):
         self.assertEqual(prepared, {'number': 7, 'head': QHEAD, 'base': BASE})
         self.assertEqual(api.checks[0]['status'], 'in_progress')
         self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+
+    def test_carries_claude_pass_from_comment_run_without_pr_links(self):
+        api = carry_fake(via_claude=True)
+        api.workflow_runs[0].update(event='issue_comment', head_sha='9' * 40,
+                                    pull_requests=[], display_title='Claude review on #7')
+        api.run_jobs[700] = [{'name': 'claude-review / review'}]
+        prepared, _ = self.run_prepare(api)
+        self.assertIsNone(prepared)
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+        self.assertIn('trusted claude[bot] APPROVED', api.checks[0]['output']['summary'])
 
     def test_identical_diff_on_a_reviewed_head_is_carried_from_agy_or_claude_without_model(self):
         for via_claude in (False, True):

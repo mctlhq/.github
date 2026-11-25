@@ -681,16 +681,16 @@ def decide_pr(
 
     all_repo_runs = pages(actions_api, f'repos/{repo}/actions/workflows/'
                                f'{review_trust.caller_allowlist_for(repo)[0].rsplit("/", 1)[1]}/runs', 'workflow_runs', max_pages=5)
-    claude_runs = review_trust.find_matching_claude_runs(
-        all_repo_runs,
-        pr.number,
-        pr.head,
-        jobs_fn=lambda rid: pages(actions_api, f'repos/{repo}/actions/runs/{rid}/jobs', 'jobs', max_pages=1),
-        reviews=reviews,
-    )
-
-    # 2. Check trusted unedited Claude PASS.
+    # 2. Match the runs once and check trusted unedited Claude PASS.
     try:
+        claude_runs = review_trust.find_matching_claude_runs(
+            all_repo_runs,
+            pr.number,
+            pr.head,
+            jobs_fn=lambda rid: pages(actions_api, f'repos/{repo}/actions/runs/{rid}/jobs', 'jobs', max_pages=1),
+            reviews=reviews,
+        )
+
         def _trusted_get(path: str):
             if '/actions/runs' in path:
                 return actions_api('GET', path)
@@ -701,14 +701,13 @@ def decide_pr(
             graphql_fn=lambda q: api('POST', 'graphql', q),
             api_get=_trusted_get,
             repo=repo,
-            pr_number=pr.number,
             default_branch=default_branch,
             head_sha=pr.head,
             live_base_sha=pr.base,
             merge_base_sha=merge_base,
             strict=policy.strict,
             live_diff_digest=live_digest,
-            claude_runs=claude_runs,
+            matching_claude_runs=claude_runs,
             compute_digest_fn=compute_digest_fn,
         )
     except review_trust.TrustError as exc:

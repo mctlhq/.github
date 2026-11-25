@@ -243,18 +243,18 @@ def verify_claude_pass(
     graphql_fn: Callable[[dict], dict],
     api_get: Callable[[str], dict],
     repo: str,
-    pr_number: int,
     default_branch: str,
     head_sha: str,
     live_base_sha: str,
     merge_base_sha: str,
     strict: bool,
     live_diff_digest: str,
-    claude_runs: list[dict],
+    matching_claude_runs: list[dict],
     compute_digest_fn: Callable[[str, str, str], str],
 ) -> tuple[bool, str, str]:
     """Verify an unedited, trusted claude[bot] APPROVED verdict matching current subject.
 
+    Callers must match the workflow runs to this PR and head before verification.
     Returns (ok, reason, reviewed_base_sha).
     """
     if has_blocking_changes_requested(reviews, head_sha, (CLAUDE_LOGIN,)):
@@ -292,14 +292,18 @@ def verify_claude_pass(
             rev_mb = mb_obj.get('sha') if isinstance(mb_obj, dict) else None
             if not isinstance(rev_mb, str) or not SHA.fullmatch(rev_mb):
                 raise TrustError('compare merge_base unreadable for reviewed_base')
-            if compute_digest_fn(repo, rev_mb, head_sha) == live_diff_digest:
+            try:
+                reviewed_digest = compute_digest_fn(repo, rev_mb, head_sha)
+            except (OSError, RuntimeError, ValueError) as exc:
+                raise TrustError(f'cannot compute reviewed-base diff digest: {type(exc).__name__}') from None
+            if reviewed_digest == live_diff_digest:
                 valid_base = rev_base
                 break
     if not valid_base:
         return False, 'no unedited claude[bot] APPROVED verdict matches current diff/base', ''
     # Verify caller workflow trust on completed matching Claude workflow runs.
     completed = [
-        run for run in find_matching_claude_runs(claude_runs, pr_number, head_sha)
+        run for run in matching_claude_runs
         if run.get('status') == 'completed'
     ]
     if not completed:
