@@ -1,7 +1,9 @@
 name: Agy formal review dispatch
+run-name: Agy formal review ${{ inputs.repository }}#${{ inputs.pr_number }} @ ${{ inputs.head_sha || inputs.queue_head_sha || 'any' }} [${{ inputs.check_name }}:${{ inputs.gate_mode }}]
 
 # Bootstrap/recovery entrypoint: trusted default-branch code can review the
-# pilot PR before a caller has been installed in that repository.
+# pilot PR before a caller has been installed in that repository. Also invoked
+# by review-gate-controller.yml when Claude ends with NO_VERDICT_TRANSIENT or SELF_EDIT.
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +16,18 @@ on:
         description: Open non-draft PR number
         type: number
         required: true
+      head_sha:
+        description: Optional PR head SHA to pin (skips if PR moved)
+        type: string
+        default: ''
+      check_name:
+        description: Target check context (agy-formal-review or independent-review)
+        type: string
+        default: 'agy-formal-review'
+      gate_mode:
+        description: Gate mode (enforce or shadow)
+        type: string
+        default: 'enforce'
       # Set together by mctl-gitops' merge_group caller (mctlhq/.github#351);
       # empty for an ordinary PR-head review.
       queue_head_ref:
@@ -41,6 +55,9 @@ jobs:
     with:
       repository: ${{ inputs.repository }}
       pr_number: ${{ fromJSON(inputs.pr_number) }}
+      head_sha: ${{ inputs.head_sha }}
+      check_name: ${{ inputs.check_name }}
+      gate_mode: ${{ inputs.gate_mode }}
       queue_head_ref: ${{ inputs.queue_head_ref }}
       queue_head_sha: ${{ inputs.queue_head_sha }}
       queue_base_sha: ${{ inputs.queue_base_sha }}

@@ -176,3 +176,38 @@ blob or an extra path, an unreadable or malformed API body, a failed later page)
 logs `queue verdict not carried` and runs the model exactly as before. A carried
 check has the title `Agy formal review: success (carried from PR head)` and never
 licenses a further carry. Inputs from the caller stay untrusted and unchanged.
+
+## Independent review gate controller (mctlhq/.github#398)
+
+To use `mctl-agy-reviewer` strictly as a fallback when Claude is unavailable on
+ordinary PRs (without running Antigravity on every PR or duplicating review
+work), `.github/workflows/review-gate-controller.yml` runs every 5 minutes (and
+on `workflow_dispatch`) from `mctlhq/.github` `main` using environment
+`agy-review-publisher`:
+
+- **Fail-closed Claude outcome classification (`claude-review.yml`, fixes #287):**
+  `claude-review.yml` verifies execution JSON output on every attempt, requires an
+  unedited `claude[bot]` terminal review (`APPROVED` with `Reviewed head=... base=...`
+  or `CHANGES_REQUESTED`), exits `1` on quota/rate-limit errors
+  (`NO_VERDICT_TRANSIENT`), and emits `review_outcome` (`PASS`, `BLOCKING_FINDINGS`,
+  `NO_VERDICT_TRANSIENT`, `NO_VERDICT_OTHER`, `STALE`, `SELF_EDIT`).
+- **Central gate check (`independent-review` / `independent-review-shadow`):**
+  `review_gate_controller.py` evaluates open non-draft same-repo PRs against their
+  default branch. It enforces blocking `CHANGES_REQUESTED` precedence, checks
+  trusted unedited `claude[bot]` `PASS` via GraphQL + caller workflow provenance,
+  and marks `independent-review` (or `independent-review-shadow` in shadow mode)
+  green without invoking Antigravity.
+- **Fallback dispatch & reuse:** Only on trusted `NO_VERDICT_TRANSIENT` (or
+  allowlisted `timed_out`/`startup_failure` with an unmodified caller workflow) or
+  trusted `SELF_EDIT` does the controller dispatch `agy-formal-dispatch.yml` for
+  the exact `head_sha` under `agy-review/v2` + canonical `pr_diff_digest_v1`.
+  Qualifying exact-head/digest Agy verdicts are reused across ticks, and terminal
+  fallback failures suppress infinite `*/5` re-dispatch until `head_sha`/`diff_digest`
+  moves or `force_rerun=true` is dispatched.
+- **Shadow-first activation & kill switch:** Until repository variable
+  `AGY_REVIEW_GATE_ENABLED=true` is set, the scheduled controller stays in dry-run
+  mode and `AGY_REVIEW_GATE_REPOS` defaults to `mctlhq/mctl-gitops:shadow`. In
+  merge queues, `agy_review_publish.py` `carry_proof` also carries trusted unedited
+  `claude[bot]` `PASS` verdicts (as well as active unedited `mctl-agy-reviewer[bot]`
+  approvals) without re-running Antigravity. This Phase 1 architecture supersedes
+  the always-on per-PR draft (#348).

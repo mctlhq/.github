@@ -1,0 +1,110 @@
+name: Independent review gate controller
+
+# Central trusted orchestrator for provider-neutral PR review gating
+# (mctlhq/.github#398). Reads only from default-branch `main`, never checks out
+# PR code, writes `independent-review` (or `independent-review-shadow` in shadow
+# mode) when Claude reaches a verified PASS, and dispatches `agy-formal-dispatch`
+# ONLY when Claude ends with NO_VERDICT_TRANSIENT or trusted SELF_EDIT.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Optional target repository (e.g. mctlhq/mctl-gitops)
+        type: string
+        default: ''
+      pr_number:
+        description: Optional open PR number filter
+        type: string
+        default: ''
+      dry_run:
+        description: Evaluate and report metrics without modifying check-runs or dispatching
+        type: boolean
+        default: true
+      gate_mode:
+        description: Optional mode override (shadow only when configured repo is shadow)
+        type: string
+        default: ''
+      force_rerun:
+        description: Bypass terminal failure guard for one manual retry
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: review-gate-controller
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.repository == 'mctlhq/.github' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: agy-review-publisher
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout trusted controller scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+
+      - name: Compute target repository list
+        id: targets
+        env:
+          GATE_REPOSITORIES: ${{ vars.AGY_REVIEW_GATE_REPOS || 'mctlhq/mctl-gitops:shadow' }}
+        run: |
+          repos=$(python3 - <<'PY'
+          import os
+          names = []
+          for tok in os.environ['GATE_REPOSITORIES'].replace(',', ' ').split():
+              r = tok.split(':', 1)[0]
+              if r.startswith('mctlhq/'):
+                  names.append(r.split('/', 1)[1])
+          print(','.join(dict.fromkeys(names)))
+          PY
+          )
+          echo "repositories=$repos" >> "$GITHUB_OUTPUT"
+
+      - name: Generate isolated reviewer token
+        id: token
+        if: vars.AGY_REVIEW_GATE_ENABLED == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.AGY_REVIEW_APP_ID }}
+          private-key: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
+          owner: mctlhq
+          repositories: ${{ steps.targets.outputs.repositories }}
+          permission-contents: read
+          permission-pull-requests: write
+          permission-checks: write
+          permission-administration: read
+
+      - name: Reconcile independent review gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AGY_REVIEW_TOKEN: ${{ steps.token.outputs.token }}
+          AGY_REVIEW_APP_ID: ${{ vars.AGY_REVIEW_APP_ID || '5732062' }}
+          AGY_REVIEW_LOGIN: ${{ steps.token.outputs.app-slug && format('{0}[bot]', steps.token.outputs.app-slug) || 'mctl-agy-reviewer[bot]' }}
+          GATE_REPOSITORIES: ${{ vars.AGY_REVIEW_GATE_REPOS || 'mctlhq/mctl-gitops:shadow' }}
+          LIVE: ${{ vars.AGY_REVIEW_GATE_ENABLED == 'true' && (github.event_name == 'schedule' || inputs.dry_run == false) }}
+          OVERRIDE_REPOSITORY: ${{ inputs.repository }}
+          OVERRIDE_GATE_MODE: ${{ inputs.gate_mode }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          FORCE_RERUN: ${{ inputs.force_rerun }}
+          METRICS_PATH: ${{ runner.temp }}/review-gate-metrics.json
+          CONTROLLER_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 -I .github/scripts/review_gate_controller.py
+
+      - name: Upload review-gate metrics artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: review-gate-metrics
+          path: ${{ runner.temp }}/review-gate-metrics.json
+          if-no-files-found: ignore
+          retention-days: 30

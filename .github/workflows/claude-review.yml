@@ -42,6 +42,17 @@ on:
           not run, the check is non-failing and is NOT a review. A caller gate
           can read needs.<job>.outputs.self_edit to demand another review path.
         value: ${{ jobs.review.outputs.self_edit }}
+      review_outcome:
+        description: >
+          Deterministic outcome from {PASS, BLOCKING_FINDINGS,
+          NO_VERDICT_TRANSIENT, NO_VERDICT_OTHER, STALE, SELF_EDIT}.
+        value: ${{ jobs.review.outputs.review_outcome }}
+      reviewed_head:
+        description: Head SHA covered by the verified verdict (empty when unverified).
+        value: ${{ jobs.review.outputs.reviewed_head }}
+      reviewed_base:
+        description: Base SHA covered by the verified verdict (empty when unverified).
+        value: ${{ jobs.review.outputs.reviewed_base }}
     inputs:
       runner:
         description: Runner label for both jobs.
@@ -315,6 +326,9 @@ jobs:
     # review: nothing was reviewed and no verdict exists.
     outputs:
       self_edit: ${{ steps.selfedit.outputs.blocked == 'true' }}
+      review_outcome: ${{ steps.outcome.outputs.review_outcome }}
+      reviewed_head: ${{ steps.outcome.outputs.reviewed_head }}
+      reviewed_base: ${{ steps.outcome.outputs.reviewed_base }}
     # Bounds mid-flight duplication: pull_request (auto, on every push) and a
     # manual '@claude review' comment on the same commit are two independent
     # triggers for the workflow, and nothing before this stopped both runs
@@ -1249,21 +1263,25 @@ jobs:
         # underlying SDK call itself errored (e.g. instant quota-exhaustion
         # failure) — outcome alone would silently miss that. Read the raw
         # execution output the action always writes to confirm the run
-        # really finished cleanly.
+        # really finished cleanly (fail closed on missing or malformed output).
         id: review-check
         if: always()
         env:
           REVIEW_OUTCOME: ${{ steps.review.outcome }}
         run: |
+          if [ "$REVIEW_OUTCOME" = "skipped" ]; then
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           OUT="$RUNNER_TEMP/claude-execution-output.json"
-          is_error="false"
+          is_error="true"
           if [ -f "$OUT" ]; then
             is_error=$(jq -r '
-              if type != "array" then "false"
-              else ([.[] | select(.type == "result")] | if length > 0 then (.[-1].is_error // false | tostring) else "false" end)
-              end' "$OUT" 2>/dev/null || echo "false")
+              if type != "array" then "true"
+              else ([.[] | select(.type == "result")] | if length > 0 and ((.[-1].is_error | type) == "boolean") then (.[-1].is_error | tostring) else "true" end)
+              end' "$OUT" 2>/dev/null || echo "true")
           fi
-          if [ "$REVIEW_OUTCOME" = "failure" ] || [ "$is_error" = "true" ]; then
+          if [ "$REVIEW_OUTCOME" != "success" ] || [ ! -f "$OUT" ] || [ "$is_error" != "false" ]; then
             echo "failed=true" >> "$GITHUB_OUTPUT"
           else
             echo "failed=false" >> "$GITHUB_OUTPUT"
@@ -1359,14 +1377,14 @@ jobs:
             echo "failed=true" >> "$GITHUB_OUTPUT"
           else
             OUT="$RUNNER_TEMP/claude-execution-output-fallback.json"
-            is_error="false"
+            is_error="true"
             if [ -f "$OUT" ]; then
               is_error=$(jq -r '
-                if type != "array" then "false"
-                else ([.[] | select(.type == "result")] | if length > 0 then (.[-1].is_error // false | tostring) else "false" end)
-                end' "$OUT" 2>/dev/null || echo "false")
+                if type != "array" then "true"
+                else ([.[] | select(.type == "result")] | if length > 0 and ((.[-1].is_error | type) == "boolean") then (.[-1].is_error | tostring) else "true" end)
+                end' "$OUT" 2>/dev/null || echo "true")
             fi
-            if [ "$FALLBACK_OUTCOME" = "failure" ] || [ ! -f "$OUT" ] || [ "$is_error" = "true" ]; then
+            if [ "$FALLBACK_OUTCOME" != "success" ] || [ ! -f "$OUT" ] || [ "$is_error" != "false" ]; then
               echo "failed=true" >> "$GITHUB_OUTPUT"
             else
               echo "failed=false" >> "$GITHUB_OUTPUT"
@@ -1427,6 +1445,7 @@ jobs:
       # through to the fail-closed path — this narrows what counts as
       # "transient", it never widens what counts as "done".
       - name: Classify reviewer outcome
+        id: classify-failure
         if: steps.review-final.outputs.failed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1461,23 +1480,13 @@ jobs:
               end' "$OUT" 2>/dev/null || echo unknown)
           fi
           if [ "$shape" = "limit" ]; then
-            echo "::warning::Claude reviewer ($ATTEMPT attempt) hit a transient usage limit — treating as non-blocking."
+            echo "outcome=NO_VERDICT_TRANSIENT" >> "${GITHUB_OUTPUT:-/dev/null}"
             gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
               "⏳ The Claude reviewer hit the shared usage limit on its final attempt (the $ATTEMPT token) and could not finish. This is **transient** and is *not* a code issue. Re-run with \`@claude review\` once the window resets." || true
-            exit 0
+            echo "::error::Claude reviewer ($ATTEMPT attempt) hit a transient usage limit (NO_VERDICT_TRANSIENT) — failing review job instead of returning false green (#287)."
+            exit 1
           fi
-          # The line below used to say "see the step logs" and send whoever
-          # read it nowhere: claude-code-action prints "full output hidden for
-          # security" and the only trace of why a run died is this file, which
-          # nothing ever opened. A reviewer that fails without saying why is a
-          # reviewer nobody can fix — mctlhq/projects-mcp#1 sat on the same
-          # 2-second, 1-turn, $0 failure through nine runs and two tokens with
-          # no error text anywhere.
-          #
-          # So print the diagnosis, and only that: the result entry's scalar
-          # fields and the first 800 characters of its message. Not the whole
-          # file — that holds the model's entire pass over the diff, which is
-          # what the action hides on purpose.
+          echo "outcome=NO_VERDICT_OTHER" >> "${GITHUB_OUTPUT:-/dev/null}"
           if [ -f "$OUT" ]; then
             echo "::group::Reviewer failure diagnostics ($ATTEMPT attempt)"
             jq -r '
@@ -1504,6 +1513,164 @@ jobs:
             *)      why="The final attempt ($ATTEMPT token) failed and its result could not be read, so the cause is unknown." ;;
           esac
           gh pr comment "$PR_NUMBER" --repo "$REPO" \
-            --body "Claude review failed to complete. $why See the [run log]($RUN_URL); the 'Reviewer failure diagnostics' group in the review job says why. Re-trigger with \`@claude review\` once the underlying issue is resolved."
+            --body "Claude review failed to complete. $why See the [run log]($RUN_URL); the 'Reviewer failure diagnostics' group in the review job says why. Re-trigger with \`@claude review\` once the underlying issue is resolved." || true
           echo "::error::Claude reviewer failed for a non-quota reason ($ATTEMPT attempt, $shape) — see the 'Reviewer failure diagnostics' group in this job."
           exit 1
+
+      - name: Verify terminal verdict posted
+        id: verify-verdict
+        if: steps.prerun-staleness.outputs.stale != 'true' && steps.classify.outputs.skip != 'true' && steps.selfedit.outputs.blocked != 'true' && steps.review-final.outputs.failed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEDUP_SKIPPED: ${{ steps.dedup.outputs.already_reviewed }}
+        run: |
+          set -euo pipefail
+          fail_verdict() {
+            {
+              echo "verdict_ok=false"
+              echo "outcome=NO_VERDICT_OTHER"
+            } >> "$GITHUB_OUTPUT"
+            echo "::error::Missing or unverifiable Claude terminal verdict for $HEAD_SHA: $1"
+            exit 1
+          }
+          reviews=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews") ||
+            fail_verdict "could not read PR reviews"
+          parsed=$(jq -cs --arg head "$HEAD_SHA" '
+            if length > 0 and all(.[]; type == "array") and all(.[][]; type == "object") then
+              [.[][] | select(.user.login == "claude[bot]" and .user.type == "Bot" and .commit_id == $head)] as $all
+              | {
+                  blocking: [$all[] | select(.state == "CHANGES_REQUESTED")] | length,
+                  approvals: [
+                    $all[] | select(.state == "APPROVED")
+                    | . as $r
+                    | ($r.body // "" | capture("Reviewed head=(?<rh>[0-9a-f]{40,64}) base=(?<rb>[0-9a-f]{40,64})")?) as $m
+                    | select($m != null and $m.rh == $head)
+                    | {node_id: $r.node_id, base: $m.rb}
+                  ]
+                }
+              | if all(.approvals[]; (.node_id | type == "string" and length > 0)) then . else error("missing node_id") end
+            else error("malformed review list") end' <<< "$reviews") ||
+            fail_verdict "review list payload malformed"
+
+          blocking=$(jq -r .blocking <<< "$parsed")
+          if [ "$blocking" -gt 0 ]; then
+            {
+              echo "verdict_ok=true"
+              echo "outcome=BLOCKING_FINDINGS"
+              echo "reviewed_head=$HEAD_SHA"
+              echo "reviewed_base=$BASE_SHA"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ids=$(jq -c '[.approvals[].node_id]' <<< "$parsed")
+          [ "$ids" != "[]" ] || fail_verdict "no claude[bot] APPROVED verdict carrying Reviewed head=$HEAD_SHA base=..."
+
+          record=$(jq -n --argjson ids "$ids" '{variables: {ids: $ids}, query:
+              "query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequestReview { id lastEditedAt updatedAt submittedAt } } }"}' |
+            gh api graphql --input -) ||
+            fail_verdict "could not verify review edit history"
+
+          unedited_ids=$(jq -cs --argjson ids "$ids" '
+            (if length == 1 and (.[0] | type) == "object" and (.[0] | has("errors") | not)
+             then .[0].data.nodes else null end) as $nodes
+            | if ($nodes | type) == "array"
+                 and all($nodes[]; type == "object" and has("lastEditedAt")
+                         and (.lastEditedAt | type == "null" or type == "string")
+                         and (.updatedAt | type == "string") and (.submittedAt | type == "string"))
+                 and ($nodes | map(.id) | sort) == ($ids | sort)
+              then [$nodes[] | select(.lastEditedAt == null and .updatedAt == .submittedAt) | .id]
+              else error("malformed GraphQL review response") end' <<< "$record") ||
+            fail_verdict "GraphQL review edit response malformed"
+
+          matched_base=$(jq -r --argjson unedited "$unedited_ids" --arg base "$BASE_SHA" '
+            [.approvals[] | select(.node_id as $n | $unedited | index($n)) | .base] as $bases
+            | if ($bases | index($base)) != null then $base
+              elif ($bases | length) > 0 then $bases[-1]
+              else "" end' <<< "$parsed")
+          [ -n "$matched_base" ] || fail_verdict "no unedited APPROVED verdict found on $HEAD_SHA"
+
+          if [ "$matched_base" != "$BASE_SHA" ]; then
+            [ "$DEDUP_SKIPPED" = "true" ] || fail_verdict "reviewed base $matched_base != expected base $BASE_SHA"
+            cmp_mb() {
+              gh api "repos/$REPO/compare/$1...$HEAD_SHA?per_page=1" -q '.merge_base_commit.sha'
+            }
+            mb_rev=$(cmp_mb "$matched_base") || fail_verdict "could not read compare merge_base for $matched_base"
+            mb_cur=$(cmp_mb "$BASE_SHA") || fail_verdict "could not read compare merge_base for $BASE_SHA"
+            sha_re='^[0-9a-f]{40}([0-9a-f]{24})?$'
+            [[ "$mb_rev" =~ $sha_re && "$mb_cur" =~ $sha_re && "$mb_rev" = "$mb_cur" ]] ||
+              fail_verdict "dedup reviewed base $matched_base merge-base diverges from current base $BASE_SHA"
+          fi
+
+          {
+            echo "verdict_ok=true"
+            echo "outcome=PASS"
+            echo "reviewed_head=$HEAD_SHA"
+            echo "reviewed_base=$matched_base"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Resolve review outcome
+        id: outcome
+        if: always()
+        env:
+          PRERUN_STALE: ${{ steps.prerun-staleness.outputs.stale }}
+          SELF_EDIT: ${{ steps.selfedit.outputs.blocked }}
+          CLASSIFY_SKIP: ${{ steps.classify.outputs.skip }}
+          REVIEW_FAILED: ${{ steps.review-final.outputs.failed }}
+          FAILURE_OUTCOME: ${{ steps.classify-failure.outputs.outcome }}
+          VERDICT_OK: ${{ steps.verify-verdict.outputs.verdict_ok }}
+          VERDICT_OUTCOME: ${{ steps.verify-verdict.outputs.outcome }}
+          VERDICT_HEAD: ${{ steps.verify-verdict.outputs.reviewed_head }}
+          VERDICT_BASE: ${{ steps.verify-verdict.outputs.reviewed_base }}
+        run: |
+          out="NO_VERDICT_OTHER"
+          rh=""
+          rb=""
+          if [ "$PRERUN_STALE" = "true" ]; then
+            out="STALE"
+          elif [ "$SELF_EDIT" = "true" ]; then
+            out="SELF_EDIT"
+          elif [ "$CLASSIFY_SKIP" = "true" ]; then
+            out="NO_VERDICT_OTHER"
+          elif [ "$REVIEW_FAILED" = "true" ]; then
+            out="${FAILURE_OUTCOME:-NO_VERDICT_OTHER}"
+          elif [ "$VERDICT_OK" = "true" ]; then
+            out="${VERDICT_OUTCOME:-PASS}"
+            rh="$VERDICT_HEAD"
+            rb="$VERDICT_BASE"
+          fi
+          {
+            echo "review_outcome=$out"
+            echo "reviewed_head=$rh"
+            echo "reviewed_base=$rb"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: "Classify outcome: PASS"
+        if: always() && steps.outcome.outputs.review_outcome == 'PASS'
+        run: |
+          echo "Claude review outcome: PASS"
+
+      - name: "Classify outcome: BLOCKING_FINDINGS"
+        if: always() && steps.outcome.outputs.review_outcome == 'BLOCKING_FINDINGS'
+        run: |
+          echo "Claude review outcome: BLOCKING_FINDINGS"
+
+      - name: "Classify outcome: NO_VERDICT_TRANSIENT"
+        if: always() && steps.outcome.outputs.review_outcome == 'NO_VERDICT_TRANSIENT'
+        run: |
+          echo "Claude review outcome: NO_VERDICT_TRANSIENT"
+
+      - name: "Classify outcome: NO_VERDICT_OTHER"
+        if: always() && steps.outcome.outputs.review_outcome == 'NO_VERDICT_OTHER'
+        run: |
+          echo "Claude review outcome: NO_VERDICT_OTHER"
+
+      - name: "Classify outcome: STALE"
+        if: always() && steps.outcome.outputs.review_outcome == 'STALE'
+        run: |
+          echo "Claude review outcome: STALE"
+
+      - name: "Classify outcome: SELF_EDIT"
+        if: always() && steps.outcome.outputs.review_outcome == 'SELF_EDIT'
+        run: |
+          echo "Claude review outcome: SELF_EDIT"

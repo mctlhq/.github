@@ -11,7 +11,8 @@
   graph is owned by `roadmap/epics/agent-commerce.yaml`, not by the plan.
 
 - [Agy formal reviews](docs/plans/agy-formal-reviews.md): isolated reviewer App,
-  exact-head approval publisher, pilot activation and acceptance checklist.
+  exact-head approval publisher, central independent-review fallback controller (#398),
+  pilot activation and acceptance checklist.
 
 # Spike issue creation rules
 

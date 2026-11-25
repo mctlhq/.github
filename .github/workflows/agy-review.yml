@@ -207,6 +207,38 @@ jobs:
               echo "::error::formal review requires the entire nonempty diff; no approval on truncation"
               exit 1
             fi
+            mb=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+            if ! [[ "$mb" =~ ^[0-9a-f]{40}([0-9a-f]{24})?$ ]]; then
+              echo "::error::could not resolve merge-base for $BASE_SHA and $HEAD_SHA"
+              exit 1
+            fi
+            git -c core.quotePath=false diff-tree -r --no-renames --full-index -z "$mb" "$HEAD_SHA" > "$SCRATCH/diff-tree.z"
+            python3 - "$SCRATCH/diff-tree.z" > "$SCRATCH/diff_digest.txt" <<'PY_DIGEST'
+          import hashlib, re, sys
+          from pathlib import Path
+          raw = Path(sys.argv[1]).read_bytes()
+          if not raw or not raw.endswith(b'\x00'):
+              raise SystemExit('diff-tree output empty or unterminated')
+          parts = raw[:-1].split(b'\x00')
+          if len(parts) % 2 != 0:
+              raise SystemExit('diff-tree record count is odd')
+          meta_re = re.compile(r'^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40,64}) ([0-9a-f]{40,64}) ([AMDTU])$')
+          entries = {}
+          for i in range(0, len(parts), 2):
+              m = meta_re.fullmatch(parts[i].decode('ascii'))
+              if not m or not parts[i + 1] or parts[i + 1] in entries:
+                  raise SystemExit('malformed or duplicate diff-tree entry')
+              entries[parts[i + 1]] = m.groups()
+          if not entries:
+              raise SystemExit('empty diff-tree entry set')
+          buf = bytearray(b'pr_diff_digest_v1\n')
+          for path_bytes in sorted(entries):
+              old_mode, new_mode, old_blob, new_blob, status = entries[path_bytes]
+              buf.extend(f'{old_mode} {new_mode} {old_blob} {new_blob} {status}\t{len(path_bytes)}\n'.encode('ascii'))
+              buf.extend(path_bytes + b'\n')
+          buf.extend(f'{len(entries)}\n'.encode('ascii'))
+          print('sha256:' + hashlib.sha256(buf).hexdigest())
+          PY_DIGEST
           fi
           MARKER="END-OF-DIFF-$(uuidgen)"
 
@@ -754,6 +786,8 @@ jobs:
           BASE_SHA: ${{ inputs.review_base_sha }}
           AGY_MODEL: ${{ steps.agy.outputs.model || inputs.model }}
         run: |
+          DIFF_DIGEST=$(tr -d '[:space:]' < diff_digest.txt)
+          export DIFF_DIGEST
           python3 - <<'PY_RECORD'
           import json
           import os
@@ -776,12 +810,17 @@ jobs:
               for name in ('HEAD_SHA', 'BASE_SHA'):
                   if not re.fullmatch('[0-9a-f]{40}', env[name]):
                       raise ValueError('invalid reviewed commit')
+              diff_digest = env.get('DIFF_DIGEST', '')
+              if not re.fullmatch('sha256:[0-9a-f]{64}', diff_digest):
+                  raise ValueError('missing or invalid diff_digest')
               number = int(env['PR_NUMBER'])
               if number <= 0:
                   raise ValueError('invalid PR number')
-              return {'schema_version': 'agy-review/v1', 'repository': env['REVIEW_REPOSITORY'],
+              return {'schema_version': 'agy-review/v2', 'provider': 'agy',
+                      'repository': env['REVIEW_REPOSITORY'],
                       'source_repository': env['GITHUB_REPOSITORY'],
                       'pr_number': number, 'head_sha': env['HEAD_SHA'], 'base_sha': env['BASE_SHA'],
+                      'diff_digest': diff_digest,
                       'run_id': int(env['GITHUB_RUN_ID']), 'run_attempt': int(env['GITHUB_RUN_ATTEMPT']),
                       'model': env['AGY_MODEL'], 'verdict': verdict, 'body': body}
 
