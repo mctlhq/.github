@@ -1,4 +1,4 @@
-"""Exercise the actual publisher and inline result exporter with synthetic API responses."""
+"""Exercise the actual publisher, diff digest, and inline result exporter."""
 import copy
 import contextlib
 import importlib.util
@@ -10,12 +10,20 @@ from unittest.mock import patch
 from pathlib import Path
 import re
 import subprocess
+import sys
 import unittest
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-PATH = ROOT / '.github/scripts/agy_review_publish.py'
+SCRIPTS = ROOT / '.github/scripts'
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+import pr_diff_digest  # noqa: E402
+import review_trust  # noqa: E402
+
+PATH = SCRIPTS / 'agy_review_publish.py'
 SPEC = importlib.util.spec_from_file_location('agy_publisher', PATH)
 P = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(P)
@@ -24,20 +32,24 @@ EXPORT = next(x['run'] for x in WF['jobs']['review']['steps'] if x.get('id') == 
 PACK = EXPORT.split("python3 - <<'PY_RECORD'\n", 1)[1].rsplit('\nPY_RECORD', 1)[0]
 NS = {'__name__': 'record_tests'}
 exec(compile(PACK, '<actual workflow record exporter>', 'exec'), NS)
-HEAD, BASE = 'a' * 40, 'b' * 40
+
+HEAD, BASE, ALT_BASE = 'a' * 40, 'b' * 40, 'f' * 40
+DIGEST = 'sha256:' + '9' * 64
 REPO = 'mctlhq/test-repo'
 ENV = {'GITHUB_REPOSITORY': REPO, 'PR_NUMBER': '7', 'GITHUB_RUN_ID': '100',
        'GITHUB_RUN_ATTEMPT': '1', 'GITHUB_EVENT_NAME': 'pull_request_target',
        'GITHUB_REF': 'refs/heads/main', 'REVIEW_REPOSITORY': REPO, 'AGY_REVIEW_APP_ID': '123',
        'AGY_REVIEW_LOGIN': 'agy-test[bot]', 'HEAD_SHA': HEAD, 'BASE_SHA': BASE,
-       'AGY_MODEL': 'gemini-4-hydrogen-high'}
+       'DIFF_DIGEST': DIGEST, 'AGY_MODEL': 'gemini-4-hydrogen-high'}
 PASS = 'No significant issues found.\n\n<!-- VERDICT: PASS -->\n'
 
 
 class Fake:
     def __init__(self):
         self.source_repo = REPO
+        self.diff_digest = DIGEST
         self.pr = {'number': 7, 'state': 'open', 'draft': False,
+                   'user': {'login': 'pr-author'},
                    'head': {'sha': HEAD, 'repo': {'full_name': REPO}},
                    'base': {'sha': BASE, 'ref': 'main', 'repo': {'full_name': REPO}}}
         self.rules = [{'type': 'pull_request', 'parameters': {'dismiss_stale_reviews_on_push': True}},
@@ -56,6 +68,12 @@ class Fake:
         self.move_on_queue_read = None
         self.other_checks = []
         self.compare = {}
+        self.workflow_runs = []
+        self.run_details = {}
+        self.contents = {}
+        self.branch_commits = []
+        self.edited_nodes = set()
+        self.graphql_error = False
 
     def __call__(self, method, path, payload=None, absent=False):
         self.calls.append((method, path, copy.deepcopy(payload)))
@@ -63,11 +81,40 @@ class Fake:
             raise P.Refused('synthetic unavailable read')
         root = 'repos/' + REPO
         bare = path.split('?')[0]
+        if method == 'POST' and bare == 'graphql':
+            if self.graphql_error:
+                return {'errors': [{'message': 'synthetic graphql failure'}]}
+            ids = payload['variables']['ids']
+            nodes = []
+            for nid in ids:
+                if nid in self.edited_nodes:
+                    nodes.append({'id': nid, 'lastEditedAt': '2026-01-02T00:00:00Z',
+                                  'updatedAt': '2026-01-02T00:00:00Z', 'submittedAt': '2026-01-01T00:00:00Z'})
+                else:
+                    nodes.append({'id': nid, 'lastEditedAt': None,
+                                  'updatedAt': '2026-01-01T00:00:00Z', 'submittedAt': '2026-01-01T00:00:00Z'})
+            return {'data': {'nodes': nodes}}
         if method == 'GET':
             if bare in (root, 'repos/' + self.source_repo):
                 value = {'default_branch': 'main'}
             elif bare == 'repos/' + self.source_repo + '/actions/runs/100':
                 value = {'event': 'pull_request_target', 'run_attempt': self.attempt}
+            elif bare.startswith(root + '/actions/runs/'):
+                rid = int(bare.rsplit('/', 1)[1])
+                if rid not in self.run_details:
+                    raise P.Refused(f'unknown run {rid}')
+                value = self.run_details[rid]
+            elif bare == root + '/actions/runs':
+                value = {'workflow_runs': self.workflow_runs}
+            elif bare.startswith(root + '/contents/'):
+                cpath = bare[len(root + '/contents/'):]
+                m_ref = re.search(r'[?&]ref=([^&]+)', path)
+                ref = m_ref.group(1) if m_ref else 'main'
+                if (cpath, ref) not in self.contents:
+                    raise P.Refused(f'unconfigured content {cpath}@{ref}')
+                value = {'sha': self.contents[(cpath, ref)]}
+            elif bare == root + '/commits':
+                value = self.branch_commits
             elif bare == root + '/pulls/7':
                 value = self.pr
             elif bare == root + '/rules/branches/main':
@@ -80,11 +127,16 @@ class Fake:
                 value = {'check_runs': own if own else self.checks}
             elif '/compare/' in bare:
                 a, b = bare.rsplit('/compare/', 1)[1].split('...')
-                if (a, b) not in self.compare:
+                if (a, b) in self.compare:
+                    body = copy.deepcopy(self.compare[(a, b)])
+                    m_page = re.search(r'[?&]page=(\d+)', path)
+                    page = int(m_page.group(1)) if m_page else 1
+                    files = body.get('files', [])
+                    value = dict(body, files=files[(page - 1) * 100:page * 100] if isinstance(files, list) else files)
+                elif 'per_page=1' in path and 'per_page=100' not in path:
+                    value = {'merge_base_commit': {'sha': BASE}, 'files': []}
+                else:
                     raise P.Refused('synthetic unconfigured comparison')
-                body = copy.deepcopy(self.compare[(a, b)])
-                page = int(re.search(r'[?&]page=(\d+)', path).group(1))
-                value = dict(body, files=body['files'][(page - 1) * 100:page * 100])
             elif bare.startswith(root + '/git/ref/'):
                 ref = 'refs/' + bare[len(root + '/git/ref/'):]
                 if ref not in self.queue_refs:
@@ -109,7 +161,8 @@ class Fake:
             self.checks[0].update(payload)
             return copy.deepcopy(self.checks[0])
         if method == 'POST' and bare.endswith('/reviews'):
-            review = {'id': len(self.reviews) + 1, 'body': payload['body'],
+            review = {'id': len(self.reviews) + 1, 'node_id': f'PRR_{len(self.reviews) + 1}',
+                      'body': payload['body'],
                       'commit_id': payload['commit_id'],
                       'user': {'login': 'agy-test[bot]', 'type': 'Bot'},
                       'state': 'APPROVED' if payload['event'] == 'APPROVE' else 'CHANGES_REQUESTED'}
@@ -125,15 +178,19 @@ class Fake:
         raise AssertionError((method, path))
 
 
+def make_pub(api, env=None):
+    return P.Publisher(api, api, env or ENV, diff_digest_fn=lambda r, m, h: api.diff_digest)
+
+
 class PublisherTests(unittest.TestCase):
     def setup_pub(self, env=None):
         api = Fake()
-        pub = P.Publisher(api, api, env or ENV)
+        pub = make_pub(api, env or ENV)
         pub.prepare()
         return api, pub
 
-    def raw(self, review_text=PASS, **changes):
-        record = NS['make_record'](review_text, ENV)
+    def raw(self, review_text=PASS, env=None, **changes):
+        record = NS['make_record'](review_text, env or ENV)
         record.update(changes)
         return json.dumps(record)
 
@@ -144,6 +201,8 @@ class PublisherTests(unittest.TestCase):
         self.assertEqual(len(api.reviews), 1)
         self.assertEqual(api.reviews[0]['commit_id'], HEAD)
         self.assertEqual(api.checks[0]['conclusion'], 'success')
+        self.assertTrue(api.checks[0]['external_id'].startswith('agy/v2:'))
+        self.assertTrue(api.checks[0]['external_id'].endswith(':' + DIGEST))
 
     def test_lost_write_response_is_unknown_and_cannot_authorize_merge(self):
         class LostResponse(Fake):
@@ -154,7 +213,7 @@ class PublisherTests(unittest.TestCase):
                 return result
 
         api = LostResponse()
-        pub = P.Publisher(api, api, ENV)
+        pub = make_pub(api)
         pub.prepare()
         with self.assertRaises(P.Refused):
             pub.publish(self.raw())
@@ -168,11 +227,62 @@ class PublisherTests(unittest.TestCase):
     def test_central_dispatch_reviews_target_without_borrowing_its_run_identity(self):
         api = Fake(); api.source_repo = 'mctlhq/.github'
         env = dict(ENV, GITHUB_REPOSITORY=api.source_repo, TARGET_REPOSITORY=REPO)
-        pub = P.Publisher(api, api, env); pub.prepare()
+        pub = make_pub(api, env); pub.prepare()
         record = NS['make_record'](PASS, env)
         self.assertEqual(pub.publish(json.dumps(record)), 'APPROVE')
         self.assertEqual(api.reviews[0]['commit_id'], HEAD)
         self.assertIn('/mctlhq/.github/actions/runs/', api.checks[0]['details_url'])
+
+    def test_independent_review_and_shadow_gate_modes(self):
+        # Enforce mode under check_name='independent-review' publishes approval + independent-review check.
+        api = Fake()
+        api.rules[1]['parameters']['required_status_checks'] = [{'context': 'independent-review', 'integration_id': 123}]
+        env = dict(ENV, CHECK_NAME='independent-review', GATE_MODE='enforce')
+        pub = make_pub(api, env); pub.prepare()
+        self.assertEqual(pub.publish(self.raw()), 'APPROVE')
+        self.assertEqual(api.checks[0]['name'], 'independent-review')
+        self.assertEqual(len(api.reviews), 1)
+
+        # Shadow mode skips PR review creation and uses independent-review-shadow even without independent-review required.
+        sapi = Fake()
+        sapi.rules[1]['parameters']['required_status_checks'] = [{'context': 'some-other-check', 'integration_id': 999}]
+        senv = dict(ENV, CHECK_NAME='independent-review', GATE_MODE='shadow')
+        spub = make_pub(sapi, senv); spub.prepare()
+        self.assertEqual(spub.publish(self.raw()), 'APPROVE')
+        self.assertEqual(sapi.checks[0]['name'], 'independent-review-shadow')
+        self.assertEqual(sapi.checks[0]['conclusion'], 'success')
+        self.assertEqual(sapi.reviews, [])
+
+        # Invalid check_name or gate_mode refuses immediately.
+        for bad in ({'CHECK_NAME': 'claude-review'}, {'GATE_MODE': 'bypass'}):
+            with self.assertRaises(P.Refused):
+                make_pub(Fake(), dict(ENV, **bad))
+
+    def test_author_matching_reviewer_identity_refuses(self):
+        api = Fake()
+        api.pr['user']['login'] = 'agy-test[bot]'
+        with self.assertRaises(P.Refused):
+            make_pub(api).prepare()
+
+    def test_existing_changes_requested_blocks_prepare_and_publish(self):
+        # Blocking CHANGES_REQUESTED by claude[bot] on HEAD fails prepare and blocks publish.
+        api = Fake()
+        api.reviews = [{'id': 9, 'node_id': 'PRR_9', 'commit_id': HEAD,
+                        'user': {'login': 'claude[bot]', 'type': 'Bot'},
+                        'state': 'CHANGES_REQUESTED', 'body': 'fix P1'}]
+        with self.assertRaises(P.Refused):
+            make_pub(api).prepare()
+        self.assertEqual(api.checks[0]['conclusion'], 'failure')
+
+        # If a blocking CHANGES_REQUESTED lands AFTER prepare (including on publish re-read), publish refuses and dismisses.
+        api2, pub2 = self.setup_pub()
+        api2.reviews = [{'id': 9, 'node_id': 'PRR_9', 'commit_id': HEAD,
+                         'user': {'login': 'claude[bot]', 'type': 'Bot'},
+                         'state': 'CHANGES_REQUESTED', 'body': 'edited or not'}]
+        with self.assertRaises(P.Refused):
+            pub2.publish(self.raw())
+        self.assertEqual(len(api2.reviews), 1)
+        self.assertNotEqual(api2.checks[0].get('conclusion'), 'success')
 
     def test_findings_request_changes_and_fail_the_app_check(self):
         for verdict in ('FAIL:P1', 'FAIL:P2', 'FAIL:P1,P2'):
@@ -185,7 +295,9 @@ class PublisherTests(unittest.TestCase):
     def test_no_result_malformed_or_wrong_scope_never_approves(self):
         values = ['', '{}', '{', self.raw(repository='other/repo'), self.raw(pr_number=8),
                   self.raw(run_id=101), self.raw(run_attempt=2), self.raw(run_id=True),
-                  self.raw(schema_version='other'), self.raw(verdict='UNKNOWN'),
+                  self.raw(schema_version='agy-review/v1'), self.raw(provider='claude'),
+                  self.raw(diff_digest='sha256:bad'),
+                  self.raw(verdict='UNKNOWN'),
                   self.raw(head_sha='x'), self.raw(model='bad\nmodel'),
                   self.raw(body='[P2] bug\n<!-- VERDICT: PASS -->'),
                   self.raw(body='### Finding 1 (P1)\nBug.\n<!-- VERDICT: PASS -->'),
@@ -209,6 +321,27 @@ class PublisherTests(unittest.TestCase):
                 pub.publish(self.raw())
             self.assertEqual(api.reviews, [])
 
+    def test_non_strict_base_advance_allowed_only_when_diff_digest_matches(self):
+        # strict=false (with merge queue rule): base_sha advanced during review, same diff_digest -> allowed.
+        api = Fake()
+        api.rules[1]['parameters']['strict_required_status_checks_policy'] = False
+        api.rules.append({'type': 'merge_queue', 'parameters': {'merge_method': 'MERGE'}})
+        pub = make_pub(api); pub.prepare()
+        api.pr['base']['sha'] = ALT_BASE
+        self.assertEqual(pub.publish(self.raw()), 'APPROVE')
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+
+        # strict=false: base_sha advanced AND live diff_digest changed -> refused!
+        api2 = Fake()
+        api2.rules[1]['parameters']['strict_required_status_checks_policy'] = False
+        api2.rules.append({'type': 'merge_queue', 'parameters': {'merge_method': 'MERGE'}})
+        pub2 = make_pub(api2); pub2.prepare()
+        api2.pr['base']['sha'] = ALT_BASE
+        api2.diff_digest = 'sha256:' + '1' * 64
+        with self.assertRaises(P.Refused):
+            pub2.publish(self.raw())
+        self.assertEqual(api2.reviews, [])
+
     def test_move_during_post_dismisses_and_never_marks_new_head_green(self):
         api, pub = self.setup_pub()
         api.move_on_post = True
@@ -223,7 +356,7 @@ class PublisherTests(unittest.TestCase):
                        lambda a: a.rules[1]['parameters'].update(strict_required_status_checks_policy=False),
                        lambda a: a.rules[1]['parameters']['required_status_checks'][0].update(integration_id=15368)):
             api = Fake(); mutate(api)
-            pub = P.Publisher(api, api, ENV)
+            pub = make_pub(api)
             with self.assertRaises(P.Refused):
                 pub.prepare()
             self.assertEqual(api.checks, [])
@@ -234,7 +367,7 @@ class PublisherTests(unittest.TestCase):
                         {'GITHUB_REPOSITORY': 'outsider/repo'}):
             api = Fake()
             with self.assertRaises(P.Refused):
-                P.Publisher(api, api, dict(ENV, **changes)).prepare()
+                make_pub(api, dict(ENV, **changes)).prepare()
         for path, value in (('head_repo', 'outsider/repo'), ('base_ref', 'other')):
             api = Fake()
             if path == 'head_repo':
@@ -242,12 +375,12 @@ class PublisherTests(unittest.TestCase):
             else:
                 api.pr['base']['ref'] = value
             with self.assertRaises(P.Refused):
-                P.Publisher(api, api, ENV).prepare()
+                make_pub(api).prepare()
 
     def test_closed_or_draft_is_not_reviewed(self):
         for mutate in (lambda a: a.pr.update(draft=True), lambda a: a.pr.update(state='closed')):
             api = Fake(); mutate(api)
-            self.assertIsNone(P.Publisher(api, api, ENV).prepare())
+            self.assertIsNone(make_pub(api).prepare())
             self.assertEqual(api.reviews, [])
 
     def test_unavailable_reads_do_not_create_an_approval(self):
@@ -260,7 +393,7 @@ class PublisherTests(unittest.TestCase):
 
     def test_later_page_failure_is_not_partial_success(self):
         api, pub = self.setup_pub()
-        api.reviews = [{'id': i} for i in range(100)]
+        api.reviews = [{'id': i, 'user': {'login': 'x', 'type': 'User'}, 'state': 'COMMENTED'} for i in range(100)]
         api.error = lambda method, path: method == 'GET' and '/reviews?' in path and 'page=2' in path
         with self.assertRaises(P.Refused):
             pub.publish(self.raw())
@@ -268,7 +401,7 @@ class PublisherTests(unittest.TestCase):
 
     def test_unknown_check_or_newer_run_cannot_be_overwritten(self):
         api, pub = self.setup_pub()
-        api.checks[0]['external_id'] = 'agy/v1:mctlhq/test-repo:7:101:1'
+        api.checks[0]['external_id'] = 'agy/v2:mctlhq/test-repo:7:101:1'
         with self.assertRaises(P.Refused):
             pub.publish(self.raw())
         with self.assertRaises(P.Refused):
@@ -302,7 +435,7 @@ class PublisherTests(unittest.TestCase):
         for head in ('', HEAD):
             with self.subTest(head=head):
                 api, pub = self.setup_pub()
-                api.checks[0]['external_id'] = 'agy/v1:mctlhq/test-repo:7:101:1'
+                api.checks[0]['external_id'] = 'agy/v2:mctlhq/test-repo:7:101:1'
                 original_check = copy.deepcopy(api.checks)
                 env = dict(ENV, PUBLISH_MODE='publish', REVIEW_RECORD='{',
                            REVIEWED_HEAD=head, AGY_REVIEW_TOKEN='fixture', GITHUB_TOKEN='fixture')
@@ -327,28 +460,50 @@ def queue_fake():
     api.rules.append({'type': 'merge_queue', 'parameters': {'merge_method': 'MERGE'}})
     api.queue_refs[QREF] = QHEAD
     api.commits[QHEAD] = [BASE, HEAD]
+    rows = [file_row('values.yaml', '1' * 40)]
+    api.compare[(BASE, HEAD)] = {'merge_base_commit': {'sha': ALT_BASE}, 'files': copy.deepcopy(rows)}
+    api.compare[(BASE, QHEAD)] = {'merge_base_commit': {'sha': BASE}, 'files': copy.deepcopy(rows)}
     return api
 
 
-PRHEAD_CHECK = {'id': 50, 'name': 'agy-formal-review', 'app': {'id': 123}, 'head_sha': HEAD,
+PRHEAD_CHECK = {'id': 50, 'name': 'independent-review', 'app': {'id': 123}, 'head_sha': HEAD,
                 'status': 'completed', 'conclusion': 'success',
-                'external_id': 'agy/v1:' + REPO + ':7:50:1',
+                'external_id': 'agy/v2:' + REPO + ':7:50:1:' + DIGEST,
                 'output': {'title': 'Agy formal review: success', 'summary': 'Complete review'}}
+PRHEAD_REVIEW = {'id': 500, 'node_id': 'PRR_500', 'commit_id': HEAD,
+                 'user': {'login': 'agy-test[bot]', 'type': 'Bot'},
+                 'state': 'APPROVED',
+                 'body': f'<!-- agy-formal:50:1:{HEAD}:PASS -->\n\nLooks good.'}
 
 
 def file_row(name, blob, status='modified', changes=3, **extra):
     return dict({'filename': name, 'sha': blob, 'status': status, 'changes': changes}, **extra)
 
 
-def carry_fake():
-    """A queue entry whose commit is exactly the reviewed PR head's diff on the base."""
+def carry_fake(*, via_claude=False):
+    """A queue entry whose commit is the reviewed PR head's exact diff on the base."""
     api = queue_fake()
-    api.other_checks = [copy.deepcopy(PRHEAD_CHECK)]
     rows = [file_row('values.yaml', '1' * 40), file_row('new.yaml', '2' * 40, 'added', 9)]
-    # The queue commit is on a newer base than the PR was branched from, but
-    # carries the same changes; both comparisons are against the queue base.
-    api.compare[(BASE, HEAD)] = {'merge_base_commit': {'sha': 'f' * 40}, 'files': copy.deepcopy(rows)}
+    api.compare[(BASE, HEAD)] = {'merge_base_commit': {'sha': ALT_BASE}, 'files': copy.deepcopy(rows)}
     api.compare[(BASE, QHEAD)] = {'merge_base_commit': {'sha': BASE}, 'files': copy.deepcopy(rows)}
+    if via_claude:
+        api.reviews = [{'id': 600, 'node_id': 'PRR_600', 'commit_id': HEAD,
+                        'user': {'login': 'claude[bot]', 'type': 'Bot'},
+                        'state': 'APPROVED',
+                        'body': f'Reviewed head={HEAD} base={BASE}\nLGTM.'}]
+        api.workflow_runs = [{'id': 700, 'path': '.github/workflows/claude-review.yml',
+                              'event': 'pull_request', 'head_sha': HEAD, 'status': 'completed',
+                              'pull_requests': [{'number': 7}]}]
+        api.run_details[700] = {'referenced_workflows': [
+            {'path': review_trust.TRUSTED_CLAUDE_REUSABLE + 'main', 'sha': 'e' * 40}
+        ]}
+        wf_sha = '1' * 40
+        api.contents[('.github/workflows/claude-review.yml', HEAD)] = wf_sha
+        api.contents[('.github/workflows/claude-review.yml', ALT_BASE)] = wf_sha
+        api.contents[('.github/workflows/claude-review.yml', 'main')] = wf_sha
+    else:
+        api.other_checks = [copy.deepcopy(PRHEAD_CHECK)]
+        api.reviews = [copy.deepcopy(PRHEAD_REVIEW)]
     return api
 
 
@@ -356,29 +511,33 @@ class CarryTests(unittest.TestCase):
     """The queue commit is marked from the PR-head verdict only on proof it adds nothing."""
 
     def run_prepare(self, api, env=None):
-        pub = P.Publisher(api, api, env or QENV)
+        pub = make_pub(api, env or QENV)
         with contextlib.redirect_stdout(io.StringIO()) as out:
             prepared = pub.prepare()
         return prepared, out.getvalue()
 
     def assert_model_runs(self, api, prepared):
-        # Fallback is the pre-existing behaviour: in_progress check, model job.
         self.assertEqual(prepared, {'number': 7, 'head': QHEAD, 'base': BASE})
         self.assertEqual(api.checks[0]['status'], 'in_progress')
         self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
 
-    def test_identical_diff_on_a_reviewed_head_is_carried_without_the_model(self):
-        api = carry_fake()
-        prepared, out = self.run_prepare(api)
-        self.assertIsNone(prepared)  # eligible=false: review and publish jobs are skipped
-        self.assertEqual(len(api.checks), 1)
-        check = api.checks[0]
-        self.assertEqual((check['head_sha'], check['status'], check['conclusion']), (QHEAD, 'completed', 'success'))
-        self.assertEqual(check['output']['title'], P.CARRY_TITLE)
-        self.assertIn(HEAD, check['output']['summary'])
-        self.assertEqual(api.reviews, [])
-        self.assertIn('carried from PR head', out)
-        self.assertFalse(any(m == 'POST' and p.endswith('/reviews') for m, p, _ in api.calls))
+    def test_identical_diff_on_a_reviewed_head_is_carried_from_agy_or_claude_without_model(self):
+        for via_claude in (False, True):
+            with self.subTest(via_claude=via_claude):
+                api = carry_fake(via_claude=via_claude)
+                prepared, out = self.run_prepare(api)
+                self.assertIsNone(prepared)
+                self.assertEqual(len(api.checks), 1)
+                check = api.checks[0]
+                self.assertEqual((check['head_sha'], check['status'], check['conclusion']), (QHEAD, 'completed', 'success'))
+                self.assertEqual(check['output']['title'], P.CARRY_TITLE)
+                self.assertIn(HEAD, check['output']['summary'])
+                self.assertIn('carried from PR head', out)
+                if via_claude:
+                    self.assertIn('trusted claude[bot] APPROVED verdict', check['output']['summary'])
+                else:
+                    self.assertIn('complete agy review', check['output']['summary'])
+                self.assertFalse(any(m == 'POST' and p.endswith('/reviews') for m, p, _ in api.calls))
 
     def test_order_of_listed_files_does_not_matter(self):
         api = carry_fake(); api.compare[(BASE, QHEAD)]['files'].reverse()
@@ -401,7 +560,7 @@ class CarryTests(unittest.TestCase):
                 self.assert_model_runs(api, prepared)
                 self.assertIn('not carried', out)
 
-    def test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr(self):
+    def test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest(self):
         def drop(a): a.other_checks.clear()
         def failed(a): a.other_checks[0]['conclusion'] = 'failure'
         def neutral(a): a.other_checks[0]['conclusion'] = 'neutral'
@@ -409,19 +568,74 @@ class CarryTests(unittest.TestCase):
         def running(a): a.other_checks[0].update(status='in_progress', conclusion=None)
         def queued_success(a): a.other_checks[0]['status'] = 'queued'
         def stale_head(a): a.other_checks[0]['head_sha'] = 'c' * 40
-        def other_pr(a): a.other_checks[0]['external_id'] = 'agy/v1:' + REPO + ':8:50:1'
-        def other_source(a): a.other_checks[0]['external_id'] = 'agy/v1:mctlhq/elsewhere:7:50:1'
+        def other_pr(a): a.other_checks[0]['external_id'] = 'agy/v2:' + REPO + ':8:50:1:' + DIGEST
+        def other_source(a): a.other_checks[0]['external_id'] = 'agy/v2:mctlhq/elsewhere:7:50:1:' + DIGEST
+        def v1_external_id(a): a.other_checks[0]['external_id'] = 'agy/v1:' + REPO + ':7:50:1'
+        def wrong_digest(a): a.other_checks[0]['external_id'] = 'agy/v2:' + REPO + ':7:50:1:sha256:' + ('1' * 64)
         def no_external_id(a): a.other_checks[0].pop('external_id')
         def carried_itself(a): a.other_checks[0]['output']['title'] = P.CARRY_TITLE
         def no_output(a): a.other_checks[0].pop('output')
         def duplicate(a): a.other_checks.append(copy.deepcopy(a.other_checks[0]))
         def foreign_app(a): a.other_checks[0]['app']['id'] = 999
+        def dismissed_agy_review(a): a.reviews[0]['state'] = 'DISMISSED'
+        def edited_agy_review(a): a.edited_nodes.add('PRR_500')
         for mutate in (drop, failed, neutral, cancelled, running, queued_success, stale_head, other_pr,
-                       other_source, no_external_id, carried_itself, no_output, duplicate, foreign_app):
+                       other_source, v1_external_id, wrong_digest, no_external_id, carried_itself,
+                       no_output, duplicate, foreign_app, dismissed_agy_review, edited_agy_review):
             with self.subTest(mutate=mutate.__name__):
                 api = carry_fake(); mutate(api)
                 prepared, out = self.run_prepare(api)
                 self.assert_model_runs(api, prepared)
+
+    def test_blocking_changes_requested_or_unreadable_api_in_carry_refuses_without_model(self):
+        # Blocking CHANGES_REQUESTED on live_pr_head fails closed immediately in prepare (no model run).
+        for login in ('claude[bot]', 'agy-test[bot]'):
+            with self.subTest(login=login):
+                api = carry_fake()
+                api.reviews.append({'id': 601, 'node_id': 'PRR_601', 'commit_id': HEAD,
+                                    'user': {'login': login, 'type': 'Bot'},
+                                    'state': 'CHANGES_REQUESTED', 'body': 'edited or not'})
+                with self.assertRaises(P.Refused):
+                    self.run_prepare(api)
+                self.assertEqual(api.checks[0]['conclusion'], 'failure')
+
+        # Unreadable API / GraphQL fails closed without falling back to the model.
+        def fail_on(marker):
+            return lambda a: setattr(a, 'error', lambda m, p: marker in p)
+        def malformed(key, value):
+            return lambda a: a.compare[(BASE, QHEAD)].update({key: value})
+        refusal_cases = {
+            'compare pr head': fail_on('/compare/' + BASE + '...' + HEAD),
+            'compare queue commit': fail_on('/compare/' + BASE + '...' + QHEAD),
+            'graphql failure': lambda a: setattr(a, 'graphql_error', True),
+            'files not a list': malformed('files', 'oops'),
+            'no merge base': malformed('merge_base_commit', None),
+            'bad merge base': malformed('merge_base_commit', {'sha': 'zz'}),
+            'unconfigured': lambda a: a.compare.clear(),
+        }
+        for name, mutate in refusal_cases.items():
+            with self.subTest(case=name):
+                api = carry_fake(); mutate(api)
+                with self.assertRaises(P.Refused):
+                    self.run_prepare(api)
+                self.assertEqual(api.checks[0]['conclusion'], 'failure')
+
+    def test_non_comparable_or_oversized_comparisons_fall_back_to_model(self):
+        def many(a):
+            rows = [file_row(f'f{i}.yaml', '5' * 40) for i in range(300)]
+            for key in a.compare: a.compare[key]['files'] = copy.deepcopy(rows)
+        fallback_cases = {
+            'zero changes': lambda a: [r.update(changes=0) for k in a.compare for r in a.compare[k]['files']],
+            'bad blob': lambda a: [r.update(sha='x') for k in a.compare for r in a.compare[k]['files']],
+            'unknown status': lambda a: [r.update(status='changed') for k in a.compare for r in a.compare[k]['files']],
+            'too many files': many,
+        }
+        for name, mutate in fallback_cases.items():
+            with self.subTest(case=name):
+                api = carry_fake(); mutate(api)
+                prepared, out = self.run_prepare(api)
+                self.assert_model_runs(api, prepared)
+                self.assertIn('not carried', out)
 
     def test_the_head_must_be_the_live_pr_head_the_queue_commit_was_built_from(self):
         for mutate in (lambda a: a.pr['head'].update(sha='c' * 40),
@@ -433,40 +647,8 @@ class CarryTests(unittest.TestCase):
                 try:
                     prepared, _ = self.run_prepare(api)
                 except P.Refused:
-                    continue  # the unchanged queue_state refusal, no check is green
+                    continue
                 self.assertNotEqual(api.checks and api.checks[0].get('conclusion'), 'success')
-
-    def test_unreadable_or_partial_reads_fall_back_to_the_model(self):
-        def fail_on(marker):
-            return lambda a: setattr(a, 'error', lambda m, p: marker in p)
-        def malformed(key, value):
-            def go(a):
-                a.compare[(BASE, QHEAD)][key] = value
-            return go
-        def many(a):
-            rows = [file_row(f'f{i}.yaml', '5' * 40) for i in range(150)]
-            for key in a.compare: a.compare[key]['files'] = copy.deepcopy(rows)
-        cases = {
-            'compare pr head': fail_on('/compare/' + BASE + '...' + HEAD),
-            'compare queue commit': fail_on('/compare/' + BASE + '...' + QHEAD),
-            'later page': lambda a: (many(a), setattr(a, 'error', lambda m, p: 'page=2' in p)),
-            'check listing': lambda a: setattr(a, 'error', lambda m, p: '/commits/' + HEAD + '/check-runs' in p),
-            'files not a list': malformed('files', 'oops'),
-            'no merge base': malformed('merge_base_commit', None),
-            'bad merge base': malformed('merge_base_commit', {'sha': 'zz'}),
-            'zero changes': lambda a: [r.update(changes=0) for k in a.compare for r in a.compare[k]['files']],
-            'bad blob': lambda a: [r.update(sha='x') for k in a.compare for r in a.compare[k]['files']],
-            'unknown status': lambda a: [r.update(status='changed') for k in a.compare for r in a.compare[k]['files']],
-            'entry not an object': lambda a: [a.compare[k]['files'].insert(0, 'x') for k in a.compare],
-            'duplicate path': lambda a: [a.compare[k]['files'].append(dict(a.compare[k]['files'][0])) for k in a.compare],
-            'unconfigured': lambda a: a.compare.clear(),
-        }
-        for name, mutate in cases.items():
-            with self.subTest(case=name):
-                api = carry_fake(); mutate(api)
-                prepared, out = self.run_prepare(api)
-                self.assert_model_runs(api, prepared)
-                self.assertIn('not carried', out)
 
     def test_a_listing_of_exactly_one_full_page_and_a_complete_second_page_still_works(self):
         api = carry_fake()
@@ -475,28 +657,22 @@ class CarryTests(unittest.TestCase):
         self.assertIsNone(self.run_prepare(api)[0])
         self.assertEqual(api.checks[0]['conclusion'], 'success')
 
-    def test_too_many_files_are_never_carried(self):
-        api = carry_fake()
-        rows = [file_row(f'f{i:03}.yaml', '5' * 40) for i in range(300)]
-        for key in api.compare: api.compare[key]['files'] = copy.deepcopy(rows)
-        prepared, _ = self.run_prepare(api)
-        self.assert_model_runs(api, prepared)
-
     def test_queue_moving_after_the_comparison_is_not_carried(self):
         api = carry_fake()
         seen = []
         def move(fake):
             seen.append(1)
-            if len(seen) == 2:  # moves after target() and carry_proof()'s entry: the re-read after the comparisons sees it
+            if len(seen) == 2:
                 fake.queue_refs[QREF] = 'e' * 40
         api.move_on_queue_read = move
-        prepared, _ = self.run_prepare(api)
+        with self.assertRaises(P.Refused):
+            self.run_prepare(api)
         self.assertEqual(len(seen), 3)
-        self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
+        self.assertEqual(api.checks[0]['conclusion'], 'failure')
 
     def test_ordinary_pr_head_reviews_are_never_carried(self):
         api = carry_fake(); api.other_checks.clear()
-        pub = P.Publisher(api, api, ENV)
+        pub = make_pub(api)
         self.assertEqual(pub.prepare(), {'number': 7, 'head': HEAD, 'base': BASE})
         self.assertEqual(api.checks[0]['status'], 'in_progress')
         self.assertFalse(any('/compare/' in p for _, p, _ in api.calls))
@@ -504,7 +680,7 @@ class CarryTests(unittest.TestCase):
     def test_an_owned_in_progress_check_on_the_queue_commit_is_completed_not_duplicated(self):
         api = carry_fake()
         api.checks.append({'id': 1, 'name': 'agy-formal-review', 'app': {'id': 123}, 'head_sha': QHEAD,
-                           'status': 'in_progress', 'external_id': 'agy/v1:' + REPO + ':7:99:1'})
+                           'status': 'in_progress', 'external_id': 'agy/v2:' + REPO + ':7:99:1'})
         self.assertIsNone(self.run_prepare(api)[0])
         self.assertEqual(len(api.checks), 1)
         self.assertEqual(api.checks[0]['conclusion'], 'success')
@@ -512,15 +688,14 @@ class CarryTests(unittest.TestCase):
     def test_a_newer_run_owning_the_queue_check_is_not_overwritten_by_a_carry(self):
         api = carry_fake()
         api.checks.append({'id': 1, 'name': 'agy-formal-review', 'app': {'id': 123}, 'head_sha': QHEAD,
-                           'status': 'in_progress', 'external_id': 'agy/v1:' + REPO + ':7:101:1'})
+                           'status': 'in_progress', 'external_id': 'agy/v2:' + REPO + ':7:101:1'})
         with self.assertRaises(P.Refused):
             self.run_prepare(api)
         self.assertNotIn('conclusion', api.checks[0])
 
     def test_carried_check_cannot_itself_be_carried_and_model_path_still_publishes(self):
-        # The fallback path is unchanged: prepare, then a model verdict marks the commit.
-        api = carry_fake(); api.other_checks.clear()
-        pub = P.Publisher(api, api, QENV)
+        api = carry_fake(); api.other_checks.clear(); api.reviews.clear()
+        pub = make_pub(api, QENV)
         self.assertEqual(pub.prepare(), {'number': 7, 'head': QHEAD, 'base': BASE})
         record = NS['make_record'](PASS, dict(ENV, HEAD_SHA=QHEAD, BASE_SHA=BASE))
         self.assertEqual(pub.publish(json.dumps(record)), 'APPROVE')
@@ -533,7 +708,7 @@ class QueueTests(unittest.TestCase):
 
     def setup_pub(self, api=None, env=None):
         api = api or queue_fake()
-        pub = P.Publisher(api, api, env or QENV)
+        pub = make_pub(api, env or QENV)
         prepared = pub.prepare()
         return api, pub, prepared
 
@@ -567,7 +742,7 @@ class QueueTests(unittest.TestCase):
         api = queue_fake(); api.rules.pop()
         api.rules[1]['parameters']['strict_required_status_checks_policy'] = True
         with self.assertRaises(P.Refused):
-            P.Publisher(api, api, QENV).prepare()
+            make_pub(api, QENV).prepare()
         self.assertEqual(api.checks, [])
 
     def test_queue_needs_the_merge_method(self):
@@ -575,7 +750,7 @@ class QueueTests(unittest.TestCase):
             with self.subTest(method=method):
                 api = queue_fake(); api.rules[-1]['parameters']['merge_method'] = method
                 with self.assertRaises(P.Refused) as raised:
-                    P.Publisher(api, api, QENV).prepare()
+                    make_pub(api, QENV).prepare()
                 self.assertIn('MERGE', str(raised.exception))
                 self.assertEqual(api.checks, [])
 
@@ -584,7 +759,7 @@ class QueueTests(unittest.TestCase):
             with self.subTest():
                 api = queue_fake(); mutate(api)
                 with self.assertRaises(P.Refused):
-                    P.Publisher(api, api, QENV).prepare()
+                    make_pub(api, QENV).prepare()
                 self.assertEqual(api.checks, [])
                 api, pub, _ = self.setup_pub()
                 mutate(api)
@@ -597,7 +772,7 @@ class QueueTests(unittest.TestCase):
             with self.subTest(parents=parents):
                 api = queue_fake(); api.commits[QHEAD] = parents
                 with self.assertRaises(P.Refused):
-                    P.Publisher(api, api, QENV).prepare()
+                    make_pub(api, QENV).prepare()
                 self.assertEqual(api.checks, [])
 
     def test_queued_pr_must_be_open_at_the_queued_head(self):
@@ -606,7 +781,7 @@ class QueueTests(unittest.TestCase):
             with self.subTest():
                 api = queue_fake(); mutate(api)
                 with self.assertRaises(P.Refused):
-                    P.Publisher(api, api, QENV).prepare()
+                    make_pub(api, QENV).prepare()
                 self.assertEqual(api.checks, [])
 
     def test_queue_move_during_publication_never_marks_green(self):
@@ -615,7 +790,7 @@ class QueueTests(unittest.TestCase):
 
         def move(fake):
             reads.append(1)
-            if len(reads) == 1:  # after the publish-time check, before the re-check
+            if len(reads) == 1:
                 fake.queue_refs[QREF] = 'e' * 40
         api.move_on_queue_read = move
         with self.assertRaises(P.Refused):
@@ -626,7 +801,7 @@ class QueueTests(unittest.TestCase):
         for marker in ('/git/ref/', '/commits/' + QHEAD):
             with self.subTest(marker=marker):
                 api, pub, _ = self.setup_pub()
-                api.error = lambda method, path, m=marker: method == 'GET' and m in path and not path.endswith('/check-runs') and 'check-runs' not in path
+                api.error = lambda method, path, m=marker: method == 'GET' and m in path and 'check-runs' not in path
                 with self.assertRaises(P.Refused):
                     pub.publish(self.raw())
                 self.assertNotEqual(api.checks[0].get('conclusion'), 'success')
@@ -640,35 +815,31 @@ class QueueTests(unittest.TestCase):
                         {'QUEUE_HEAD_REF': 'refs/heads/gh-readonly-queue/other/pr-7-' + BASE}):
             with self.subTest(changes=changes):
                 api = queue_fake()
-                # Every forged ref exists and points at the queued commit, so
-                # only the input validation itself can refuse it.
                 for ref in ('refs/heads/gh-readonly-queue/other/pr-7-' + BASE,
                             'refs/heads/gh-readonly-queue/main/pr-8-' + BASE):
                     api.queue_refs[ref] = QHEAD
                 with self.assertRaises(P.Refused):
-                    P.Publisher(api, api, dict(QENV, **changes)).prepare()
+                    make_pub(api, dict(QENV, **changes)).prepare()
                 self.assertEqual(api.checks, [])
 
     def test_queue_ref_must_name_the_queue_base(self):
-        # A ref naming any other commit (the PR head included) is refused even
-        # when that ref exists and points at the queued commit.
         for named in (HEAD, 'e' * 40):
             with self.subTest(named=named):
                 api = queue_fake()
                 ref = 'refs/heads/gh-readonly-queue/main/pr-7-' + named
                 api.queue_refs[ref] = QHEAD
                 with self.assertRaises(P.Refused) as raised:
-                    P.Publisher(api, api, dict(QENV, QUEUE_HEAD_REF=ref)).prepare()
+                    make_pub(api, dict(QENV, QUEUE_HEAD_REF=ref)).prepare()
                 self.assertIn('another base', str(raised.exception))
                 self.assertEqual(api.checks, [])
 
     def test_pr_head_review_accepts_a_merge_queue_instead_of_strict(self):
         api = queue_fake()
-        pub = P.Publisher(api, api, ENV)
+        pub = make_pub(api)
         self.assertEqual(pub.prepare()['head'], HEAD)
         api.rules.pop()
         with self.assertRaises(P.Refused):
-            P.Publisher(api, api, ENV).prepare()
+            make_pub(api).prepare()
 
 
 class ExportTests(unittest.TestCase):
@@ -681,12 +852,18 @@ class ExportTests(unittest.TestCase):
         self.assertNotIn('secrets', formal['jobs']['review'])
 
     def test_exact_verdicts_only(self):
-        self.assertEqual(NS['make_record'](PASS, ENV)['verdict'], 'PASS')
+        rec = NS['make_record'](PASS, ENV)
+        self.assertEqual(rec['verdict'], 'PASS')
+        self.assertEqual(rec['schema_version'], 'agy-review/v2')
+        self.assertEqual(rec['provider'], 'agy')
+        self.assertEqual(rec['diff_digest'], DIGEST)
         for body in ('', 'not a review', 'No issues.\n<!-- VERDICT: PASS --> extra',
                      'No issues.\n <!-- VERDICT: PASS -->', '[P1] bug\n<!-- VERDICT: PASS -->',
                      'Finding 1 (P1)\n<!-- VERDICT: PASS -->', 'severity: p2\n<!-- VERDICT: PASS -->'):
             with self.assertRaises(ValueError):
                 NS['make_record'](body, ENV)
+        with self.assertRaises(ValueError):
+            NS['make_record'](PASS, dict(ENV, DIFF_DIGEST='bad'))
 
     def test_ordinary_callers_do_not_get_formal_outputs(self):
         steps = WF['jobs']['review']['steps']
@@ -730,8 +907,6 @@ class SourceResolutionTests(unittest.TestCase):
             return output.read_text()
 
     def test_actual_local_and_external_api_path_forms_resolve_exact_sha(self):
-        # Local calls also use canonical owner/repo/path@ref in the REST API.
-        # Observed: .github run 43218908988, local claude-review.yml caller.
         prefix = 'mctlhq/.github/.github/workflows/agy-formal-review.yml@'
         for ref in ('main', HEAD):
             with self.subTest(ref=ref):
@@ -749,7 +924,7 @@ class SourceResolutionTests(unittest.TestCase):
             self.resolve([valid], target='outside/repo')
 
 
-class PromptGateTests(unittest.TestCase):
+class PromptGateAndDigestTests(unittest.TestCase):
     def run_prompt(self, directory, base, head, script):
         script = script.replace('${{ github.run_id }}', 'fixture')
         self.assertNotIn('${{', script)
@@ -792,16 +967,59 @@ class PromptGateTests(unittest.TestCase):
                 actual = self.run_prompt(directory, base, head, script)
                 if kind == 'text':
                     self.assertEqual(actual.returncode, 0, actual.stderr)
-                    prompt = (Path(directory) / 'agy-review-fixture/prompt.md').read_text()
+                    scratch = Path(directory) / 'agy-review-fixture'
+                    prompt = (scratch / 'prompt.md').read_text()
                     self.assertIn('+complete text change', prompt)
+                    inline_digest = (scratch / 'diff_digest.txt').read_text().strip()
+                    mb = git('merge-base', base, head)
+                    local_digest = pr_diff_digest.compute_local_diff_digest(directory, mb, head)
+                    self.assertEqual(inline_digest, local_digest)
+                    self.assertRegex(local_digest, r'^sha256:[0-9a-f]{64}$')
                 else:
                     self.assertNotEqual(actual.returncode, 0, actual.stdout)
-                    # Disable the actual guard and prove the same rejected
-                    # fixture becomes incorrectly accepted, then restore it.
                     mutated = self.run_prompt(directory, base, head, mutant)
                     self.assertEqual(mutated.returncode, 0, mutated.stderr)
                     restored = self.run_prompt(directory, base, head, script)
                     self.assertNotEqual(restored.returncode, 0)
+
+    def test_digest_handles_spaces_utf8_and_non_conflicting_base_advance_parity(self):
+        script = next(x['run'] for x in WF['jobs']['review']['steps']
+                      if x.get('name') == 'Prepare review prompt')
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=directory,
+                                               stderr=subprocess.DEVNULL, text=True).strip()
+            git('init', '--initial-branch=main', '--object-format=sha1')
+            (Path(directory) / 'unrelated.txt').write_text('v1\n')
+            sub = Path(directory) / 'dir with spaces'
+            sub.mkdir()
+            target = sub / 'café.txt'
+            target.write_text('hello\n', encoding='utf-8')
+            git('add', '.')
+            git('-c', 'user.name=F', '-c', 'user.email=f@e.i', '-c', 'commit.gpgsign=false',
+                'commit', '-m', 'base', '-m', 'Agent: agy')
+            base1 = git('rev-parse', 'HEAD')
+
+            git('checkout', '-b', 'feat')
+            target.write_text('hello world\n', encoding='utf-8')
+            git('add', '.')
+            git('-c', 'user.name=F', '-c', 'user.email=f@e.i', '-c', 'commit.gpgsign=false',
+                'commit', '-m', 'feat', '-m', 'Agent: agy')
+            head = git('rev-parse', 'HEAD')
+
+            # Advance main with an unrelated file; merge-base with head stays base1.
+            git('checkout', 'main')
+            (Path(directory) / 'unrelated.txt').write_text('v2\n')
+            git('add', '.')
+            git('-c', 'user.name=F', '-c', 'user.email=f@e.i', '-c', 'commit.gpgsign=false',
+                'commit', '-m', 'advance', '-m', 'Agent: agy')
+            base2 = git('rev-parse', 'HEAD')
+
+            self.run_prompt(directory, base1, head, script)
+            d1 = (Path(directory) / 'agy-review-fixture/diff_digest.txt').read_text().strip()
+            mb2 = git('merge-base', base2, head)
+            d2 = pr_diff_digest.compute_local_diff_digest(directory, mb2, head)
+            self.assertEqual(d1, d2)
 
 
 class MutationTests(unittest.TestCase):
@@ -810,8 +1028,13 @@ class MutationTests(unittest.TestCase):
         mutations = [
             (r"r'\bP[12]\b'", r"r'\[P[12]\]|\bP[12]\s*[:—-]'", 'test_no_result_malformed_or_wrong_scope_never_approves'),
             ("raise Refused('head/base moved; reviewed result is stale')", 'pass', 'test_move_head_or_base_before_publication_refuses'),
+            ("raise Refused('live diff digest does not match reviewed digest')", 'pass', 'test_non_strict_base_advance_allowed_only_when_diff_digest_matches'),
+            ("raise Refused('author and reviewer cannot share the same login')", 'pass', 'test_author_matching_reviewer_identity_refuses'),
             ("raise Refused('invalid verdict')", 'pass', 'test_no_result_malformed_or_wrong_scope_never_approves'),
-            ("raise Refused('formal approval needs stale-review dismissal, strict checks or a merge queue, and the App-bound agy-formal-review check')", 'pass', 'test_every_protection_is_required'),
+            ("raise Refused('invalid reviewer provider')", 'pass', 'test_no_result_malformed_or_wrong_scope_never_approves'),
+            ("if blocked:\n                raise Refused(f'blocking CHANGES_REQUESTED review present on {sha}')",
+             'if False:\n                pass', 'test_existing_changes_requested_blocks_prepare_and_publish'),
+            ("if not (stale and (strict or queued) and bound):", 'if False:', 'test_every_protection_is_required'),
             ("raise Refused('merge queue review needs a merge queue rule on the branch')", 'pass', 'test_queue_needs_a_merge_queue_rule'),
             ("raise Refused('merge queue ref does not point at the reviewed commit')", 'pass', 'test_queue_entry_must_still_exist_and_point_at_the_commit'),
             ("raise Refused('merge queue commit is not the base plus this PR')", 'pass', 'test_queue_commit_must_be_base_plus_the_queued_pr'),
@@ -820,23 +1043,25 @@ class MutationTests(unittest.TestCase):
             ("raise Refused('merge queue ref names another base')", 'pass', 'test_queue_ref_must_name_the_queue_base'),
             ("raise Refused('merge queue review needs merge_method MERGE')", 'pass', 'test_queue_needs_the_merge_method'),
             ("raise Refused('run event or attempt mismatch')", 'pass', 'test_changed_run_attempt_never_publishes'),
-            ("raise Refused('queue commit differs from the reviewed PR diff')", 'pass', 'test_a_different_tree_is_never_carried'),
-            ("raise Refused('queue commit does not descend from its base')", 'pass', 'test_a_different_tree_is_never_carried'),
-            ("raise Refused('PR head has no single formal check')", 'pass', 'test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr'),
-            ("raise Refused('PR head has no completed success from a formal run for this PR')", 'pass', 'test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr'),
-            ("raise Refused('PR head verdict is itself carried or unreadable')", 'pass', 'test_head_verdict_must_be_a_complete_success_bound_to_this_exact_head_and_pr'),
-            ("raise Refused('comparison entry not comparable')", 'pass', 'test_unreadable_or_partial_reads_fall_back_to_the_model'),
-            ("raise Refused('comparison too large or ambiguous')", 'pass', 'test_too_many_files_are_never_carried'),
-            ("self.queue_state(self.context()[0], branch)\n        return check", "return check", 'test_queue_moving_after_the_comparison_is_not_carried'),
+            ("raise CarryMiss('queue commit differs from the reviewed PR diff')", 'pass', 'test_a_different_tree_is_never_carried'),
+            ("raise CarryMiss('queue commit does not descend from its base')", 'pass', 'test_a_different_tree_is_never_carried'),
+            ("or match[6] != live_digest", "or False", 'test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest'),
+            ("if not unedited:\n            return None", "if False:\n            return None", 'test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest'),
+            ("if not source_desc:\n            raise CarryMiss('PR head has no qualifying unedited formal verdict')",
+             "if False:\n            raise CarryMiss('x')", 'test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest'),
+            ("raise CarryMiss(str(exc)) from None", "raise", 'test_non_comparable_or_oversized_comparisons_fall_back_to_model'),
+            ("self.queue_state(self.context()[0], branch)\n        return {'description': source_desc, 'diff_digest': live_digest}",
+             "return {'description': source_desc, 'diff_digest': live_digest}", 'test_queue_moving_after_the_comparison_is_not_carried'),
         ]
         original = P.Publisher
         for old, new, test in mutations:
             suite = next(c for c in (PublisherTests, QueueTests, CarryTests) if hasattr(c, test))
-            with self.subTest(test=test):
-                self.assertEqual(source.count(old), 1)
-                scope = {'__name__': 'mutant'}
+            with self.subTest(test=test, old=old[:40]):
+                self.assertEqual(source.count(old), 1, f'expected unique occurrence for {old!r}')
+                scope = {'__name__': 'mutant', '__file__': str(PATH)}
                 exec(compile(source.replace(old, new), '<mutated publisher>', 'exec'), scope)
                 scope['Refused'] = P.Refused
+                scope['CarryMiss'] = P.CarryMiss
                 try:
                     P.Publisher = scope['Publisher']
                     red = unittest.TestResult()
