@@ -170,9 +170,9 @@ class API:
             raise Unknown(f'{method} {path.split("?")[0]}: unavailable or malformed') from exc
 
 
-def pages(api, path: str, field_name: str | None = None) -> list[dict]:
+def pages(api, path: str, field_name: str | None = None, max_pages: int = PAGE_LIMIT) -> list[dict]:
     result, total = [], None
-    for page in range(1, PAGE_LIMIT + 1):
+    for page in range(1, max_pages + 1):
         sep = '&' if '?' in path else '?'
         obj = api('GET', f'{path}{sep}per_page=100&page={page}')
         if field_name:
@@ -189,6 +189,8 @@ def pages(api, path: str, field_name: str | None = None) -> list[dict]:
             if total is not None and len(result) != total:
                 raise Unknown(f'{path}: listing length {len(result)} differs from total_count {total}')
             return result
+    if max_pages < PAGE_LIMIT:
+        return result
     raise Unknown('listing exceeded bounded pagination')
 
 
@@ -381,6 +383,34 @@ def classify_claude_run(
 
     if step_succeeded('Classify outcome: NO_VERDICT_OTHER') or conclusion in ('failure', 'cancelled'):
         return OUTCOME_OTHER, f'Claude run ended with {conclusion}/NO_VERDICT_OTHER'
+    if conclusion == 'success':
+        # Check if Claude posted a real unedited APPROVED on head_sha that became stale due to base/diff move.
+        candidates = []
+        for r in reviews:
+            u = r.get('user')
+            if not isinstance(u, dict) or u.get('login') != review_trust.CLAUDE_LOGIN or u.get('type') != 'Bot':
+                continue
+            if r.get('commit_id') != head_sha or r.get('state') != 'APPROVED':
+                continue
+            parsed = review_trust.extract_reviewed_markers(r.get('body', ''))
+            if parsed and parsed[0] == head_sha and isinstance(r.get('node_id'), str) and r.get('node_id'):
+                candidates.append(r['node_id'])
+        if candidates:
+            try:
+                unedited = review_trust.unedited_review_ids(lambda q: api('POST', 'graphql', q), candidates)
+            except review_trust.TrustError as exc:
+                raise Unknown(str(exc)) from None
+            if unedited:
+                try:
+                    trusted, reason = review_trust.verify_run_caller_trust(
+                        lambda p: api('GET', p), repo, run, default_branch, head_sha, merge_base_sha,
+                        require_unchanged_blob=True,
+                    )
+                except review_trust.TrustError as exc:
+                    raise Unknown(str(exc)) from None
+                if not trusted:
+                    return OUTCOME_OTHER, 'untrusted Claude PASS run: ' + reason
+                return OUTCOME_STALE, 'Claude PASS became stale after base/diff move'
     return OUTCOME_OTHER, f'Claude run finished ({conclusion}) without a verifiable PASS'
 
 
@@ -519,6 +549,7 @@ class Decision:
     action: str  # 'pass_check', 'fail_check', 'dispatch', 'wait', 'skip', 'unknown', 'done'
     reason: str
     trigger_reason: str = ''
+    diff_digest: str = ''
 
 
 def upsert_check_run(api, repo: str, app_id: int, check_name: str, head_sha: str, status: str,
@@ -617,13 +648,13 @@ def decide_pr(
     try:
         if review_trust.has_blocking_changes_requested(reviews, pr.head, (review_trust.CLAUDE_LOGIN, agy_login)):
             metrics.claude_evaluated += 1
-            return Decision(OUTCOME_BLOCKING, 'fail_check', f'CHANGES_REQUESTED present on {pr.head}')
+            return Decision(OUTCOME_BLOCKING, 'fail_check', f'CHANGES_REQUESTED present on {pr.head}', diff_digest=live_digest)
     except review_trust.TrustError as exc:
         raise Unknown(str(exc)) from None
 
     all_repo_runs = pages(actions_api, f'repos/{repo}/actions/workflows/'
-                               f'{review_trust.caller_allowlist_for(repo)[0].rsplit("/", 1)[1]}/runs', 'workflow_runs')
-    claude_runs = review_trust.find_matching_claude_runs(all_repo_runs, pr.number, pr.head)
+                               f'{review_trust.caller_allowlist_for(repo)[0].rsplit("/", 1)[1]}/runs', 'workflow_runs', max_pages=5)
+    claude_runs = review_trust.find_matching_claude_runs(all_repo_runs, pr.number, pr.head, reviews=reviews)
 
     # 2. Check trusted unedited Claude PASS.
     try:
@@ -651,11 +682,11 @@ def decide_pr(
         raise Unknown(str(exc)) from None
     if claude_ok:
         metrics.claude_evaluated += 1
-        return Decision(OUTCOME_PASS, 'pass_check', f'trusted claude[bot] PASS for {pr.head} (base {rev_base})')
+        return Decision(OUTCOME_PASS, 'pass_check', f'trusted claude[bot] PASS for {pr.head} (base {rev_base})', diff_digest=live_digest)
 
     # 3. Inspect matching Claude runs for active, transient, self-edit, or non-transient states.
     if any(r.get('status') in ACTIVE_STATUSES for r in claude_runs):
-        return Decision(OUTCOME_STALE, 'wait', 'Claude review is still running on this PR')
+        return Decision(OUTCOME_STALE, 'wait', 'Claude review is still running on this PR', diff_digest=live_digest)
 
     completed_claude = sorted(
         [r for r in claude_runs if r.get('status') == 'completed'],
@@ -663,7 +694,7 @@ def decide_pr(
         reverse=True,
     )
     if not completed_claude:
-        return Decision(OUTCOME_UNKNOWN, 'wait', 'no matching Claude run completed yet for this head')
+        return Decision(OUTCOME_UNKNOWN, 'wait', 'no matching Claude run completed yet for this head', diff_digest=live_digest)
 
     claude_outcome, claude_reason = classify_claude_run(
         lambda m, p, payload=None: (actions_api if '/actions/' in p else api)(m, p, payload),
@@ -674,20 +705,21 @@ def decide_pr(
         metrics.no_verdict_by_provider['claude'][OUTCOME_TRANSIENT] += 1
     elif claude_outcome == OUTCOME_OTHER:
         metrics.no_verdict_by_provider['claude'][OUTCOME_OTHER] += 1
-        return Decision(OUTCOME_OTHER, 'fail_check', claude_reason)
+        return Decision(OUTCOME_OTHER, 'fail_check', claude_reason, diff_digest=live_digest)
     elif claude_outcome == OUTCOME_BLOCKING:
-        return Decision(OUTCOME_BLOCKING, 'fail_check', claude_reason)
+        return Decision(OUTCOME_BLOCKING, 'fail_check', claude_reason, diff_digest=live_digest)
     elif claude_outcome == OUTCOME_STALE:
-        return Decision(OUTCOME_STALE, 'wait', claude_reason)
+        return Decision(OUTCOME_STALE, 'wait', claude_reason, diff_digest=live_digest)
 
     # 4. Reuse qualifying formal Agy result, preserve terminal failure, or dispatch.
-    reused, _ = find_qualifying_agy_reuse(
+    reused, reused_chk = find_qualifying_agy_reuse(
         lambda m, p, payload=None: (actions_api if '/actions/' in p else api)(m, p, payload),
         source_repo, repo, pr.number, pr.head, live_digest,
         check_runs, reviews, app_id, agy_login, gate_mode, target_check,
     )
     if reused:
-        return Decision(OUTCOME_PASS, 'pass_check', f'reused qualifying formal Agy result for {pr.head}')
+        action = 'done' if reused_chk is not None and reused_chk.get('name') == target_check else 'pass_check'
+        return Decision(OUTCOME_PASS, action, f'reused qualifying formal Agy result for {pr.head}', diff_digest=live_digest)
 
     if not force_rerun:
         term_fail, term_reason = has_terminal_fallback_failure(
@@ -697,18 +729,19 @@ def decide_pr(
         )
         if term_fail:
             metrics.no_verdict_by_provider['agy'][OUTCOME_OTHER] += 1
-            return Decision(OUTCOME_OTHER, 'fail_check', term_reason)
+            return Decision(OUTCOME_OTHER, 'fail_check', term_reason, diff_digest=live_digest)
 
     mine = [r for r in active_dispatches if (r.repository, r.number) == (repo, pr.number)]
     if any(r.head in (pr.head, None) for r in mine):
-        return Decision(claude_outcome, 'wait', 'formal Agy dispatch already active for this PR/head')
+        return Decision(claude_outcome, 'wait', 'formal Agy dispatch already active for this PR/head', diff_digest=live_digest)
     if len(active_dispatches) >= MAX_ACTIVE_FORMAL_RUNS:
-        return Decision(claude_outcome, 'wait', 'formal runner capacity is in use')
+        return Decision(claude_outcome, 'wait', 'formal runner capacity is in use', diff_digest=live_digest)
 
     return Decision(
         claude_outcome, 'dispatch',
         f'{claude_reason}; dispatching formal Agy fallback ({gate_mode})',
         trigger_reason=f'{claude_outcome}:{live_digest}',
+        diff_digest=live_digest,
     )
 
 
@@ -752,7 +785,8 @@ def evaluate_repo(
             active_raw += pages(dispatch_api, f'repos/{source_repo}/actions/workflows/{DISPATCH_WORKFLOW}/runs?status={status}', 'workflow_runs')
         active_dispatches = parse_dispatch_runs(active_raw, ACTIVE_STATUSES)
         completed_dispatches = pages(
-            dispatch_api, f'repos/{source_repo}/actions/workflows/{DISPATCH_WORKFLOW}/runs?status=completed', 'workflow_runs'
+            dispatch_api, f'repos/{source_repo}/actions/workflows/{DISPATCH_WORKFLOW}/runs?status=completed',
+            'workflow_runs', max_pages=1,
         )[:50]
     except Unknown as exc:
         metrics.errors.append(f'{repo}: {exc}')
@@ -782,11 +816,8 @@ def evaluate_repo(
                 agy_login, app_id, still_active, completed_dispatches, force_rerun,
                 compute_digest_fn, metrics, actions_api=dispatch_api,
             )
-            ext_id = f'gate/v1:{repo}:{pr.number}:{pr.head}:{gate_mode}'
-            if ':' in dec.trigger_reason:
-                ext_id += ':' + dec.trigger_reason.split(':', 1)[1]
-            else:
-                ext_id += ':sha256:' + ('0' * 64)
+            ext_digest = dec.diff_digest or ('sha256:' + ('0' * 64))
+            ext_id = f'gate/v1:{repo}:{pr.number}:{pr.head}:{gate_mode}:{ext_digest}'
 
             if live and dec.action == 'pass_check':
                 upsert_check_run(

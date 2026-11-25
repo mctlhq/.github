@@ -309,8 +309,10 @@ class ControllerAcceptanceTests(unittest.TestCase):
         rc2, m2 = run_controller(gh)
         self.assertEqual(rc2, 0)
         self.assertEqual(m2['decisions'][0]['outcome'], 'PASS')
-        self.assertEqual(m2['decisions'][0]['action'], 'pass_check')
+        self.assertEqual(m2['decisions'][0]['action'], 'done')
         self.assertEqual(gh.dispatches, [])
+        # Existing agy/v2 external_id MUST be preserved untouched (never overwritten by gate/v1:...:0*64).
+        self.assertEqual(gh.checks[0]['external_id'], f'agy/v2:{SRC}:42:555:1:{DIGEST}')
 
     def test_t4_timeout_or_startup_failure_triggers_agy_only_with_unmodified_caller_blob(self):
         for conc in ('timed_out', 'startup_failure'):
@@ -470,8 +472,49 @@ class ControllerAcceptanceTests(unittest.TestCase):
         gh_sr.run_details[556] = {'referenced_workflows': [{'path': review_trust.TRUSTED_AGY_REUSABLE + 'main', 'sha': 'f' * 40}]}
         rc_sr, m_sr = run_controller(gh_sr, gate_repos=f'{REPO}:shadow')
         self.assertEqual(rc_sr, 0)
-        self.assertEqual(m_sr['decisions'][0]['action'], 'pass_check')
+        self.assertEqual(m_sr['decisions'][0]['action'], 'done')
         self.assertEqual(gh_sr.dispatches, [])
+        self.assertEqual(gh_sr.checks[0]['external_id'], f'agy/v2:{SRC}:42:556:1:{DIGEST}')
+
+    def test_stale_issue_comment_run_before_newer_pr_push_is_ignored(self):
+        gh = FakeGitHub()
+        # Earlier push on OLD_HEAD + older issue_comment failure on OLD_HEAD must NOT trigger fallback for HEAD.
+        gh.add_claude_run(
+            90, event='pull_request', head_sha=OLD_HEAD, conclusion='success',
+            steps=[], pull_requests=[{'number': 42}],
+        )
+        gh.claude_runs[-1]['created_at'] = '2026-11-25T10:05:00Z'
+        gh.add_claude_run(
+            91, event='issue_comment', head_sha='9' * 40, conclusion='failure',
+            steps=[gh.outcome_step('Classify outcome: NO_VERDICT_OTHER')],
+        )
+        gh.claude_runs[-1]['created_at'] = '2026-11-25T10:04:00Z'
+        rc, m = run_controller(gh)
+        self.assertEqual(rc, 0)
+        self.assertEqual(m['decisions'][0]['action'], 'wait')
+        self.assertEqual(gh.dispatches, [])
+
+    def test_claude_success_with_stale_base_returns_wait_and_preserves_digest_on_fail_check(self):
+        gh = FakeGitHub(mode='enforce')
+        gh.rules[1]['parameters']['strict_required_status_checks_policy'] = False
+        gh.rules.append({'type': 'merge_queue', 'parameters': {'merge_method': 'MERGE'}})
+        # Claude ran and posted unedited APPROVED against ALT_BASE whose compare diff differs from live BASE.
+        gh.compares[f'{ALT_BASE}...{HEAD}'] = {'merge_base_commit': {'sha': '9' * 40}}
+        gh.add_claude_pass(base=ALT_BASE)
+        rc, m = run_controller(
+            gh,
+            digest_fn=lambda r, m_sha, h: DIGEST if m_sha == MB else ('sha256:' + '7' * 64),
+        )
+        self.assertEqual(rc, 0)
+        self.assertEqual(m['decisions'][0]['outcome'], 'STALE')
+        self.assertEqual(m['decisions'][0]['action'], 'wait')
+        self.assertEqual(gh.dispatches, [])
+
+        # When fail_check IS written, external_id carries live DIGEST (not sha256:0000...).
+        gh_fail = FakeGitHub()
+        gh_fail.add_claude_run(112, conclusion='failure', steps=[gh_fail.outcome_step('Classify outcome: NO_VERDICT_OTHER')])
+        run_controller(gh_fail)
+        self.assertTrue(gh_fail.checks[0]['external_id'].endswith(':' + DIGEST))
 
     def test_dry_run_writes_zero_checks_or_dispatches(self):
         gh = FakeGitHub()
@@ -493,24 +536,34 @@ class ControllerMutationTests(unittest.TestCase):
                 'test_t2_changes_requested_takes_precedence_over_any_pass',
             ),
             (
-                "if claude_ok:\n        metrics.claude_evaluated += 1\n        return Decision(OUTCOME_PASS, 'pass_check', f'trusted claude[bot] PASS for {pr.head} (base {rev_base})')",
+                "if claude_ok:\n        metrics.claude_evaluated += 1\n        return Decision(OUTCOME_PASS, 'pass_check', f'trusted claude[bot] PASS for {pr.head} (base {rev_base})', diff_digest=live_digest)",
                 "if False:\n        pass",
                 'test_t1_claude_valid_unedited_pass_approves_check_without_agy_dispatch',
             ),
             (
-                "elif claude_outcome == OUTCOME_OTHER:\n        metrics.no_verdict_by_provider['claude'][OUTCOME_OTHER] += 1\n        return Decision(OUTCOME_OTHER, 'fail_check', claude_reason)",
+                "elif claude_outcome == OUTCOME_OTHER:\n        metrics.no_verdict_by_provider['claude'][OUTCOME_OTHER] += 1\n        return Decision(OUTCOME_OTHER, 'fail_check', claude_reason, diff_digest=live_digest)",
                 "elif False:\n        pass",
                 'test_t5_non_transient_no_verdict_fails_without_fallback_and_self_edit_uses_trusted_agy',
             ),
             (
-                "require_unchanged_blob=True,",
-                "require_unchanged_blob=False,",
+                "try:\n            trusted, reason = review_trust.verify_run_caller_trust(\n                lambda p: api('GET', p), repo, run, default_branch, head_sha, merge_base_sha,\n                require_unchanged_blob=True,\n            )\n        except review_trust.TrustError as exc:\n            raise Unknown(str(exc)) from None\n        if not trusted:\n            return OUTCOME_OTHER, 'untrusted Claude transient run: ' + reason",
+                "trusted = True",
                 'test_t4_timeout_or_startup_failure_triggers_agy_only_with_unmodified_caller_blob',
             ),
             (
-                "if term_fail:\n            metrics.no_verdict_by_provider['agy'][OUTCOME_OTHER] += 1\n            return Decision(OUTCOME_OTHER, 'fail_check', term_reason)",
+                "if term_fail:\n            metrics.no_verdict_by_provider['agy'][OUTCOME_OTHER] += 1\n            return Decision(OUTCOME_OTHER, 'fail_check', term_reason, diff_digest=live_digest)",
                 "if False:\n            pass",
                 'test_t7_terminal_fallback_failure_suppresses_infinite_redispatch_until_force_rerun',
+            ),
+            (
+                "action = 'done' if reused_chk is not None and reused_chk.get('name') == target_check else 'pass_check'",
+                "action = 'pass_check'",
+                'test_t3_transient_failure_dispatches_agy_then_reuses_formal_agy_pass',
+            ),
+            (
+                "return OUTCOME_STALE, 'Claude PASS became stale after base/diff move'",
+                "return OUTCOME_OTHER, 'broken'",
+                'test_claude_success_with_stale_base_returns_wait_and_preserves_digest_on_fail_check',
             ),
             (
                 "if override_mode == 'enforce' and configured == 'shadow':\n            raise Unknown(f'cannot promote shadow-configured repository {repo} to enforce via dispatch')",

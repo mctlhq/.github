@@ -31,6 +31,9 @@ CARRY_TITLE = 'Agy formal review: success (carried from PR head)'
 EXTERNAL_ID = re.compile(
     r'agy/v([12]):(mctlhq/[A-Za-z0-9_.-]+):([1-9][0-9]*):([0-9]+):([0-9]+)(?::(sha256:[0-9a-f]{64}))?'
 )
+CONTROLLER_EXT_ID = re.compile(
+    r'gate/v1:(mctlhq/[A-Za-z0-9_.-]+):([1-9][0-9]*):([0-9a-f]{40}):(enforce|shadow):(sha256:[0-9a-f]{64})'
+)
 MAX_CARRY_FILES = 300
 
 
@@ -365,7 +368,14 @@ class Publisher:
         return check
 
     def _claude_workflow_runs(self):
-        runs = pages(self.run_api, self.root + '/actions/runs', field='workflow_runs')
+        wf_file = review_trust.caller_allowlist_for(self.repo)[0].rsplit('/', 1)[1]
+        try:
+            runs = pages(self.run_api, self.root + f'/actions/workflows/{wf_file}/runs', field='workflow_runs')
+        except Refused:
+            # Cross-repo run_api (GITHUB_TOKEN on source_repo) may lack workflow listing on target repo.
+            if self.repo != self.source_repo:
+                return None
+            raise
         return [r for r in runs if str(r.get('path', '')) in review_trust.caller_allowlist_for(self.repo)]
 
     def carry_proof(self, pr, branch):
@@ -398,21 +408,32 @@ class Publisher:
         # Option 1: qualifying trusted unedited claude[bot] APPROVED verdict on live_pr_head.
         try:
             claude_runs = self._claude_workflow_runs()
-            claude_ok, _, rev_base = review_trust.verify_claude_pass(
-                reviews=reviews,
-                graphql_fn=self._graphql,
-                api_get=lambda p: self.run_api('GET', p),
-                repo=self.repo,
-                pr_number=self.number,
-                default_branch=branch,
-                head_sha=head,
-                live_base_sha=q['base'],
-                merge_base_sha=merge_base,
-                strict=self.strict,
-                live_diff_digest=live_digest,
-                claude_runs=claude_runs,
-                compute_digest_fn=self._compute_digest,
-            )
+            if claude_runs is not None:
+                def _carry_get(path):
+                    return self.run_api('GET', path) if '/actions/' in path else self.api('GET', path)
+
+                claude_ok, _, rev_base = review_trust.verify_claude_pass(
+                    reviews=reviews,
+                    graphql_fn=self._graphql,
+                    api_get=_carry_get,
+                    repo=self.repo,
+                    pr_number=self.number,
+                    default_branch=branch,
+                    head_sha=head,
+                    live_base_sha=q['base'],
+                    merge_base_sha=merge_base,
+                    strict=self.strict,
+                    live_diff_digest=live_digest,
+                    claude_runs=claude_runs,
+                    compute_digest_fn=self._compute_digest,
+                )
+            else:
+                claude_ok, rev_base = False, ''
+        except Refused:
+            if self.repo != self.source_repo:
+                claude_ok, rev_base = False, ''
+            else:
+                raise
         except review_trust.TrustError as exc:
             raise Refused(str(exc)) from None
         if claude_ok:
@@ -470,9 +491,19 @@ class Publisher:
         if len(old) > 1:
             raise Refused('ambiguous reviewer checks')
         if old:
-            match = EXTERNAL_ID.fullmatch(str(old[0].get('external_id', '')))
-            if not match or match[2] != self.source_repo or int(match[3]) != self.number or (int(match[4]), int(match[5])) > (self.run, self.attempt):
-                raise Refused('unknown or newer formal review owns this head')
+            eid = str(old[0].get('external_id', ''))
+            match = EXTERNAL_ID.fullmatch(eid)
+            ctrl_match = CONTROLLER_EXT_ID.fullmatch(eid)
+            is_controller_handoff = (
+                ctrl_match is not None
+                and ctrl_match[1] == self.repo
+                and int(ctrl_match[2]) == self.number
+                and ctrl_match[3] == head
+                and ctrl_match[4] == self.gate_mode
+            )
+            if not is_controller_handoff:
+                if not match or match[2] != self.source_repo or int(match[3]) != self.number or (int(match[4]), int(match[5])) > (self.run, self.attempt):
+                    raise Refused('unknown or newer formal review owns this head')
 
         if self.queue:
             try:

@@ -154,36 +154,71 @@ def verify_run_caller_trust(
     return True, 'ok'
 
 
+def _issue_comment_targets_other_head(
+    run: dict,
+    head_sha: str,
+    reviews: list[dict] | None,
+    latest_other_pr_ts: str,
+) -> bool:
+    """Return True when an issue_comment run provably belongs to an earlier/other PR commit."""
+    run_created = str(run.get('created_at') or '')
+    run_updated = str(run.get('updated_at') or '')
+    if latest_other_pr_ts and run_created and run_created <= latest_other_pr_ts:
+        return True
+    if reviews and run_created:
+        for r in reviews:
+            u = r.get('user')
+            if not isinstance(u, dict) or u.get('login') != CLAUDE_LOGIN or u.get('type') != 'Bot':
+                continue
+            sub = str(r.get('submitted_at') or '')
+            cid = str(r.get('commit_id') or '')
+            if cid and cid != head_sha and sub and run_created <= sub and (not run_updated or sub <= run_updated):
+                return True
+    return False
+
+
 def find_matching_claude_runs(
     workflow_runs: list[dict],
     pr_number: int,
     head_sha: str,
     jobs_fn: Callable[[int], list[dict]] | None = None,
+    reviews: list[dict] | None = None,
 ) -> list[dict]:
     """Return workflow runs associated with pr_number / head_sha.
 
     Includes pull_request runs whose head_sha matches head_sha AND issue_comment
-    runs that explicitly reference pr_number (and matching head_sha step/job env or
-    PR association when available).
+    runs referencing pr_number unless provably superseded by a pull_request run
+    for another commit or linked via review timestamps to another commit_id.
     """
-    matched = []
+    other_pr_timestamps = []
     for run in workflow_runs:
         if not isinstance(run, dict):
             raise TrustError('malformed workflow run entry')
-        event = run.get('event')
-        run_head = run.get('head_sha')
         prs = run.get('pull_requests') or []
         if not isinstance(prs, list):
             raise TrustError('workflow run pull_requests malformed')
+        pr_nums = {p.get('number') for p in prs if isinstance(p, dict)}
+        if run.get('event') == 'pull_request' and (not pr_nums or pr_number in pr_nums) and run.get('head_sha') != head_sha:
+            ts = run.get('created_at')
+            if isinstance(ts, str) and ts:
+                other_pr_timestamps.append(ts)
+    latest_other_pr_ts = max(other_pr_timestamps) if other_pr_timestamps else ''
+
+    matched = []
+    for run in workflow_runs:
+        event = run.get('event')
+        run_head = run.get('head_sha')
+        prs = run.get('pull_requests') or []
         pr_nums = {p.get('number') for p in prs if isinstance(p, dict)}
         if event == 'pull_request':
             if run_head == head_sha and (not pr_nums or pr_number in pr_nums):
                 matched.append(run)
         elif event == 'issue_comment':
+            if _issue_comment_targets_other_head(run, head_sha, reviews, latest_other_pr_ts):
+                continue
             if pr_number in pr_nums:
                 matched.append(run)
             elif jobs_fn is not None and type(run.get('id')) is int:
-                # Some GitHub issue_comment workflow_runs omit pull_requests[]; inspect jobs/title link if available.
                 title = str(run.get('display_title') or '')
                 if f'#{pr_number}' in title:
                     matched.append(run)

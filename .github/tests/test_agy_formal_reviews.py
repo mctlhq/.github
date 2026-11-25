@@ -104,7 +104,7 @@ class Fake:
                 if rid not in self.run_details:
                     raise P.Refused(f'unknown run {rid}')
                 value = self.run_details[rid]
-            elif bare == root + '/actions/runs':
+            elif bare == root + '/actions/runs' or (bare.startswith(root + '/actions/workflows/') and bare.endswith('/runs')):
                 value = {'workflow_runs': self.workflow_runs}
             elif bare.startswith(root + '/contents/'):
                 cpath = bare[len(root + '/contents/'):]
@@ -430,6 +430,72 @@ class PublisherTests(unittest.TestCase):
     def test_duplicate_json_rejected(self):
         with self.assertRaises(P.Refused):
             P.loads('{"x":1,"x":2}')
+
+    def test_controller_handoff_check_can_be_reclaimed_and_mismatched_refused(self):
+        for gate_mode in ('enforce', 'shadow'):
+            with self.subTest(gate_mode=gate_mode):
+                api = Fake()
+                if gate_mode == 'enforce':
+                    api.rules[1]['parameters']['required_status_checks'] = [
+                        {'context': 'independent-review', 'integration_id': 123}
+                    ]
+                check_name = 'independent-review-shadow' if gate_mode == 'shadow' else 'independent-review'
+                api.checks = [{
+                    'id': 1, 'name': check_name, 'app': {'id': 123}, 'head_sha': HEAD,
+                    'status': 'in_progress',
+                    'external_id': f'gate/v1:{REPO}:7:{HEAD}:{gate_mode}:{DIGEST}',
+                }]
+                env = dict(ENV, CHECK_NAME='independent-review', GATE_MODE=gate_mode)
+                pub = make_pub(api, env)
+                self.assertEqual(pub.prepare()['head'], HEAD)
+                self.assertEqual(pub.publish(self.raw(env=env)), 'APPROVE')
+                self.assertTrue(api.checks[0]['external_id'].startswith('agy/v2:'))
+
+        # Mismatched PR/head/mode in gate/v1 external_id must still refuse!
+        for bad_eid in (
+            f'gate/v1:{REPO}:8:{HEAD}:enforce:{DIGEST}',
+            f'gate/v1:{REPO}:7:{"c" * 40}:enforce:{DIGEST}',
+            f'gate/v1:{REPO}:7:{HEAD}:shadow:{DIGEST}',
+            f'gate/v1:mctlhq/other:7:{HEAD}:enforce:{DIGEST}',
+        ):
+            with self.subTest(bad_eid=bad_eid):
+                api = Fake()
+                api.rules[1]['parameters']['required_status_checks'] = [
+                    {'context': 'independent-review', 'integration_id': 123}
+                ]
+                api.checks = [{'id': 1, 'name': 'independent-review', 'app': {'id': 123},
+                               'head_sha': HEAD, 'status': 'in_progress', 'external_id': bad_eid}]
+                env = dict(ENV, CHECK_NAME='independent-review', GATE_MODE='enforce')
+                with self.assertRaises(P.Refused):
+                    make_pub(api, env).prepare()
+
+    def test_cross_repo_carry_uses_target_token_and_falls_back_on_actions_403(self):
+        api = carry_fake(via_claude=True)
+        chk = copy.deepcopy(PRHEAD_CHECK)
+        chk['external_id'] = 'agy/v2:mctlhq/.github:7:50:1:' + DIGEST
+        api.other_checks = [chk]
+        api.reviews.append(copy.deepcopy(PRHEAD_REVIEW))
+        api.source_repo = 'mctlhq/.github'
+
+        class SourceOnlyRunAPI:
+            def __init__(self, backing):
+                self.backing = backing
+
+            def __call__(self, method, path, payload=None, absent=False):
+                # Simulates source_repo GITHUB_TOKEN lacking target actions read or failing on target repo actions.
+                if path.startswith('repos/' + REPO + '/actions/'):
+                    raise P.Refused('GitHub read/write failed: HTTP 403')
+                return self.backing(method, path, payload, absent)
+
+        env = dict(QENV, GITHUB_REPOSITORY='mctlhq/.github', TARGET_REPOSITORY=REPO)
+        pub = P.Publisher(api, SourceOnlyRunAPI(api), env, diff_digest_fn=lambda r, m, h: api.diff_digest)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertIsNone(pub.prepare())
+        # Option 1 gracefully yielded to Option 2 (Agy PRHEAD_CHECK + PRHEAD_REVIEW), NOT failure!
+        self.assertEqual(api.checks[0]['conclusion'], 'success')
+        self.assertEqual(api.checks[0]['output']['title'], P.CARRY_TITLE)
+        # /contents/ reads happened on `api` (AGY_REVIEW_TOKEN), never failing SourceOnlyRunAPI.
+        self.assertFalse(any('/contents/' in p for _, p, _ in api.calls if 'mctlhq/.github' in p))
 
     def test_cli_cleanup_failure_keeps_original_error_and_newer_check(self):
         for head in ('', HEAD):
@@ -1047,6 +1113,7 @@ class MutationTests(unittest.TestCase):
             ("raise CarryMiss('queue commit does not descend from its base')", 'pass', 'test_a_different_tree_is_never_carried'),
             ("or match[6] != live_digest", "or False", 'test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest'),
             ("if not unedited:\n            return None", "if False:\n            return None", 'test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest'),
+            ("raise Refused('unknown or newer formal review owns this head')", 'pass', 'test_controller_handoff_check_can_be_reclaimed_and_mismatched_refused'),
             ("if not source_desc:\n            raise CarryMiss('PR head has no qualifying unedited formal verdict')",
              "if False:\n            raise CarryMiss('x')", 'test_head_verdict_must_be_complete_unedited_and_bound_to_exact_head_pr_and_digest'),
             ("raise CarryMiss(str(exc)) from None", "raise", 'test_non_comparable_or_oversized_comparisons_fall_back_to_model'),
