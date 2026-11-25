@@ -30,7 +30,7 @@ ENV = {'GITHUB_REPOSITORY': REPO, 'PR_NUMBER': '7', 'GITHUB_RUN_ID': '100',
        'GITHUB_RUN_ATTEMPT': '1', 'GITHUB_EVENT_NAME': 'pull_request_target',
        'GITHUB_REF': 'refs/heads/main', 'REVIEW_REPOSITORY': REPO, 'AGY_REVIEW_APP_ID': '123',
        'AGY_REVIEW_LOGIN': 'agy-test[bot]', 'HEAD_SHA': HEAD, 'BASE_SHA': BASE,
-       'AGY_MODEL': 'gemini-3.8-flash-high'}
+       'AGY_MODEL': 'gemini-4-hydrogen-high'}
 PASS = 'No significant issues found.\n\n<!-- VERDICT: PASS -->\n'
 
 
