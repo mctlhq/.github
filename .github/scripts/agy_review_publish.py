@@ -435,7 +435,6 @@ class Publisher:
                     live_diff_digest=live_digest,
                     matching_claude_runs=matching_runs,
                     compute_digest_fn=self._compute_digest,
-                    jobs_fn=lambda rid: pages(self.run_api, self.root + f'/actions/runs/{rid}/jobs', field='jobs', max_pages=1),
                 )
             else:
                 claude_ok, rev_base = False, ''
