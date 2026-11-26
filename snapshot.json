@@ -6218,7 +6218,16 @@
         "repository": "mctlhq/mctl-telegram"
       },
       "state": "open",
-      "subIssues": [],
+      "subIssues": [
+        {
+          "number": 1483,
+          "repository": "mctlhq/mctl-telegram"
+        },
+        {
+          "number": 1482,
+          "repository": "mctlhq/mctl-telegram"
+        }
+      ],
       "updatedAt": "2026-11-24T00:36:35Z"
     },
     {
@@ -7150,7 +7159,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-25T19:25:25Z",
+    "capturedAt": "2026-11-26T02:54:20Z",
     "mode": "live-capture"
   }
 }
