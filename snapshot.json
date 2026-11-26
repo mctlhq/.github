@@ -6228,7 +6228,7 @@
           "repository": "mctlhq/mctl-telegram"
         }
       ],
-      "updatedAt": "2026-11-24T00:36:35Z"
+      "updatedAt": "2026-11-26T12:43:14Z"
     },
     {
       "blockedBy": [
@@ -7159,7 +7159,7 @@
   "kind": "GitHubGraphSnapshot",
   "source": {
     "apiBase": "https://api.github.com",
-    "capturedAt": "2026-11-26T02:54:20Z",
+    "capturedAt": "2026-11-26T12:50:10Z",
     "mode": "live-capture"
   }
 }
