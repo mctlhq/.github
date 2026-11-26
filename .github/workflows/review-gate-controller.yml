@@ -76,7 +76,7 @@ jobs:
       - name: Generate isolated reviewer token
         id: token
         if: vars.AGY_REVIEW_GATE_ENABLED == 'true' && (github.event_name == 'schedule' || inputs.dry_run == false)
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           client-id: ${{ vars.AGY_REVIEW_APP_ID }}
           private-key: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
@@ -92,7 +92,7 @@ jobs:
       - name: Generate read-only reviewer token
         id: read-token
         if: github.event_name == 'workflow_dispatch' && (inputs.dry_run || vars.AGY_REVIEW_GATE_ENABLED != 'true')
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           client-id: ${{ vars.AGY_REVIEW_APP_ID }}
           private-key: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
