@@ -1,0 +1,9 @@
+{
+  "specversion": "mctl.events/v1",
+  "id": "synthetic:devloop:proposal_ready:1",
+  "type": "synthetic.devloop.proposal_ready",
+  "source": "mctl-synthetic",
+  "occurred_at": "2026-11-22T09:00:00Z",
+  "correlation_id": "corr-proposal-ready-1",
+  "subject": {"kind": "synthetic.devloop.proposal", "repository": "mctlhq/.github", "issue": "377"}
+}
