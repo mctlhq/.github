@@ -205,8 +205,9 @@ on `workflow_dispatch`) from `mctlhq/.github` `main` using environment
   fallback failures suppress infinite `*/5` re-dispatch until `head_sha`/`diff_digest`
   moves or `force_rerun=true` is dispatched.
 - **Shadow-first activation & kill switch:** Until repository variable
-  `AGY_REVIEW_GATE_ENABLED=true` is set, the scheduled controller stays in dry-run
-  mode and `AGY_REVIEW_GATE_REPOS` defaults to `mctlhq/mctl-gitops:shadow`. In
+  `AGY_REVIEW_GATE_ENABLED=true` is set, scheduled runs stay disabled and manual dispatch can evaluate the
+  configured repositories using a read-only installation token.
+  `AGY_REVIEW_GATE_REPOS` defaults to `mctlhq/mctl-gitops:shadow`. In
   merge queues, `agy_review_publish.py` `carry_proof` also carries trusted unedited
   `claude[bot]` `PASS` verdicts (as well as active unedited `mctl-agy-reviewer[bot]`
   approvals) without re-running Antigravity. This Phase 1 architecture supersedes
