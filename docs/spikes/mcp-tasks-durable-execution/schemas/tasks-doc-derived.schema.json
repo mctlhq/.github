@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mctlhq/.github/docs/spikes/mcp-tasks-durable-execution/schemas/tasks-doc-derived.schema.json",
+  "title": "MCP Tasks 2026-07-28 responses, DOC-DERIVED (not the official schema)",
+  "$comment": "[DOC]-derived from https://tasks.extensions.modelcontextprotocol.io/specification/2026-07-28/tasks (retrieved 2026-11-22). The official JSON Schema file could not be obtained as a file in this run, so schemas/vendor/ is absent and this hand-written schema must not be read as the official one. Replace it with the vendored upstream schema (and its sha256) before G2.",
+  "oneOf": [
+    { "$ref": "#/$defs/successEnvelope" },
+    { "$ref": "#/$defs/errorEnvelope" }
+  ],
+  "$defs": {
+    "successEnvelope": {
+      "type": "object",
+      "required": ["result"],
+      "additionalProperties": false,
+      "properties": {
+        "result": {
+          "oneOf": [
+            { "$ref": "#/$defs/createTaskResult" },
+            { "$ref": "#/$defs/getTaskResult" },
+            { "$ref": "#/$defs/ackResult" },
+            { "$ref": "#/$defs/callToolResult" }
+          ]
+        }
+      }
+    },
+    "errorEnvelope": {
+      "type": "object",
+      "required": ["error"],
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "enum": [-32602, -32603, -32021, -32601, -32001] },
+            "message": { "type": "string" },
+            "data": { "type": "object" }
+          }
+        }
+      }
+    },
+    "status": { "enum": ["working", "input_required", "completed", "failed", "cancelled"] },
+    "taskFields": {
+      "type": "object",
+      "required": ["taskId", "status", "createdAt", "lastUpdatedAt", "ttlMs", "pollIntervalMs"],
+      "properties": {
+        "taskId": { "type": "string", "pattern": "^tk_[a-z0-9]+$" },
+        "status": { "$ref": "#/$defs/status" },
+        "statusMessage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastUpdatedAt": { "type": "string", "format": "date-time" },
+        "ttlMs": { "type": ["integer", "null"], "minimum": 0 },
+        "pollIntervalMs": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "createTaskResult": {
+      "allOf": [{ "$ref": "#/$defs/taskFields" }],
+      "type": "object",
+      "required": ["resultType"],
+      "properties": { "resultType": { "const": "task" } },
+      "not": { "anyOf": [{ "required": ["result"] }, { "required": ["error"] }, { "required": ["inputRequests"] }] }
+    },
+    "inputRequest": {
+      "type": "object",
+      "required": ["method", "params"],
+      "additionalProperties": false,
+      "properties": {
+        "method": { "const": "elicitation/create" },
+        "params": {
+          "type": "object",
+          "required": ["mode", "message", "requestedSchema"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "const": "form" },
+            "message": { "type": "string" },
+            "requestedSchema": { "type": "object" }
+          }
+        }
+      }
+    },
+    "getTaskResult": {
+      "allOf": [
+        { "$ref": "#/$defs/taskFields" },
+        {
+          "if": { "properties": { "status": { "const": "completed" } }, "required": ["status"] },
+          "then": { "required": ["result"], "not": { "required": ["error"] } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+          "then": { "required": ["error"], "not": { "required": ["result"] } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "input_required" } }, "required": ["status"] },
+          "then": { "required": ["inputRequests"] },
+          "else": { "not": { "required": ["inputRequests"] } }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["working", "cancelled"] } }, "required": ["status"] },
+          "then": { "not": { "anyOf": [{ "required": ["result"] }, { "required": ["error"] }] } }
+        }
+      ],
+      "type": "object",
+      "required": ["resultType"],
+      "properties": {
+        "resultType": { "const": "complete" },
+        "result": { "type": "object" },
+        "error": { "type": "object", "required": ["code", "message"] },
+        "inputRequests": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^hir-[0-9a-f]+$" },
+          "additionalProperties": { "$ref": "#/$defs/inputRequest" }
+        }
+      }
+    },
+    "ackResult": {
+      "type": "object",
+      "required": ["resultType"],
+      "additionalProperties": false,
+      "properties": { "resultType": { "const": "complete" } }
+    },
+    "callToolResult": {
+      "type": "object",
+      "required": ["content"],
+      "not": { "required": ["resultType"] }
+    }
+  }
+}

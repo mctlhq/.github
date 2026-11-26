@@ -1,0 +1,1 @@
+{"result":{"resultType":"complete","status":"working","inputRequests":{"hir-01":{"method":"elicitation/create","params":{"mode":"form","message":"m","requestedSchema":{}}}},"taskId":"tk_abc","createdAt":"2026-11-22T12:00:00Z","lastUpdatedAt":"2026-11-22T12:00:00Z","ttlMs":null,"pollIntervalMs":5000}}

@@ -1,0 +1,11 @@
+{
+  "result": {
+    "createdAt": "2026-11-22T12:00:00Z",
+    "lastUpdatedAt": "2026-11-22T12:00:00Z",
+    "pollIntervalMs": 5000,
+    "resultType": "task",
+    "status": "working",
+    "taskId": "tk_fixture01",
+    "ttlMs": null
+  }
+}
