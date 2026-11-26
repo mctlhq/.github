@@ -39,7 +39,10 @@ concurrency:
 
 jobs:
   reconcile:
-    if: github.repository == 'mctlhq/.github' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'mctlhq/.github' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || vars.AGY_REVIEW_GATE_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: agy-review-publisher
@@ -72,7 +75,7 @@ jobs:
 
       - name: Generate isolated reviewer token
         id: token
-        if: vars.AGY_REVIEW_GATE_ENABLED == 'true'
+        if: vars.AGY_REVIEW_GATE_ENABLED == 'true' && (github.event_name == 'schedule' || inputs.dry_run == false)
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.AGY_REVIEW_APP_ID }}
@@ -84,10 +87,26 @@ jobs:
           permission-checks: write
           permission-administration: read
 
+      # The repo-scoped GITHUB_TOKEN cannot read another repository's branch
+      # protection. Keep manual dry runs on a read-only installation token.
+      - name: Generate read-only reviewer token
+        id: read-token
+        if: github.event_name == 'workflow_dispatch' && (inputs.dry_run || vars.AGY_REVIEW_GATE_ENABLED != 'true')
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.AGY_REVIEW_APP_ID }}
+          private-key: ${{ secrets.AGY_REVIEW_APP_PRIVATE_KEY }}
+          owner: mctlhq
+          repositories: ${{ steps.targets.outputs.repositories }}
+          permission-contents: read
+          permission-pull-requests: read
+          permission-checks: read
+          permission-administration: read
+
       - name: Reconcile independent review gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          AGY_REVIEW_TOKEN: ${{ steps.token.outputs.token }}
+          AGY_REVIEW_TOKEN: ${{ steps.token.outputs.token || steps.read-token.outputs.token }}
           AGY_REVIEW_APP_ID: ${{ vars.AGY_REVIEW_APP_ID || '5732062' }}
           AGY_REVIEW_LOGIN: ${{ steps.token.outputs.app-slug && format('{0}[bot]', steps.token.outputs.app-slug) || 'mctl-agy-reviewer[bot]' }}
           GATE_REPOSITORIES: ${{ vars.AGY_REVIEW_GATE_REPOS || 'mctlhq/mctl-gitops:shadow' }}
